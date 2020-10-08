@@ -132,15 +132,17 @@ func main() {
 			configure.PathWorker(dir, func(index int, path string) {
 				fmt.Print(systools.Purple("execute on "), systools.White(path))
 				os.Chdir(path)
-				out, errout, err := cmdhandle.Shellout("bash", *execute)
+				err := cmdhandle.ExecuteScriptLine("bash", *execute, func(output string) bool {
+					fmt.Println(output)
+					return true
+				})
 				if err != nil {
 					errorCount++
-					fmt.Println("\t", systools.Red(" Error:"), systools.Yellow(errout))
+					fmt.Println("\t", systools.Red(" Error:"), err)
 				} else {
 					fmt.Println(systools.Green(" OK"))
 					successCount++
 				}
-				fmt.Printf("%s", out)
 			})
 		}
 		fmt.Print("execution done. ")

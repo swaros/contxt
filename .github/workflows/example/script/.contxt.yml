@@ -1,0 +1,39 @@
+task:
+    - id: script
+      trigger:
+        events:
+          - start script
+      stopreasons:
+        onerror: true
+        onoutcountLess: 0
+        onoutcountMore: 0
+        onoutContains:
+          - context.json
+          - fatal
+        onevents:
+          - stop script
+          - full stop
+      options:
+        format: "log: %s\n"
+        displaycmd: true
+        showout: true
+        maincmd: bash
+        mainparams:
+          - '-c'
+      script:
+        - echo 'hallo welt'
+        - ls -ga
+      watch:
+        - output: 
+            contains:
+              - error
+              - failure
+            exitcode:
+              greater: 0
+              equals: 1
+              lower: 10
+            then:
+              pushEvents:
+                - script failure
+              stop: false
+  

@@ -1,0 +1,21 @@
+{
+ "TestScript": [],
+ "InitScript": [],
+ "CleanScript": [],
+ "Script": [
+  {
+   "Require": {
+    "FileExists": [],
+    "FileNotExists": []
+   },
+   "Command": "bash",
+   "Params": "echo 'Hallo Welt'",
+   "Comment": "just a example about the structure of a command",
+   "StopOnError": true,
+   "StopOnOutCountLess": 0,
+   "StopOnOutCountMore": 0,
+   "StopOnOutContains": "",
+   "TraceOutput": false
+  }
+ ]
+}

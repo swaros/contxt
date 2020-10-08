@@ -1,0 +1,5 @@
+task:
+    - id: script
+      script:
+        - echo 'hallo welt'
+        - ls -ga
