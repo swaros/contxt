@@ -3,3 +3,10 @@ task:
       script:
         - echo 'hallo welt'
         - ls -ga
+    - id: check
+      script:
+        - echo 'this is the check run'
+        - find / -name '*jar'
+    - id: test
+      script:
+        - "echo 'das ist run 2'"

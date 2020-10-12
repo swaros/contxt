@@ -24,7 +24,7 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 				var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
 				ExecuteScriptLine(mainCommand, codeLine, func(logLine string) bool {
 					if script.Options.Hideout == false {
-						fmt.Printf(defaultString(script.Options.Format, " >\t%s\n"), logLine)
+						fmt.Printf(defaultString(script.Options.Format, systools.Yellow(target)+"\t"+systools.Teal("|")+"%s\n"), systools.White(logLine))
 					}
 					stopReasonFound := checkStopReason(stopReason, logLine)
 					if stopReasonFound {

@@ -14,7 +14,16 @@
             "args": ["-l"]
         },
         {
-            "name": "Read execution yaml",
+            "name": "execute multiple targets",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
+            "env": {},
+            "args": ["-target","script,check,test"]
+        },
+        {
+            "name": "execute -script",
             "type": "go",
             "request": "launch",
             "mode": "auto",

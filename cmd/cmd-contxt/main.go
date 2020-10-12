@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/swaros/contxt/context/cmdhandle"
 	"github.com/swaros/contxt/context/configure"
@@ -32,6 +33,7 @@ func main() {
 	targetInit := flag.Bool("init", false, "set script target to init")
 	targetClean := flag.Bool("clean", false, "set script target to clean")
 	targetTest := flag.Bool("test", false, "set script target to test")
+	targets := flag.String("target", "script", "set target. for mutliple targets seperate by ,")
 
 	nonParams := true
 
@@ -108,6 +110,14 @@ func main() {
 			}
 		}
 
+	}
+
+	if *targets != "script" {
+		nonParams = false
+		allTargets := strings.Split(*targets, ",")
+		for _, runTarget := range allTargets {
+			cmdhandle.ExecCurrentPathTemplate(runTarget)
+		}
 	}
 
 	if *scriptRunAll {
