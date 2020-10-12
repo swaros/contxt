@@ -32,6 +32,15 @@
             "args": ["-script"]
         },
         {
+            "name": "execute -script-all",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
+            "env": {},
+            "args": ["-script-all"]
+        },
+        {
             "name": "write default execution yaml",
             "type": "go",
             "request": "launch",

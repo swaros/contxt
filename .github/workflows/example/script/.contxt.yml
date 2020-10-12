@@ -16,7 +16,7 @@ task:
       options:
         format: "log: %s\n"
         displaycmd: true
-        hideout: true
+        hideout: false
         maincmd: bash
         mainparams:
           - '-c'

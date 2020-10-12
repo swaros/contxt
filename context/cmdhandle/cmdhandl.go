@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 
 	"github.com/swaros/contxt/context/configure"
@@ -36,10 +37,11 @@ const (
 )
 
 // ExecuteScriptLine executes a simple shell script
-func ExecuteScriptLine(ShellToUse string, command string, callback func(string) bool) error {
+func ExecuteScriptLine(ShellToUse string, command string, callback func(string) bool, startInfo func(*os.Process)) error {
 	cmd := exec.Command(ShellToUse, "-c", command)
 	stdoutPipe, _ := cmd.StdoutPipe()
 	err := cmd.Start()
+	startInfo(cmd.Process)
 	scanner := bufio.NewScanner(stdoutPipe)
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {

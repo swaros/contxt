@@ -127,7 +127,7 @@ func main() {
 		if err == nil {
 			configure.PathWorker(dir, func(index int, path string) {
 				os.Chdir(path)
-				cmdhandle.ExecPathFile(path+cmdhandle.DefaultExecFile, runTargetName)
+				cmdhandle.ExecPathFile(path+cmdhandle.DefaultExecYaml, runTargetName)
 			})
 		}
 	}
@@ -145,6 +145,8 @@ func main() {
 				err := cmdhandle.ExecuteScriptLine("bash", *execute, func(output string) bool {
 					fmt.Println(output)
 					return true
+				}, func(process *os.Process) {
+
 				})
 				if err != nil {
 					errorCount++

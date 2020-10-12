@@ -7,6 +7,23 @@ task:
       script:
         - echo 'this is the check run'
         - find / -name '*jar'
+      options:
+        displaycmd: true
+        hideout: false
+        watch:
+          - output: 
+              contains:
+                - ant.jar
+              exitcode:
+                greater: 0
+                equals: 1
+                lower: 10
+              then:
+                pushEvents:
+                  - script failure
+                stop: false
     - id: test
       script:
         - "echo 'das ist run 2'"
+      options:
+        displaycmd: true
