@@ -40,6 +40,9 @@ func RunTargets(targets string) {
 }
 
 func executeTemplate(runCfg configure.RunConfig, target string) {
+	colorCode := systools.CreateColorCode()
+	bgCode := systools.CreateBgColor()
+	defaultFormat := systools.GetCodeBg(bgCode) + systools.PrintColored(colorCode, systools.PadStringToR(target+" :", 8)) + systools.GetReset() + "%s\n"
 	for _, script := range runCfg.Task {
 		// check if we have found the target
 		if strings.EqualFold(target, script.ID) {
@@ -57,9 +60,9 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 					if script.Listener != nil {
 						for _, listener := range script.Listener {
 							listenReason := configure.StopReasons(listener.Trigger)
-							triggerFound := checkStopReason(listenReason, logLine)
+							triggerFound, triggerMessage := checkReason(listenReason, logLine)
 							if triggerFound {
-								fmt.Println(systools.Magenta("\tlistener hit"), logLine)
+								fmt.Println(systools.Magenta("\tlistener hit"), systools.Yellow(triggerMessage), logLine)
 								actionDef := configure.Action(listener.Action)
 								if actionDef.Target != "" {
 									go executeTemplate(runCfg, actionDef.Target)
@@ -70,13 +73,17 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 
 					// print the output by configuration
 					if script.Options.Hideout == false {
-						fmt.Printf(defaultString(
-							script.Options.Format,
-							systools.Yellow(target)+"\t"+systools.Teal("|")+"%s\n"), systools.White(logLine))
+
+						//fmt.Printf(defaultString(script.Options.Format, defaultFormat), systools.White(logLine))
+						fmt.Printf(defaultString(script.Options.Format, defaultFormat), systools.PrintColored(colorCode, logLine))
+
 					}
 					// do we found a defined reason to stop execution
-					stopReasonFound := checkStopReason(stopReason, logLine)
+					stopReasonFound, message := checkReason(stopReason, logLine)
 					if stopReasonFound {
+						if script.Options.Displaycmd {
+							fmt.Println(systools.Teal(" HIT "), systools.Info(message))
+						}
 						return false
 					}
 					return true
@@ -107,23 +114,23 @@ func stringContains(findInHere string, matches []string) bool {
 	return false
 }
 
-func checkStopReason(stopReason configure.StopReasons, output string) bool {
-	var stopReasonBool = false
+func checkReason(stopReason configure.StopReasons, output string) (bool, string) {
+	var message = ""
 	if stopReason.OnoutcountLess > 0 && stopReason.OnoutcountLess > len(output) {
-		fmt.Println("\treason match output len (", len(output), ") is less then ", stopReason.OnoutcountLess)
-		stopReasonBool = true
+		message = fmt.Sprint("\treason match output len (", len(output), ") is less then ", stopReason.OnoutcountLess)
+		return true, message
 	}
 	if stopReason.OnoutcountMore > 0 && stopReason.OnoutcountMore < len(output) {
-		fmt.Println("\treason match output len (", len(output), ") is more then ", stopReason.OnoutcountMore)
-		stopReasonBool = true
+		message = fmt.Sprint("\treason match output len (", len(output), ") is more then ", stopReason.OnoutcountMore)
+		return true, message
 	}
 
 	for _, checkText := range stopReason.OnoutContains {
 		if checkText != "" && strings.Contains(output, checkText) {
-			fmt.Println("s\treason match because output contains ", checkText)
-			stopReasonBool = true
+			message = fmt.Sprint("s\treason match because output contains ", checkText)
+			return true, message
 		}
 	}
 
-	return stopReasonBool
+	return false, message
 }
