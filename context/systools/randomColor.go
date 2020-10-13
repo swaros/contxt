@@ -62,7 +62,6 @@ func CreateColorCode() string {
 }
 
 func colorFormatNumber(code string) string {
-	//return "\033[1;" + code + "m%s\033[0m"
 	return "\033[1;" + code + "m%s"
 }
 
