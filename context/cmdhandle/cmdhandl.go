@@ -140,8 +140,9 @@ func ExecPathFile(path string, target string) {
 
 		if err != nil {
 			fmt.Println("error:", err)
+		} else {
+			executeTemplate(template, target)
 		}
-		executeTemplate(template, target)
 	}
 }
 
