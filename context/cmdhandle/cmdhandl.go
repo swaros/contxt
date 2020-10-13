@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"sync"
 
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
@@ -35,6 +36,18 @@ const (
 	// DefaultCommandFallBack is used if no command is defined
 	DefaultCommandFallBack = "bash"
 )
+
+// ExecuteTemplateWorker runs ExecCurrentPathTemplate in context of a waitgroup
+func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, path string) {
+	defer waitGroup.Done()
+	ExecCurrentPathTemplate(path)
+}
+
+// ExecuteWorker runs ExecuteScriptLine in context of a waitgroup
+func ExecuteWorker(waitGroup *sync.WaitGroup, ShellToUse string, command string, callback func(string) bool, startInfo func(*os.Process)) {
+	defer waitGroup.Done()
+	ExecuteScriptLine(ShellToUse, command, callback, startInfo)
+}
 
 // ExecuteScriptLine executes a simple shell script
 func ExecuteScriptLine(ShellToUse string, command string, callback func(string) bool, startInfo func(*os.Process)) error {

@@ -1,0 +1,34 @@
+config:
+  sequencially: true
+task:
+    - id: script
+      stopreasons:
+        onerror: true
+        onoutcountLess: 0
+        onoutcountMore: 0
+        onoutContains:
+          - context.json
+          - fatal
+      options:
+        format: "log: %s\n"
+        displaycmd: true
+        hideout: false
+        maincmd: bash
+        mainparams:
+          - '-c'
+      script:
+        - echo 'hallo welt'
+        - ls -ga
+      listener:
+          - trigger:
+              onerror: true
+              onoutcountLess: 0
+              onoutcountMore: 0
+              onoutContains:
+                - context.json
+                - fatal
+            action:
+              target: ""
+              stopall: false
+              script:
+                - echo 'triggered by output parsing'

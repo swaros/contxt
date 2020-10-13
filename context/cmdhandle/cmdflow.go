@@ -4,11 +4,40 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/swaros/contxt/context/systools"
 
 	"github.com/swaros/contxt/context/configure"
 )
+
+// RunTargets executes multiple targets
+func RunTargets(targets string) {
+	allTargets := strings.Split(targets, ",")
+	template, exists := GetTemplate()
+
+	var runSequencially = false
+	if exists {
+		runSequencially = template.Config.Sequencially
+	}
+
+	if runSequencially == false {
+		// run in thread
+		var wg sync.WaitGroup
+		for _, runTarget := range allTargets {
+			wg.Add(1)
+			go ExecuteTemplateWorker(&wg, runTarget)
+		}
+		wg.Wait()
+
+	} else {
+		// trun one by one
+		for _, runTarget := range allTargets {
+			ExecCurrentPathTemplate(runTarget)
+		}
+	}
+
+}
 
 func executeTemplate(runCfg configure.RunConfig, target string) {
 	for _, script := range runCfg.Task {
@@ -25,6 +54,19 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 				var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
 				ExecuteScriptLine(mainCommand, codeLine, func(logLine string) bool {
 					// the watcher
+					if script.Listener != nil {
+						for _, listener := range script.Listener {
+							listenReason := configure.StopReasons(listener.Trigger)
+							triggerFound := checkStopReason(listenReason, logLine)
+							if triggerFound {
+								fmt.Println(systools.Magenta("\tlistener hit"), logLine)
+								actionDef := configure.Action(listener.Action)
+								if actionDef.Target != "" {
+									go executeTemplate(runCfg, actionDef.Target)
+								}
+							}
+						}
+					}
 
 					// print the output by configuration
 					if script.Options.Hideout == false {
@@ -68,17 +110,17 @@ func stringContains(findInHere string, matches []string) bool {
 func checkStopReason(stopReason configure.StopReasons, output string) bool {
 	var stopReasonBool = false
 	if stopReason.OnoutcountLess > 0 && stopReason.OnoutcountLess > len(output) {
-		fmt.Println("stopped because output len (", len(output), ") is less then ", stopReason.OnoutcountLess)
+		fmt.Println("\treason match output len (", len(output), ") is less then ", stopReason.OnoutcountLess)
 		stopReasonBool = true
 	}
 	if stopReason.OnoutcountMore > 0 && stopReason.OnoutcountMore < len(output) {
-		fmt.Println("stopped because output len (", len(output), ") is more then ", stopReason.OnoutcountMore)
+		fmt.Println("\treason match output len (", len(output), ") is more then ", stopReason.OnoutcountMore)
 		stopReasonBool = true
 	}
 
 	for _, checkText := range stopReason.OnoutContains {
 		if checkText != "" && strings.Contains(output, checkText) {
-			fmt.Println("stoppend because output contains ", checkText)
+			fmt.Println("s\treason match because output contains ", checkText)
 			stopReasonBool = true
 		}
 	}

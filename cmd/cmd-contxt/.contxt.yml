@@ -10,18 +10,13 @@ task:
       options:
         displaycmd: true
         hideout: false
-        watch:
-          - output: 
-              contains:
-                - ant.jar
-              exitcode:
-                greater: 0
-                equals: 1
-                lower: 10
-              then:
-                pushEvents:
-                  - script failure
-                stop: false
+      listener:
+        - trigger:
+            onoutContains:
+              - maven
+          action:
+            script:
+              - echo ' HIT --------------- HIT -------------- HIT'
     - id: test
       script:
         - "echo 'das ist run 2'"

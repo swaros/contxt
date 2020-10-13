@@ -118,6 +118,7 @@ func main() {
 		for _, runTarget := range allTargets {
 			cmdhandle.ExecCurrentPathTemplate(runTarget)
 		}
+
 	}
 
 	if *scriptRunAll {

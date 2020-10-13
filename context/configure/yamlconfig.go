@@ -6,22 +6,27 @@ type StopReasons struct {
 	OnoutcountLess int
 	OnoutcountMore int
 	OnoutContains  []string
-	Onevents       []string
+}
+
+// Action defines a action that can be executed
+type Action struct {
+	Target  string   `yaml:"target"`
+	Stopall bool     `yaml:"stopall"`
+	Script  []string `yaml:"script"`
 }
 
 // RunConfig defines the structure of the local stored execution files
 type RunConfig struct {
+	Config struct {
+		Sequencially bool `yaml:"sequencially"`
+	} `yaml:"config"`
 	Task []struct {
-		ID      string `yaml:"id"`
-		Trigger struct {
-			Events []string `yaml:"events"`
-		} `yaml:"trigger"`
+		ID          string `yaml:"id"`
 		Stopreasons struct {
 			Onerror        bool     `yaml:"onerror"`
 			OnoutcountLess int      `yaml:"onoutcountLess"`
 			OnoutcountMore int      `yaml:"onoutcountMore"`
 			OnoutContains  []string `yaml:"onoutContains"`
-			Onevents       []string `yaml:"onevents"`
 		} `yaml:"stopreasons"`
 		Options struct {
 			Format     string   `yaml:"format"`
@@ -30,20 +35,19 @@ type RunConfig struct {
 			Maincmd    string   `yaml:"maincmd"`
 			Mainparams []string `yaml:"mainparams"`
 		} `yaml:"options"`
-		Script []string `yaml:"script"`
-		Watch  []struct {
-			Output struct {
-				Contains []string `yaml:"contains"`
-				Exitcode struct {
-					Greater int `yaml:"greater"`
-					Equals  int `yaml:"equals"`
-					Lower   int `yaml:"lower"`
-				} `yaml:"exitcode"`
-				Then struct {
-					PushEvents []string `yaml:"pushEvents"`
-					Stop       bool     `yaml:"stop"`
-				} `yaml:"then"`
-			} `yaml:"output"`
-		} `yaml:"watch"`
+		Script   []string `yaml:"script"`
+		Listener []struct {
+			Trigger struct {
+				Onerror        bool     `yaml:"onerror"`
+				OnoutcountLess int      `yaml:"onoutcountLess"`
+				OnoutcountMore int      `yaml:"onoutcountMore"`
+				OnoutContains  []string `yaml:"onoutContains"`
+			} `yaml:"trigger"`
+			Action struct {
+				Target  string   `yaml:"target"`
+				Stopall bool     `yaml:"stopall"`
+				Script  []string `yaml:"script"`
+			} `yaml:"action"`
+		} `yaml:"listener"`
 	} `yaml:"task"`
 }
