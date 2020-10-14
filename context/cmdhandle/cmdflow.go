@@ -43,7 +43,8 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 
 	colorCode := systools.CreateColorCode()
 	bgCode := systools.CurrentBgColor
-
+	placeHolder := NewPlaceHolderMap()
+	placeHolder["RUN.TARGET"] = target
 	for _, script := range runCfg.Task {
 		// check if we have found the target
 		if strings.EqualFold(target, script.ID) {
@@ -59,6 +60,7 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 					panelSize = script.Options.Panelsize
 				}
 				var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
+				placeHolder["RUN.SCRIPT_LINE"] = codeLine
 				ExecuteScriptLine(mainCommand, codeLine, func(logLine string) bool {
 					// the watcher
 					if script.Listener != nil {
@@ -82,7 +84,8 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 						foreColor := defaultString(script.Options.Colorcode, colorCode)
 						bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
 						labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
-						outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
+						logVarLine := HandlePlaceHolder(placeHolder, logLine)
+						outStr := systools.LabelPrintWithArg(logVarLine, colorCode, "39", 2)
 						fmt.Println(labelStr, outStr)
 
 					}
@@ -96,6 +99,7 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 					}
 					return true
 				}, func(process *os.Process) {
+					placeHolder["RUN.PID"] = fmt.Sprintf("%d", process.Pid)
 					if script.Options.Displaycmd {
 						fmt.Println(systools.Magenta(" PID "), systools.Teal(process.Pid))
 					}
