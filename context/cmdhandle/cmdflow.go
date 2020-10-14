@@ -86,7 +86,14 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 						labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
 						logVarLine := HandlePlaceHolder(placeHolder, logLine)
 						outStr := systools.LabelPrintWithArg(logVarLine, colorCode, "39", 2)
+						if script.Options.Stickcursor {
+							fmt.Print("\033[G\033[K")
+						}
+						// prints the codeline
 						fmt.Println(labelStr, outStr)
+						if script.Options.Stickcursor {
+							fmt.Print("\033[A")
+						}
 
 					}
 					// do we found a defined reason to stop execution

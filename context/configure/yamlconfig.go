@@ -30,6 +30,7 @@ type RunConfig struct {
 		} `yaml:"stopreasons"`
 		Options struct {
 			Format      string   `yaml:"format"`
+			Stickcursor bool     `yaml:"stickcursor"`
 			Colorcode   string   `yaml:"colorcode"`
 			Bgcolorcode string   `yaml:"bgcolorcode"`
 			Panelsize   int      `yaml:"panelsize"`
