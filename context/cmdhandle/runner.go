@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
@@ -210,11 +209,13 @@ func MainExecute() {
 }
 
 func runTargets(path string, targets string) {
-	allTargets := strings.Split(targets, ",")
-	for _, runTarget := range allTargets {
-		//ExecCurrentPathTemplate(runTarget)
-		ExecPathFile(path+DefaultExecYaml, runTarget)
-	}
+	/*
+		allTargets := strings.Split(targets, ",")
+		for _, runTarget := range allTargets {
+			//ExecCurrentPathTemplate(runTarget)
+			ExecPathFile(path+DefaultExecYaml, runTarget)
+		}*/
+	RunTargets(targets)
 }
 
 func printOutHeader() {
@@ -224,6 +225,7 @@ func printOutHeader() {
 func printInfo() {
 	printOutHeader()
 	printPaths()
+	//systools.TestPrintColoredChanges()
 }
 
 func printPaths() {

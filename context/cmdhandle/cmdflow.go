@@ -40,9 +40,10 @@ func RunTargets(targets string) {
 }
 
 func executeTemplate(runCfg configure.RunConfig, target string) {
+
 	colorCode := systools.CreateColorCode()
-	bgCode := systools.CreateBgColor()
-	defaultFormat := systools.GetCodeBg(bgCode) + systools.PrintColored(colorCode, systools.PadStringToR(target+" :", 8)) + systools.GetReset() + "%s\n"
+	bgCode := systools.CurrentBgColor
+
 	for _, script := range runCfg.Task {
 		// check if we have found the target
 		if strings.EqualFold(target, script.ID) {
@@ -53,7 +54,10 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 				if script.Options.Displaycmd {
 					fmt.Println(systools.Magenta(" RUN "), systools.Teal(target), systools.White(codeLine))
 				}
-
+				panelSize := 12
+				if script.Options.Panelsize > 0 {
+					panelSize = script.Options.Panelsize
+				}
 				var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
 				ExecuteScriptLine(mainCommand, codeLine, func(logLine string) bool {
 					// the watcher
@@ -62,7 +66,9 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 							listenReason := configure.StopReasons(listener.Trigger)
 							triggerFound, triggerMessage := checkReason(listenReason, logLine)
 							if triggerFound {
-								fmt.Println(systools.Magenta("\tlistener hit"), systools.Yellow(triggerMessage), logLine)
+								if script.Options.Displaycmd {
+									fmt.Println(systools.Magenta("\tlistener hit"), systools.Yellow(triggerMessage), logLine)
+								}
 								actionDef := configure.Action(listener.Action)
 								if actionDef.Target != "" {
 									go executeTemplate(runCfg, actionDef.Target)
@@ -73,9 +79,11 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 
 					// print the output by configuration
 					if script.Options.Hideout == false {
-
-						//fmt.Printf(defaultString(script.Options.Format, defaultFormat), systools.White(logLine))
-						fmt.Printf(defaultString(script.Options.Format, defaultFormat), systools.PrintColored(colorCode, logLine))
+						foreColor := defaultString(script.Options.Colorcode, colorCode)
+						bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
+						labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
+						outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
+						fmt.Println(labelStr, outStr)
 
 					}
 					// do we found a defined reason to stop execution

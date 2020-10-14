@@ -29,11 +29,14 @@ type RunConfig struct {
 			OnoutContains  []string `yaml:"onoutContains"`
 		} `yaml:"stopreasons"`
 		Options struct {
-			Format     string   `yaml:"format"`
-			Displaycmd bool     `yaml:"displaycmd"`
-			Hideout    bool     `yaml:"hideout"`
-			Maincmd    string   `yaml:"maincmd"`
-			Mainparams []string `yaml:"mainparams"`
+			Format      string   `yaml:"format"`
+			Colorcode   string   `yaml:"colorcode"`
+			Bgcolorcode string   `yaml:"bgcolorcode"`
+			Panelsize   int      `yaml:"panelsize"`
+			Displaycmd  bool     `yaml:"displaycmd"`
+			Hideout     bool     `yaml:"hideout"`
+			Maincmd     string   `yaml:"maincmd"`
+			Mainparams  []string `yaml:"mainparams"`
 		} `yaml:"options"`
 		Script   []string `yaml:"script"`
 		Listener []struct {

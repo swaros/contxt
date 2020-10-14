@@ -6,3 +6,9 @@ install-local: build
 
 clean:
 	rm -f ./bin/contxt
+
+test:
+	go test -v ./...
+
+info: build
+	./bin/contxt dir -info

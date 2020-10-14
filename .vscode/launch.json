@@ -47,7 +47,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
             "env": {},
-            "args": ["run", "-all-paths","-target=java"]
+            "args": ["run", "-all-paths","-target=server"]
         },
         {
             "name": "info",
