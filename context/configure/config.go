@@ -123,7 +123,6 @@ func DisplayWorkSpaces() {
 	files = ListWorkSpaces()
 
 	if len(files) > 0 {
-		fmt.Println("  ", systools.Yellow("all existing workspaces"))
 		for _, file := range files {
 			var basePath = filepath.Base(file)
 			var extension = filepath.Ext(file)
@@ -132,19 +131,38 @@ func DisplayWorkSpaces() {
 				basePath = strings.TrimSuffix(basePath, extension)
 				// we are also not interested in the default workspace
 				if basePath != DefaultWorkspace {
-					fmt.Println("\t", systools.Teal(basePath))
+					fmt.Println(basePath)
 				}
 			}
 		}
-	} else {
-		fmt.Println("\t", systools.Yellow("No workspaces exists"))
+	}
+}
+
+// WorkSpaces handler to iterate all workspaces
+func WorkSpaces(callback func(string)) {
+	var files []string
+	files = ListWorkSpaces()
+
+	if len(files) > 0 {
+		for _, file := range files {
+			var basePath = filepath.Base(file)
+			var extension = filepath.Ext(file)
+			// display json files only they are not the default config
+			if extension == ".json" && basePath != DefaultConfigFileName {
+				basePath = strings.TrimSuffix(basePath, extension)
+				// we are also not interested in the default workspace
+				if basePath != DefaultWorkspace {
+					callback(basePath)
+				}
+			}
+		}
 	}
 }
 
 // ShowPaths : display all stored paths in the workspace
 func ShowPaths(current string) int {
 
-	PathWorker(current, func(index int, path string) {
+	PathWorker(func(index int, path string) {
 		if path == current {
 			fmt.Println("\t[", systools.Yellow(index), "]\t", path)
 		} else {
@@ -155,7 +173,7 @@ func ShowPaths(current string) int {
 }
 
 // PathWorker executes a callback function in a path
-func PathWorker(current string, callback func(int, string)) {
+func PathWorker(callback func(int, string)) {
 	cnt := len(Config.Paths)
 	if cnt < 1 {
 		fmt.Println("\t", systools.Warn("no paths actually stored"))

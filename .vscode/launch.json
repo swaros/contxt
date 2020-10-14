@@ -41,13 +41,31 @@
             "args": ["run", "-all-paths","-target=java"]
         },
         {
-            "name": "write default execution yaml",
+            "name": "run java target at all",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
             "env": {},
-            "args": ["-create-template"]
+            "args": ["run", "-all-paths","-target=java"]
+        },
+        {
+            "name": "info",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
+            "env": {},
+            "args": ["dir","-info"]
+        },
+        {
+            "name": "show paths",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
+            "env": {},
+            "args": ["dir","-paths"]
         }
     ]
 }
