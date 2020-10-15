@@ -1,14 +1,27 @@
 task:
-    - id: base
-      options:
-        displaycmd: true
-      script:
-        - "echo 'sub 1'"
-        - "echo 'sub 2'"
-        - "echo 'sub 3'"
-        - "echo 'sub 4-6'"
-        - "echo 'sub 5'"
-        - "echo 'sub 6'"
-        - "echo 'sub 7'"
-      stopreasons:
-        onoutcountMore: 5
+  - id: base
+    options:
+      displaycmd: true
+    script:
+      - "echo 'sub 1'"
+      - "echo 'sub 2'"
+      - "echo 'sub 3'"
+      - "echo 'sub 4-6'"
+      - "echo 'sub 5'"
+      - "echo 'sub 6'"
+      - "echo 'sub 7'"
+    stopreasons:
+      onoutcountMore: 5
+  - id: contains
+    options:
+      displaycmd: true
+    script:
+      - "echo 'come and dance'"
+      - "echo 'come and run'"
+      - "echo 'come and cry'"
+      - "echo 'come and die'"
+      - "echo 'come and drive away'"
+
+    stopreasons:
+      onoutContains:
+        - "and die"

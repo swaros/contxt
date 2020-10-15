@@ -98,3 +98,20 @@ func TestRunTargetCase3(t *testing.T) {
 	})
 
 }
+
+func TestCase4(t *testing.T) {
+	caseRunner("4", t, func(t *testing.T) {
+		//stopped because log entrie to big
+		cmdhandle.RunTargets("base")
+		log := cmdhandle.GetPH("RUN.base.LOG.LAST")
+		if log != "sub 4-6" {
+			t.Error("last log entrie should not be:", log)
+		}
+
+		cmdhandle.RunTargets("contains")
+		log = cmdhandle.GetPH("RUN.contains.LOG.LAST")
+		if log != "come and die" {
+			t.Error("last log entrie should not be", log)
+		}
+	})
+}
