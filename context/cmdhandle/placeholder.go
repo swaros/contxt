@@ -35,6 +35,13 @@ func handlePlaceHolder(line string) string {
 		line = strings.ReplaceAll(line, keyName, value.(string))
 		return true
 	})
-
 	return line
+}
+
+// ClearAll removes all entries
+func ClearAll() {
+	keyValue.Range(func(key, value interface{}) bool {
+		keyValue.Delete(key)
+		return true
+	})
 }

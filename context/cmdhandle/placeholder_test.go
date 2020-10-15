@@ -14,6 +14,12 @@ func TestSetAndGet(t *testing.T) {
 	if value != "data" {
 		t.Error("unexpected result:'", value, "' expected was 'data'")
 	}
+
+	cmdhandle.ClearAll()
+	valueAfterClean := cmdhandle.GetPH("lost1")
+	if valueAfterClean != "" {
+		t.Error("unexpected result:'", valueAfterClean, "' should be empty after ClearAll")
+	}
 }
 
 func TestOverwrite(t *testing.T) {
@@ -49,6 +55,7 @@ func TestBasicReplace(t *testing.T) {
 	if result2 != "b: XXX and again XXX" {
 		t.Error("noting was replaced:'", testLine2, "' => ", result2)
 	}
+
 }
 
 func TestAsync(t *testing.T) {
