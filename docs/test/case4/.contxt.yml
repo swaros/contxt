@@ -1,0 +1,14 @@
+task:
+    - id: base
+      options:
+        displaycmd: true
+      script:
+        - "echo 'sub 1'"
+        - "echo 'sub 2'"
+        - "echo 'sub 3'"
+        - "echo 'sub 4-6'"
+        - "echo 'sub 5'"
+        - "echo 'sub 6'"
+        - "echo 'sub 7'"
+      stopreasons:
+        onoutcountMore: 5

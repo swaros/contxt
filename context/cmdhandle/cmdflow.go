@@ -11,6 +11,15 @@ import (
 	"github.com/swaros/contxt/context/configure"
 )
 
+const (
+	// ExitOk the process was executed without errors
+	ExitOk = 0
+	// ExitByStopReason the process stopped because of a defined reason
+	ExitByStopReason = 101
+	// ExitNoCode means there was no code associated
+	ExitNoCode = 102
+)
+
 // RunTargets executes multiple targets
 func RunTargets(targets string) {
 	allTargets := strings.Split(targets, ",")
@@ -39,7 +48,7 @@ func RunTargets(targets string) {
 
 }
 
-func executeTemplate(runCfg configure.RunConfig, target string) {
+func executeTemplate(runCfg configure.RunConfig, target string) int {
 
 	colorCode := systools.CreateColorCode()
 	bgCode := systools.CurrentBgColor
@@ -62,7 +71,7 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 				replacedLine := HandlePlaceHolder(codeLine)
 
 				SetPH("RUN.SCRIPT_LINE", codeLine)
-				ExecuteScriptLine(mainCommand, replacedLine, func(logLine string) bool {
+				execCode, execErr := ExecuteScriptLine(mainCommand, replacedLine, func(logLine string) bool {
 
 					SetPH("RUN."+target+".LOG.LAST", logLine)
 					// the watcher
@@ -104,7 +113,7 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 					stopReasonFound, message := checkReason(stopReason, logLine)
 					if stopReasonFound {
 						if script.Options.Displaycmd {
-							fmt.Println(systools.Teal(" HIT "), systools.Info(message))
+							fmt.Println(systools.Magenta(" STOP-HIT "), systools.Info(message))
 						}
 						return false
 					}
@@ -117,10 +126,18 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 						fmt.Println(systools.Magenta(" PID "), systools.Teal(process.Pid))
 					}
 				})
+				if execErr != nil {
+					fmt.Println(systools.Warn(execErr))
+				}
+				if execCode == ExitByStopReason {
+					return ExitByStopReason
+				}
 			}
+			return ExitOk
 		}
 
 	}
+	return ExitNoCode
 }
 
 func defaultString(line string, defaultString string) string {

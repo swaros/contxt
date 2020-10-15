@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/swaros/contxt/context/cmdhandle"
+	"github.com/swaros/contxt/context/dirhandle"
 )
 
 func getTestTemplate(filename string) string {
@@ -27,7 +28,11 @@ func TestGetPwdTemplate(t *testing.T) {
 }
 
 func TestGetTemplate(t *testing.T) {
-	os.Chdir("./../../docs/test/")
+	old, derr := dirhandle.Current()
+	if derr != nil {
+		t.Error(derr)
+	}
+	os.Chdir("./../../docs/test/case0")
 	template, exists := cmdhandle.GetTemplate()
 	if !exists {
 		t.Error("could not found the test template file")
@@ -36,4 +41,5 @@ func TestGetTemplate(t *testing.T) {
 			t.Error("expected template.Config.Sequencially is set to true")
 		}
 	}
+	os.Chdir(old)
 }

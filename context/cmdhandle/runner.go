@@ -104,7 +104,7 @@ func MainExecute() {
 				configure.PathWorker(func(index int, path string) {
 					fmt.Print(systools.Purple("execute on "), systools.White(path))
 					os.Chdir(path)
-					err := ExecuteScriptLine("bash", *execute, func(output string) bool {
+					_, err := ExecuteScriptLine("bash", *execute, func(output string) bool {
 						fmt.Println(output)
 						return true
 					}, func(process *os.Process) {
@@ -209,12 +209,6 @@ func MainExecute() {
 }
 
 func runTargets(path string, targets string) {
-	/*
-		allTargets := strings.Split(targets, ",")
-		for _, runTarget := range allTargets {
-			//ExecCurrentPathTemplate(runTarget)
-			ExecPathFile(path+DefaultExecYaml, runTarget)
-		}*/
 	RunTargets(targets)
 }
 
