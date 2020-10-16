@@ -34,7 +34,9 @@ jobs:
       run: go build -i -o ./bin/contxt cmd/cmd-contxt/main.go
 
     - name: Test
-      run: go test -v ./...
+      run: |
+        go test -timeout 30s github.com/swaros/contxt/context/cmdhandle -v
+        go test -timeout 30s github.com/swaros/contxt/context/systools -v
     
     - name: contxt-artifact
       uses: actions/upload-artifact@v2
