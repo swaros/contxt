@@ -115,3 +115,14 @@ func TestCase4(t *testing.T) {
 		}
 	})
 }
+
+func TestCase5(t *testing.T) {
+	caseRunner("5", t, func(t *testing.T) {
+		//contains a mutliline shell script
+		cmdhandle.RunTargets("base")
+		log := cmdhandle.GetPH("RUN.base.LOG.LAST")
+		if log != "line4" {
+			t.Error("last log entrie should not be", log)
+		}
+	})
+}

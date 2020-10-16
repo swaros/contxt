@@ -94,20 +94,23 @@ func executeTemplate(runCfg configure.RunConfig, target string) int {
 
 					// print the output by configuration
 					if script.Options.Hideout == false {
-						foreColor := defaultString(script.Options.Colorcode, colorCode)
-						bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
-						labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
+						if script.Options.Format != "" {
+							fmt.Printf(script.Options.Format, logLine)
+						} else {
+							foreColor := defaultString(script.Options.Colorcode, colorCode)
+							bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
+							labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
 
-						outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
-						if script.Options.Stickcursor {
-							fmt.Print("\033[G\033[K")
+							outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
+							if script.Options.Stickcursor {
+								fmt.Print("\033[G\033[K")
+							}
+							// prints the codeline
+							fmt.Println(labelStr, outStr)
+							if script.Options.Stickcursor {
+								fmt.Print("\033[A")
+							}
 						}
-						// prints the codeline
-						fmt.Println(labelStr, outStr)
-						if script.Options.Stickcursor {
-							fmt.Print("\033[A")
-						}
-
 					}
 					// do we found a defined reason to stop execution
 					stopReasonFound, message := checkReason(stopReason, logLine)
