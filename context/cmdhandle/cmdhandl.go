@@ -19,7 +19,8 @@ const (
 	DefaultExecFile = "/.context.json"
 
 	// DefaultExecYaml is the default yaml configuration file
-	DefaultExecYaml = "/.contxt.yml"
+	DefaultExecYaml     = "/.contxt.yml"
+	defaultExecYamlName = ".contxt.yml"
 
 	// TargetScript is script default target
 	TargetScript = "script"
@@ -38,15 +39,11 @@ const (
 )
 
 // ExecuteTemplateWorker runs ExecCurrentPathTemplate in context of a waitgroup
-func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, path string) {
+func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, target string, templatePath string) {
 	defer waitGroup.Done()
-	ExecCurrentPathTemplate(path)
-}
+	//ExecCurrentPathTemplate(path)
+	ExecPathFile(templatePath, target)
 
-// ExecuteWorker runs ExecuteScriptLine in context of a waitgroup
-func ExecuteWorker(waitGroup *sync.WaitGroup, ShellToUse string, command string, callback func(string) bool, startInfo func(*os.Process)) {
-	defer waitGroup.Done()
-	ExecuteScriptLine(ShellToUse, command, callback, startInfo)
 }
 
 // ExecuteScriptLine executes a simple shell script
@@ -96,28 +93,6 @@ func WriteTemplate() {
 	err := ioutil.WriteFile(path, []byte(demoContent), 0644)
 	if err != nil {
 		fmt.Println(err)
-	}
-}
-
-// ExecCurrentPathTemplate looks for template in current folder and executes them if exists
-func ExecCurrentPathTemplate(target string) {
-	execCurrentYaml(target)
-}
-
-func execCurrentYaml(target string) {
-	dir, error := dirhandle.Current()
-	if error != nil {
-		fmt.Println("error getting current directory")
-		return
-	}
-	var path = dir + DefaultExecYaml
-	already, errEx := dirhandle.Exists(path)
-	if errEx != nil {
-		fmt.Println("error ", errEx)
-		return
-	}
-	if already {
-		ExecPathFile(path, target)
 	}
 }
 

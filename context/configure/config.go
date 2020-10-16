@@ -20,6 +20,8 @@ const (
 	DefaultPath = "/.contxt/"
 	// DefaultWorkspace this is the main configuration workspace
 	DefaultWorkspace = "default"
+	// MirrorPath path for local mirror
+	MirrorPath = "mirror/"
 )
 
 // Config is the the current used configuration

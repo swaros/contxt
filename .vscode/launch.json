@@ -41,13 +41,13 @@
             "args": ["run", "-all-paths","-target=java"]
         },
         {
-            "name": "run java target at all",
+            "name": "run test target at all",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
             "env": {},
-            "args": ["run", "-all-paths","-target=server"]
+            "args": ["run", "-all-paths","-target=test"]
         },
         {
             "name": "info",
