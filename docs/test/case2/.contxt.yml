@@ -1,0 +1,19 @@
+task:
+    - id: base
+      options:
+        displaycmd: true
+      script:
+        - "echo 'start-task-2'"
+        - "echo 'something-else'"
+      listener:
+        - trigger:
+            onoutContains:
+                - "start-task-2"
+          action:
+            target: task-2
+
+    - id: task-2
+      options:
+        displaycmd: true
+      script:
+        - "echo 'im-task-2'"

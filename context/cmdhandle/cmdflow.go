@@ -11,6 +11,15 @@ import (
 	"github.com/swaros/contxt/context/configure"
 )
 
+const (
+	// ExitOk the process was executed without errors
+	ExitOk = 0
+	// ExitByStopReason the process stopped because of a defined reason
+	ExitByStopReason = 101
+	// ExitNoCode means there was no code associated
+	ExitNoCode = 102
+)
+
 // RunTargets executes multiple targets
 func RunTargets(targets string) {
 	allTargets := strings.Split(targets, ",")
@@ -39,10 +48,11 @@ func RunTargets(targets string) {
 
 }
 
-func executeTemplate(runCfg configure.RunConfig, target string) {
+func executeTemplate(runCfg configure.RunConfig, target string) int {
+
 	colorCode := systools.CreateColorCode()
-	bgCode := systools.CreateBgColor()
-	defaultFormat := systools.GetCodeBg(bgCode) + systools.PrintColored(colorCode, systools.PadStringToR(target+" :", 8)) + systools.GetReset() + "%s\n"
+	bgCode := systools.CurrentBgColor
+	SetPH("RUN.TARGET", target)
 	for _, script := range runCfg.Task {
 		// check if we have found the target
 		if strings.EqualFold(target, script.ID) {
@@ -53,16 +63,27 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 				if script.Options.Displaycmd {
 					fmt.Println(systools.Magenta(" RUN "), systools.Teal(target), systools.White(codeLine))
 				}
-
+				panelSize := 12
+				if script.Options.Panelsize > 0 {
+					panelSize = script.Options.Panelsize
+				}
 				var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
-				ExecuteScriptLine(mainCommand, codeLine, func(logLine string) bool {
+				replacedLine := HandlePlaceHolder(codeLine)
+
+				SetPH("RUN.SCRIPT_LINE", codeLine)
+				execCode, execErr := ExecuteScriptLine(mainCommand, replacedLine, func(logLine string) bool {
+
+					SetPH("RUN."+target+".LOG.LAST", logLine)
 					// the watcher
 					if script.Listener != nil {
 						for _, listener := range script.Listener {
 							listenReason := configure.StopReasons(listener.Trigger)
 							triggerFound, triggerMessage := checkReason(listenReason, logLine)
 							if triggerFound {
-								fmt.Println(systools.Magenta("\tlistener hit"), systools.Yellow(triggerMessage), logLine)
+								SetPH("RUN."+target+".LOG.HIT", logLine)
+								if script.Options.Displaycmd {
+									fmt.Println(systools.Magenta("\tlistener hit"), systools.Yellow(triggerMessage), logLine)
+								}
 								actionDef := configure.Action(listener.Action)
 								if actionDef.Target != "" {
 									go executeTemplate(runCfg, actionDef.Target)
@@ -73,29 +94,53 @@ func executeTemplate(runCfg configure.RunConfig, target string) {
 
 					// print the output by configuration
 					if script.Options.Hideout == false {
+						if script.Options.Format != "" {
+							fmt.Printf(script.Options.Format, logLine)
+						} else {
+							foreColor := defaultString(script.Options.Colorcode, colorCode)
+							bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
+							labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
 
-						//fmt.Printf(defaultString(script.Options.Format, defaultFormat), systools.White(logLine))
-						fmt.Printf(defaultString(script.Options.Format, defaultFormat), systools.PrintColored(colorCode, logLine))
-
+							outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
+							if script.Options.Stickcursor {
+								fmt.Print("\033[G\033[K")
+							}
+							// prints the codeline
+							fmt.Println(labelStr, outStr)
+							if script.Options.Stickcursor {
+								fmt.Print("\033[A")
+							}
+						}
 					}
 					// do we found a defined reason to stop execution
 					stopReasonFound, message := checkReason(stopReason, logLine)
 					if stopReasonFound {
 						if script.Options.Displaycmd {
-							fmt.Println(systools.Teal(" HIT "), systools.Info(message))
+							fmt.Println(systools.Magenta(" STOP-HIT "), systools.Info(message))
 						}
 						return false
 					}
 					return true
 				}, func(process *os.Process) {
+					pidStr := fmt.Sprintf("%d", process.Pid)
+					SetPH("RUN.PID", pidStr)
+					SetPH("RUN."+target+".PID", pidStr)
 					if script.Options.Displaycmd {
 						fmt.Println(systools.Magenta(" PID "), systools.Teal(process.Pid))
 					}
 				})
+				if execErr != nil {
+					fmt.Println(systools.Warn(execErr))
+				}
+				if execCode == ExitByStopReason {
+					return ExitByStopReason
+				}
 			}
+			return ExitOk
 		}
 
 	}
+	return ExitNoCode
 }
 
 func defaultString(line string, defaultString string) string {

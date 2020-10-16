@@ -24,3 +24,18 @@ func TestPrintColored(t *testing.T) {
 		t.Error("unexpected output format ", colored)
 	}
 }
+
+func TestPrintColoredChanges(t *testing.T) {
+	for i := 0; i < 40; i++ {
+		var last string
+		colorCode := systools.CreateColorCode()
+
+		if i > 1 {
+			if last == colorCode {
+				t.Error("colorcode is the same again", colorCode, "prevoius", last)
+			}
+		}
+		last = colorCode
+	}
+	
+}

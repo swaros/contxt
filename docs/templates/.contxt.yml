@@ -1,5 +1,5 @@
 config:
-  sequencially: true
+  sequencially: true  
 task:
     - id: script
       stopreasons:
@@ -11,6 +11,10 @@ task:
           - fatal
       options:
         format: "log: %s\n"
+        stickcursor: false
+        colorcode: "97"
+        bgcolorcode: "44"
+        panelsize: 20
         displaycmd: true
         hideout: false
         maincmd: bash

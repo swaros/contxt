@@ -6,3 +6,13 @@ install-local: build
 
 clean:
 	rm -f ./bin/contxt
+
+test-all:
+	go test -v ./...
+
+test:
+	go test -timeout 30s github.com/swaros/contxt/context/cmdhandle -v
+	go test -timeout 30s github.com/swaros/contxt/context/systools -v
+
+info: build
+	./bin/contxt dir -info

@@ -1,0 +1,9 @@
+config:
+    sequencially: false  
+task:
+    - id: test1
+      script:
+        - "pwd"
+    - id: test2
+      script:
+        - "echo 'runs'"

@@ -2,8 +2,16 @@ package systools
 
 import (
 	"fmt"
-	"math/rand"
 )
+
+var lastUsedColor = 2
+var lastUsedBgColor = 4
+
+// CurrentColor current used foreground color
+var CurrentColor = "36"
+
+// CurrentBgColor current used background color
+var CurrentBgColor = "40"
 
 var colorCodes = map[int]string{
 	0:  "31",
@@ -41,24 +49,44 @@ var colorBgCodes = map[int]string{
 	14: "106",
 }
 
+// LabelColor contains fore and background color
+type LabelColor struct {
+	Color   string
+	BgColor string
+}
+
 // CreateColor defines a random color and returns a id
 func CreateColor() string {
-	rand.Seed(2)
-	colorNumber := rand.Intn(len(colorCodes))
-	return colorFormatNumber(colorCodes[colorNumber])
+	CreateColorCode()
+	return colorFormatNumber(colorCodes[lastUsedColor])
 }
 
 // CreateBgColor defines a random color and returns a id
 func CreateBgColor() string {
-	rand.Seed(4)
-	colorNumber := rand.Intn(len(colorBgCodes))
-	return colorBgCodes[colorNumber]
+	CreateBgColorCode()
+	return colorBgCodes[lastUsedBgColor]
 }
 
 // CreateColorCode returns the colorcode by a random number
 func CreateColorCode() string {
-	colorNumber := rand.Intn(len(colorCodes))
-	return colorCodes[colorNumber]
+	lastUsedColor++
+	if lastUsedColor >= len(colorCodes) {
+		lastUsedColor = 0
+		CreateBgColor()
+	}
+	CurrentColor = colorCodes[lastUsedColor]
+	return CurrentColor
+}
+
+// CreateBgColorCode returns the colorcode by a random number
+func CreateBgColorCode() string {
+	lastUsedBgColor++
+	if lastUsedBgColor >= len(colorBgCodes) {
+		lastUsedBgColor = 0
+	}
+
+	CurrentBgColor = colorBgCodes[lastUsedBgColor]
+	return CurrentBgColor
 }
 
 func colorFormatNumber(code string) string {
@@ -94,6 +122,12 @@ func GetCodeBg(code string) string {
 	return "\033[" + code + "m"
 }
 
+func getCodeFg(code string) string {
+
+	return "\033[1;" + code + "m"
+
+}
+
 // GetDefaultBg Get the Default Background
 func GetDefaultBg() string {
 	return "\033[49m"
@@ -102,6 +136,31 @@ func GetDefaultBg() string {
 // GetReset gets the reset code
 func GetReset() string {
 	return "\033[0m"
+}
+
+// ResetColors resets terminal colors
+// if print false you get the ansi code only
+func ResetColors(print bool) string {
+	if print {
+		fmt.Print(GetReset(), GetDefaultBg())
+	}
+	return GetReset() + GetDefaultBg()
+}
+
+// LabelPrint prints message by using current fore and background
+func LabelPrint(message string, attribute int) string {
+
+	//outstr := fmt.Sprintf("\033[%s;%sm%s\033[0m", currentColor, currentBgColor, message)
+	outstr := fmt.Sprintf("\033[%d;%s;%sm %s \033[0m", attribute, CurrentBgColor, CurrentColor, message)
+	return outstr
+}
+
+// LabelPrintWithArg prints message by using current fore and background
+func LabelPrintWithArg(message string, fg string, bg string, attribute int) string {
+
+	//outstr := fmt.Sprintf("\033[%s;%sm%s\033[0m", currentColor, currentBgColor, message)
+	outstr := fmt.Sprintf("\033[%d;%s;%sm %s \033[0m", attribute, fg, bg, message)
+	return outstr
 }
 
 // PadString Returns max len string filled with spaces
@@ -131,3 +190,17 @@ func PadStringToR(line string, max int) string {
 	}
 	return line
 }
+
+/*
+// TestPrintColoredChanges is for testing the color formats
+func TestPrintColoredChanges() {
+	for i := 0; i < 500; i++ {
+		CreateColorCode()
+		//outpt := PrintColored(colorCode, "test ["+colorCode+"] last ("+lastCode+")")
+		labelOut := LabelPrint("\t label print ", 2)
+		fmt.Println(labelOut, "\t", currentColor, currentBgColor)
+
+	}
+	ResetColors(true)
+}
+*/

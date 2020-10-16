@@ -50,7 +50,7 @@ func ExecuteWorker(waitGroup *sync.WaitGroup, ShellToUse string, command string,
 }
 
 // ExecuteScriptLine executes a simple shell script
-func ExecuteScriptLine(ShellToUse string, command string, callback func(string) bool, startInfo func(*os.Process)) error {
+func ExecuteScriptLine(ShellToUse string, command string, callback func(string) bool, startInfo func(*os.Process)) (int, error) {
 	cmd := exec.Command(ShellToUse, "-c", command)
 	stdoutPipe, _ := cmd.StdoutPipe()
 	err := cmd.Start()
@@ -62,12 +62,12 @@ func ExecuteScriptLine(ShellToUse string, command string, callback func(string) 
 		keepRunning := callback(m)
 		if keepRunning == false {
 			cmd.Process.Kill()
-			return err
+			return ExitByStopReason, err
 		}
 
 	}
 	cmd.Wait()
-	return err
+	return ExitOk, err
 }
 
 // WriteTemplate create path based execution file
@@ -140,8 +140,9 @@ func ExecPathFile(path string, target string) {
 
 		if err != nil {
 			fmt.Println("error:", err)
+		} else {
+			executeTemplate(template, target)
 		}
-		executeTemplate(template, target)
 	}
 }
 
