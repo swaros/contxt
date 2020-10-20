@@ -182,6 +182,7 @@ func PathWorker(callback func(int, string)) {
 		return
 	}
 	for index, path := range Config.Paths {
+		os.Chdir(path)
 		callback(index, path)
 	}
 }

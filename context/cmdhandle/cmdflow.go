@@ -18,6 +18,8 @@ const (
 	ExitByStopReason = 101
 	// ExitNoCode means there was no code associated
 	ExitNoCode = 102
+	// ExitCmdError means the execution of the command fails. a error by the command itself
+	ExitCmdError = 103
 )
 
 // RunTargets executes multiple targets
@@ -30,26 +32,31 @@ func RunTargets(targets string) {
 		runSequencially = template.Config.Sequencially
 	}
 
+	var wg sync.WaitGroup
 	if runSequencially == false {
 		// run in thread
-		var wg sync.WaitGroup
+		fmt.Println("thread runmode")
 		for _, runTarget := range allTargets {
 			wg.Add(1)
-			go ExecuteTemplateWorker(&wg, runTarget, templatePath)
+			go ExecuteTemplateWorker(&wg, true, runTarget, templatePath)
 		}
 		wg.Wait()
-
 	} else {
 		// trun one by one
+		fmt.Println("Sequencially runmode")
 		for _, runTarget := range allTargets {
 			//ExecCurrentPathTemplate(runTarget)
-			ExecPathFile(templatePath, runTarget)
+			ExecPathFile(&wg, false, templatePath, runTarget)
 		}
 	}
-
+	fmt.Println("done target run")
 }
 
-func executeTemplate(runCfg configure.RunConfig, target string) int {
+func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string) int {
+	if useWaitGroup {
+		waitGroup.Add(1)
+		defer waitGroup.Done()
+	}
 	if len(runCfg.Task) > 0 {
 		colorCode := systools.CreateColorCode()
 		bgCode := systools.CurrentBgColor
@@ -87,7 +94,12 @@ func executeTemplate(runCfg configure.RunConfig, target string) int {
 									}
 									actionDef := configure.Action(listener.Action)
 									if actionDef.Target != "" {
-										go executeTemplate(runCfg, actionDef.Target)
+										if useWaitGroup {
+											go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+
+										} else {
+											executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+										}
 									}
 								}
 							}
@@ -133,8 +145,19 @@ func executeTemplate(runCfg configure.RunConfig, target string) int {
 					if execErr != nil {
 						fmt.Println(systools.Warn(execErr))
 					}
-					if execCode == ExitByStopReason {
+					// check execution codes
+					switch execCode {
+					case ExitByStopReason:
 						return ExitByStopReason
+					case ExitCmdError:
+						if script.Stopreasons.Onerror {
+							return ExitByStopReason
+						}
+						fmt.Println(systools.Yellow("NOTE"), "\t", "a script execution was failing. no stopreason is set so execution will continued")
+						fmt.Println("\ttarget :\t", target)
+						fmt.Println("\tcommand:\t", codeLine)
+						return ExitOk
+
 					}
 				}
 				return ExitOk

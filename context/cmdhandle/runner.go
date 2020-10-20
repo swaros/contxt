@@ -136,8 +136,10 @@ func MainExecute() {
 
 	if dirCommand.Parsed() {
 		someDirCmd := false
+
 		if *addCmd {
 			nonParams = false
+			someDirCmd = true
 			dir, err := dirhandle.Current()
 			if err == nil {
 				fmt.Println("add ", systools.Purple(dir))
@@ -229,16 +231,21 @@ func printPaths() {
 		fmt.Println(systools.White(" current workspace:"), configure.Config.CurrentSet)
 		fmt.Println(" contains paths:")
 		configure.PathWorker(func(index int, path string) {
-			template, err := GetPwdTemplate(path + DefaultExecYaml)
-			if err != nil {
-				fmt.Println(systools.Fata(err))
-			}
-			outTasks := ""
-			for _, tasks := range template.Task {
-				outTasks = outTasks + " " + tasks.ID
-			}
-			fmt.Println(systools.White("       path:"), "no", systools.Yellow(index), path, systools.White("targets"), "[", systools.Teal(outTasks), "]")
 
+			template, _, exists := GetTemplate()
+			//template, err := GetPwdTemplate(path + DefaultExecYaml)
+			/*if err != nil {
+				fmt.Println(systools.Fata(err))
+			}*/
+			if exists {
+				outTasks := ""
+				for _, tasks := range template.Task {
+					outTasks = outTasks + " " + tasks.ID
+				}
+				fmt.Println(systools.White("       path:"), "no", systools.Yellow(index), path, systools.White("targets"), "[", systools.Teal(outTasks), "]")
+			} else {
+				fmt.Println(systools.White("       path:"), "no", systools.Yellow(index), path)
+			}
 		})
 		fmt.Println()
 		fmt.Println(" targets can be executes by ", systools.Teal("run -target <targetname>"), "(for the current directory)")

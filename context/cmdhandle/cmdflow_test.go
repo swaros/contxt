@@ -126,3 +126,32 @@ func TestCase5(t *testing.T) {
 		}
 	})
 }
+
+// testing the thread run. do we wait for the subjobs also if they run longer then then main Task?
+func TestCase6(t *testing.T) {
+	caseRunner("6", t, func(t *testing.T) {
+		cmdhandle.RunTargets("base")
+		log := cmdhandle.GetPH("RUN.sub.LOG.LAST")
+		if log != "sub-end" {
+			t.Error("failed wait for ending subrun. last log entrie should be 'sub-end' got [", log, "] instead")
+		}
+
+	})
+}
+
+// testing error handling by script fails
+func TestCase7(t *testing.T) {
+	caseRunner("7", t, func(t *testing.T) {
+		cmdhandle.RunTargets("base")
+		logMain := cmdhandle.GetPH("RUN.base.LOG.LAST")
+		if logMain != "done-main" {
+			t.Error("last runstep should be excuted. but stopped on:", logMain)
+		}
+
+		log := cmdhandle.GetPH("RUN.sub.LOG.LAST")
+		if log == "sub-end" {
+			t.Error("the script runs without erros, but hey have an error. script have to stop")
+		}
+
+	})
+}
