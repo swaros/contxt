@@ -78,7 +78,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
 					replacedLine := HandlePlaceHolder(codeLine)
 
-					SetPH("RUN.SCRIPT_LINE", codeLine)
+					SetPH("RUN.SCRIPT_LINE", replacedLine)
 					execCode, execErr := ExecuteScriptLine(mainCommand, replacedLine, func(logLine string) bool {
 
 						SetPH("RUN."+target+".LOG.LAST", logLine)
