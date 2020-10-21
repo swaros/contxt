@@ -11,8 +11,6 @@ import (
 	"github.com/swaros/contxt/context/systools"
 )
 
-const version = "0.0.2-alpha"
-
 // MainExecute runs main. parsing flags
 func MainExecute() {
 
@@ -267,7 +265,8 @@ func runTargets(path string, targets string) {
 }
 
 func printOutHeader() {
-	fmt.Println(systools.White("contxt"), version)
+	fmt.Println(systools.White("cont(e)xt"), configure.GetVersion())
+	fmt.Println(" build-no [", configure.GetBuild(), "]")
 }
 
 func printInfo() {
