@@ -63,6 +63,7 @@ func ChangeWorkspace(workspace string) {
 		fmt.Println(err)
 	}
 	SaveDefaultConfiguration(true)
+	fmt.Println("current workspace is now:", systools.Green(workspace))
 }
 
 // RemoveWorkspace removes a workspace

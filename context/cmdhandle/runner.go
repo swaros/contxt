@@ -56,9 +56,13 @@ func MainExecute() {
 	case "run":
 		scriptCommand.Parse(os.Args[2:])
 	default:
-		fmt.Println("unexpected command ", systools.Yellow(os.Args[1]))
-		flag.PrintDefaults()
-		os.Exit(1)
+		foundATask := doMagicParamOne(os.Args[1])
+		if !foundATask {
+			fmt.Println("unexpected command ", systools.Yellow(os.Args[1]))
+			flag.PrintDefaults()
+			os.Exit(1)
+		}
+
 	}
 
 	if scriptCommand.Parsed() {
@@ -128,9 +132,18 @@ func MainExecute() {
 			}
 			fmt.Println(" ...")
 		}
+		// non defined commands found. check shortcuts
 		if someRunCmd == false {
-			printOutHeader()
-			scriptCommand.PrintDefaults()
+			shrtcut := false
+			if len(os.Args) > 2 {
+				shrtcut = doRunShortCuts(os.Args[2])
+			}
+			if !shrtcut {
+				printOutHeader()
+				fmt.Println("to run a single target you can just type ", systools.White("contxt run <target-name>"))
+				fmt.Println()
+				scriptCommand.PrintDefaults()
+			}
 		}
 	}
 
@@ -210,6 +223,45 @@ func MainExecute() {
 	}
 }
 
+func doMagicParamOne(param string) bool {
+	result := false
+	// param is a workspace ?
+	configure.WorkSpaces(func(ws string) {
+		if param == ws {
+			configure.ChangeWorkspace(ws)
+			result = true
+		}
+	})
+	if !result {
+		fmt.Println(systools.Teal(param), "is not a workspace")
+	}
+	return result
+}
+
+func doRunShortCuts(param string) bool {
+	result := false
+	template, _, exists := GetTemplate()
+	if exists {
+		for _, tasks := range template.Task {
+			if tasks.ID == param {
+				path, _ := dirhandle.Current()
+				runTargets(path, tasks.ID)
+				result = true
+			}
+		}
+	}
+	if !result {
+		fmt.Println("\t", systools.Yellow(param), "is not a valid task.")
+		fmt.Println("\t", systools.White("these are the tasks they can be used as shortcut together with run"))
+		for _, tasks := range template.Task {
+			fmt.Println("\t\t", tasks.ID)
+		}
+	}
+	fmt.Println()
+
+	return result
+}
+
 func runTargets(path string, targets string) {
 	RunTargets(targets)
 }
@@ -233,10 +285,6 @@ func printPaths() {
 		configure.PathWorker(func(index int, path string) {
 
 			template, _, exists := GetTemplate()
-			//template, err := GetPwdTemplate(path + DefaultExecYaml)
-			/*if err != nil {
-				fmt.Println(systools.Fata(err))
-			}*/
 			if exists {
 				outTasks := ""
 				for _, tasks := range template.Task {

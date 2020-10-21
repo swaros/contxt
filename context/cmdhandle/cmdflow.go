@@ -69,7 +69,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 
 				for _, codeLine := range script.Script {
 					if script.Options.Displaycmd {
-						fmt.Println(systools.Magenta(" RUN "), systools.Teal(target), systools.White(codeLine))
+						fmt.Println(systools.Yellow(" [cmd] "), systools.Teal(target), systools.White(codeLine))
 					}
 					panelSize := 12
 					if script.Options.Panelsize > 0 {
@@ -139,7 +139,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						SetPH("RUN.PID", pidStr)
 						SetPH("RUN."+target+".PID", pidStr)
 						if script.Options.Displaycmd {
-							fmt.Println(systools.Magenta(" PID "), systools.Teal(process.Pid))
+							fmt.Println(systools.Yellow(" [pid] "), systools.Teal(process.Pid))
 						}
 					})
 					if execErr != nil {
