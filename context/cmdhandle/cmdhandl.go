@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"sync"
+	"syscall"
 
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
@@ -19,7 +21,8 @@ const (
 	DefaultExecFile = "/.context.json"
 
 	// DefaultExecYaml is the default yaml configuration file
-	DefaultExecYaml = "/.contxt.yml"
+	DefaultExecYaml     = "/.contxt.yml"
+	defaultExecYamlName = ".contxt.yml"
 
 	// TargetScript is script default target
 	TargetScript = "script"
@@ -38,24 +41,31 @@ const (
 )
 
 // ExecuteTemplateWorker runs ExecCurrentPathTemplate in context of a waitgroup
-func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, path string) {
-	defer waitGroup.Done()
-	ExecCurrentPathTemplate(path)
-}
+func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, useWaitGroup bool, target string, templatePath string) {
+	if useWaitGroup {
+		defer waitGroup.Done()
+	}
+	//ExecCurrentPathTemplate(path)
+	ExecPathFile(waitGroup, useWaitGroup, templatePath, target)
 
-// ExecuteWorker runs ExecuteScriptLine in context of a waitgroup
-func ExecuteWorker(waitGroup *sync.WaitGroup, ShellToUse string, command string, callback func(string) bool, startInfo func(*os.Process)) {
-	defer waitGroup.Done()
-	ExecuteScriptLine(ShellToUse, command, callback, startInfo)
 }
 
 // ExecuteScriptLine executes a simple shell script
 func ExecuteScriptLine(ShellToUse string, command string, callback func(string) bool, startInfo func(*os.Process)) (int, error) {
+
 	cmd := exec.Command(ShellToUse, "-c", command)
+
 	stdoutPipe, _ := cmd.StdoutPipe()
+	cmd.Stderr = cmd.Stdout
+
 	err := cmd.Start()
+	if err != nil {
+		return ExitCmdError, err
+	}
+
 	startInfo(cmd.Process)
 	scanner := bufio.NewScanner(stdoutPipe)
+
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
 		m := scanner.Text()
@@ -66,7 +76,26 @@ func ExecuteScriptLine(ShellToUse string, command string, callback func(string) 
 		}
 
 	}
-	cmd.Wait()
+	err = cmd.Wait()
+	if err != nil {
+
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			// The program has exited with an exit code != 0
+
+			// This works on both Unix and Windows. Although package
+			// syscall is generally platform dependent, WaitStatus is
+			// defined for both Unix and Windows and in both cases has
+			// an ExitStatus() method with the same signature.
+			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				log.Printf("Exit Status reported: %d", status.ExitStatus())
+			}
+
+		} else {
+			log.Printf("execution error: %v", err)
+		}
+		return ExitCmdError, err
+	}
+
 	return ExitOk, err
 }
 
@@ -99,30 +128,8 @@ func WriteTemplate() {
 	}
 }
 
-// ExecCurrentPathTemplate looks for template in current folder and executes them if exists
-func ExecCurrentPathTemplate(target string) {
-	execCurrentYaml(target)
-}
-
-func execCurrentYaml(target string) {
-	dir, error := dirhandle.Current()
-	if error != nil {
-		fmt.Println("error getting current directory")
-		return
-	}
-	var path = dir + DefaultExecYaml
-	already, errEx := dirhandle.Exists(path)
-	if errEx != nil {
-		fmt.Println("error ", errEx)
-		return
-	}
-	if already {
-		ExecPathFile(path, target)
-	}
-}
-
 // ExecPathFile executes the default exec file
-func ExecPathFile(path string, target string) {
+func ExecPathFile(waitGroup *sync.WaitGroup, useWaitGroup bool, path string, target string) {
 	existing, fileerror := dirhandle.Exists(path)
 	if fileerror != nil {
 		fmt.Println("filecheck error: ", fileerror)
@@ -141,7 +148,7 @@ func ExecPathFile(path string, target string) {
 		if err != nil {
 			fmt.Println("error:", err)
 		} else {
-			executeTemplate(template, target)
+			executeTemplate(waitGroup, useWaitGroup, template, target)
 		}
 	}
 }

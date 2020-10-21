@@ -33,7 +33,7 @@ func TestGetTemplate(t *testing.T) {
 		t.Error(derr)
 	}
 	os.Chdir("./../../docs/test/case0")
-	template, exists := cmdhandle.GetTemplate()
+	template, _, exists := cmdhandle.GetTemplate()
 	if !exists {
 		t.Error("could not found the test template file")
 	} else {

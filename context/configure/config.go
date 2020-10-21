@@ -20,6 +20,8 @@ const (
 	DefaultPath = "/.contxt/"
 	// DefaultWorkspace this is the main configuration workspace
 	DefaultWorkspace = "default"
+	// MirrorPath path for local mirror
+	MirrorPath = "mirror/"
 )
 
 // Config is the the current used configuration
@@ -61,6 +63,7 @@ func ChangeWorkspace(workspace string) {
 		fmt.Println(err)
 	}
 	SaveDefaultConfiguration(true)
+	fmt.Println("current workspace is now:", systools.Green(workspace))
 }
 
 // RemoveWorkspace removes a workspace
@@ -180,6 +183,7 @@ func PathWorker(callback func(int, string)) {
 		return
 	}
 	for index, path := range Config.Paths {
+		os.Chdir(path)
 		callback(index, path)
 	}
 }

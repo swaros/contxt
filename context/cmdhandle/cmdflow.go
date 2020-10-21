@@ -18,127 +18,152 @@ const (
 	ExitByStopReason = 101
 	// ExitNoCode means there was no code associated
 	ExitNoCode = 102
+	// ExitCmdError means the execution of the command fails. a error by the command itself
+	ExitCmdError = 103
 )
 
 // RunTargets executes multiple targets
 func RunTargets(targets string) {
 	allTargets := strings.Split(targets, ",")
-	template, exists := GetTemplate()
+	template, templatePath, exists := GetTemplate()
 
 	var runSequencially = false
 	if exists {
 		runSequencially = template.Config.Sequencially
 	}
 
+	var wg sync.WaitGroup
 	if runSequencially == false {
 		// run in thread
-		var wg sync.WaitGroup
+		fmt.Println("thread runmode")
 		for _, runTarget := range allTargets {
 			wg.Add(1)
-			go ExecuteTemplateWorker(&wg, runTarget)
+			go ExecuteTemplateWorker(&wg, true, runTarget, templatePath)
 		}
 		wg.Wait()
-
 	} else {
 		// trun one by one
+		fmt.Println("Sequencially runmode")
 		for _, runTarget := range allTargets {
-			ExecCurrentPathTemplate(runTarget)
+			//ExecCurrentPathTemplate(runTarget)
+			ExecPathFile(&wg, false, templatePath, runTarget)
 		}
 	}
-
+	fmt.Println("done target run")
 }
 
-func executeTemplate(runCfg configure.RunConfig, target string) int {
+func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string) int {
+	if useWaitGroup {
+		waitGroup.Add(1)
+		defer waitGroup.Done()
+	}
+	if len(runCfg.Task) > 0 {
+		colorCode := systools.CreateColorCode()
+		bgCode := systools.CurrentBgColor
+		SetPH("RUN.TARGET", target)
+		for _, script := range runCfg.Task {
+			// check if we have found the target
+			if strings.EqualFold(target, script.ID) {
+				// convert to stopReason struct
+				stopReason := configure.StopReasons(script.Stopreasons)
 
-	colorCode := systools.CreateColorCode()
-	bgCode := systools.CurrentBgColor
-	SetPH("RUN.TARGET", target)
-	for _, script := range runCfg.Task {
-		// check if we have found the target
-		if strings.EqualFold(target, script.ID) {
-			// convert to stopReason struct
-			stopReason := configure.StopReasons(script.Stopreasons)
-
-			for _, codeLine := range script.Script {
-				if script.Options.Displaycmd {
-					fmt.Println(systools.Magenta(" RUN "), systools.Teal(target), systools.White(codeLine))
-				}
-				panelSize := 12
-				if script.Options.Panelsize > 0 {
-					panelSize = script.Options.Panelsize
-				}
-				var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
-				replacedLine := HandlePlaceHolder(codeLine)
-
-				SetPH("RUN.SCRIPT_LINE", codeLine)
-				execCode, execErr := ExecuteScriptLine(mainCommand, replacedLine, func(logLine string) bool {
-
-					SetPH("RUN."+target+".LOG.LAST", logLine)
-					// the watcher
-					if script.Listener != nil {
-						for _, listener := range script.Listener {
-							listenReason := configure.StopReasons(listener.Trigger)
-							triggerFound, triggerMessage := checkReason(listenReason, logLine)
-							if triggerFound {
-								SetPH("RUN."+target+".LOG.HIT", logLine)
-								if script.Options.Displaycmd {
-									fmt.Println(systools.Magenta("\tlistener hit"), systools.Yellow(triggerMessage), logLine)
-								}
-								actionDef := configure.Action(listener.Action)
-								if actionDef.Target != "" {
-									go executeTemplate(runCfg, actionDef.Target)
-								}
-							}
-						}
-					}
-
-					// print the output by configuration
-					if script.Options.Hideout == false {
-						if script.Options.Format != "" {
-							fmt.Printf(script.Options.Format, logLine)
-						} else {
-							foreColor := defaultString(script.Options.Colorcode, colorCode)
-							bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
-							labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
-
-							outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
-							if script.Options.Stickcursor {
-								fmt.Print("\033[G\033[K")
-							}
-							// prints the codeline
-							fmt.Println(labelStr, outStr)
-							if script.Options.Stickcursor {
-								fmt.Print("\033[A")
-							}
-						}
-					}
-					// do we found a defined reason to stop execution
-					stopReasonFound, message := checkReason(stopReason, logLine)
-					if stopReasonFound {
-						if script.Options.Displaycmd {
-							fmt.Println(systools.Magenta(" STOP-HIT "), systools.Info(message))
-						}
-						return false
-					}
-					return true
-				}, func(process *os.Process) {
-					pidStr := fmt.Sprintf("%d", process.Pid)
-					SetPH("RUN.PID", pidStr)
-					SetPH("RUN."+target+".PID", pidStr)
+				for _, codeLine := range script.Script {
 					if script.Options.Displaycmd {
-						fmt.Println(systools.Magenta(" PID "), systools.Teal(process.Pid))
+						fmt.Println(systools.Yellow(" [cmd] "), systools.Teal(target), systools.White(codeLine))
 					}
-				})
-				if execErr != nil {
-					fmt.Println(systools.Warn(execErr))
-				}
-				if execCode == ExitByStopReason {
-					return ExitByStopReason
-				}
-			}
-			return ExitOk
-		}
+					panelSize := 12
+					if script.Options.Panelsize > 0 {
+						panelSize = script.Options.Panelsize
+					}
+					var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
+					replacedLine := HandlePlaceHolder(codeLine)
 
+					SetPH("RUN.SCRIPT_LINE", replacedLine)
+					execCode, execErr := ExecuteScriptLine(mainCommand, replacedLine, func(logLine string) bool {
+
+						SetPH("RUN."+target+".LOG.LAST", logLine)
+						// the watcher
+						if script.Listener != nil {
+							for _, listener := range script.Listener {
+								listenReason := configure.StopReasons(listener.Trigger)
+								triggerFound, triggerMessage := checkReason(listenReason, logLine)
+								if triggerFound {
+									SetPH("RUN."+target+".LOG.HIT", logLine)
+									if script.Options.Displaycmd {
+										fmt.Println(systools.Magenta("\tlistener hit"), systools.Yellow(triggerMessage), logLine)
+									}
+									actionDef := configure.Action(listener.Action)
+									if actionDef.Target != "" {
+										if useWaitGroup {
+											go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+
+										} else {
+											executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+										}
+									}
+								}
+							}
+						}
+
+						// print the output by configuration
+						if script.Options.Hideout == false {
+							if script.Options.Format != "" {
+								fmt.Printf(script.Options.Format, logLine)
+							} else {
+								foreColor := defaultString(script.Options.Colorcode, colorCode)
+								bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
+								labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
+
+								outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
+								if script.Options.Stickcursor {
+									fmt.Print("\033[G\033[K")
+								}
+								// prints the codeline
+								fmt.Println(labelStr, outStr)
+								if script.Options.Stickcursor {
+									fmt.Print("\033[A")
+								}
+							}
+						}
+						// do we found a defined reason to stop execution
+						stopReasonFound, message := checkReason(stopReason, logLine)
+						if stopReasonFound {
+							if script.Options.Displaycmd {
+								fmt.Println(systools.Magenta(" STOP-HIT "), systools.Info(message))
+							}
+							return false
+						}
+						return true
+					}, func(process *os.Process) {
+						pidStr := fmt.Sprintf("%d", process.Pid)
+						SetPH("RUN.PID", pidStr)
+						SetPH("RUN."+target+".PID", pidStr)
+						if script.Options.Displaycmd {
+							fmt.Println(systools.Yellow(" [pid] "), systools.Teal(process.Pid))
+						}
+					})
+					if execErr != nil {
+						fmt.Println(systools.Warn(execErr))
+					}
+					// check execution codes
+					switch execCode {
+					case ExitByStopReason:
+						return ExitByStopReason
+					case ExitCmdError:
+						if script.Stopreasons.Onerror {
+							return ExitByStopReason
+						}
+						fmt.Println(systools.Yellow("NOTE"), "\t", "a script execution was failing. no stopreason is set so execution will continued")
+						fmt.Println("\ttarget :\t", target)
+						fmt.Println("\tcommand:\t", codeLine)
+						return ExitOk
+
+					}
+				}
+				return ExitOk
+			}
+
+		}
 	}
 	return ExitNoCode
 }

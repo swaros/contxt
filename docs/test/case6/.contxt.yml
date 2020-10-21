@@ -1,0 +1,25 @@
+config:
+  sequencially: false
+task:
+  - id: base
+    options:
+      displaycmd: false
+      format: "thread-test-main:\t[%s]\n"
+    script:
+      - echo 'main'
+      - echo 'run-cmd'
+      - echo 'done-main'
+    listener:
+      - trigger:
+          onoutContains:
+            - "run-cmd"
+        action:
+          target: sub
+  - id: sub
+    options:
+      displaycmd: false
+      format: "thread-test-sub:\t[%s]\n"
+    script:
+      - echo 'sub-start'
+      - sleep 1
+      - echo 'sub-end'
