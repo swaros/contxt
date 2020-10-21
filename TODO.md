@@ -1,13 +1,32 @@
 ### Todo List
 
-#### 'contxt <some-param>' 
+---
+
+#### contxt <some-param>
 parsing param. if they are integer use it like 'conxtxt dir -i <param>'. if they are a word look for the matching parts in stored paths to get the dir
 
+##### IMPLEMENTATION
+`contxt bla` will check the workspaces. if there a workspaces exists, then it will be the same as `contxt dir -w bla`
+without the danger to create a new workspace by accident.
+if the workspace does not exists, a error will shown that this can not be used as workspace, and also that the param can't be used differently
+````shell
+contxt bla
+bla is not a workspace
+unexpected command  bla
+````
+`contxt run bla` will check for the target **bla** and executes them if exists. it is similiar to `contxt run -target bla` 
+but the short form dos not accept multiple targets. so `contxt run bla,bla2` will not work for nonof the targets, even if they exists booth.
+
+---
 
 #### mirror paths
 
 mirror paths in /home/<user>/.contxt/paths/ and look for .contxt.yml first. make an optional merge (configurable in .contxt.yml). add option -mirror to copy .contxt.yml into mirror path 
    
+##### IMPLEMENTATION
+ not yet
+ 
+----
 
 #### Requirements
 
@@ -24,8 +43,10 @@ requirements should be checked for task. requirements should check
 
 requirements have to be defined for multiple usage.
 
-
-  
+##### IMPLEMENTATION
+ not yet
+ 
+---
 
 #### varibales for placeholder block
 
@@ -57,4 +78,7 @@ config:
   variables: []
 ````
 
+##### IMPLEMENTATION
+ not yet
 
+---
