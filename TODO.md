@@ -79,6 +79,7 @@ config:
 ````
 
 ##### IMPLEMENTATION
- not yet
+
+ implemented as described. also variable values can use existing placeholders
 
 ---
