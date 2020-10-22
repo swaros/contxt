@@ -10,9 +10,10 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/swaros/contxt/context/output"
+
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
-	"github.com/swaros/contxt/context/systools"
 	"gopkg.in/yaml.v2"
 )
 
@@ -137,7 +138,7 @@ func ExecPathFile(waitGroup *sync.WaitGroup, useWaitGroup bool, path string, tar
 	}
 
 	if existing {
-		fmt.Println(systools.Purple("exec "), systools.Teal(target), systools.White(path))
+		fmt.Println(output.MessageCln(output.ForeBlue, "[exec] ", output.BoldTag, target, output.ResetBold, " ", output.ForeWhite, path))
 		file, ferr := ioutil.ReadFile(path)
 		if ferr != nil {
 			fmt.Println("file loading error: ", fileerror)

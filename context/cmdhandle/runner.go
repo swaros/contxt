@@ -6,9 +6,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/swaros/contxt/context/output"
+
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
-	"github.com/swaros/contxt/context/systools"
 )
 
 // MainExecute runs main. parsing flags
@@ -20,6 +21,7 @@ func MainExecute() {
 	}
 
 	nonParams := true
+
 	// Directory related commands
 	dirCommand := flag.NewFlagSet("dir", flag.ExitOnError)
 
@@ -43,8 +45,8 @@ func MainExecute() {
 	if len(os.Args) < 2 {
 		printOutHeader()
 		fmt.Println("not enough arguments")
-		fmt.Println(systools.White("  dir"), "\tmanaging paths in workspaces")
-		fmt.Println(systools.White("  run"), "\texecuting scripts in workspaces")
+		fmt.Println(output.MessageCln(output.ForeWhite, "  dir", output.ForeLightCyan, "\tmanaging paths in workspaces"))
+		fmt.Println(output.MessageCln(output.ForeWhite, "  run", output.ForeLightCyan, "\texecuting scripts in workspaces"))
 		os.Exit(1)
 	}
 
@@ -56,7 +58,7 @@ func MainExecute() {
 	default:
 		foundATask := doMagicParamOne(os.Args[1])
 		if !foundATask {
-			fmt.Println("unexpected command ", systools.Yellow(os.Args[1]))
+			fmt.Println(output.MessageCln("unexpected command ", output.ForeLightCyan, os.Args[1]))
 			flag.PrintDefaults()
 			os.Exit(1)
 		}
@@ -104,7 +106,7 @@ func MainExecute() {
 			var errorCount = 0
 			if err == nil {
 				configure.PathWorker(func(index int, path string) {
-					fmt.Print(systools.Purple("execute on "), systools.White(path))
+					fmt.Print(output.MessageCln("execute on ", output.ForeWhite, path))
 					os.Chdir(path)
 					_, err := ExecuteScriptLine("bash", *execute, func(output string) bool {
 						fmt.Println(output)
@@ -114,19 +116,19 @@ func MainExecute() {
 					})
 					if err != nil {
 						errorCount++
-						fmt.Println("\t", systools.Red(" Error:"), err)
+						fmt.Println(output.MessageCln("\t", output.ForeRed, " Error:", err))
 					} else {
-						fmt.Println(systools.Green(" OK"))
+						fmt.Println(output.MessageCln(output.ForeGreen, " OK"))
 						successCount++
 					}
 				})
 			}
 			fmt.Print("execution done. ")
 			if errorCount > 0 {
-				fmt.Print(systools.Red(errorCount), " errors ")
+				fmt.Print(output.MessageCln(output.ForeRed, errorCount, output.ForeWhite, " errors "))
 			}
 			if successCount > 0 {
-				fmt.Print(systools.Green(successCount), " successfully ")
+				fmt.Print(output.MessageCln(output.ForeGreen, successCount, output.ForeWhite, " successes "))
 			}
 			fmt.Println(" ...")
 		}
@@ -138,7 +140,7 @@ func MainExecute() {
 			}
 			if !shrtcut {
 				printOutHeader()
-				fmt.Println("to run a single target you can just type ", systools.White("contxt run <target-name>"))
+				fmt.Println(output.MessageCln("to run a single target you can just type ", output.ForeWhite, "contxt run <target-name>"))
 				fmt.Println()
 				scriptCommand.PrintDefaults()
 			}
@@ -153,7 +155,7 @@ func MainExecute() {
 			someDirCmd = true
 			dir, err := dirhandle.Current()
 			if err == nil {
-				fmt.Println("add ", systools.Purple(dir))
+				fmt.Println(output.MessageCln("add ", output.ForeBlue, dir))
 				configure.AddPath(dir)
 				configure.SaveDefaultConfiguration(true)
 			}
@@ -195,14 +197,14 @@ func MainExecute() {
 		if *showPaths == true {
 			someDirCmd = true
 			nonParams = false
-			fmt.Println("\t", "paths stored in ", systools.Green(configure.Config.CurrentSet))
+			fmt.Println(output.MessageCln("\t", "paths stored in ", output.ForeCyan, configure.Config.CurrentSet))
 			dir, err := dirhandle.Current()
 			if err == nil {
 				count := configure.ShowPaths(dir)
 				if count > 0 {
 					fmt.Println()
-					fmt.Println("\t", "to change directory depending stored path you can write", systools.Purple("cd $(", os.Args[0], " -i ", count-1, ")"), "in bash")
-					fmt.Println("\t", "this will be the same as ", systools.Magenta("cd ", dirhandle.GetDir(count-1)))
+					fmt.Println(output.MessageCln("\t", "to change directory depending stored path you can write ", output.BoldTag, "cd $(", os.Args[0], " -i ", count-1, ")", output.CleanTag, " in bash"))
+					fmt.Println(output.MessageCln("\t", "this will be the same as ", output.BoldTag, "cd ", dirhandle.GetDir(count-1)))
 				}
 			}
 
@@ -231,7 +233,7 @@ func doMagicParamOne(param string) bool {
 		}
 	})
 	if !result {
-		fmt.Println(systools.Teal(param), "is not a workspace")
+		fmt.Println(output.MessageCln(output.BoldTag, param, output.ResetBold, " is not a workspace"))
 	}
 	return result
 }
@@ -249,8 +251,9 @@ func doRunShortCuts(param string) bool {
 		}
 	}
 	if !result {
-		fmt.Println("\t", systools.Yellow(param), "is not a valid task.")
-		fmt.Println("\t", systools.White("these are the tasks they can be used as shortcut together with run"))
+		fmt.Println(output.MessageCln(output.BoldTag, param, output.CleanTag, " is not a valid task"))
+
+		fmt.Println("\t", "these are the tasks they can be used as shortcut together with run")
 		for _, tasks := range template.Task {
 			fmt.Println("\t\t", tasks.ID)
 		}
@@ -265,8 +268,8 @@ func runTargets(path string, targets string) {
 }
 
 func printOutHeader() {
-	fmt.Println(systools.White("cont(e)xt"), configure.GetVersion())
-	fmt.Println(" build-no [", configure.GetBuild(), "]")
+	fmt.Println(output.MessageCln(output.BoldTag, output.ForeWhite, "cont(e)xt ", output.CleanTag, configure.GetVersion()))
+	fmt.Println(output.MessageCln(output.Dim, " build-no [", output.ResetDim, configure.GetBuild(), output.Dim, "]"))
 }
 
 func printInfo() {
@@ -278,8 +281,9 @@ func printInfo() {
 func printPaths() {
 	dir, err := dirhandle.Current()
 	if err == nil {
-		fmt.Println(systools.White(" current directory:"), dir)
-		fmt.Println(systools.White(" current workspace:"), configure.Config.CurrentSet)
+		fmt.Println(output.MessageCln(output.ForeWhite, " current directory:", output.ForeBlue, dir))
+		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace:", output.ForeBlue, configure.Config.CurrentSet))
+
 		fmt.Println(" contains paths:")
 		configure.PathWorker(func(index int, path string) {
 
@@ -289,20 +293,20 @@ func printPaths() {
 				for _, tasks := range template.Task {
 					outTasks = outTasks + " " + tasks.ID
 				}
-				fmt.Println(systools.White("       path:"), "no", systools.Yellow(index), path, systools.White("targets"), "[", systools.Teal(outTasks), "]")
+				fmt.Println(output.MessageCln("       path:", "no", index, path, "targets", "[", outTasks, "]"))
 			} else {
-				fmt.Println(systools.White("       path:"), "no", systools.Yellow(index), path)
+				fmt.Println(output.MessageCln("       path:", "no", index, path))
 			}
 		})
 		fmt.Println()
-		fmt.Println(" targets can be executes by ", systools.Teal("run -target <targetname>"), "(for the current directory)")
-		fmt.Println(" a target can also be executed in all stored paths by ", systools.Teal("run -all-paths -target <targetname>"), "independend from current path")
+		fmt.Println(output.MessageCln(" targets can be executes by ", "run -target <targetname>", "(for the current directory)"))
+		fmt.Println(output.MessageCln(" a target can also be executed in all stored paths by ", "run -all-paths -target <targetname>", "independend from current path"))
 
 		fmt.Println()
-		fmt.Println(systools.White(" all workspaces:"), " ... change by ", systools.Teal("dir -w <workspace>"), "")
+		fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", "dir -w <workspace>", ""))
 		configure.WorkSpaces(func(name string) {
 			if name == configure.Config.CurrentSet {
-				fmt.Println("\t[", systools.White(name), "]")
+				fmt.Println(output.MessageCln("\t[", name, "]"))
 			} else {
 				fmt.Println("\t ", name)
 			}

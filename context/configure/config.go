@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/swaros/contxt/context/systools"
+	"github.com/swaros/contxt/context/output"
 )
 
 const (
@@ -63,7 +63,7 @@ func ChangeWorkspace(workspace string) {
 		fmt.Println(err)
 	}
 	SaveDefaultConfiguration(true)
-	fmt.Println("current workspace is now:", systools.Green(workspace))
+	fmt.Println(output.MessageCln("current workspace is now:", output.BackBlue, output.ForeWhite, workspace))
 }
 
 // RemoveWorkspace removes a workspace
@@ -167,10 +167,12 @@ func ShowPaths(current string) int {
 
 	PathWorker(func(index int, path string) {
 		if path == current {
-			fmt.Println("\t[", systools.Yellow(index), "]\t", path)
+
+			fmt.Println(output.MessageCln("\t[", output.BackLightBlue, output.ForeWhite, index, "]\t", path))
 		} else {
-			fmt.Println("\t ", systools.Purple(index), " \t", path)
+			fmt.Println(output.MessageCln("\t ", output.ForeLightBlue, index, output.CleanTag, " \t", path))
 		}
+
 	})
 	return len(Config.Paths)
 }
@@ -179,7 +181,7 @@ func ShowPaths(current string) int {
 func PathWorker(callback func(int, string)) {
 	cnt := len(Config.Paths)
 	if cnt < 1 {
-		fmt.Println("\t", systools.Warn("no paths actually stored"))
+		fmt.Println(output.Message("\t", output.ForeRed, "no paths actually stored"))
 		return
 	}
 	for index, path := range Config.Paths {
@@ -220,7 +222,7 @@ func getConfigPath(fileName string) (string, error) {
 // AddPath adding a path if they not already exists
 func AddPath(path string) {
 	if pathExists(path) {
-		fmt.Println(systools.Warn("\terror"), systools.Info(path), "already in set", systools.Green(Config.CurrentSet))
+		fmt.Println(output.MessageCln("\terror", output.BoldTag, path, output.ResetBold, "already in set", Config.CurrentSet))
 		return
 	}
 
