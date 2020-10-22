@@ -281,8 +281,8 @@ func printInfo() {
 func printPaths() {
 	dir, err := dirhandle.Current()
 	if err == nil {
-		fmt.Println(output.MessageCln(output.ForeWhite, " current directory:", output.ForeBlue, dir))
-		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace:", output.ForeBlue, configure.Config.CurrentSet))
+		fmt.Println(output.MessageCln(output.ForeWhite, " current directory: ", output.BoldTag, dir))
+		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace: ", output.BoldTag, configure.Config.CurrentSet))
 
 		fmt.Println(" contains paths:")
 		configure.PathWorker(func(index int, path string) {
@@ -293,9 +293,9 @@ func printPaths() {
 				for _, tasks := range template.Task {
 					outTasks = outTasks + " " + tasks.ID
 				}
-				fmt.Println(output.MessageCln("       path:", "no", index, path, "targets", "[", outTasks, "]"))
+				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", output.ForeLightBlue, path, output.CleanTag, " targets", "[", output.ForeYellow, outTasks, output.CleanTag, "]"))
 			} else {
-				fmt.Println(output.MessageCln("       path:", "no", index, path))
+				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", output.ForeLightBlue, path))
 			}
 		})
 		fmt.Println()
@@ -306,9 +306,9 @@ func printPaths() {
 		fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", "dir -w <workspace>", ""))
 		configure.WorkSpaces(func(name string) {
 			if name == configure.Config.CurrentSet {
-				fmt.Println(output.MessageCln("\t[", name, "]"))
+				fmt.Println(output.MessageCln("\t[ ", output.BoldTag, name, output.CleanTag, " ]"))
 			} else {
-				fmt.Println("\t ", name)
+				fmt.Println(output.MessageCln("\t  ", name, "   "))
 			}
 		})
 	}
