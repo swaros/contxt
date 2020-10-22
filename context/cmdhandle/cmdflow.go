@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/swaros/contxt/context/output"
+
 	"github.com/swaros/contxt/context/systools"
 
 	"github.com/swaros/contxt/context/configure"
@@ -35,7 +37,7 @@ func RunTargets(targets string) {
 	var wg sync.WaitGroup
 	if runSequencially == false {
 		// run in thread
-		fmt.Println("thread runmode")
+		fmt.Println(output.Message(output.ForeCyan, "thread runmode"), output.CleanTag)
 		for _, runTarget := range allTargets {
 			wg.Add(1)
 			go ExecuteTemplateWorker(&wg, true, runTarget, templatePath)
