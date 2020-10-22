@@ -1,5 +1,6 @@
 config:
   sequencially: false
+  coloroff: true
   variables:
     replace: hallo-welt
 task:

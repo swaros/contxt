@@ -32,6 +32,7 @@ func RunTargets(targets string) {
 	var runSequencially = false
 	if exists {
 		runSequencially = template.Config.Sequencially
+		output.ColorEnabled = !template.Config.Coloroff
 	}
 
 	var wg sync.WaitGroup

@@ -22,6 +22,7 @@ type Action struct {
 type RunConfig struct {
 	Config struct {
 		Sequencially bool              `yaml:"sequencially"`
+		Coloroff     bool              `yaml:"coloroff"`
 		Variables    map[string]string `yaml:"variables,omitempty"`
 	} `yaml:"config"`
 	Task []struct {
