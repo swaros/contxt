@@ -15,13 +15,18 @@ type Action struct {
 	Script  []string `yaml:"script"`
 }
 
+// after autogenerate todos:
+// Variables are map[string]string and contains settings for Placeholders. add yaml:"variables,omitempty
+
 // RunConfig defines the structure of the local stored execution files
 type RunConfig struct {
 	Config struct {
-		Sequencially bool `yaml:"sequencially"`
+		Sequencially bool              `yaml:"sequencially"`
+		Variables    map[string]string `yaml:"variables,omitempty"`
 	} `yaml:"config"`
 	Task []struct {
-		ID          string `yaml:"id"`
+		ID          string            `yaml:"id"`
+		Variables   map[string]string `yaml:"variables,omitempty"`
 		Stopreasons struct {
 			Onerror        bool     `yaml:"onerror"`
 			OnoutcountLess int      `yaml:"onoutcountLess"`

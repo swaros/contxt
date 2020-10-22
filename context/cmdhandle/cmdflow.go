@@ -58,12 +58,24 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 		defer waitGroup.Done()
 	}
 	if len(runCfg.Task) > 0 {
+
+		// main variables
+		for keyName, variable := range runCfg.Config.Variables {
+			SetPH(keyName, HandlePlaceHolder(variable))
+		}
+
 		colorCode := systools.CreateColorCode()
 		bgCode := systools.CurrentBgColor
 		SetPH("RUN.TARGET", target)
 		for _, script := range runCfg.Task {
 			// check if we have found the target
 			if strings.EqualFold(target, script.ID) {
+
+				// first get the task related variables
+				for keyName, variable := range script.Variables {
+					SetPH(keyName, HandlePlaceHolder(variable))
+				}
+
 				// convert to stopReason struct
 				stopReason := configure.StopReasons(script.Stopreasons)
 

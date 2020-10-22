@@ -1,0 +1,11 @@
+config:
+  sequencially: false
+  variables:
+    replace: hallo-welt
+task:
+  - id: base
+    script:
+      - echo 'main'
+      - echo 'run-cmd'
+      - echo 'done-main'
+      - echo ${replace}

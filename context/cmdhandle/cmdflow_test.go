@@ -155,3 +155,29 @@ func TestCase7(t *testing.T) {
 
 	})
 }
+
+// test variables. replace set at config variables to hallo-welt
+func TestCase8(t *testing.T) {
+	caseRunner("8", t, func(t *testing.T) {
+		cmdhandle.RunTargets("base")
+		logMain := cmdhandle.GetPH("RUN.base.LOG.LAST")
+		if logMain != "hallo-welt" {
+			t.Error("variable should be replaced. but got:", logMain)
+		}
+	})
+}
+
+// test variables. replace set at config variables to hallo-welt but then overwrittn in task to hello-world
+func TestCase9(t *testing.T) {
+	caseRunner("9", t, func(t *testing.T) {
+		cmdhandle.RunTargets("base,test2")
+		logMain := cmdhandle.GetPH("RUN.base.LOG.LAST")
+		if logMain != "hello-world" {
+			t.Error("variable should be replaced. but got:", logMain)
+		}
+		test2 := cmdhandle.GetPH("RUN.test2.LOG.LAST")
+		if test2 != "lets go" {
+			t.Error("placeholder was not used in task variables. got:", test2)
+		}
+	})
+}

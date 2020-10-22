@@ -1,7 +1,9 @@
 config:
-  sequencially: true  
+  sequencially: true
+  variables: []
 task:
     - id: script
+      variables: []
       stopreasons:
         onerror: true
         onoutcountLess: 0
