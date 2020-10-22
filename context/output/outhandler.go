@@ -65,6 +65,16 @@ var tagMap = map[string]string{
 	ForeWhite:        "97",
 }
 
+// MessageCln converts arguemnst to a fomated string and adding cleanup and newline code
+func MessageCln(a ...interface{}) string {
+	result := Message(a...)
+	needToDo := strings.Contains(result, "\033[")
+	if needToDo {
+		result = Message(result, CleanTag)
+	}
+	return result
+}
+
 // Message get the message an handle the formating of them
 func Message(a ...interface{}) string {
 	stringResult := fmt.Sprint(a...)

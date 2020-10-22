@@ -37,7 +37,7 @@ func RunTargets(targets string) {
 	var wg sync.WaitGroup
 	if runSequencially == false {
 		// run in thread
-		fmt.Println(output.Message(output.ForeCyan, "thread runmode"), output.CleanTag)
+		fmt.Println(output.MessageCln(output.ForeCyan, "thread runmode"))
 		for _, runTarget := range allTargets {
 			wg.Add(1)
 			go ExecuteTemplateWorker(&wg, true, runTarget, templatePath)
