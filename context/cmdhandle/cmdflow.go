@@ -84,16 +84,16 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				stopReason := configure.StopReasons(script.Stopreasons)
 
 				for _, codeLine := range script.Script {
-					if script.Options.Displaycmd {
-						fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, codeLine))
-					}
+
 					panelSize := 12
 					if script.Options.Panelsize > 0 {
 						panelSize = script.Options.Panelsize
 					}
 					var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
 					replacedLine := HandlePlaceHolder(codeLine)
-
+					if script.Options.Displaycmd {
+						fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, replacedLine))
+					}
 					SetPH("RUN.SCRIPT_LINE", replacedLine)
 					execCode, execErr := ExecuteScriptLine(mainCommand, replacedLine, func(logLine string) bool {
 

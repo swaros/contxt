@@ -138,7 +138,7 @@ func ExecPathFile(waitGroup *sync.WaitGroup, useWaitGroup bool, path string, tar
 	}
 
 	if existing {
-		fmt.Println(output.MessageCln(output.ForeBlue, "[exec] ", output.BoldTag, target, output.ResetBold, " ", output.ForeWhite, path))
+		fmt.Println(output.MessageCln(output.ForeBlue, "[exec] ", output.BoldTag, target, " ", output.ForeWhite, path))
 		file, ferr := ioutil.ReadFile(path)
 		if ferr != nil {
 			fmt.Println("file loading error: ", fileerror)
