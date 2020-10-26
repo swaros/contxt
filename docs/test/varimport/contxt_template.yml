@@ -1,0 +1,9 @@
+config:
+    import:
+        - "values.yaml"
+task:
+    - id: testvars
+      script:
+        - echo {{ .Names }}
+        - echo 'next'
+        - echo instance {{ .data.instance }}

@@ -1,0 +1,3 @@
+testcase:
+    imports:
+        testint: {{ .my_name}}

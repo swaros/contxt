@@ -1,0 +1,6 @@
+Names: test-run
+data:
+    instance: 1258
+template:
+    Script:
+        - "echo 'make me great again'"
