@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"text/template"
@@ -94,6 +96,79 @@ func ImportJSONFile(fileName string) (map[string]interface{}, error) {
 
 }
 
+// MergeVariableMap merges two maps
+func MergeVariableMap(mapin map[string]interface{}, maporigin map[string]interface{}) map[string]interface{} {
+	for k, v := range mapin {
+		maporigin[k] = v
+	}
+	return maporigin
+}
+
+// ImportFolders import a list of folders recusiv
+func ImportFolders(templatePath string, paths ...string) (string, error) {
+	var mapOrigin map[string]interface{}
+	mapOrigin = make(map[string]interface{})
+
+	template, terr := ImportFileContent(templatePath)
+	if terr != nil {
+		return "", terr
+	}
+
+	for _, path := range paths {
+		pathMap, parseErr := ImportFolder(path, templatePath)
+		if parseErr != nil {
+			return "", parseErr
+		}
+		mapOrigin = MergeVariableMap(pathMap, mapOrigin)
+	}
+	result, herr := HandleJSONMap(template, mapOrigin)
+	if herr != nil {
+		return "", herr
+	}
+	template = result
+
+	return template, nil
+}
+
+// ImportFolder reads folder recusiv and reads all .json, .yml and .yaml files
+func ImportFolder(path string, templatePath string) (map[string]interface{}, error) {
+
+	var mapOrigin map[string]interface{}
+	mapOrigin = make(map[string]interface{})
+
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		var jsonMap map[string]interface{}
+		var loaderr error
+		hit := false
+		if !info.IsDir() {
+			var extension = filepath.Ext(path)
+			switch extension {
+			case ".json":
+				jsonMap, loaderr = ImportJSONFile(path)
+				hit = true
+				break
+			case ".yaml", ".yml":
+				jsonMap, loaderr = ImportYAMLFile(path)
+				hit = true
+				break
+			}
+			if loaderr != nil {
+				return loaderr
+			}
+			if hit {
+				mapOrigin = MergeVariableMap(jsonMap, mapOrigin)
+			}
+		}
+
+		return nil
+	})
+
+	return mapOrigin, err
+}
+
 // ImportFileContent imports a file and returns content as string
 func ImportFileContent(filename string) (string, error) {
 	data, err := ioutil.ReadFile(filename)
@@ -156,7 +231,7 @@ func HandleJSONMap(tmpl string, m map[string]interface{}) (string, error) {
 	t := template.New("contxt-vars").Funcs(tf)
 	tt, err := t.Parse(tmpl)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	out := new(bytes.Buffer)
 	tt.Execute(out, &m)

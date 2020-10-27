@@ -97,3 +97,17 @@ func TestParseTemplateFile3(t *testing.T) {
 		t.Error("result is not matching expected result\n", result, "\n", compare, "\n short:[", result2, "]")
 	}
 }
+
+func TestFolderCheck(t *testing.T) {
+	value, err := cmdhandle.ImportFolders("../../docs/test/01template/contxt.yml", "../../docs/test/01values/")
+	if err != nil {
+		t.Error(err)
+	}
+
+	check1 := clearStrings(value)
+	compare := `config:version:1.45.06sequencially:truecoloroff:truevariables:checkApi:context.democheckName:awesometask:-id:scriptscript:-echo'hallowelt'-ls-ga-echo'tagout_1valuehello'-echo'tagout_2valueworld'listener:-trigger:onerror:trueonoutcountLess:0onoutcountMore:0onoutContains:-context.json-fatalaction:target:""stopall:falsescript:-echo'triggeredbyoutputparsing'`
+	if check1 != compare {
+		t.Error("result is not matching with expected\n", check1, "\n", compare)
+	}
+
+}

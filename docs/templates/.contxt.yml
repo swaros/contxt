@@ -2,6 +2,10 @@ config:
   sequencially: true
   coloroff: true
   variables: []
+  imports:
+    - filename.yaml
+    - /test/filename.json
+    - /check/filename.yml
 task:
     - id: script
       variables: []

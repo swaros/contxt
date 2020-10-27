@@ -24,6 +24,7 @@ type RunConfig struct {
 		Sequencially bool              `yaml:"sequencially"`
 		Coloroff     bool              `yaml:"coloroff"`
 		Variables    map[string]string `yaml:"variables,omitempty"`
+		Imports      []string          `yAML:"imports"`
 	} `yaml:"config"`
 	Task []struct {
 		ID          string            `yaml:"id"`

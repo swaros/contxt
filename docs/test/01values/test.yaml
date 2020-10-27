@@ -1,0 +1,21 @@
+apiVersion: context.demo
+name: awesome
+version: "1.45.06"
+keywords:
+  - samle out 1
+  - samle out 2
+mapcheck:
+    out_1: "hello"
+    out_2: "world"
+
+dependencies: # A list of the chart requirements (optional)
+  - name: nginx
+    version: "1.2.3"    
+    tags: # (optional)
+      - caster
+      - worker
+      - importer
+    enabled: true
+    import-values: # (optional)
+      testcase1: "check"
+      testcase2: "second"
