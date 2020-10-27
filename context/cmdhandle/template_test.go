@@ -43,3 +43,41 @@ func TestGetTemplate(t *testing.T) {
 	}
 	os.Chdir(old)
 }
+
+func TestGetVarImport(t *testing.T) {
+	caseRunner("10", t, func(t *testing.T) {
+		template, path, exists := cmdhandle.GetTemplate()
+		if !exists {
+			t.Error("could not found the test template file", path)
+		} else {
+			if template.Config.Sequencially == false {
+				t.Error("expected template.Config.Sequencially is set to false")
+			}
+			if template.Config.Coloroff == false {
+				t.Error("expected template.Config.Coloroff is set to false")
+			}
+		}
+
+		cmdhandle.RunTargets("base")
+		test1Result := cmdhandle.GetPH("RUN.test1.LOG.LAST")
+		if test1Result == "" {
+			t.Error("result 1 should not be empty.", test1Result)
+		}
+
+	})
+}
+
+// test to verfiy content that might be build in step 10
+func TestGetVarImport11(t *testing.T) {
+	caseRunner("11", t, func(t *testing.T) {
+		template, path, exists := cmdhandle.GetTemplate()
+		if !exists {
+			t.Error("could not found the test template file", path)
+		} else {
+			if template.Config.Sequencially == false {
+				t.Error("expected template.Config.Sequencially is set to false")
+			}
+		}
+
+	})
+}

@@ -15,6 +15,17 @@ type Action struct {
 	Script  []string `yaml:"script"`
 }
 
+// IncludePaths are files the defines how variables should be parsed.
+// they indludes folders they have to be parsed first so they contents
+// can be sued to proceeed with test/template.
+// otherwise the yaml file is not readable
+type IncludePaths struct {
+	Include struct {
+		Basedir bool     `yaml:"basedir"`
+		Folders []string `yaml:"folders"`
+	} `yaml:"include"`
+}
+
 // after autogenerate todos:
 // Variables are map[string]string and contains settings for Placeholders. add yaml:"variables,omitempty
 

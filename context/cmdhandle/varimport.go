@@ -124,6 +124,10 @@ func ImportFolder(path string, templatePath string) (map[string]interface{}, err
 		hit := false
 		if !info.IsDir() {
 			var extension = filepath.Ext(path)
+			var basename = filepath.Base(path)
+			if basename == ".contxt.yml" {
+				return nil
+			}
 			switch extension {
 			case ".json":
 				jsonMap, loaderr = ImportJSONFile(path)
