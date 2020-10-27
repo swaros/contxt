@@ -19,27 +19,6 @@ const (
 	startMark    = "@"
 )
 
-// Todo just for example
-type Todo struct {
-	Name        string
-	Description string
-}
-
-// Demo is just to try templates
-func Demo() string {
-	td := Todo{"test1", "test1 is replaced"}
-	t, err := template.New("todos").Parse("name: \"{{ .Name}}\" with description: \"{{ .Description}}\"")
-	if err != nil {
-		panic(err)
-	}
-	out := new(bytes.Buffer)
-	err = t.Execute(out, td)
-	if err != nil {
-		panic(err)
-	}
-	return out.String()
-}
-
 // TryParse to parse a line and set a value depending on the line command
 func TryParse(line string) bool {
 	if line[0:1] == startMark {
@@ -241,3 +220,35 @@ func HandleJSONMap(tmpl string, m map[string]interface{}) (string, error) {
 	return out.String(), nil
 
 }
+
+/*
+func IsList(i interface{}) bool {
+	v := reflect.ValueOf(i).Kind()
+	return v == reflect.Array || v == reflect.Slice
+}
+
+func IsNumber(i interface{}) bool {
+	v := reflect.ValueOf(i).Kind()
+	switch v {
+	case reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsInt(i interface{}) bool {
+	v := reflect.ValueOf(i).Kind()
+	switch v {
+	case reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint64:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsFloat(i interface{}) bool {
+	v := reflect.ValueOf(i).Kind()
+	return v == reflect.Float32 || v == reflect.Float64
+}
+*/

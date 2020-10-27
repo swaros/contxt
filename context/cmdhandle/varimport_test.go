@@ -14,19 +14,6 @@ func clearStrings(compare string) string {
 	return compare
 }
 
-func TestTryParse(t *testing.T) {
-
-	works := cmdhandle.TryParse("@import::../../docs/test/varimport/test1.json::names.prename")
-	if works == false {
-		t.Error("error while parsing file import")
-	}
-
-	replaced := cmdhandle.Demo()
-	if replaced != "name: \"test1\" with description: \"test1 is replaced\"" {
-		t.Error("should not:", replaced)
-	}
-}
-
 func TestParsingFile(t *testing.T) {
 	fileName := "../../docs/test/varimport/test1.json"
 	jsonMap, err := cmdhandle.ImportJSONFile(fileName)
