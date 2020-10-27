@@ -10,11 +10,8 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/swaros/contxt/context/output"
-
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -42,12 +39,12 @@ const (
 )
 
 // ExecuteTemplateWorker runs ExecCurrentPathTemplate in context of a waitgroup
-func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, useWaitGroup bool, target string, templatePath string) {
+func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, useWaitGroup bool, target string, template configure.RunConfig) {
 	if useWaitGroup {
 		defer waitGroup.Done()
 	}
 	//ExecCurrentPathTemplate(path)
-	ExecPathFile(waitGroup, useWaitGroup, templatePath, target)
+	ExecPathFile(waitGroup, useWaitGroup, template, target)
 
 }
 
@@ -130,28 +127,12 @@ func WriteTemplate() {
 }
 
 // ExecPathFile executes the default exec file
-func ExecPathFile(waitGroup *sync.WaitGroup, useWaitGroup bool, path string, target string) {
-	existing, fileerror := dirhandle.Exists(path)
-	if fileerror != nil {
-		fmt.Println("filecheck error: ", fileerror)
-		return
-	}
+func ExecPathFile(waitGroup *sync.WaitGroup, useWaitGroup bool, template configure.RunConfig, target string) {
 
-	if existing {
-		fmt.Println(output.MessageCln(output.ForeBlue, "[exec] ", output.BoldTag, target, " ", output.ForeWhite, path))
-		file, ferr := ioutil.ReadFile(path)
-		if ferr != nil {
-			fmt.Println("file loading error: ", fileerror)
-		}
-		var template configure.RunConfig
-		err := yaml.Unmarshal(file, &template)
+	//fmt.Println(output.MessageCln(output.ForeBlue, "[exec] ", output.BoldTag, target, " ", output.ForeWhite))
 
-		if err != nil {
-			fmt.Println("error:", err)
-		} else {
-			executeTemplate(waitGroup, useWaitGroup, template, target)
-		}
-	}
+	executeTemplate(waitGroup, useWaitGroup, template, target)
+
 }
 
 func checkRequirements(command configure.CommandLine) bool {

@@ -41,15 +41,16 @@ func RunTargets(targets string) {
 		fmt.Println(output.MessageCln(output.ForeCyan, "thread runmode"))
 		for _, runTarget := range allTargets {
 			wg.Add(1)
-			go ExecuteTemplateWorker(&wg, true, runTarget, templatePath)
+			fmt.Println(output.MessageCln(output.ForeBlue, "[exec:async] ", output.BoldTag, runTarget, " ", output.ForeWhite, templatePath))
+			go ExecuteTemplateWorker(&wg, true, runTarget, template)
 		}
 		wg.Wait()
 	} else {
 		// trun one by one
 		fmt.Println("Sequencially runmode")
 		for _, runTarget := range allTargets {
-			//ExecCurrentPathTemplate(runTarget)
-			ExecPathFile(&wg, false, templatePath, runTarget)
+			fmt.Println(output.MessageCln(output.ForeBlue, "[exec:seq] ", output.BoldTag, runTarget, " ", output.ForeWhite, templatePath))
+			ExecPathFile(&wg, false, template, runTarget)
 		}
 	}
 	fmt.Println("done target run")
