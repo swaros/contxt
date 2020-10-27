@@ -75,7 +75,6 @@ func LoadIncTempalte(path string) (string, bool) {
 
 	fullPath := filepath.Dir(path)
 	checkIncPath := fullPath + "/.inc.contxt.yml"
-	fmt.Println(checkIncPath)
 	existing, fileerror := dirhandle.Exists(checkIncPath)
 	if fileerror != nil || !existing {
 		return "", false
