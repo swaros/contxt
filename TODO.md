@@ -29,7 +29,8 @@ mirror paths in /home/<user>/.contxt/paths/ and look for .contxt.yml first. make
 ##### IMPLEMENTATION
 
 ![task Status](https://img.shields.io/badge/status-open-red)
-not yet
+
+
  
 ----
 
@@ -51,8 +52,7 @@ requirements have to be defined for multiple usage.
 ##### IMPLEMENTATION
 
 ![task Status](https://img.shields.io/badge/status-open-red)
- not yet
- 
+  
 ---
 
 #### varibales for placeholder block
@@ -92,3 +92,71 @@ config:
  implemented as described. also variable values can use existing placeholders
 
 ---
+
+#### implementing text/template
+
+implementing parsing golang template engine for yaml files.
+
+##### IMPLEMENTATION
+
+![task Status](https://img.shields.io/badge/status-done-green)
+
+because a yaml file that includes placeholders like `{{ .setup.options.sequence }}` is not parseable a different config file was needed.
+so a new file comes in that adds **.inc** as prefix to the used template filename and loads values from them.
+this file hav currently the following structure
+
+````yaml
+include:
+    basedir: true
+    folders:
+        - "../subdir/"
+        - "../../readthistoo/"
+````
+
+if basedir is set, the current directory, including subdirectories, will be parsed and all **.json, *.yaml, .yml** files will  be parsed
+and merged.
+folders can have different directories they will be parsed too.
+
+any content will be merged, so it can happen that a entrie from file A can overwrite file B
+
+a template file can use this template like so:
+
+````yaml
+config:    
+    sequencially: {{ .setup.options.sequence }}
+    coloroff: {{ .setup.options.color }}
+    variables: 
+        checkApi: {{ .apiVersion }}
+        checkName: {{ .name }}
+task:
+  - id: script
+    script:
+      - echo 'hallo welt'
+      - ls -ga
+      {{ range $key, $value := .mapcheck }}
+      - echo ' tag {{ $key }} value {{ $value }}'
+      {{ end }}
+````
+
+this will only work if any of these placeholders is set. otherwise a parsing error will happen.
+see *docs/test/case10*
+
+#### implementing blacklist for text/template 
+
+because all file from any subdirectory is parsed, we need to exclude files from them
+so it would make sense to add a blacklist that contains a list of regex.
+if one of them is matching, the file will be ignored.
+
+````yaml
+include:
+    basedir: true
+    folders:
+      - "../subdir/"
+      - "../../readthistoo/"
+    blacklist:
+      - "test[234].yml"
+````
+
+##### IMPLEMENTATION
+
+![task Status](https://img.shields.io/badge/status-open-red)
