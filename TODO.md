@@ -3,11 +3,12 @@
 
 #### contxt <some-param>
   
-parsing param. if they are integer use it like 'conxtxt dir -i <param>'. if they are a word look for the matching parts in stored paths to get the dir
+parsing param. if they are integer use it like 'contxt dir -i param'. if they are a word look for the matching parts in stored paths to get the dir
 
 ##### IMPLEMENTATION
 
 ![task Status](https://img.shields.io/badge/status-done-green)
+![task Status](https://img.shields.io/badge/implemented-v0.0.2-blue)
 
 `contxt bla` will check the workspaces. if there a workspaces exists, then it will be the same as `contxt dir -w bla`
 without the danger to create a new workspace by accident.
@@ -24,7 +25,7 @@ but the short form dos not accept multiple targets. so `contxt run bla,bla2` wil
 
 #### mirror paths
 
-mirror paths in /home/<user>/.contxt/paths/ and look for .contxt.yml first. make an optional merge (configurable in .contxt.yml). add option -mirror to copy .contxt.yml into mirror path 
+mirror paths in /home/username/.contxt/paths/ and look for .contxt.yml first. make an optional merge (configurable in .contxt.yml). add option -mirror to copy .contxt.yml into mirror path 
    
 ##### IMPLEMENTATION
 
@@ -88,6 +89,7 @@ config:
 ##### IMPLEMENTATION
 
 ![task Status](https://img.shields.io/badge/status-done-green)
+![task Status](https://img.shields.io/badge/implemented-v0.0.2-blue)
 
  implemented as described. also variable values can use existing placeholders
 
@@ -100,10 +102,11 @@ implementing parsing golang template engine for yaml files.
 ##### IMPLEMENTATION
 
 ![task Status](https://img.shields.io/badge/status-done-green)
+![task Status](https://img.shields.io/badge/implemented-v0.0.2-blue)
 
-because a yaml file that includes placeholders like `{{ .setup.options.sequence }}` is not parseable a different config file was needed.
+because a yaml file that includes placeholders like `{{ .setup.options.sequence }}` is not parsable a different config file was needed.
 so a new file comes in that adds **.inc** as prefix to the used template filename and loads values from them.
-this file hav currently the following structure
+this file have currently the following structure
 
 ````yaml
 include:
@@ -140,6 +143,8 @@ task:
 
 this will only work if any of these placeholders is set. otherwise a parsing error will happen.
 see *docs/test/case10*
+
+---
 
 #### implementing blacklist for text/template 
 
