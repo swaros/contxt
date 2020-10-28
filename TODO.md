@@ -1,11 +1,14 @@
 ### Todo List
-![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/swaros/contxt)
 ---
 
 #### contxt <some-param>
+  
 parsing param. if they are integer use it like 'conxtxt dir -i <param>'. if they are a word look for the matching parts in stored paths to get the dir
 
 ##### IMPLEMENTATION
+
+![task Status](https://img.shields.io/badge/status-done-green)
+
 `contxt bla` will check the workspaces. if there a workspaces exists, then it will be the same as `contxt dir -w bla`
 without the danger to create a new workspace by accident.
 if the workspace does not exists, a error will shown that this can not be used as workspace, and also that the param can't be used differently
@@ -24,7 +27,9 @@ but the short form dos not accept multiple targets. so `contxt run bla,bla2` wil
 mirror paths in /home/<user>/.contxt/paths/ and look for .contxt.yml first. make an optional merge (configurable in .contxt.yml). add option -mirror to copy .contxt.yml into mirror path 
    
 ##### IMPLEMENTATION
- not yet
+
+![task Status](https://img.shields.io/badge/status-open-red)
+not yet
  
 ----
 
@@ -44,6 +49,8 @@ requirements should be checked for task. requirements should check
 requirements have to be defined for multiple usage.
 
 ##### IMPLEMENTATION
+
+![task Status](https://img.shields.io/badge/status-open-red)
  not yet
  
 ---
@@ -79,6 +86,8 @@ config:
 ````
 
 ##### IMPLEMENTATION
+
+![task Status](https://img.shields.io/badge/status-done-green)
 
  implemented as described. also variable values can use existing placeholders
 
