@@ -1,5 +1,5 @@
 ### Todo List
-https://img.shields.io/github/v/tag/swaros/contxt
+![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/swaros/contxt)
 ---
 
 #### contxt <some-param>
