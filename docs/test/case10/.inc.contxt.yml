@@ -1,0 +1,4 @@
+include:
+    basedir: true
+    folders:
+        - "./"

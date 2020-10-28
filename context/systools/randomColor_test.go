@@ -37,5 +37,18 @@ func TestPrintColoredChanges(t *testing.T) {
 		}
 		last = colorCode
 	}
-	
+
 }
+
+/*
+// TestPrintColoredChanges is for testing the color formats
+func TestPrintColors(t *testing.T) {
+	for i := 0; i < 500; i++ {
+		systools.CreateColorCode()
+		labelOut := systools.LabelPrint("\t label print ", 2)
+		fmt.Println(labelOut, "\t fg:", systools.CurrentColor, "\tbg:", systools.CurrentBgColor)
+
+	}
+	systools.ResetColors(true)
+}
+*/

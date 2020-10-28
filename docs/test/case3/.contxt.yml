@@ -1,3 +1,5 @@
+config:
+  coloroff: true
 task:
     - id: base
       options:

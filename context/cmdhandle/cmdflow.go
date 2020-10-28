@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/swaros/contxt/context/output"
+
 	"github.com/swaros/contxt/context/systools"
 
 	"github.com/swaros/contxt/context/configure"
@@ -30,23 +32,25 @@ func RunTargets(targets string) {
 	var runSequencially = false
 	if exists {
 		runSequencially = template.Config.Sequencially
+		output.ColorEnabled = !template.Config.Coloroff
 	}
 
 	var wg sync.WaitGroup
 	if runSequencially == false {
 		// run in thread
-		fmt.Println("thread runmode")
+		fmt.Println(output.MessageCln(output.ForeCyan, "thread runmode"))
 		for _, runTarget := range allTargets {
 			wg.Add(1)
-			go ExecuteTemplateWorker(&wg, true, runTarget, templatePath)
+			fmt.Println(output.MessageCln(output.ForeBlue, "[exec:async] ", output.BoldTag, runTarget, " ", output.ForeWhite, templatePath))
+			go ExecuteTemplateWorker(&wg, true, runTarget, template)
 		}
 		wg.Wait()
 	} else {
 		// trun one by one
 		fmt.Println("Sequencially runmode")
 		for _, runTarget := range allTargets {
-			//ExecCurrentPathTemplate(runTarget)
-			ExecPathFile(&wg, false, templatePath, runTarget)
+			fmt.Println(output.MessageCln(output.ForeBlue, "[exec:seq] ", output.BoldTag, runTarget, " ", output.ForeWhite, templatePath))
+			ExecPathFile(&wg, false, template, runTarget)
 		}
 	}
 	fmt.Println("done target run")
@@ -57,27 +61,40 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 		waitGroup.Add(1)
 		defer waitGroup.Done()
 	}
+
 	if len(runCfg.Task) > 0 {
+
+		// main variables
+		for keyName, variable := range runCfg.Config.Variables {
+			SetPH(keyName, HandlePlaceHolder(variable))
+		}
+
 		colorCode := systools.CreateColorCode()
 		bgCode := systools.CurrentBgColor
 		SetPH("RUN.TARGET", target)
 		for _, script := range runCfg.Task {
 			// check if we have found the target
 			if strings.EqualFold(target, script.ID) {
+
+				// first get the task related variables
+				for keyName, variable := range script.Variables {
+					SetPH(keyName, HandlePlaceHolder(variable))
+				}
+
 				// convert to stopReason struct
 				stopReason := configure.StopReasons(script.Stopreasons)
 
 				for _, codeLine := range script.Script {
-					if script.Options.Displaycmd {
-						fmt.Println(systools.Yellow(" [cmd] "), systools.Teal(target), systools.White(codeLine))
-					}
+
 					panelSize := 12
 					if script.Options.Panelsize > 0 {
 						panelSize = script.Options.Panelsize
 					}
 					var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
 					replacedLine := HandlePlaceHolder(codeLine)
-
+					if script.Options.Displaycmd {
+						fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, replacedLine))
+					}
 					SetPH("RUN.SCRIPT_LINE", replacedLine)
 					execCode, execErr := ExecuteScriptLine(mainCommand, replacedLine, func(logLine string) bool {
 
@@ -90,7 +107,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 								if triggerFound {
 									SetPH("RUN."+target+".LOG.HIT", logLine)
 									if script.Options.Displaycmd {
-										fmt.Println(systools.Magenta("\tlistener hit"), systools.Yellow(triggerMessage), logLine)
+										fmt.Println(output.MessageCln(output.ForeMagenta, "\tlistener hit", output.ForeYellow, triggerMessage, output.Reverse, logLine))
 									}
 									actionDef := configure.Action(listener.Action)
 									if actionDef.Target != "" {
@@ -129,7 +146,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						stopReasonFound, message := checkReason(stopReason, logLine)
 						if stopReasonFound {
 							if script.Options.Displaycmd {
-								fmt.Println(systools.Magenta(" STOP-HIT "), systools.Info(message))
+								fmt.Println(output.MessageCln(output.ForeLightCyan, " STOP-HIT ", output.ForeWhite, output.BackBlue, message))
 							}
 							return false
 						}
@@ -139,11 +156,13 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						SetPH("RUN.PID", pidStr)
 						SetPH("RUN."+target+".PID", pidStr)
 						if script.Options.Displaycmd {
-							fmt.Println(systools.Yellow(" [pid] "), systools.Teal(process.Pid))
+							fmt.Println(output.MessageCln(output.ForeYellow, " [pid] ", output.ForeBlue, process.Pid))
 						}
 					})
 					if execErr != nil {
-						fmt.Println(systools.Warn(execErr))
+						if script.Options.Displaycmd {
+							fmt.Println(output.MessageCln(output.ForeRed, "execution error: ", output.BackRed, output.ForeWhite, execErr))
+						}
 					}
 					// check execution codes
 					switch execCode {
@@ -153,7 +172,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						if script.Stopreasons.Onerror {
 							return ExitByStopReason
 						}
-						fmt.Println(systools.Yellow("NOTE"), "\t", "a script execution was failing. no stopreason is set so execution will continued")
+						fmt.Println("NOTE", "\t", "a script execution was failing. no stopreason is set so execution will continued")
 						fmt.Println("\ttarget :\t", target)
 						fmt.Println("\tcommand:\t", codeLine)
 						return ExitOk

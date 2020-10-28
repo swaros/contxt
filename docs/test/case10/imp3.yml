@@ -1,0 +1,4 @@
+setup:
+    options:        
+        sequence: true
+        color: true

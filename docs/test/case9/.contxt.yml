@@ -1,0 +1,19 @@
+config:
+  sequencially: false
+  coloroff: true
+  variables:
+    replace: hallo-welt
+    part1 : lets
+    part2 : go
+task:
+  - id: base
+    variables:
+      replace: hello-world
+    script:
+      - echo 'main'
+      - echo ${replace}
+  - id: test2
+    variables:
+      message: "${part1} ${part2}"
+    script:
+      - echo ${message}

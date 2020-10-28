@@ -9,6 +9,10 @@ import (
 	"github.com/swaros/contxt/context/cmdhandle"
 )
 
+// caseRunner helps to switch a testrunn in testcase directory to this
+// this folder. and go back after the test is done
+// it also resets all variables
+// the id is just the number of the test/case folder (postfix)
 func caseRunner(id string, t *testing.T, testFunc func(t *testing.T)) {
 	cmdhandle.ClearAll()
 	old, derr := dirhandle.Current()
@@ -16,6 +20,18 @@ func caseRunner(id string, t *testing.T, testFunc func(t *testing.T)) {
 		t.Error(derr)
 	}
 	os.Chdir("./../../docs/test/case" + id)
+	testFunc(t)
+	os.Chdir(old)
+
+}
+
+func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) {
+	cmdhandle.ClearAll()
+	old, derr := dirhandle.Current()
+	if derr != nil {
+		t.Error(derr)
+	}
+	os.Chdir(folder)
 	testFunc(t)
 	os.Chdir(old)
 
@@ -153,5 +169,31 @@ func TestCase7(t *testing.T) {
 			t.Error("the script runs without erros, but hey have an error. script have to stop")
 		}
 
+	})
+}
+
+// test variables. replace set at config variables to hallo-welt
+func TestCase8(t *testing.T) {
+	caseRunner("8", t, func(t *testing.T) {
+		cmdhandle.RunTargets("base")
+		logMain := cmdhandle.GetPH("RUN.base.LOG.LAST")
+		if logMain != "hallo-welt" {
+			t.Error("variable should be replaced. but got:", logMain)
+		}
+	})
+}
+
+// test variables. replace set at config variables to hallo-welt but then overwrittn in task to hello-world
+func TestCase9(t *testing.T) {
+	caseRunner("9", t, func(t *testing.T) {
+		cmdhandle.RunTargets("base,test2")
+		logMain := cmdhandle.GetPH("RUN.base.LOG.LAST")
+		if logMain != "hello-world" {
+			t.Error("variable should be replaced. but got:", logMain)
+		}
+		test2 := cmdhandle.GetPH("RUN.test2.LOG.LAST")
+		if test2 != "lets go" {
+			t.Error("placeholder was not used in task variables. got:", test2)
+		}
 	})
 }

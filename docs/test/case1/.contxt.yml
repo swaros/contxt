@@ -1,5 +1,6 @@
 config:
-    sequencially: true  
+    sequencially: true
+    coloroff: true
 task:
     - id: case1_1
       script:

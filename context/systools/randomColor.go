@@ -2,6 +2,8 @@ package systools
 
 import (
 	"fmt"
+
+	"github.com/swaros/contxt/context/output"
 )
 
 var lastUsedColor = 2
@@ -75,6 +77,12 @@ func CreateColorCode() string {
 		CreateBgColor()
 	}
 	CurrentColor = colorCodes[lastUsedColor]
+	// hardcoded way to check if a backgroundcolor
+	// is usable with forground color
+	// might be replaced in future with something else
+	for colorCombinationisFine() == false {
+		CreateColorCode()
+	}
 	return CurrentColor
 }
 
@@ -89,22 +97,126 @@ func CreateBgColorCode() string {
 	return CurrentBgColor
 }
 
+func colorCombinationisFine() bool {
+	switch CurrentBgColor {
+
+	case "47":
+		{
+			switch CurrentColor {
+			case "97", "37":
+				return false
+			}
+		}
+	case "100":
+		{
+			switch CurrentColor {
+			case "32", "36", "95", "96":
+				return false
+			}
+		}
+	case "101":
+		{
+			switch CurrentColor {
+			case "32", "33", "37", "94", "95", "96":
+				return false
+			}
+		}
+	case "102":
+		{
+			switch CurrentColor {
+			case "97":
+				return false
+			}
+		}
+	case "104", "105":
+		{
+			switch CurrentColor {
+			case "37", "92", "93", "96", "97":
+				return false
+			}
+		}
+	case "106":
+		{
+			switch CurrentColor {
+			case "97":
+				return false
+			}
+		}
+	case "40":
+		{
+			switch CurrentColor {
+			case "31", "34", "90", "91", "35":
+				return false
+			}
+		}
+	case "41":
+		{
+			switch CurrentColor {
+			case "31", "32", "34", "36", "91", "95":
+				return false
+			}
+		}
+	case "42":
+		{
+			switch CurrentColor {
+			case "37", "92", "93", "96", "97":
+				return false
+			}
+		}
+	case "43":
+		{
+			switch CurrentColor {
+			case "93", "97", "37":
+				return false
+			}
+		}
+	case "44", "45":
+		{
+			switch CurrentColor {
+			case "32", "33", "36", "94", "95":
+				return false
+			}
+		}
+	case "46":
+		{
+			switch CurrentColor {
+			case "37", "92", "96":
+				return false
+			}
+		}
+
+	}
+	return true
+}
+
 func colorFormatNumber(code string) string {
+	if !output.ColorEnabled {
+		return "%s"
+	}
 	return "\033[1;" + code + "m%s"
 }
 
 func colorFormatWithBg(code string, bg string) string {
+	if !output.ColorEnabled {
+		return "%s"
+	}
 	return "\033[1;" + code + "m\033[" + bg + "m%s"
 }
 
 // PrintColored formats string colored by the color id
-func PrintColored(code string, output string) string {
-	return fmt.Sprintf(colorFormatNumber(code), output)
+func PrintColored(code string, outputs string) string {
+	if !output.ColorEnabled {
+		return outputs
+	}
+	return fmt.Sprintf(colorFormatNumber(code), outputs)
 }
 
 // PrintColoredBg formats string colored by the color id including background
-func PrintColoredBg(code string, bgCode string, output string) string {
-	return fmt.Sprintf(colorFormatWithBg(code, bgCode), output)
+func PrintColoredBg(code string, bgCode string, outputs string) string {
+	if !output.ColorEnabled {
+		return outputs
+	}
+	return fmt.Sprintf(colorFormatWithBg(code, bgCode), outputs)
 }
 
 // GetWhiteBg Get the White Background
@@ -157,7 +269,9 @@ func LabelPrint(message string, attribute int) string {
 
 // LabelPrintWithArg prints message by using current fore and background
 func LabelPrintWithArg(message string, fg string, bg string, attribute int) string {
-
+	if !output.ColorEnabled {
+		return message
+	}
 	//outstr := fmt.Sprintf("\033[%s;%sm%s\033[0m", currentColor, currentBgColor, message)
 	outstr := fmt.Sprintf("\033[%d;%s;%sm %s \033[0m", attribute, fg, bg, message)
 	return outstr
@@ -190,17 +304,3 @@ func PadStringToR(line string, max int) string {
 	}
 	return line
 }
-
-/*
-// TestPrintColoredChanges is for testing the color formats
-func TestPrintColoredChanges() {
-	for i := 0; i < 500; i++ {
-		CreateColorCode()
-		//outpt := PrintColored(colorCode, "test ["+colorCode+"] last ("+lastCode+")")
-		labelOut := LabelPrint("\t label print ", 2)
-		fmt.Println(labelOut, "\t", currentColor, currentBgColor)
-
-	}
-	ResetColors(true)
-}
-*/
