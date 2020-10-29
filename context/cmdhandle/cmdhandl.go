@@ -49,7 +49,7 @@ func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, useWaitGroup bool, target 
 }
 
 // ExecuteScriptLine executes a simple shell script
-func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callback func(string) bool, startInfo func(*os.Process)) (int, error) {
+func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callback func(string) bool, startInfo func(*os.Process)) (int, int, error) {
 
 	// default behavior. -c param is not set by default
 	if cmdArg == nil && ShellToUse == DefaultCommandFallBack {
@@ -65,7 +65,7 @@ func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callb
 	err := cmd.Start()
 	if err != nil {
 		GetLogger().Warn("execution error: ", err)
-		return ExitCmdError, err
+		return ExitCmdError, 0, err
 	}
 
 	GetLogger().WithFields(logrus.Fields{
@@ -91,24 +91,26 @@ func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callb
 		}).Info("handle-result")
 		if keepRunning == false {
 			cmd.Process.Kill()
-			return ExitByStopReason, err
+			return ExitByStopReason, 0, err
 		}
 
 	}
 	err = cmd.Wait()
 	if err != nil {
+		errRealCode := 0
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
 				GetLogger().Warn("(maybe expected...) Exit Status reported: ", status.ExitStatus())
+				errRealCode = status.ExitStatus()
 			}
 
 		} else {
 			GetLogger().Warn("execution error: ", err)
 		}
-		return ExitCmdError, err
+		return ExitCmdError, errRealCode, err
 	}
 
-	return ExitOk, err
+	return ExitOk, 0, err
 }
 
 // WriteTemplate create path based execution file

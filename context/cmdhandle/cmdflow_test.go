@@ -166,7 +166,7 @@ func TestCase7(t *testing.T) {
 
 		log := cmdhandle.GetPH("RUN.sub.LOG.LAST")
 		if log == "sub-end" {
-			t.Error("the script runs without erros, but hey have an error. script have to stop")
+			t.Error("the script runs without erros, but hey have an error. script have to stop. log=", log)
 		}
 
 	})

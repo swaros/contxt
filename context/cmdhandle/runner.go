@@ -128,7 +128,7 @@ func MainExecute() {
 				configure.PathWorker(func(index int, path string) {
 					fmt.Print(output.MessageCln("execute on ", output.ForeWhite, path))
 					os.Chdir(path)
-					_, err := ExecuteScriptLine("bash", []string{"-c"}, *execute, func(output string) bool {
+					_, _, err := ExecuteScriptLine("bash", []string{"-c"}, *execute, func(output string) bool {
 						fmt.Println(output)
 						return true
 					}, func(process *os.Process) {
