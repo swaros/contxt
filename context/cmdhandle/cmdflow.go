@@ -200,8 +200,14 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					case ExitByStopReason:
 						return ExitByStopReason
 					case ExitCmdError:
-						if script.Stopreasons.Onerror {
-							return ExitByStopReason
+						if script.Options.IgnoreCmdError {
+							if script.Stopreasons.Onerror {
+								return ExitByStopReason
+							}
+							fmt.Println("NOTE", "\t", "a script execution was failing. no stopreason is set so execution will continued")
+							fmt.Println("\ttarget :\t", target)
+							fmt.Println("\tcommand:\t", codeLine)
+							return ExitOk
 						}
 						fmt.Println(output.MessageCln(output.ForeYellow, "NOTE!\t", output.BackLightYellow, output.ForeDarkGrey, " a script execution was failing. no stopreason is set so execution will continued "))
 						fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " if this is expected you can ignore this message.                                 "))

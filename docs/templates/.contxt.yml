@@ -1,15 +1,48 @@
+# main configuration part
+# all booleans are by default set to false
 config:
+
+  # defines how the task will be started.
+  # if this is set to true, no task will
+  # run until a task is already running
   sequencially: true
+  
+  # disables the colored labels if true
   coloroff: true
   loglevel: "error"
+
+  # defines variables  
+  # use key: value
+  # example:
+  #   variables:
+  #      message: "hello"
+  # 
+  # this can now be used in scripts like: echo " ${message} world"
   variables: []
+
+  # UNUSED
   imports:
     - filename.yaml
     - /test/filename.json
     - /check/filename.yml
+
+# all tasks the can be executed
 task:
+
+    # the Ident of the task. this ID will be named as target.
+    # in this cas it can be used with: contxt run script
+    # it is allowed to reuse the same id. 
+    # this task will be started all
     - id: script
+
+      # defines variables
+      # use key: value
+      # these variables can overwrite 
+      # variables they are defined in 
+      # the config section. 
       variables: []
+
+      
       stopreasons:
         onerror: true
         onoutcountLess: 0
@@ -18,6 +51,11 @@ task:
           - context.json
           - fatal
       options:
+        # if set to true, the following scripts
+        # will be executed if the last command ends
+        # with a error
+        ignoreCmdError: false
+
         format: "log: %s\n"
         stickcursor: false
         colorcode: "97"
