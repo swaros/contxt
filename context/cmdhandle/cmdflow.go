@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/swaros/contxt/context/systools"
@@ -35,6 +36,10 @@ func RunTargets(targets string) {
 		output.ColorEnabled = !template.Config.Coloroff
 	}
 
+	if template.Config.LogLevel != "" {
+		setLogLevelByString(template.Config.LogLevel)
+	}
+
 	var wg sync.WaitGroup
 	if runSequencially == false {
 		// run in thread
@@ -54,6 +59,32 @@ func RunTargets(targets string) {
 		}
 	}
 	fmt.Println("done target run")
+}
+
+func setLogLevelByString(loglevel string) {
+	switch strings.ToUpper(loglevel) {
+	case "DEBUG":
+		GetLogger().SetLevel(logrus.DebugLevel)
+		break
+	case "WARN":
+		GetLogger().SetLevel(logrus.WarnLevel)
+		break
+	case "ERROR":
+		GetLogger().SetLevel(logrus.ErrorLevel)
+		break
+	case "FATAL":
+		GetLogger().SetLevel(logrus.FatalLevel)
+		break
+	case "TRACE":
+		GetLogger().SetLevel(logrus.TraceLevel)
+		break
+	case "INFO":
+		GetLogger().SetLevel(logrus.InfoLevel)
+		break
+	default:
+		GetLogger().Fatal("unkown log level in config section: ", loglevel)
+	}
+
 }
 
 func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string) int {
