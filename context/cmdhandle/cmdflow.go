@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/swaros/contxt/context/systools"
@@ -35,6 +36,10 @@ func RunTargets(targets string) {
 		output.ColorEnabled = !template.Config.Coloroff
 	}
 
+	if template.Config.LogLevel != "" {
+		setLogLevelByString(template.Config.LogLevel)
+	}
+
 	var wg sync.WaitGroup
 	if runSequencially == false {
 		// run in thread
@@ -54,6 +59,32 @@ func RunTargets(targets string) {
 		}
 	}
 	fmt.Println("done target run")
+}
+
+func setLogLevelByString(loglevel string) {
+	switch strings.ToUpper(loglevel) {
+	case "DEBUG":
+		GetLogger().SetLevel(logrus.DebugLevel)
+		break
+	case "WARN":
+		GetLogger().SetLevel(logrus.WarnLevel)
+		break
+	case "ERROR":
+		GetLogger().SetLevel(logrus.ErrorLevel)
+		break
+	case "FATAL":
+		GetLogger().SetLevel(logrus.FatalLevel)
+		break
+	case "TRACE":
+		GetLogger().SetLevel(logrus.TraceLevel)
+		break
+	case "INFO":
+		GetLogger().SetLevel(logrus.InfoLevel)
+		break
+	default:
+		GetLogger().Fatal("unkown log level in config section: ", loglevel)
+	}
+
 }
 
 func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string) int {
@@ -96,7 +127,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, replacedLine))
 					}
 					SetPH("RUN.SCRIPT_LINE", replacedLine)
-					execCode, execErr := ExecuteScriptLine(mainCommand, replacedLine, func(logLine string) bool {
+					execCode, execErr := ExecuteScriptLine(mainCommand, script.Options.Mainparams, replacedLine, func(logLine string) bool {
 
 						SetPH("RUN."+target+".LOG.LAST", logLine)
 						// the watcher
@@ -172,9 +203,11 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						if script.Stopreasons.Onerror {
 							return ExitByStopReason
 						}
-						fmt.Println("NOTE", "\t", "a script execution was failing. no stopreason is set so execution will continued")
-						fmt.Println("\ttarget :\t", target)
-						fmt.Println("\tcommand:\t", codeLine)
+						fmt.Println(output.MessageCln(output.ForeYellow, "NOTE!\t", output.BackLightYellow, output.ForeDarkGrey, " a script execution was failing. no stopreason is set so execution will continued "))
+						fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " if this is expected you can ignore this message.                                 "))
+						fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " but you should handle error cases                                                "))
+						fmt.Println("\ttarget :\t", output.MessageCln(output.ForeYellow, target))
+						fmt.Println("\tcommand:\t", output.MessageCln(output.ForeYellow, codeLine))
 						return ExitOk
 
 					}

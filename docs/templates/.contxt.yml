@@ -1,6 +1,7 @@
 config:
   sequencially: true
   coloroff: true
+  loglevel: "error"
   variables: []
   imports:
     - filename.yaml

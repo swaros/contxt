@@ -3,23 +3,43 @@ package cmdhandle
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
+	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
 )
 
+//var log = logrus.New()
+var log = &logrus.Logger{
+	Out:       os.Stdout,
+	Formatter: new(logrus.TextFormatter),
+	Hooks:     make(logrus.LevelHooks),
+	Level:     logrus.ErrorLevel,
+}
+
+func initLogger() {
+	//log.Out = os.Stdout
+	//log.SetLevel(logrus.DebugLevel)
+
+}
+
+// GetLogger is the main Logger instance
+func GetLogger() *logrus.Logger {
+	return log
+}
+
 // MainExecute runs main. parsing flags
 func MainExecute() {
+
+	initLogger()
 
 	var configErr = configure.InitConfig()
 	if configErr != nil {
 		log.Fatal(configErr)
 	}
-
 	nonParams := true
 
 	// Directory related commands
@@ -108,7 +128,7 @@ func MainExecute() {
 				configure.PathWorker(func(index int, path string) {
 					fmt.Print(output.MessageCln("execute on ", output.ForeWhite, path))
 					os.Chdir(path)
-					_, err := ExecuteScriptLine("bash", *execute, func(output string) bool {
+					_, err := ExecuteScriptLine("bash", []string{"-c"}, *execute, func(output string) bool {
 						fmt.Println(output)
 						return true
 					}, func(process *os.Process) {
@@ -122,6 +142,8 @@ func MainExecute() {
 						successCount++
 					}
 				})
+			} else {
+				log.Fatal("error getting user dir", err)
 			}
 			fmt.Print("execution done. ")
 			if errorCount > 0 {
@@ -136,9 +158,11 @@ func MainExecute() {
 		if someRunCmd == false {
 			shrtcut := false
 			if len(os.Args) > 2 {
+				log.Debug("got undefined argument. try to figure out meaning of ", os.Args[2])
 				shrtcut = doRunShortCuts(os.Args[2])
 			}
 			if !shrtcut {
+				log.Debug("no usage found for argument ", os.Args[2])
 				printOutHeader()
 				fmt.Println(output.MessageCln("to run a single target you can just type ", output.ForeWhite, "contxt run <target-name>"))
 				fmt.Println()
@@ -233,7 +257,7 @@ func doMagicParamOne(param string) bool {
 		}
 	})
 	if !result {
-		fmt.Println(output.MessageCln(output.BoldTag, param, output.ResetBold, " is not a workspace"))
+		fmt.Println(output.MessageCln(output.BoldTag, param, output.CleanTag, " is not a workspace"))
 	}
 	return result
 }
@@ -275,7 +299,6 @@ func printOutHeader() {
 func printInfo() {
 	printOutHeader()
 	printPaths()
-	//systools.TestPrintColoredChanges()
 }
 
 func printPaths() {

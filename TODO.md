@@ -1,4 +1,8 @@
 ### Todo List
+
+*this is not a complete task list. it is more then a overview for things they are planned, done and comes in mind.
+it is just better to have something to keep ideas tracked. and not somewhere on the lokal pc*
+
 ---
 
 #### contxt <some-param>
