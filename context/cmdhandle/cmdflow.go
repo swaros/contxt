@@ -96,7 +96,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, replacedLine))
 					}
 					SetPH("RUN.SCRIPT_LINE", replacedLine)
-					execCode, execErr := ExecuteScriptLine(mainCommand, replacedLine, func(logLine string) bool {
+					execCode, execErr := ExecuteScriptLine(mainCommand, script.Options.Mainparams, replacedLine, func(logLine string) bool {
 
 						SetPH("RUN."+target+".LOG.LAST", logLine)
 						// the watcher
@@ -172,9 +172,11 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						if script.Stopreasons.Onerror {
 							return ExitByStopReason
 						}
-						fmt.Println("NOTE", "\t", "a script execution was failing. no stopreason is set so execution will continued")
-						fmt.Println("\ttarget :\t", target)
-						fmt.Println("\tcommand:\t", codeLine)
+						fmt.Println(output.MessageCln(output.ForeYellow, "NOTE!\t", output.BackLightYellow, output.ForeDarkGrey, " a script execution was failing. no stopreason is set so execution will continued "))
+						fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " if this is expected you can ignore this message.                                 "))
+						fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " but you should handle error cases                                                "))
+						fmt.Println("\ttarget :\t", output.MessageCln(output.ForeYellow, target))
+						fmt.Println("\tcommand:\t", output.MessageCln(output.ForeYellow, codeLine))
 						return ExitOk
 
 					}

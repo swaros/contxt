@@ -3,7 +3,6 @@ package cmdhandle
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -23,7 +22,7 @@ func FindTemplate() (string, bool) {
 	// 1. looking in user mirror path
 	usr, err := user.Current()
 	if err != nil {
-		log.Fatal(err)
+		GetLogger().Fatal(err)
 	}
 
 	homeDirYml := usr.HomeDir + configure.DefaultPath + configure.MirrorPath + DefaultExecYaml
