@@ -34,6 +34,7 @@ type RunConfig struct {
 	Config struct {
 		Sequencially bool              `yaml:"sequencially"`
 		Coloroff     bool              `yaml:"coloroff"`
+		LogLevel     string            `yaml:"loglevel"`
 		Variables    map[string]string `yaml:"variables,omitempty"`
 		Imports      []string          `yAML:"imports"`
 	} `yaml:"config"`
