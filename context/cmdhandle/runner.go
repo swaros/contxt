@@ -162,7 +162,6 @@ func MainExecute() {
 				shrtcut = doRunShortCuts(os.Args[2])
 			}
 			if !shrtcut {
-				log.Debug("no usage found for argument ", os.Args[2])
 				printOutHeader()
 				fmt.Println(output.MessageCln("to run a single target you can just type ", output.ForeWhite, "contxt run <target-name>"))
 				fmt.Println()
