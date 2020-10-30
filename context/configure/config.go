@@ -52,18 +52,25 @@ func createDefaultConfig() {
 }
 
 // ChangeWorkspace changing workspace
-func ChangeWorkspace(workspace string) {
-	// save current configuration
-	SaveDefaultConfiguration(true)
-	// change set name
-	UsedConfig.CurrentSet = workspace
-	SaveDefaultConfiguration(false)
-	err := checkSetup()
-	if err != nil {
-		fmt.Println(err)
+func ChangeWorkspace(workspace string, oldspace func(string) bool, newspace func(string)) {
+	// triggers execution of checking old Workspace
+	canChange := oldspace(UsedConfig.CurrentSet)
+	if canChange {
+		// save current configuration
+		SaveDefaultConfiguration(true)
+		// change set name
+		UsedConfig.CurrentSet = workspace
+		SaveDefaultConfiguration(false)
+		err := checkSetup()
+		if err != nil {
+			fmt.Println(err)
+		}
+		SaveDefaultConfiguration(true)
+		newspace(workspace)
+		fmt.Println(output.MessageCln("current workspace is now:", output.BackBlue, output.ForeWhite, workspace))
+	} else {
+		fmt.Println(output.MessageCln(output.ForeLightYellow, "changing workspace failed."))
 	}
-	SaveDefaultConfiguration(true)
-	fmt.Println(output.MessageCln("current workspace is now:", output.BackBlue, output.ForeWhite, workspace))
 }
 
 // RemoveWorkspace removes a workspace

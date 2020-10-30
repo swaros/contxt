@@ -43,7 +43,6 @@ func RunTargets(targets string) {
 	var wg sync.WaitGroup
 	if runSequencially == false {
 		// run in thread
-		fmt.Println(output.MessageCln(output.ForeCyan, "thread runmode"))
 		for _, runTarget := range allTargets {
 			wg.Add(1)
 			fmt.Println(output.MessageCln(output.ForeBlue, "[exec:async] ", output.BoldTag, runTarget, " ", output.ForeWhite, templatePath))
@@ -58,7 +57,7 @@ func RunTargets(targets string) {
 			ExecPathFile(&wg, false, template, runTarget)
 		}
 	}
-	fmt.Println("done target run")
+	fmt.Println(output.MessageCln(output.ForeBlue, "[done] ", output.BoldTag, targets))
 }
 
 func setLogLevelByString(loglevel string) {

@@ -170,7 +170,7 @@ func MainExecute() {
 			}
 		}
 	}
-
+	// DIR execution block
 	if dirCommand.Parsed() {
 		someDirCmd := false
 
@@ -192,10 +192,11 @@ func MainExecute() {
 			configure.RemoveWorkspace(*removeWorkSpace)
 		}
 
+		// changing worksspace
 		if *workSpace != "" {
 			someDirCmd = true
 			nonParams = false
-			configure.ChangeWorkspace(*workSpace)
+			configure.ChangeWorkspace(*workSpace, callBackOldWs, callBackNewWs)
 		}
 
 		if *clearPaths {
@@ -247,12 +248,65 @@ func MainExecute() {
 	}
 }
 
+func callBackOldWs(oldws string) bool {
+	GetLogger().Info("OLD workspace: ", oldws)
+	// get all paths first
+	configure.PathWorker(func(index int, path string) {
+
+		os.Chdir(path)
+		template, templateFile, exists := GetTemplate()
+
+		GetLogger().WithFields(logrus.Fields{
+			"templateFile": templateFile,
+			"exists":       exists,
+			"path":         path,
+		}).Debug("path parsing")
+
+		if exists && template.Config.Autorun.Onleave != "" {
+			onleaveTarget := template.Config.Autorun.Onleave
+			GetLogger().WithFields(logrus.Fields{
+				"templateFile": templateFile,
+				"target":       onleaveTarget,
+			}).Info("execute leave-action")
+			RunTargets(onleaveTarget)
+
+		}
+
+	})
+	return true
+}
+
+func callBackNewWs(newWs string) {
+	GetLogger().Info("NEW workspace: ", newWs)
+	configure.PathWorker(func(index int, path string) {
+
+		os.Chdir(path)
+		template, templateFile, exists := GetTemplate()
+
+		GetLogger().WithFields(logrus.Fields{
+			"templateFile": templateFile,
+			"exists":       exists,
+			"path":         path,
+		}).Debug("path parsing")
+
+		if exists && template.Config.Autorun.Onenter != "" {
+			onEnterTarget := template.Config.Autorun.Onenter
+			GetLogger().WithFields(logrus.Fields{
+				"templateFile": templateFile,
+				"target":       onEnterTarget,
+			}).Info("execute enter-action")
+			RunTargets(onEnterTarget)
+		}
+
+	})
+}
+
 func doMagicParamOne(param string) bool {
 	result := false
 	// param is a workspace ?
 	configure.WorkSpaces(func(ws string) {
 		if param == ws {
-			configure.ChangeWorkspace(ws)
+			configure.ChangeWorkspace(ws, callBackOldWs, callBackNewWs)
 			result = true
 		}
 	})
