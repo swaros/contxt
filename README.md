@@ -23,8 +23,21 @@ user@showcase:~/devsource/project_x/client$ pwd
 /home/user/devsource/project_x/client
 
 ````
+## overview
+|action|arg 1| arg 2 | arg 3 |
+|--|--|--|--|
+create  a new workspace|dir|-w  | **string** *name-of-workspace* |
+list existing workspaces|dir|-list||
+add current path to current workspace|dir|-add||
+list all assigned paths|dir|-paths||
+remove all path assignments in workspace|dir|-clear||
+remove workspace|dir|-delete|**string** *name-of-workspace*|
+show info screen|dir|-info||
+execute tasks in current path|run| -target| **string** *target-names-separated-by-comma*|
+execute one in current path *shortcut*|run| **string** *target-name*|
 
 ## workspaces
+
 #### create a new workspace
 `contxt dir -w mywork` will create a new workspace named *mywork*
 #### list existing workspaces
@@ -45,6 +58,7 @@ add /home/user/devsource/project_x/server
 
 ### show all paths in current workspace
 `contxt dir -paths` 
+
 example:
 ````shell
 user@showcase:~$ context dir --paths
@@ -54,3 +68,4 @@ paths stored in deltadna
 	to change directory depending stored path you can write cd $(contxt -i 0) in bash
 	this will be the same as /home/user/devsource/project_x/server
 ````
+
