@@ -8,7 +8,7 @@
 user@showcase:~$ contxt projectX
 current workspace is now:projectX
 user@showcase:~$ context dir --paths
-paths stored in deltadna
+paths stored in projectX
 	 0 	/home/user/devsource/project_x
 	 1 	/home/user/devsource/project_x/server
 	 2 	/home/user/devsource/project_x/client
@@ -62,7 +62,7 @@ add /home/user/devsource/project_x/server
 example:
 ````shell
 user@showcase:~$ context dir --paths
-paths stored in deltadna
+paths stored in projectX
 	 0 	/home/user/devsource/project_x/server
 	 
 	to change directory depending stored path you can write cd $(contxt -i 0) in bash
