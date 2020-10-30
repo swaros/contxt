@@ -221,7 +221,7 @@ func MainExecute() {
 		if *showPaths == true {
 			someDirCmd = true
 			nonParams = false
-			fmt.Println(output.MessageCln("\t", "paths stored in ", output.ForeCyan, configure.Config.CurrentSet))
+			fmt.Println(output.MessageCln("\t", "paths stored in ", output.ForeCyan, configure.UsedConfig.CurrentSet))
 			dir, err := dirhandle.Current()
 			if err == nil {
 				count := configure.ShowPaths(dir)
@@ -305,7 +305,7 @@ func printPaths() {
 	dir, err := dirhandle.Current()
 	if err == nil {
 		fmt.Println(output.MessageCln(output.ForeWhite, " current directory: ", output.BoldTag, dir))
-		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace: ", output.BoldTag, configure.Config.CurrentSet))
+		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace: ", output.BoldTag, configure.UsedConfig.CurrentSet))
 
 		fmt.Println(" contains paths:")
 		configure.PathWorker(func(index int, path string) {
@@ -328,7 +328,7 @@ func printPaths() {
 		fmt.Println()
 		fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", "dir -w <workspace>", ""))
 		configure.WorkSpaces(func(name string) {
-			if name == configure.Config.CurrentSet {
+			if name == configure.UsedConfig.CurrentSet {
 				fmt.Println(output.MessageCln("\t[ ", output.BoldTag, name, output.CleanTag, " ]"))
 			} else {
 				fmt.Println(output.MessageCln("\t  ", name, "   "))

@@ -20,6 +20,15 @@ config:
   # this can now be used in scripts like: echo " ${message} world"
   variables: []
 
+  # autoruns are targets they are executed
+  # by different events
+  autorun:
+    # define a target that will be executed if a workspace was entered
+    onenter: ""
+    # define a target that will be executed if another workspace
+    # will be used
+    onleave: ""
+
   # UNUSED
   imports:
     - filename.yaml

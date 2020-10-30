@@ -24,8 +24,8 @@ const (
 	MirrorPath = "mirror/"
 )
 
-// Config is the the current used configuration
-var Config Configuration
+// UsedConfig is the the current used configuration
+var UsedConfig Configuration
 
 func getUserDir() (string, error) {
 	usr, err := user.Current()
@@ -43,12 +43,12 @@ func InitConfig() error {
 
 // ClearPaths removes all paths from current Workspace
 func ClearPaths() {
-	Config.Paths = nil
+	UsedConfig.Paths = nil
 	SaveDefaultConfiguration(true)
 }
 
 func createDefaultConfig() {
-	Config.CurrentSet = DefaultWorkspace
+	UsedConfig.CurrentSet = DefaultWorkspace
 }
 
 // ChangeWorkspace changing workspace
@@ -56,7 +56,7 @@ func ChangeWorkspace(workspace string) {
 	// save current configuration
 	SaveDefaultConfiguration(true)
 	// change set name
-	Config.CurrentSet = workspace
+	UsedConfig.CurrentSet = workspace
 	SaveDefaultConfiguration(false)
 	err := checkSetup()
 	if err != nil {
@@ -68,7 +68,7 @@ func ChangeWorkspace(workspace string) {
 
 // RemoveWorkspace removes a workspace
 func RemoveWorkspace(name string) {
-	if name == Config.CurrentSet {
+	if name == UsedConfig.CurrentSet {
 		fmt.Println("can not remove current workspace")
 		return
 	}
@@ -89,12 +89,12 @@ func RemoveWorkspace(name string) {
 func SaveDefaultConfiguration(workSpaceConfigUpdate bool) {
 	path, err := getConfigPath(DefaultConfigFileName)
 	if err == nil {
-		SaveConfiguration(Config, path)
+		SaveConfiguration(UsedConfig, path)
 		// save workspace config too
 		if workSpaceConfigUpdate {
-			pathWorkspace, secErr := getConfigPath(Config.CurrentSet + ".json")
+			pathWorkspace, secErr := getConfigPath(UsedConfig.CurrentSet + ".json")
 			if secErr == nil {
-				SaveConfiguration(Config, pathWorkspace)
+				SaveConfiguration(UsedConfig, pathWorkspace)
 			}
 		}
 	} else {
@@ -174,17 +174,17 @@ func ShowPaths(current string) int {
 		}
 
 	})
-	return len(Config.Paths)
+	return len(UsedConfig.Paths)
 }
 
 // PathWorker executes a callback function in a path
 func PathWorker(callback func(int, string)) {
-	cnt := len(Config.Paths)
+	cnt := len(UsedConfig.Paths)
 	if cnt < 1 {
 		fmt.Println(output.Message("\t", output.ForeRed, "no paths actually stored"))
 		return
 	}
-	for index, path := range Config.Paths {
+	for index, path := range UsedConfig.Paths {
 		os.Chdir(path)
 		callback(index, path)
 	}
@@ -195,7 +195,7 @@ func loadConfigurationFile(path string) {
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 
-	err := decoder.Decode(&Config)
+	err := decoder.Decode(&UsedConfig)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
@@ -222,15 +222,15 @@ func getConfigPath(fileName string) (string, error) {
 // AddPath adding a path if they not already exists
 func AddPath(path string) {
 	if pathExists(path) {
-		fmt.Println(output.MessageCln("\terror", output.BoldTag, path, output.ResetBold, "already in set", Config.CurrentSet))
+		fmt.Println(output.MessageCln("\terror", output.BoldTag, path, output.ResetBold, "already in set", UsedConfig.CurrentSet))
 		return
 	}
 
-	Config.Paths = append(Config.Paths, path)
+	UsedConfig.Paths = append(UsedConfig.Paths, path)
 }
 
 func pathExists(pathSearch string) bool {
-	for _, path := range Config.Paths {
+	for _, path := range UsedConfig.Paths {
 		if pathSearch == path {
 			return true
 		}
@@ -262,18 +262,18 @@ func checkSetup() error {
 		// load config file
 		if configFileExists == true && err == nil {
 			loadConfigurationFile(configPath)
-			if Config.CurrentSet == "" {
-				Config.CurrentSet = DefaultWorkspace
+			if UsedConfig.CurrentSet == "" {
+				UsedConfig.CurrentSet = DefaultWorkspace
 				SaveDefaultConfiguration(false)
 			}
 			// now copy content of set
-			pathWorkspace, secErr := getConfigPath(Config.CurrentSet + ".json")
+			pathWorkspace, secErr := getConfigPath(UsedConfig.CurrentSet + ".json")
 			if secErr == nil {
 				confPathExists, _ := exists(pathWorkspace)
 				if confPathExists {
 					loadConfigurationFile(pathWorkspace)
 				} else {
-					Config.Paths = nil
+					UsedConfig.Paths = nil
 				}
 			}
 		}

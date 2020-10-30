@@ -36,8 +36,8 @@ func RunTargets(targets string) {
 		output.ColorEnabled = !template.Config.Coloroff
 	}
 
-	if template.Config.LogLevel != "" {
-		setLogLevelByString(template.Config.LogLevel)
+	if template.Config.Loglevel != "" {
+		setLogLevelByString(template.Config.Loglevel)
 	}
 
 	var wg sync.WaitGroup
