@@ -188,7 +188,7 @@ func ShowPaths(current string) int {
 func PathWorker(callback func(int, string)) {
 	cnt := len(UsedConfig.Paths)
 	if cnt < 1 {
-		fmt.Println(output.Message("\t", output.ForeRed, "no paths actually stored"))
+		fmt.Println(output.MessageCln("\t", output.ForeRed, "no paths actually stored"))
 		return
 	}
 	for index, path := range UsedConfig.Paths {
