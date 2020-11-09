@@ -229,7 +229,7 @@ func getConfigPath(fileName string) (string, error) {
 // AddPath adding a path if they not already exists
 func AddPath(path string) {
 	if pathExists(path) {
-		fmt.Println(output.MessageCln("\terror", output.BoldTag, path, output.ResetBold, "already in set", UsedConfig.CurrentSet))
+		fmt.Println(output.MessageCln(output.ForeYellow, "\tthe path is already in set ", output.BoldTag, UsedConfig.CurrentSet))
 		return
 	}
 
