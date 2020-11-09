@@ -175,7 +175,7 @@ func ShowPaths(current string) int {
 	PathWorker(func(index int, path string) {
 		if path == current {
 
-			fmt.Println(output.MessageCln("\t[", output.BackLightBlue, output.ForeWhite, index, "]\t", path))
+			fmt.Println(output.MessageCln("\t[", output.ForeLightYellow, index, output.CleanTag, "]\t", output.BoldTag, path))
 		} else {
 			fmt.Println(output.MessageCln("\t ", output.ForeLightBlue, index, output.CleanTag, " \t", path))
 		}
