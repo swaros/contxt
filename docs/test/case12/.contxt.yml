@@ -1,0 +1,48 @@
+config:
+    sequencially: true 
+    coloroff: true 
+task:
+    - id: test1
+      require:
+        exists:
+          - .contxt.yml
+          - direxists/
+      script:
+        - "echo run_a"
+
+    - id: test2
+      require:
+        notExists:
+          - .contxt.yml
+      script:
+        - "echo 'run_b'"
+
+    - id: test3
+      require:
+        environment:
+          test: "check_check"
+      script:
+        - echo run_c
+
+    - id: test4
+      require:
+        environment:
+          TESTCASE_12_VAL: "HELLO"
+      script:
+        - echo run_d
+
+    - id: test5
+      variables:
+        test_var: "HELLO_KLAUS"
+      require:
+        variables:
+          test_var: "HELLO_WORLD"
+      script:
+        - echo run_e
+
+    - id: test6
+      require:
+        variables:
+          test_var: "HELLO_KLAUS"
+      script:
+        - echo run_f

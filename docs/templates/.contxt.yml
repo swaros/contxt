@@ -1,37 +1,135 @@
+# main configuration part
+# all booleans are by default set to false
 config:
+
+  # defines how the task will be started.
+  # if this is set to true, no task will
+  # run until a task is already running
   sequencially: true
+  
+  # disables the colored labels if true
   coloroff: true
   loglevel: "error"
+
+  # defines variables  
+  # use key: value
+  # example:
+  #   variables:
+  #      message: "hello"
+  # 
+  # this can now be used in scripts like: echo " ${message} world"
   variables: []
+
+  # autoruns are targets they are executed
+  # by different events
+  autorun:
+    # define a target that will be executed if a workspace was entered
+    onenter: ""
+    # define a target that will be executed if another workspace
+    # will be used
+    onleave: ""
+
+  # UNUSED
   imports:
     - filename.yaml
     - /test/filename.json
     - /check/filename.yml
+
+# all tasks the can be executed
 task:
+
+    # the Ident of the task. this ID will be named as target.
+    # in this cas it can be used with: contxt run script
+    # it is allowed to reuse the same id. 
+    # this task will be started all
     - id: script
+
+      # defines variables
+      # use key: value
+      # these variables can overwrite 
+      # variables they are defined in 
+      # the config section. 
       variables: []
+
+      # reguire
+      # this blocks contains all requirements that have to be checked before
+      # we will start the task
+      require:
+        # check if path exists
+        exists:
+          - test1.txt
+          - test2.txt
+          - /home/${USER}/.contxt/
+        # check if path not exists
+        notExists:
+          - .git/
+        # check matching variables in environment
+        environment: []
+        # check matching variables 
+        variables: []
+
+      # reasons to abort execution
       stopreasons:
+        # stop if a error was reportet
         onerror: true
+        # stop if a line from the output contains less then X chars
         onoutcountLess: 0
+        # stop if a line from the output contains more then X chars
         onoutcountMore: 0
+        # stop if the output contains any of the following text
         onoutContains:
           - context.json
           - fatal
       options:
+        # if set to true, the following scripts
+        # will be executed even if the last command ends
+        # with a error
+        ignoreCmdError: false
+
+        # text format for the output. if set it overwrites also labeling
         format: "log: %s\n"
+        # the cursor will stay in the same line for this tasks
         stickcursor: false
+        # foreground color code for label
         colorcode: "97"
+        # background color code for label
         bgcolorcode: "44"
+        # size of the panel that includes the panel text
         panelsize: 20
+        # enables printing the commandline and other depending outputs
         displaycmd: true
+        # hides printing the output from command
         hideout: false
+        # program that s used to executes the command. default is bash
         maincmd: bash
+        # arguments for the main program
         mainparams:
           - '-c'
+      
+      # here we have the script that is used with 'maincmd'
+      # what is usally bash.
+      # any line is started separately in his own process
+      # that also means: if you need to change a directory, set variables and
+      # so on use the json multilines
+      # for example this will not work as expected:
+      #
+      # - cd /home/myproject/
+      # - sh mytask.sh
+      #
+      # write it so instead:
+      # - |
+      #   cd /home/myproject/
+      #   sh mytask.sh
       script:
         - echo 'hallo welt'
         - ls -ga
+
+      # listener are a list of triggers
+      # they will execute actions depending
+      # on a defined case
       listener:
+          # a trigger
+          # they are the same as for stopreasons
           - trigger:
               onerror: true
               onoutcountLess: 0
@@ -39,8 +137,13 @@ task:
               onoutContains:
                 - context.json
                 - fatal
+            # the action that will be used if a trigger was triggered
             action:
+              # execute this target
               target: ""
+              # stop the whole execution.
+              # contxt will be stopped with an error code
               stopall: false
+              # NOT USED
               script:
                 - echo 'triggered by output parsing'

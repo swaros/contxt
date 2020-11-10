@@ -128,7 +128,7 @@ func MainExecute() {
 				configure.PathWorker(func(index int, path string) {
 					fmt.Print(output.MessageCln("execute on ", output.ForeWhite, path))
 					os.Chdir(path)
-					_, err := ExecuteScriptLine("bash", []string{"-c"}, *execute, func(output string) bool {
+					_, _, err := ExecuteScriptLine("bash", []string{"-c"}, *execute, func(output string) bool {
 						fmt.Println(output)
 						return true
 					}, func(process *os.Process) {
@@ -162,7 +162,6 @@ func MainExecute() {
 				shrtcut = doRunShortCuts(os.Args[2])
 			}
 			if !shrtcut {
-				log.Debug("no usage found for argument ", os.Args[2])
 				printOutHeader()
 				fmt.Println(output.MessageCln("to run a single target you can just type ", output.ForeWhite, "contxt run <target-name>"))
 				fmt.Println()
@@ -170,7 +169,7 @@ func MainExecute() {
 			}
 		}
 	}
-
+	// DIR execution block
 	if dirCommand.Parsed() {
 		someDirCmd := false
 
@@ -192,10 +191,11 @@ func MainExecute() {
 			configure.RemoveWorkspace(*removeWorkSpace)
 		}
 
+		// changing worksspace
 		if *workSpace != "" {
 			someDirCmd = true
 			nonParams = false
-			configure.ChangeWorkspace(*workSpace)
+			configure.ChangeWorkspace(*workSpace, callBackOldWs, callBackNewWs)
 		}
 
 		if *clearPaths {
@@ -221,7 +221,7 @@ func MainExecute() {
 		if *showPaths == true {
 			someDirCmd = true
 			nonParams = false
-			fmt.Println(output.MessageCln("\t", "paths stored in ", output.ForeCyan, configure.Config.CurrentSet))
+			fmt.Println(output.MessageCln("\t", "paths stored in ", output.ForeCyan, configure.UsedConfig.CurrentSet))
 			dir, err := dirhandle.Current()
 			if err == nil {
 				count := configure.ShowPaths(dir)
@@ -247,12 +247,65 @@ func MainExecute() {
 	}
 }
 
+func callBackOldWs(oldws string) bool {
+	GetLogger().Info("OLD workspace: ", oldws)
+	// get all paths first
+	configure.PathWorker(func(index int, path string) {
+
+		os.Chdir(path)
+		template, templateFile, exists := GetTemplate()
+
+		GetLogger().WithFields(logrus.Fields{
+			"templateFile": templateFile,
+			"exists":       exists,
+			"path":         path,
+		}).Debug("path parsing")
+
+		if exists && template.Config.Autorun.Onleave != "" {
+			onleaveTarget := template.Config.Autorun.Onleave
+			GetLogger().WithFields(logrus.Fields{
+				"templateFile": templateFile,
+				"target":       onleaveTarget,
+			}).Info("execute leave-action")
+			RunTargets(onleaveTarget)
+
+		}
+
+	})
+	return true
+}
+
+func callBackNewWs(newWs string) {
+	GetLogger().Info("NEW workspace: ", newWs)
+	configure.PathWorker(func(index int, path string) {
+
+		os.Chdir(path)
+		template, templateFile, exists := GetTemplate()
+
+		GetLogger().WithFields(logrus.Fields{
+			"templateFile": templateFile,
+			"exists":       exists,
+			"path":         path,
+		}).Debug("path parsing")
+
+		if exists && template.Config.Autorun.Onenter != "" {
+			onEnterTarget := template.Config.Autorun.Onenter
+			GetLogger().WithFields(logrus.Fields{
+				"templateFile": templateFile,
+				"target":       onEnterTarget,
+			}).Info("execute enter-action")
+			RunTargets(onEnterTarget)
+		}
+
+	})
+}
+
 func doMagicParamOne(param string) bool {
 	result := false
 	// param is a workspace ?
 	configure.WorkSpaces(func(ws string) {
 		if param == ws {
-			configure.ChangeWorkspace(ws)
+			configure.ChangeWorkspace(ws, callBackOldWs, callBackNewWs)
 			result = true
 		}
 	})
@@ -305,7 +358,7 @@ func printPaths() {
 	dir, err := dirhandle.Current()
 	if err == nil {
 		fmt.Println(output.MessageCln(output.ForeWhite, " current directory: ", output.BoldTag, dir))
-		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace: ", output.BoldTag, configure.Config.CurrentSet))
+		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace: ", output.BoldTag, configure.UsedConfig.CurrentSet))
 
 		fmt.Println(" contains paths:")
 		configure.PathWorker(func(index int, path string) {
@@ -328,7 +381,7 @@ func printPaths() {
 		fmt.Println()
 		fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", "dir -w <workspace>", ""))
 		configure.WorkSpaces(func(name string) {
-			if name == configure.Config.CurrentSet {
+			if name == configure.UsedConfig.CurrentSet {
 				fmt.Println(output.MessageCln("\t[ ", output.BoldTag, name, output.CleanTag, " ]"))
 			} else {
 				fmt.Println(output.MessageCln("\t  ", name, "   "))
