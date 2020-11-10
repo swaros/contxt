@@ -51,34 +51,68 @@ task:
       # the config section. 
       variables: []
 
-      
+      # reasons to abort execution
       stopreasons:
+        # stop if a error was reportet
         onerror: true
+        # stop if a line from the output contains less then X chars
         onoutcountLess: 0
+        # stop if a line from the output contains more then X chars
         onoutcountMore: 0
+        # stop if the output contains any of the following text
         onoutContains:
           - context.json
           - fatal
       options:
         # if set to true, the following scripts
-        # will be executed if the last command ends
+        # will be executed even if the last command ends
         # with a error
         ignoreCmdError: false
 
+        # text format for the output. if set it overwrites also labeling
         format: "log: %s\n"
+        # the cursor will stay in the same line for this tasks
         stickcursor: false
+        # foreground color code for label
         colorcode: "97"
+        # background color code for label
         bgcolorcode: "44"
+        # size of the panel that includes the panel text
         panelsize: 20
+        # enables printing the commandline and other depending outputs
         displaycmd: true
+        # hides printing the output from command
         hideout: false
+        # program that s used to executes the command. default is bash
         maincmd: bash
+        # arguments for the main program
         mainparams:
           - '-c'
+      
+      # here we have the script that is used with 'maincmd'
+      # what is usally bash.
+      # any line is started separately in his own process
+      # that also means: if you need to change a directory, set variables and
+      # so on use the json multilines
+      # for example this will not work as expected:
+      #
+      # - cd /home/myproject/
+      # - sh mytask.sh
+      #
+      # write it so instead:
+      # - |
+      #   cd /home/myproject/
+      #   sh mytask.sh
       script:
         - echo 'hallo welt'
         - ls -ga
+
+      # listener are a list of triggers
+      # they will execute actions depending
+      # on a defined case
       listener:
+          # a trigger
+          # they are the same as for stopreasons
           - trigger:
               onerror: true
               onoutcountLess: 0
@@ -86,8 +120,13 @@ task:
               onoutContains:
                 - context.json
                 - fatal
+            # the action that will be used if a trigger was triggered
             action:
+              # execute this target
               target: ""
+              # stop the whole execution.
+              # contxt will be stopped with an error code
               stopall: false
+              # NOT USED
               script:
                 - echo 'triggered by output parsing'
