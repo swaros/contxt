@@ -233,3 +233,30 @@ func TestCase12Requires(t *testing.T) {
 		}
 	})
 }
+
+func TestCase13Next(t *testing.T) {
+	caseRunner("13", t, func(t *testing.T) {
+
+		cmdhandle.RunTargets("start")
+		logMain := cmdhandle.GetPH("RUN.start.LOG.LAST")
+		if logMain != "start" {
+			t.Error("got unexpected result:(", logMain, ")")
+		}
+
+		test2 := cmdhandle.GetPH("RUN.next_a.LOG.LAST")
+		if test2 != "run-a" {
+			t.Error("got unexpected result for test2. got:(", test2, ")")
+		}
+
+		test := cmdhandle.GetPH("RUN.next_b.LOG.LAST")
+		if test != "run-b" {
+			t.Error("got unexpected result for test3. got:(", test, ")")
+		}
+
+		test = cmdhandle.GetPH("RUN.next_c.LOG.LAST")
+		if test != "run-c" {
+			t.Error("got unexpected result for test4. got:(", test, ")")
+		}
+
+	})
+}

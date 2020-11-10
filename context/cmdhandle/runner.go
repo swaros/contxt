@@ -326,13 +326,22 @@ func doRunShortCuts(param string) bool {
 				result = true
 			}
 		}
+	} else {
+		fmt.Println(output.MessageCln(output.ForeRed, "not template exists. you can create one by ", output.CleanTag, " run --create-template"))
 	}
 	if !result {
 		fmt.Println(output.MessageCln(output.BoldTag, param, output.CleanTag, " is not a valid task"))
-
-		fmt.Println("\t", "these are the tasks they can be used as shortcut together with run")
-		for _, tasks := range template.Task {
-			fmt.Println("\t\t", tasks.ID)
+		fmt.Println()
+		fmt.Println(output.MessageCln(output.BoldTag, "\ttasks count: ", output.CleanTag, len(template.Task)))
+		if len(template.Task) > 0 {
+			fmt.Println("\t", "these are the tasks they can be used as shortcut together with run")
+			for _, tasks := range template.Task {
+				fmt.Println("\t\t", tasks.ID)
+			}
+		} else {
+			fmt.Println(output.MessageCln("that is what we gor so far:"))
+			fmt.Println()
+			LintOut(template)
 		}
 	}
 	fmt.Println()

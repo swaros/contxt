@@ -276,6 +276,22 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 
 					}
 				}
+				// executes next targets if there some defined
+				for _, nextTarget := range script.Next {
+					if script.Options.Displaycmd {
+						fmt.Println(output.MessageCln(output.ForeYellow, " [next] ", output.ForeBlue, nextTarget))
+					}
+					/* ---- something is wrong with my logic dependig execution not in a sequence (useWaitGroup == true)
+					if useWaitGroup {
+						go executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
+
+					} else {
+						executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
+					}*/
+
+					// for now we execute without a waitgroup
+					executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
+				}
 				return ExitOk
 			}
 

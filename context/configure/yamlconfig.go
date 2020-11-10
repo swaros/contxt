@@ -125,6 +125,7 @@ type Task struct {
 	Options     Options           `yaml:"options"`
 	Script      []string          `yaml:"script"`
 	Listener    []Listener        `yaml:"listener"`
+	Next        []string          `yaml:"next"`
 }
 
 /*

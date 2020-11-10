@@ -124,6 +124,11 @@ task:
         - echo 'hallo welt'
         - ls -ga
 
+      # wich targets should be executed next
+      next:
+        - targetA
+        - targetB
+      
       # listener are a list of triggers
       # they will execute actions depending
       # on a defined case
