@@ -166,7 +166,7 @@ func TestCase7(t *testing.T) {
 
 		log := cmdhandle.GetPH("RUN.sub.LOG.LAST")
 		if log == "sub-end" {
-			t.Error("the script runs without erros, but hey have an error. script have to stop")
+			t.Error("the script runs without erros, but hey have an error. script have to stop. log=", log)
 		}
 
 	})
@@ -195,5 +195,68 @@ func TestCase9(t *testing.T) {
 		if test2 != "lets go" {
 			t.Error("placeholder was not used in task variables. got:", test2)
 		}
+	})
+}
+
+func TestCase12Requires(t *testing.T) {
+	caseRunner("12", t, func(t *testing.T) {
+		os.Setenv("TESTCASE_12_VAL", "HELLO")
+		cmdhandle.RunTargets("test1,test2,test3,test4,test5,test6")
+		logMain := cmdhandle.GetPH("RUN.test1.LOG.LAST")
+		if logMain != "run_a" {
+			t.Error("got unexpected result:", logMain)
+		}
+
+		test2 := cmdhandle.GetPH("RUN.test2.LOG.LAST")
+		if test2 != "" {
+			t.Error("got unexpected result for test2. got:", test2, "test should not run because of checking file")
+		}
+
+		test3 := cmdhandle.GetPH("RUN.test3.LOG.LAST")
+		if test3 != "" {
+			t.Error("got unexpected result for test3. got:", test3, "test should not run because env-var check")
+		}
+
+		test4 := cmdhandle.GetPH("RUN.test4.LOG.LAST")
+		if test4 != "run_d" {
+			t.Error("got unexpected result for test4. got:", test4, "test should run because env-var check")
+		}
+
+		test5 := cmdhandle.GetPH("RUN.test5.LOG.LAST")
+		if test5 != "" {
+			t.Error("got unexpected result for test5. got:", test5, "test should not run because variable check")
+		}
+
+		test6 := cmdhandle.GetPH("RUN.test6.LOG.LAST")
+		if test6 != "run_f" {
+			t.Error("got unexpected result for test6. got:", test6, "test should run because variable check")
+		}
+	})
+}
+
+func TestCase13Next(t *testing.T) {
+	caseRunner("13", t, func(t *testing.T) {
+
+		cmdhandle.RunTargets("start")
+		logMain := cmdhandle.GetPH("RUN.start.LOG.LAST")
+		if logMain != "start" {
+			t.Error("got unexpected result:(", logMain, ")")
+		}
+
+		test2 := cmdhandle.GetPH("RUN.next_a.LOG.LAST")
+		if test2 != "run-a" {
+			t.Error("got unexpected result for test2. got:(", test2, ")")
+		}
+
+		test := cmdhandle.GetPH("RUN.next_b.LOG.LAST")
+		if test != "run-b" {
+			t.Error("got unexpected result for test3. got:(", test, ")")
+		}
+
+		test = cmdhandle.GetPH("RUN.next_c.LOG.LAST")
+		if test != "run-c" {
+			t.Error("got unexpected result for test4. got:(", test, ")")
+		}
+
 	})
 }

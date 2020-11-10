@@ -3,23 +3,43 @@ package cmdhandle
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
+	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
 )
 
+//var log = logrus.New()
+var log = &logrus.Logger{
+	Out:       os.Stdout,
+	Formatter: new(logrus.TextFormatter),
+	Hooks:     make(logrus.LevelHooks),
+	Level:     logrus.ErrorLevel,
+}
+
+func initLogger() {
+	//log.Out = os.Stdout
+	//log.SetLevel(logrus.DebugLevel)
+
+}
+
+// GetLogger is the main Logger instance
+func GetLogger() *logrus.Logger {
+	return log
+}
+
 // MainExecute runs main. parsing flags
 func MainExecute() {
+
+	initLogger()
 
 	var configErr = configure.InitConfig()
 	if configErr != nil {
 		log.Fatal(configErr)
 	}
-
 	nonParams := true
 
 	// Directory related commands
@@ -108,7 +128,7 @@ func MainExecute() {
 				configure.PathWorker(func(index int, path string) {
 					fmt.Print(output.MessageCln("execute on ", output.ForeWhite, path))
 					os.Chdir(path)
-					_, err := ExecuteScriptLine("bash", *execute, func(output string) bool {
+					_, _, err := ExecuteScriptLine("bash", []string{"-c"}, *execute, func(output string) bool {
 						fmt.Println(output)
 						return true
 					}, func(process *os.Process) {
@@ -122,6 +142,8 @@ func MainExecute() {
 						successCount++
 					}
 				})
+			} else {
+				log.Fatal("error getting user dir", err)
 			}
 			fmt.Print("execution done. ")
 			if errorCount > 0 {
@@ -136,6 +158,7 @@ func MainExecute() {
 		if someRunCmd == false {
 			shrtcut := false
 			if len(os.Args) > 2 {
+				log.Debug("got undefined argument. try to figure out meaning of ", os.Args[2])
 				shrtcut = doRunShortCuts(os.Args[2])
 			}
 			if !shrtcut {
@@ -146,7 +169,7 @@ func MainExecute() {
 			}
 		}
 	}
-
+	// DIR execution block
 	if dirCommand.Parsed() {
 		someDirCmd := false
 
@@ -168,10 +191,11 @@ func MainExecute() {
 			configure.RemoveWorkspace(*removeWorkSpace)
 		}
 
+		// changing worksspace
 		if *workSpace != "" {
 			someDirCmd = true
 			nonParams = false
-			configure.ChangeWorkspace(*workSpace)
+			configure.ChangeWorkspace(*workSpace, callBackOldWs, callBackNewWs)
 		}
 
 		if *clearPaths {
@@ -197,7 +221,7 @@ func MainExecute() {
 		if *showPaths == true {
 			someDirCmd = true
 			nonParams = false
-			fmt.Println(output.MessageCln("\t", "paths stored in ", output.ForeCyan, configure.Config.CurrentSet))
+			fmt.Println(output.MessageCln("\t", "paths stored in ", output.ForeCyan, configure.UsedConfig.CurrentSet))
 			dir, err := dirhandle.Current()
 			if err == nil {
 				count := configure.ShowPaths(dir)
@@ -223,17 +247,70 @@ func MainExecute() {
 	}
 }
 
+func callBackOldWs(oldws string) bool {
+	GetLogger().Info("OLD workspace: ", oldws)
+	// get all paths first
+	configure.PathWorker(func(index int, path string) {
+
+		os.Chdir(path)
+		template, templateFile, exists := GetTemplate()
+
+		GetLogger().WithFields(logrus.Fields{
+			"templateFile": templateFile,
+			"exists":       exists,
+			"path":         path,
+		}).Debug("path parsing")
+
+		if exists && template.Config.Autorun.Onleave != "" {
+			onleaveTarget := template.Config.Autorun.Onleave
+			GetLogger().WithFields(logrus.Fields{
+				"templateFile": templateFile,
+				"target":       onleaveTarget,
+			}).Info("execute leave-action")
+			RunTargets(onleaveTarget)
+
+		}
+
+	})
+	return true
+}
+
+func callBackNewWs(newWs string) {
+	GetLogger().Info("NEW workspace: ", newWs)
+	configure.PathWorker(func(index int, path string) {
+
+		os.Chdir(path)
+		template, templateFile, exists := GetTemplate()
+
+		GetLogger().WithFields(logrus.Fields{
+			"templateFile": templateFile,
+			"exists":       exists,
+			"path":         path,
+		}).Debug("path parsing")
+
+		if exists && template.Config.Autorun.Onenter != "" {
+			onEnterTarget := template.Config.Autorun.Onenter
+			GetLogger().WithFields(logrus.Fields{
+				"templateFile": templateFile,
+				"target":       onEnterTarget,
+			}).Info("execute enter-action")
+			RunTargets(onEnterTarget)
+		}
+
+	})
+}
+
 func doMagicParamOne(param string) bool {
 	result := false
 	// param is a workspace ?
 	configure.WorkSpaces(func(ws string) {
 		if param == ws {
-			configure.ChangeWorkspace(ws)
+			configure.ChangeWorkspace(ws, callBackOldWs, callBackNewWs)
 			result = true
 		}
 	})
 	if !result {
-		fmt.Println(output.MessageCln(output.BoldTag, param, output.ResetBold, " is not a workspace"))
+		fmt.Println(output.MessageCln(output.BoldTag, param, output.CleanTag, " is not a workspace"))
 	}
 	return result
 }
@@ -249,13 +326,22 @@ func doRunShortCuts(param string) bool {
 				result = true
 			}
 		}
+	} else {
+		fmt.Println(output.MessageCln(output.ForeRed, "not template exists. you can create one by ", output.CleanTag, " run --create-template"))
 	}
 	if !result {
 		fmt.Println(output.MessageCln(output.BoldTag, param, output.CleanTag, " is not a valid task"))
-
-		fmt.Println("\t", "these are the tasks they can be used as shortcut together with run")
-		for _, tasks := range template.Task {
-			fmt.Println("\t\t", tasks.ID)
+		fmt.Println()
+		fmt.Println(output.MessageCln(output.BoldTag, "\ttasks count: ", output.CleanTag, len(template.Task)))
+		if len(template.Task) > 0 {
+			fmt.Println("\t", "these are the tasks they can be used as shortcut together with run")
+			for _, tasks := range template.Task {
+				fmt.Println("\t\t", tasks.ID)
+			}
+		} else {
+			fmt.Println(output.MessageCln("that is what we gor so far:"))
+			fmt.Println()
+			LintOut(template)
 		}
 	}
 	fmt.Println()
@@ -275,14 +361,13 @@ func printOutHeader() {
 func printInfo() {
 	printOutHeader()
 	printPaths()
-	//systools.TestPrintColoredChanges()
 }
 
 func printPaths() {
 	dir, err := dirhandle.Current()
 	if err == nil {
 		fmt.Println(output.MessageCln(output.ForeWhite, " current directory: ", output.BoldTag, dir))
-		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace: ", output.BoldTag, configure.Config.CurrentSet))
+		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace: ", output.BoldTag, configure.UsedConfig.CurrentSet))
 
 		fmt.Println(" contains paths:")
 		configure.PathWorker(func(index int, path string) {
@@ -305,7 +390,7 @@ func printPaths() {
 		fmt.Println()
 		fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", "dir -w <workspace>", ""))
 		configure.WorkSpaces(func(name string) {
-			if name == configure.Config.CurrentSet {
+			if name == configure.UsedConfig.CurrentSet {
 				fmt.Println(output.MessageCln("\t[ ", output.BoldTag, name, output.CleanTag, " ]"))
 			} else {
 				fmt.Println(output.MessageCln("\t  ", name, "   "))

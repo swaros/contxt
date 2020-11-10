@@ -13,9 +13,9 @@ test-all:
 	go test -v ./...
 
 test:
-	go test -timeout 30s github.com/swaros/contxt/context/cmdhandle -v
-	go test -timeout 30s github.com/swaros/contxt/context/systools -v
-	go test -timeout 30s github.com/swaros/contxt/context/output -v
+	go test -timeout 30s github.com/swaros/contxt/context/cmdhandle
+	go test -timeout 30s github.com/swaros/contxt/context/systools
+	go test -timeout 30s github.com/swaros/contxt/context/output
 
 info: build
 	./bin/contxt dir -info

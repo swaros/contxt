@@ -1,0 +1,24 @@
+config:
+    sequencially: true
+    coloroff: true
+task:
+    - id: start
+      script:
+        - echo start
+      next:
+        - next_a
+        - next_b
+
+    - id: next_a
+      script:
+        - echo run-a
+
+    - id: next_b
+      script:
+        - echo run-b
+      next:
+        - next_c
+
+    - id: next_c
+      script:
+        - echo run-c

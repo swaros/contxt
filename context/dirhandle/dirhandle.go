@@ -19,7 +19,7 @@ func Current() (string, error) {
 
 // PrintDir prints the all the paths
 func PrintDir(number int) {
-	for index, path := range configure.Config.Paths {
+	for index, path := range configure.UsedConfig.Paths {
 		if number == index {
 			fmt.Println(path)
 			return
@@ -30,7 +30,7 @@ func PrintDir(number int) {
 
 // GetDir returns the path by index
 func GetDir(number int) string {
-	for index, path := range configure.Config.Paths {
+	for index, path := range configure.UsedConfig.Paths {
 		if number == index {
 
 			return path

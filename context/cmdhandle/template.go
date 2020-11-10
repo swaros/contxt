@@ -3,7 +3,6 @@ package cmdhandle
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -23,7 +22,7 @@ func FindTemplate() (string, bool) {
 	// 1. looking in user mirror path
 	usr, err := user.Current()
 	if err != nil {
-		log.Fatal(err)
+		GetLogger().Fatal(err)
 	}
 
 	homeDirYml := usr.HomeDir + configure.DefaultPath + configure.MirrorPath + DefaultExecYaml
@@ -146,4 +145,12 @@ func GetPwdTemplate(path string) (configure.RunConfig, error) {
 
 	}
 	return template, fileerror
+}
+
+// LintOut is for finding errors in the yaml file
+func LintOut(template configure.RunConfig) {
+	res, err := yaml.Marshal(template)
+	if err != nil {
+		fmt.Println(res)
+	}
 }
