@@ -6,6 +6,7 @@ task:
       require:
         exists:
           - .contxt.yml
+          - direxists/
       script:
         - "echo run_a"
 
