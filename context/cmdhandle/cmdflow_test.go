@@ -197,3 +197,39 @@ func TestCase9(t *testing.T) {
 		}
 	})
 }
+
+func TestCase12Requires(t *testing.T) {
+	caseRunner("12", t, func(t *testing.T) {
+		os.Setenv("TESTCASE_12_VAL", "HELLO")
+		cmdhandle.RunTargets("test1,test2,test3,test4,test5,test6")
+		logMain := cmdhandle.GetPH("RUN.test1.LOG.LAST")
+		if logMain != "run_a" {
+			t.Error("got unexpected result:", logMain)
+		}
+
+		test2 := cmdhandle.GetPH("RUN.test2.LOG.LAST")
+		if test2 != "" {
+			t.Error("got unexpected result for test2. got:", test2, "test should not run because of checking file")
+		}
+
+		test3 := cmdhandle.GetPH("RUN.test3.LOG.LAST")
+		if test3 != "" {
+			t.Error("got unexpected result for test3. got:", test3, "test should not run because env-var check")
+		}
+
+		test4 := cmdhandle.GetPH("RUN.test4.LOG.LAST")
+		if test4 != "run_d" {
+			t.Error("got unexpected result for test4. got:", test4, "test should run because env-var check")
+		}
+
+		test5 := cmdhandle.GetPH("RUN.test5.LOG.LAST")
+		if test5 != "" {
+			t.Error("got unexpected result for test5. got:", test5, "test should not run because variable check")
+		}
+
+		test6 := cmdhandle.GetPH("RUN.test6.LOG.LAST")
+		if test6 != "run_f" {
+			t.Error("got unexpected result for test6. got:", test6, "test should run because variable check")
+		}
+	})
+}

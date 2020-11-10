@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
+	"github.com/swaros/contxt/context/dirhandle"
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/swaros/contxt/context/systools"
@@ -23,6 +24,8 @@ const (
 	ExitNoCode = 102
 	// ExitCmdError means the execution of the command fails. a error by the command itself
 	ExitCmdError = 103
+	// ExitByRequirement means a requirement was not fulfills
+	ExitByRequirement = 104
 )
 
 // RunTargets executes multiple targets
@@ -86,6 +89,43 @@ func setLogLevelByString(loglevel string) {
 
 }
 
+func checkRequirements(require configure.Require) (bool, string) {
+	// check file exists
+	for _, fileExists := range require.Exists {
+		fexists, err := dirhandle.Exists(fileExists)
+		if err != nil || fexists == false {
+
+			return false, "required file (" + fileExists + ") not found "
+		}
+	}
+
+	// check file not exists
+	for _, fileNotExists := range require.NotExists {
+		fexists, err := dirhandle.Exists(fileNotExists)
+		if err != nil || fexists == true {
+			return false, "unexpected file (" + fileNotExists + ")  found "
+		}
+	}
+	// check environment variable is set
+
+	for name, value := range require.Environment {
+		envVar := os.Getenv(name)
+		if envVar != value {
+			return false, "environment variable[" + name + "] not matching with " + value
+		}
+	}
+
+	// check variables
+	for name, value := range require.Variables {
+		defVar := GetPH(name)
+		if defVar != value {
+			return false, "runtime variable variable[" + name + "] not matching with " + value
+		}
+	}
+
+	return true, ""
+}
+
 func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string) int {
 	if useWaitGroup {
 		waitGroup.Add(1)
@@ -113,6 +153,15 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 
 				// convert to stopReason struct
 				stopReason := configure.StopReasons(script.Stopreasons)
+
+				// check requirements
+				canRun, message := checkRequirements(script.Requires)
+				if canRun == false {
+					if script.Options.Displaycmd {
+						fmt.Println(output.MessageCln(output.ForeYellow, " [require] ", output.ForeBlue, message))
+					}
+					return ExitByRequirement
+				}
 
 				for _, codeLine := range script.Script {
 

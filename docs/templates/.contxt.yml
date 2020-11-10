@@ -51,6 +51,23 @@ task:
       # the config section. 
       variables: []
 
+      # reguire
+      # this blocks contains all requirements that have to be checked before
+      # we will start the task
+      require:
+        # check if path exists
+        exists:
+          - test1.txt
+          - test2.txt
+          - /home/${USER}/.contxt/
+        # check if path not exists
+        notExists:
+          - .git/
+        # check matching variables in environment
+        environment: []
+        # check matching variables 
+        variables: []
+
       # reasons to abort execution
       stopreasons:
         # stop if a error was reportet

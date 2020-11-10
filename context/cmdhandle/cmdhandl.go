@@ -150,23 +150,3 @@ func WriteTemplate() {
 func ExecPathFile(waitGroup *sync.WaitGroup, useWaitGroup bool, template configure.RunConfig, target string) {
 	executeTemplate(waitGroup, useWaitGroup, template, target)
 }
-
-func checkRequirements(command configure.CommandLine) bool {
-	for _, fileExists := range command.Require.FileExists {
-		fexists, err := dirhandle.Exists(fileExists)
-		if err != nil || fexists == false {
-			fmt.Println("required file (", fileExists, ") not found ")
-			return false
-		}
-	}
-
-	for _, fileNotExists := range command.Require.FileNotExists {
-		fexists, err := dirhandle.Exists(fileNotExists)
-		if err != nil || fexists == true {
-			fmt.Println("unexpected file (", fileNotExists, ")  found ")
-			return false
-		}
-	}
-
-	return true
-}

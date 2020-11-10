@@ -19,10 +19,17 @@ type IncludePaths struct {
 	} `yaml:"include"`
 }
 
+// ++++++++++++++++++++ IMPORTANT !!!! ++++++++++++++++++++++++++++++
 // after autogenerate todos:
 // Variables are map[string]string and contains settings for Placeholders. add yaml:"variables,omitempty
 //
+// change all variables anywhere
+//
 // Variables    map[string]string `yaml:"variables,omitempty"`
+//
+// same for environment in Require
+//
+// Environment map[string]string `yaml:"environment,omitempty"`
 //
 
 // RunConfig defines the structure of the local stored execution files
@@ -51,6 +58,14 @@ type Config struct {
 	Variables    map[string]string `yaml:"variables,omitempty"`
 	Autorun      Autorun           `yaml:"autorun"`
 	Imports      []string          `yaml:"imports"`
+}
+
+// Require defines what is required to execute the task
+type Require struct {
+	Exists      []string          `yaml:"exists"`
+	NotExists   []string          `yaml:"notExists"`
+	Environment map[string]string `yaml:"environment,omitempty"`
+	Variables   map[string]string `yaml:"variables,omitempty"`
 }
 
 // Stopreasons defines reasons to stop execution of the script
@@ -105,6 +120,7 @@ type Listener struct {
 type Task struct {
 	ID          string            `yaml:"id"`
 	Variables   map[string]string `yaml:"variables,omitempty"`
+	Requires    Require           `yaml:"require"`
 	Stopreasons Stopreasons       `yaml:"stopreasons"`
 	Options     Options           `yaml:"options"`
 	Script      []string          `yaml:"script"`
