@@ -39,6 +39,10 @@ func RunTargets(targets string) {
 		output.ColorEnabled = !template.Config.Coloroff
 	}
 
+	if len(template.Config.Imports) > 0 {
+		handleFileImportsToVars(template.Config.Imports)
+	}
+
 	if template.Config.Loglevel != "" {
 		setLogLevelByString(template.Config.Loglevel)
 	}
@@ -335,4 +339,33 @@ func checkReason(stopReason configure.StopReasons, output string) (bool, string)
 	}
 
 	return false, message
+}
+
+func handleFileImportsToVars(imports []string) {
+	for _, filenameFull := range imports {
+		var keyname string
+		parts := strings.Split(filenameFull, " ")
+		filename := parts[0]
+		if len(parts) > 1 {
+			keyname = parts[1]
+		}
+
+		dirhandle.FileTypeHandler(filename, func(jsonBaseName string) {
+			GetLogger().Debug("loading json File:", filename)
+			if keyname == "" {
+				keyname = jsonBaseName
+			}
+			ImportDataFromJSONFile(keyname, filename)
+
+		}, func(yamlBaseName string) {
+			GetLogger().Debug("loading yaml File:", filename)
+			if keyname == "" {
+				keyname = yamlBaseName
+			}
+			ImportDataFromYAMLFile(keyname, filename)
+
+		}, func(path string, err error) {
+			GetLogger().Errorln("file not exists:", err)
+		})
+	}
 }

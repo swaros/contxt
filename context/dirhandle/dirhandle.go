@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/swaros/contxt/context/configure"
 )
@@ -49,4 +50,22 @@ func Exists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+// FileTypeHandler calls function depending on file ending
+// and if this fil exists
+func FileTypeHandler(path string, jsonHandle func(string), yamlHandle func(string), notExists func(string, error)) {
+	fileInfo, err := os.Stat(path)
+	if err == nil && !fileInfo.IsDir() {
+		var extension = filepath.Ext(path)
+		var basename = filepath.Base(path)
+		switch extension {
+		case ".yaml", ".yml":
+			yamlHandle(basename)
+		case ".json":
+			jsonHandle(basename)
+		}
+	} else {
+		notExists(path, err)
+	}
 }
