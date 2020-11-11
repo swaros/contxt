@@ -260,3 +260,24 @@ func TestCase13Next(t *testing.T) {
 
 	})
 }
+
+func TestCase14Imports(t *testing.T) {
+	caseRunner("14", t, func(t *testing.T) {
+
+		cmdhandle.RunTargets("start,usertest")
+		check := cmdhandle.GetJSONPathValueString("import.yaml", "testdata.check")
+		if check != "hello" {
+			t.Error("expect hello but got", check)
+		}
+
+		outcome := cmdhandle.GetPH("RUN.start.LOG.LAST")
+		if outcome != "hello world" {
+			t.Error("import looks not working. got ", outcome)
+		}
+
+		usertest := cmdhandle.GetPH("RUN.usertest.LOG.LAST")
+		if usertest != "hello john miller" {
+			t.Error("user data import looks not working. got ", usertest)
+		}
+	})
+}

@@ -1,0 +1,16 @@
+config:
+    sequencially: true
+    coloroff: true
+    loglevel: debug
+    imports:
+      - import.yaml
+      - "data.yml users"
+task:
+    - id: start
+      script:
+        - echo "it runs"
+        - echo "${import.yaml:testdata.check} world"
+    
+    - id: usertest
+      script:
+        - echo "${import.yaml:testdata.check} ${users:user.name} ${users:user.last}"
