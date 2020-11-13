@@ -133,8 +133,15 @@ func checkRequirements(require configure.Require) (bool, string) {
 func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string) int {
 	if useWaitGroup {
 		waitGroup.Add(1)
+		GetLogger().WithFields(logrus.Fields{
+			"waitgroup": waitGroup,
+		}).Debug("starting async")
 		defer waitGroup.Done()
 	}
+
+	GetLogger().WithFields(logrus.Fields{
+		"target": target,
+	}).Info("LOOKING for target")
 
 	if len(runCfg.Task) > 0 {
 
@@ -146,10 +153,14 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 		colorCode := systools.CreateColorCode()
 		bgCode := systools.CurrentBgColor
 		SetPH("RUN.TARGET", target)
+		targetFound := false
 		for _, script := range runCfg.Task {
 			// check if we have found the target
 			if strings.EqualFold(target, script.ID) {
-
+				GetLogger().WithFields(logrus.Fields{
+					"target": target,
+				}).Info("EXECUTE target")
+				targetFound = true
 				// first get the task related variables
 				for keyName, variable := range script.Variables {
 					SetPH(keyName, HandlePlaceHolder(variable))
@@ -192,16 +203,29 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 								if triggerFound {
 									SetPH("RUN."+target+".LOG.HIT", logLine)
 									if script.Options.Displaycmd {
-										fmt.Println(output.MessageCln(output.ForeMagenta, "\tlistener hit", output.ForeYellow, triggerMessage, output.Reverse, logLine))
+										fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t", output.ForeYellow, triggerMessage, output.Dim, " ", logLine))
 									}
 									actionDef := configure.Action(listener.Action)
 									if actionDef.Target != "" {
+										if script.Options.Displaycmd {
+											fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t ", output.ForeGreen, "target:", output.ForeLightGreen, actionDef.Target))
+										}
+										GetLogger().WithFields(logrus.Fields{
+											"trigger": triggerMessage,
+											"target":  actionDef.Target,
+										}).Info("trigger called")
+
 										if useWaitGroup {
 											go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
 
 										} else {
 											executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
 										}
+									} else {
+										GetLogger().WithFields(logrus.Fields{
+											"trigger": triggerMessage,
+											"output":  logLine,
+										}).Warn("trigger defined without any target")
 									}
 								}
 							}
@@ -281,6 +305,10 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					}
 				}
 				// executes next targets if there some defined
+				GetLogger().WithFields(logrus.Fields{
+					"current-target": target,
+					"nexts":          script.Next,
+				}).Debug("next definition")
 				for _, nextTarget := range script.Next {
 					if script.Options.Displaycmd {
 						fmt.Println(output.MessageCln(output.ForeYellow, " [next] ", output.ForeBlue, nextTarget))
@@ -299,6 +327,11 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				return ExitOk
 			}
 
+		}
+
+		if !targetFound {
+			fmt.Println(output.MessageCln(output.ForeRed, "target not found: ", output.BackRed, output.ForeWhite, target))
+			GetLogger().Error("Target can not be found: ", target)
 		}
 	}
 	return ExitNoCode
@@ -323,17 +356,17 @@ func stringContains(findInHere string, matches []string) bool {
 func checkReason(stopReason configure.StopReasons, output string) (bool, string) {
 	var message = ""
 	if stopReason.OnoutcountLess > 0 && stopReason.OnoutcountLess > len(output) {
-		message = fmt.Sprint("\treason match output len (", len(output), ") is less then ", stopReason.OnoutcountLess)
+		message = fmt.Sprint("reason match output len (", len(output), ") is less then ", stopReason.OnoutcountLess)
 		return true, message
 	}
 	if stopReason.OnoutcountMore > 0 && stopReason.OnoutcountMore < len(output) {
-		message = fmt.Sprint("\treason match output len (", len(output), ") is more then ", stopReason.OnoutcountMore)
+		message = fmt.Sprint("reason match output len (", len(output), ") is more then ", stopReason.OnoutcountMore)
 		return true, message
 	}
 
 	for _, checkText := range stopReason.OnoutContains {
 		if checkText != "" && strings.Contains(output, checkText) {
-			message = fmt.Sprint("s\treason match because output contains ", checkText)
+			message = fmt.Sprint("reason match because output contains ", checkText)
 			return true, message
 		}
 	}
