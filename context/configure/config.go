@@ -85,7 +85,8 @@ func RemoveWorkspace(name string) {
 		if err == nil && cfgExists == true {
 			os.Remove(path)
 		} else {
-			fmt.Println("no configuration found")
+			fmt.Println("no workspace exists with name: ", output.MessageCln(output.ForeLightYellow, name))
+			os.Exit(5)
 		}
 	} else {
 		fmt.Println(err)

@@ -36,7 +36,9 @@ func RunTargets(targets string) {
 	var runSequencially = false
 	if exists {
 		runSequencially = template.Config.Sequencially
-		output.ColorEnabled = !template.Config.Coloroff
+		if template.Config.Coloroff {
+			output.ColorEnabled = false
+		}
 	}
 
 	if len(template.Config.Imports) > 0 {
