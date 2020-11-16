@@ -39,6 +39,7 @@ this task can be used to setup and cleanup the workspace
 if you enter or leave them.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
+
 		},
 	}
 
@@ -129,6 +130,15 @@ if you enter or leave them.`,
 		},
 	}
 
+	versionCmd = &cobra.Command{
+		Use:   "version",
+		Short: "prints current version",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			fmt.Println("version", configure.GetVersion(), "build", configure.GetBuild())
+		},
+	}
+
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "run a target in contxt.yml task file",
@@ -206,6 +216,7 @@ func initCobra() {
 	rootCmd.AddCommand(dirCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(createCmd)
+	rootCmd.AddCommand(versionCmd)
 
 }
 
@@ -238,7 +249,7 @@ func shortcuts() bool {
 	if len(os.Args) == 2 {
 
 		switch os.Args[1] {
-		case "dir", "run", "create":
+		case "dir", "run", "create", "version":
 			return false
 		default:
 			foundATask := doMagicParamOne(os.Args[1])
@@ -330,9 +341,7 @@ func doMagicParamOne(param string) bool {
 			result = true
 		}
 	})
-	if !result {
-		fmt.Println(output.MessageCln(output.BoldTag, param, output.CleanTag, " is not a workspace"))
-	}
+
 	return result
 }
 
