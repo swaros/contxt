@@ -423,6 +423,9 @@ func printPaths() {
 				if strings.Contains(dir, path) {
 					add = output.ResetDim + output.ForeCyan
 				}
+				if dir == path {
+					add = output.ResetDim + output.ForeGreen
+				}
 				for _, tasks := range template.Task {
 					outTasks = outTasks + " " + tasks.ID
 				}
@@ -438,11 +441,11 @@ func printPaths() {
 		}
 
 		fmt.Println()
-		fmt.Println(output.MessageCln(" targets can be executes by ", "run -target <targetname>", "(for the current directory)"))
-		fmt.Println(output.MessageCln(" a target can also be executed in all stored paths by ", "run -all-paths -target <targetname>", "independend from current path"))
+		fmt.Println(output.MessageCln(" targets can be executes by ", output.BoldTag, "contxt run <targetname>", output.CleanTag, "(for the current directory)"))
+		fmt.Println(output.MessageCln(" a target can also be executed in all stored paths by ", output.BoldTag, "contxt run -a <targetname>", output.CleanTag, " independend from current path"))
 
 		fmt.Println()
-		fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", "dir -w <workspace>", ""))
+		fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", output.BoldTag, "contxt <workspace>", ""))
 		configure.WorkSpaces(func(name string) {
 			if name == configure.UsedConfig.CurrentSet {
 				fmt.Println(output.MessageCln("\t[ ", output.BoldTag, name, output.CleanTag, " ]"))
