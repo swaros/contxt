@@ -237,6 +237,27 @@ func AddPath(path string) {
 	UsedConfig.Paths = append(UsedConfig.Paths, path)
 }
 
+// RemovePath removes a path from current set.
+// returns true is path was found and removed
+func RemovePath(path string) bool {
+	var newSlice []string
+	found := false
+	if len(UsedConfig.Paths) < 1 {
+		return false
+	}
+	for _, pathIn := range UsedConfig.Paths {
+		if pathIn != path {
+			newSlice = append(newSlice, pathIn)
+		} else {
+			found = true
+		}
+	}
+	if found {
+		UsedConfig.Paths = newSlice
+	}
+	return found
+}
+
 func pathExists(pathSearch string) bool {
 	for _, path := range UsedConfig.Paths {
 		if pathSearch == path {

@@ -121,6 +121,26 @@ if you enter or leave them.`,
 		},
 	}
 
+	removePath = &cobra.Command{
+		Use:   "rm",
+		Short: "remove current path (pwd) from the current workspace",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			dir, err := dirhandle.Current()
+			if err == nil {
+				fmt.Println(output.MessageCln("try to remove ", output.ForeBlue, dir, output.CleanTag, " from workspace"))
+				removed := configure.RemovePath(dir)
+				if !removed {
+					fmt.Println(output.MessageCln(output.ForeRed, "error", output.CleanTag, " path is not part of the current workspace"))
+					os.Exit(1)
+				} else {
+					fmt.Println(output.MessageCln(output.ForeGreen, "success"))
+					configure.SaveDefaultConfiguration(true)
+				}
+			}
+		},
+	}
+
 	createCmd = &cobra.Command{
 		Use:   "create",
 		Short: "create taskfile templates",
@@ -203,6 +223,7 @@ func initCobra() {
 	dirCmd.AddCommand(showPaths)
 	dirCmd.AddCommand(addPaths)
 	dirCmd.AddCommand(listPaths)
+	dirCmd.AddCommand(removePath)
 
 	dirCmd.Flags().IntVarP(&pathIndex, "index", "i", -1, "get path by the index in order the paths are stored")
 	dirCmd.Flags().BoolP("clear", "C", false, "remove all path assigments")
