@@ -229,7 +229,7 @@ func getConfigPath(fileName string) (string, error) {
 
 // AddPath adding a path if they not already exists
 func AddPath(path string) {
-	if pathExists(path) {
+	if PathExists(path) {
 		fmt.Println(output.MessageCln(output.ForeYellow, "\tthe path is already in set ", output.BoldTag, UsedConfig.CurrentSet))
 		return
 	}
@@ -258,9 +258,20 @@ func RemovePath(path string) bool {
 	return found
 }
 
-func pathExists(pathSearch string) bool {
+// PathExists checks if this path is stored in current Workspace
+func PathExists(pathSearch string) bool {
 	for _, path := range UsedConfig.Paths {
 		if pathSearch == path {
+			return true
+		}
+	}
+	return false
+}
+
+// PathMeightPartOfWs checks if the path meight be a part of this workspace
+func PathMeightPartOfWs(pathSearch string) bool {
+	for _, path := range UsedConfig.Paths {
+		if strings.Contains(pathSearch, path) {
 			return true
 		}
 	}

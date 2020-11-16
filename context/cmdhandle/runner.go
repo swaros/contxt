@@ -3,6 +3,7 @@ package cmdhandle
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -406,21 +407,36 @@ func printPaths() {
 	if err == nil {
 		fmt.Println(output.MessageCln(output.ForeWhite, " current directory: ", output.BoldTag, dir))
 		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace: ", output.BoldTag, configure.UsedConfig.CurrentSet))
-
+		notWorkspace := true
+		pathColor := output.ForeLightBlue
+		if !configure.PathMeightPartOfWs(dir) {
+			pathColor = output.ForeLightMagenta
+		} else {
+			notWorkspace = false
+		}
 		fmt.Println(" contains paths:")
 		configure.PathWorker(func(index int, path string) {
-
 			template, _, exists := GetTemplate()
 			if exists {
 				outTasks := ""
+				add := ""
+				if strings.Contains(dir, path) {
+					add = output.ResetDim + output.ForeCyan
+				}
 				for _, tasks := range template.Task {
 					outTasks = outTasks + " " + tasks.ID
 				}
-				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", output.ForeLightBlue, path, output.CleanTag, " targets", "[", output.ForeYellow, outTasks, output.CleanTag, "]"))
+				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, add, path, output.CleanTag, " targets", "[", output.ForeYellow, outTasks, output.CleanTag, "]"))
 			} else {
-				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", output.ForeLightBlue, path))
+				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, path))
 			}
 		})
+		if notWorkspace {
+			fmt.Println()
+			fmt.Println(output.MessageCln(output.BackYellow, output.ForeBlue, " WARNING ! ", output.CleanTag, "\tyou are currently in none of the assigned locations."))
+			fmt.Println("\t\tso maybe you are using the wrong workspace")
+		}
+
 		fmt.Println()
 		fmt.Println(output.MessageCln(" targets can be executes by ", "run -target <targetname>", "(for the current directory)"))
 		fmt.Println(output.MessageCln(" a target can also be executed in all stored paths by ", "run -all-paths -target <targetname>", "independend from current path"))
