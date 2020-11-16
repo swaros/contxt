@@ -73,6 +73,7 @@ so if this is the task for a path in workspace *company* and you run `contxt com
 but to be sure, if you switch to any other workspace, that might not have any kubernetes related action, the **leave task** is triggered. 
 in this case it will just set the context to the local **minikube** to make sure what ever you do, the procution environment is not affected.
 
+[more about tasks](https://github.com/swaros/contxt/blob/wip/development/docs/documentation/tasks.md)
 
 ##### add path to current workspace
 `contxt dir add` adds the current directory to the workspace. so you have to got to the directory first they needs to
