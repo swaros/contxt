@@ -417,21 +417,22 @@ func printPaths() {
 		fmt.Println(" contains paths:")
 		configure.PathWorker(func(index int, path string) {
 			template, _, exists := GetTemplate()
+			add := ""
+			if strings.Contains(dir, path) {
+				add = output.ResetDim + output.ForeCyan
+			}
+			if dir == path {
+				add = output.ResetDim + output.ForeGreen
+			}
 			if exists {
 				outTasks := ""
-				add := ""
-				if strings.Contains(dir, path) {
-					add = output.ResetDim + output.ForeCyan
-				}
-				if dir == path {
-					add = output.ResetDim + output.ForeGreen
-				}
 				for _, tasks := range template.Task {
 					outTasks = outTasks + " " + tasks.ID
 				}
+
 				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, add, path, output.CleanTag, " targets", "[", output.ForeYellow, outTasks, output.CleanTag, "]"))
 			} else {
-				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, path))
+				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, add, path))
 			}
 		})
 		if notWorkspace {
