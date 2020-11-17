@@ -42,11 +42,44 @@ func LintOut(leftcnt, rightcnt int) {
 				if i%2 == 0 {
 					backColor = output.BackLightGrey
 				}
-				fmt.Println(output.MessageCln(backColor, output.ForeBlue, getMaxLineString(right, leftcnt), output.ForeDarkGrey, "|", output.ForeGreen, getMaxLineString(left, rightcnt)))
+				sourceOut := getMaxLineString(right, leftcnt)
+				contentOut := getMaxLineString(left, rightcnt)
+
+				mark := ""
+				if checkIsPartOf(right, yamlSource) {
+					mark = output.ForeBlue
+				}
+
+				markCn := ""
+				if checkIsPartOf(left, fileSource) {
+					markCn = output.ForeYellow + output.Dim + output.BoldTag
+				}
+
+				fmt.Println(output.MessageCln(backColor, output.ForeDarkGrey, mark, sourceOut, output.ForeDarkGrey, "|", output.ForeDarkGrey, markCn, contentOut))
 			}
 		}
 
 	}
+}
+
+func checkIsPartOf(check string, template []string) bool {
+	check = strings.ReplaceAll(check, " ", "")
+	check = strings.ReplaceAll(check, "\"", "")
+	check = strings.ReplaceAll(check, "'", "")
+
+	if len(check) > 2 && check[len(check)-1:] == ":" {
+		return false
+	}
+
+	for _, checkLine := range template {
+		checkLine = strings.ReplaceAll(checkLine, " ", "")
+		checkLine = strings.ReplaceAll(checkLine, "\"", "")
+		checkLine = strings.ReplaceAll(checkLine, "'", "")
+		if checkLine == check {
+			return true
+		}
+	}
+	return false
 }
 
 func getMaxLineString(line string, length int) string {
