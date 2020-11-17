@@ -42,6 +42,7 @@ func RunTargets(targets string) {
 	}
 
 	if len(template.Config.Imports) > 0 {
+		GetLogger().WithField("imports", template.Config.Imports).Info("imports")
 		handleFileImportsToVars(template.Config.Imports)
 	}
 
@@ -70,27 +71,11 @@ func RunTargets(targets string) {
 }
 
 func setLogLevelByString(loglevel string) {
-	switch strings.ToUpper(loglevel) {
-	case "DEBUG":
-		GetLogger().SetLevel(logrus.DebugLevel)
-		break
-	case "WARN":
-		GetLogger().SetLevel(logrus.WarnLevel)
-		break
-	case "ERROR":
-		GetLogger().SetLevel(logrus.ErrorLevel)
-		break
-	case "FATAL":
-		GetLogger().SetLevel(logrus.FatalLevel)
-		break
-	case "TRACE":
-		GetLogger().SetLevel(logrus.TraceLevel)
-		break
-	case "INFO":
-		GetLogger().SetLevel(logrus.InfoLevel)
-		break
-	default:
-		GetLogger().Fatal("unkown log level in config section: ", loglevel)
+	level, err := logrus.ParseLevel(loglevel)
+	if err != nil {
+		GetLogger().Error("Invalid loglevel in task defined.", err)
+	} else {
+		GetLogger().SetLevel(level)
 	}
 
 }

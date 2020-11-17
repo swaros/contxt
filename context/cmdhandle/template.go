@@ -147,10 +147,3 @@ func GetPwdTemplate(path string) (configure.RunConfig, error) {
 	return template, fileerror
 }
 
-// LintOut is for finding errors in the yaml file
-func LintOut(template configure.RunConfig) {
-	res, err := yaml.Marshal(template)
-	if err != nil {
-		fmt.Println(res)
-	}
-}

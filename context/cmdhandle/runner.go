@@ -30,6 +30,8 @@ var (
 	clearTask  bool
 	setWs      string
 	runAtAll   bool
+	leftLen    int
+	rightLen   int
 
 	rootCmd = &cobra.Command{
 		Use:   "contxt",
@@ -160,6 +162,18 @@ if you enter or leave them.`,
 		},
 	}
 
+	lintCmd = &cobra.Command{
+		Use:   "lint",
+		Short: "checking the task file",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			leftLen, _ := cmd.Flags().GetInt("left")
+			rightLen, _ := cmd.Flags().GetInt("right")
+			LintOut(leftLen, rightLen)
+
+		},
+	}
+
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "run a target in contxt.yml task file",
@@ -180,6 +194,7 @@ if you enter or leave them.`,
 				if err == nil {
 					if runAtAll {
 						configure.PathWorker(func(index int, path string) {
+							GetLogger().WithField("path", path).Info("change dir")
 							os.Chdir(path)
 							runTargets(path, arg)
 						})
@@ -239,6 +254,11 @@ func initCobra() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(createCmd)
 	rootCmd.AddCommand(versionCmd)
+
+	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the with for the source code")
+	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the with for the current state view")
+
+	rootCmd.AddCommand(lintCmd)
 
 }
 
@@ -381,7 +401,6 @@ func printTargets() {
 		} else {
 			fmt.Println(output.MessageCln("that is what we gor so far:"))
 			fmt.Println()
-			LintOut(template)
 		}
 	} else {
 		fmt.Println(output.MessageCln(output.ForeCyan, "no task-file exists. you can create one by ", output.CleanTag, " contxt create"))
