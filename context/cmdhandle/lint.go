@@ -7,7 +7,6 @@ import (
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/kylelemons/godebug/pretty"
-	"github.com/swaros/contxt/context/configure"
 	"gopkg.in/yaml.v2"
 )
 
@@ -72,27 +71,6 @@ func LintOut(leftcnt, rightcnt int, all bool) {
 	}
 }
 
-func checkIsPartOf(check string, template []string) (bool, bool) {
-	check = strings.ReplaceAll(check, " ", "")
-	check = strings.ReplaceAll(check, "\"", "")
-	check = strings.ReplaceAll(check, "'", "")
-
-	if len(check) > 2 && check[len(check)-1:] == ":" {
-		return false, true
-	}
-
-	for _, checkLine := range template {
-
-		checkLine = strings.ReplaceAll(checkLine, " ", "")
-		checkLine = strings.ReplaceAll(checkLine, "\"", "")
-		checkLine = strings.ReplaceAll(checkLine, "'", "")
-		if checkLine == check {
-			return true, false
-		}
-	}
-	return false, false
-}
-
 func getMaxLineString(line string, length int) string {
 	if len(line) < length {
 		for i := len(line); i < length; i++ {
@@ -103,13 +81,4 @@ func getMaxLineString(line string, length int) string {
 		line = line[0:length]
 	}
 	return line
-}
-
-func getTemplateAsYAMLString(template configure.RunConfig) (string, error) {
-	res, err := yaml.Marshal(template)
-	if err == nil {
-		return string(res), nil
-	}
-	return "", err
-
 }

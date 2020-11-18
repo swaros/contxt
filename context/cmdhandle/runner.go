@@ -192,6 +192,9 @@ if you enter or leave them.`,
 	lintCmd = &cobra.Command{
 		Use:   "lint",
 		Short: "checking the task file",
+		Long: `to check if the task file contains the expected changes.
+use --full to see properties they are nor used.
+you will also see if a unexpected propertie found `,
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
 			leftLen, _ := cmd.Flags().GetInt("left")
