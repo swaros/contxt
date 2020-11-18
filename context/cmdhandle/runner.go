@@ -23,15 +23,16 @@ var (
 	}
 
 	// cobra stuff
-	showColors bool
-	loglevel   string
-	pathIndex  int
-	deleteWs   string
-	clearTask  bool
-	setWs      string
-	runAtAll   bool
-	leftLen    int
-	rightLen   int
+	showColors  bool
+	loglevel    string
+	pathIndex   int
+	deleteWs    string
+	clearTask   bool
+	setWs       string
+	runAtAll    bool
+	leftLen     int
+	rightLen    int
+	lintShowAll bool
 
 	rootCmd = &cobra.Command{
 		Use:   "contxt",
@@ -195,7 +196,8 @@ if you enter or leave them.`,
 			checkDefaultFlags(cmd, args)
 			leftLen, _ := cmd.Flags().GetInt("left")
 			rightLen, _ := cmd.Flags().GetInt("right")
-			LintOut(leftLen, rightLen)
+			showall, _ := cmd.Flags().GetBool("full")
+			LintOut(leftLen, rightLen, showall)
 
 		},
 	}
@@ -285,6 +287,7 @@ func initCobra() {
 
 	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the width for the source code")
 	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the witdh for the current state view")
+	lintCmd.Flags().Bool("full", false, "print also unset properties")
 
 	rootCmd.AddCommand(lintCmd)
 

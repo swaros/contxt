@@ -2,74 +2,71 @@ package cmdhandle
 
 import (
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	"github.com/swaros/contxt/context/output"
 
+	"github.com/kylelemons/godebug/pretty"
 	"github.com/swaros/contxt/context/configure"
 	"gopkg.in/yaml.v2"
 )
 
+func compareContent(a, b interface{}, showBooth bool, size int, right int) {
+	diffOut := pretty.Compare(a, b)
+	diffParts := strings.Split(diffOut, "\n")
+	i := 0
+	for _, line := range diffParts {
+		backColor := output.BackWhite
+		if i%2 == 0 {
+			backColor = output.BackLightGrey
+		}
+		leftDiff := strings.HasPrefix(line, "+")
+		rightDiff := strings.HasPrefix(line, "-")
+
+		if leftDiff && showBooth {
+			lft := getMaxLineString("", size)
+			line = getMaxLineString(line, right)
+			fmt.Println(output.MessageCln(backColor, output.ForeYellow, output.Dim, lft, line))
+			i++
+		}
+		if rightDiff {
+			rgt := getMaxLineString("  unsupported element", right)
+			line = getMaxLineString(line, size)
+
+			backColor := output.BackYellow
+			if i%2 == 0 {
+				backColor = output.BackLightYellow
+			}
+			i++
+			fmt.Println(output.MessageCln(backColor, output.BoldTag, output.ForeDarkGrey, line, output.ForeRed, output.BoldTag, rgt))
+		}
+		if !leftDiff && !rightDiff {
+			line = getMaxLineString(line, size+right)
+			i++
+			fmt.Println(output.MessageCln(backColor, output.ForeBlue, line))
+		}
+
+	}
+}
+
 // LintOut prints the source code and the parsed content
 // in a table view, and marks configured and not configured entries
 // with dfferent colors
-func LintOut(leftcnt, rightcnt int) {
+func LintOut(leftcnt, rightcnt int, all bool) {
 	template, path, exists := GetTemplate()
-	if exists {
-		file, ferr := ioutil.ReadFile(path)
-		yamlSourceYaml, err := getTemplateAsYAMLString(template)
-		if ferr == nil && err == nil {
 
-			yamlSource := strings.Split(yamlSourceYaml, "\n")
-			fileSource := strings.Split(string(file), "\n")
+	if exists && rightcnt >= 0 && leftcnt >= 0 {
 
-			max := len(fileSource)
-			if len(yamlSource) > max {
-				max = len(yamlSource)
+		origMap, yerr := ImportYAMLFile(path)
+		if yerr == nil {
+			conversionres, conerr := yaml.Marshal(template)
+			if conerr == nil {
+				m := make(map[string]interface{})
+				yaml.Unmarshal(conversionres, &m)
+
+				compareContent(origMap, m, all, leftcnt, rightcnt)
 			}
-			lineStr := "--------------------------------------------------------------------------------------------"
-			fmt.Println(output.MessageCln(output.BackDarkGrey, output.ForeWhite, getMaxLineString("source", leftcnt), "|", getMaxLineString("current state", rightcnt)))
-			fmt.Println(output.MessageCln(output.BackDarkGrey, output.ForeWhite, getMaxLineString(lineStr, leftcnt), "+", getMaxLineString(lineStr, rightcnt)))
-			for i := 0; i < max; i++ {
 
-				left := ""
-				right := ""
-				if i < len(yamlSource) {
-					left = yamlSource[i]
-				}
-				if i < len(fileSource) {
-					right = fileSource[i]
-				}
-				backColor := output.BackWhite
-				if i%2 == 0 {
-					backColor = output.BackLightGrey
-				}
-				sourceOut := getMaxLineString(right, leftcnt)
-				contentOut := getMaxLineString(left, rightcnt)
-
-				mark := ""
-				mc, mct := checkIsPartOf(right, yamlSource)
-				if mc {
-					mark = output.ForeBlue
-				}
-
-				if mct {
-					mark = output.ForeDarkGrey
-				}
-
-				markCn := ""
-				mmc, mmct := checkIsPartOf(left, fileSource)
-				if mmc {
-					markCn = output.ForeYellow + output.Dim + output.BoldTag
-				}
-
-				if mmct {
-					markCn = output.ForeMagenta + output.Dim + output.BoldTag
-				}
-
-				fmt.Println(output.MessageCln(backColor, output.ForeRed, mark, sourceOut, output.ForeDarkGrey, "|", output.ForeDarkGrey, markCn, contentOut))
-			}
 		}
 
 	}
