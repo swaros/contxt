@@ -153,6 +153,32 @@ if you enter or leave them.`,
 		},
 	}
 
+	createImport = &cobra.Command{
+		Use:   "import",
+		Short: "Create importfile that can be used for templating",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			if len(args) == 0 {
+				fmt.Println("No paths submitted")
+				os.Exit(1)
+			}
+			_, path, exists := GetTemplate()
+			if exists {
+				for _, addPath := range args {
+					err := CreateImport(path, addPath)
+					if err != nil {
+						fmt.Println("Error adding imports:", err)
+						os.Exit(1)
+					}
+				}
+			} else {
+				fmt.Println("no taskfile exists. create these first by contxt create")
+				os.Exit(1)
+			}
+
+		},
+	}
+
 	versionCmd = &cobra.Command{
 		Use:   "version",
 		Short: "prints current version",
@@ -247,6 +273,8 @@ func initCobra() {
 	dirCmd.Flags().StringP("workspace", "w", "", "set workspace. if not exists a new workspace will be created")
 
 	runCmd.Flags().BoolP("all-workspaces", "a", false, "run targets in all workspaces")
+
+	createCmd.AddCommand(createImport)
 
 	rootCmd.PersistentFlags().BoolVarP(&showColors, "coloroff", "c", false, "disable usage of colors in output")
 	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", "FATAL", "set loglevel")

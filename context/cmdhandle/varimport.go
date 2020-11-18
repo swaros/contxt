@@ -65,10 +65,13 @@ func ImportYAMLFile(filename string) (map[string]interface{}, error) {
 func ImportJSONFile(fileName string) (map[string]interface{}, error) {
 	data, err := ioutil.ReadFile(fileName)
 	if err != nil {
+		GetLogger().Error(err)
 		return nil, err
 	}
 	m := make(map[string]interface{})
-	if err = json.Unmarshal([]byte(data), &m); err != nil {
+	err = json.Unmarshal([]byte(data), &m)
+	if err != nil {
+		GetLogger().Error("ImportJSONFile : Unmarshal :", fileName, " : ", err)
 		return nil, err
 	}
 	return m, nil
@@ -94,6 +97,7 @@ func ImportFolders(templatePath string, paths ...string) (string, error) {
 	}
 
 	for _, path := range paths {
+		GetLogger().WithField("folder", path).Debug("process path")
 		pathMap, parseErr := ImportFolder(path, templatePath)
 		if parseErr != nil {
 			return "", parseErr
@@ -130,10 +134,12 @@ func ImportFolder(path string, templatePath string) (map[string]interface{}, err
 			}
 			switch extension {
 			case ".json":
+				GetLogger().WithField("file", path).Debug("parsing included file (JSON)")
 				jsonMap, loaderr = ImportJSONFile(path)
 				hit = true
 				break
 			case ".yaml", ".yml":
+				GetLogger().WithField("file", path).Debug("parsing included file (YAML)")
 				jsonMap, loaderr = ImportYAMLFile(path)
 				hit = true
 				break
@@ -154,6 +160,7 @@ func ImportFolder(path string, templatePath string) (map[string]interface{}, err
 
 // ImportFileContent imports a file and returns content as string
 func ImportFileContent(filename string) (string, error) {
+	GetLogger().WithField("file", filename).Debug("import file template")
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Println("File reading error", err)
