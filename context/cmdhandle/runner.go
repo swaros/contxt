@@ -283,8 +283,8 @@ func initCobra() {
 	rootCmd.AddCommand(createCmd)
 	rootCmd.AddCommand(versionCmd)
 
-	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the with for the source code")
-	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the with for the current state view")
+	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the width for the source code")
+	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the witdh for the current state view")
 
 	rootCmd.AddCommand(lintCmd)
 
