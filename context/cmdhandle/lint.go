@@ -2,6 +2,8 @@ package cmdhandle
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/swaros/contxt/context/output"
@@ -55,19 +57,32 @@ func LintOut(leftcnt, rightcnt int, all bool) {
 	template, path, exists := GetTemplate()
 
 	if exists && rightcnt >= 0 && leftcnt >= 0 {
-
-		origMap, yerr := ImportYAMLFile(path)
+		data, err := GetParsedTemplateSource(path)
+		if err != nil {
+			output.Error("template loading", err)
+			return
+		}
+		origMap, yerr := YAMLToMap(data)
 		if yerr == nil {
 			conversionres, conerr := yaml.Marshal(template)
 			if conerr == nil {
 				m := make(map[string]interface{})
-				yaml.Unmarshal(conversionres, &m)
+				amlerr := yaml.Unmarshal(conversionres, &m)
+				if amlerr != nil {
+					fmt.Println(amlerr)
+					os.Exit(1)
+				}
 
 				compareContent(origMap, m, all, leftcnt, rightcnt)
 			}
 
+		} else {
+			prinfFile(path, leftcnt+rightcnt)
+			output.Error("parsing error", yerr)
 		}
 
+	} else {
+		output.Error("template not found ", path)
 	}
 }
 
@@ -81,4 +96,22 @@ func getMaxLineString(line string, length int) string {
 		line = line[0:length]
 	}
 	return line
+}
+
+func prinfFile(filename string, size int) error {
+	data, err := GetParsedTemplateSource(filename)
+	if err != nil {
+		return err
+	}
+
+	backColor := output.BackWhite
+	lines := strings.Split(data, "\n")
+	i := 0
+	for _, line := range lines {
+		i++
+		prefix := getMaxLineString(strconv.Itoa(i), 5)
+		line = getMaxLineString(line, size)
+		fmt.Println(output.MessageCln(output.BackCyan, output.ForeWhite, prefix, backColor, output.ForeBlue, line))
+	}
+	return nil
 }

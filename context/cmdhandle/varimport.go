@@ -42,6 +42,19 @@ func handleImport(filename, path string) {
 
 }
 
+// YAMLToMap Convert yaml source string into map
+func YAMLToMap(source string) (map[string]interface{}, error) {
+	jsond, jerr := yaml.YAMLToJSON([]byte(source))
+	if jerr != nil {
+		return nil, jerr
+	}
+	m := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(jsond), &m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ImportYAMLFile imports a yaml file as used for json map
 func ImportYAMLFile(filename string) (map[string]interface{}, error) {
 	data, err := ioutil.ReadFile(filename)

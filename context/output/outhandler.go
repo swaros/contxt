@@ -142,6 +142,14 @@ var tagMap = map[string]string{
 	BackWhite:        "107",
 }
 
+// Error Print Error Message to stdout
+func Error(label string, a ...interface{}) {
+	labelMessage := Message(ForeRed, Dim, BackLightRed, " ", label, " ", CleanTag, " ! ")
+
+	stringResult := MessageCln(a...)
+	fmt.Println(labelMessage, stringResult)
+}
+
 // MessageCln converts arguemnst to a fomated string and adding cleanup and newline code
 func MessageCln(a ...interface{}) string {
 	result := Message(a...)

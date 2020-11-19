@@ -1,6 +1,7 @@
 package cmdhandle
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -103,13 +104,13 @@ func getIncludeConfig(path string) (configure.IncludePaths, string, string, bool
 // and if this is the case the content will be loaded and all defined paths
 // used to get values for parsing the template file
 func LoadIncTempalte(path string) (string, bool) {
-
 	importTemplate, _, fullPath, existing := getIncludeConfig(path)
 	if !existing {
 		return "", false
 	}
 	// imports by Include.Folders
 	if len(importTemplate.Include.Folders) > 0 || importTemplate.Include.Basedir {
+		GetLogger().WithField("file", path).Info("parsing task-file")
 		var dirs []string = importTemplate.Include.Folders
 		if importTemplate.Include.Basedir {
 			GetLogger().WithField("dir", fullPath).Debug("add parsing source dir")
@@ -127,43 +128,46 @@ func LoadIncTempalte(path string) (string, bool) {
 	return "", false
 }
 
+// GetParsedTemplateSource Returnsthe soucecode of the template
+// including parsing placeholders
+func GetParsedTemplateSource(path string) (string, error) {
+	existing, fileerror := dirhandle.Exists(path)
+	if fileerror != nil {
+		return "", fileerror
+	}
+	if existing {
+		// first check if includes exists
+		templateSource, inExists := LoadIncTempalte(path)
+		if inExists {
+			return templateSource, nil
+		}
+		// no imports .... load template file
+		file, ferr := ioutil.ReadFile(path)
+		if ferr != nil {
+			return "", ferr
+		}
+		return string(file), nil
+	}
+	notExistsErr := errors.New("file not exists")
+	return "", notExistsErr
+}
+
 // GetPwdTemplate returns the template path if exists.
 // it also parses the content of the template
 // against imports and handles them
 func GetPwdTemplate(path string) (configure.RunConfig, error) {
 	var template configure.RunConfig
-	existing, fileerror := dirhandle.Exists(path)
-	if fileerror != nil {
-		return template, fileerror
+	source, err := GetParsedTemplateSource(path)
+	if err != nil {
+		return template, err
 	}
 
-	if existing {
+	err2 := yaml.Unmarshal([]byte(source), &template)
 
-		// first check if includes exists
-		templateSource, inExists := LoadIncTempalte(path)
-		if inExists {
-			err2 := yaml.Unmarshal([]byte(templateSource), &template)
-
-			if err2 != nil {
-				fmt.Println("error parsing ", path, "after resolving imports. check result", err2)
-				fmt.Println(templateSource)
-				return template, err2
-			}
-		} else {
-			// no imports .... load template file
-			file, ferr := ioutil.ReadFile(path)
-			if ferr != nil {
-				return template, ferr
-			}
-			err := yaml.Unmarshal(file, &template)
-
-			if err != nil {
-				fmt.Println("error parsing template", path, "check result", err)
-				fmt.Println(string(file))
-				return template, err
-			}
-		}
-
+	if err2 != nil {
+		fmt.Println("error parsing ", path, "after resolving imports. check result", err2)
+		fmt.Println(source)
+		return template, err2
 	}
-	return template, fileerror
+	return template, nil
 }
