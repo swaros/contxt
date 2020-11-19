@@ -44,7 +44,8 @@ func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, useWaitGroup bool, target 
 		defer waitGroup.Done()
 	}
 	//ExecCurrentPathTemplate(path)
-	ExecPathFile(waitGroup, useWaitGroup, template, target)
+	exitCode := ExecPathFile(waitGroup, useWaitGroup, template, target)
+	GetLogger().WithField("exitcode", exitCode).Info("ExecuteTemplateWorker done with exitcode")
 
 }
 
@@ -147,6 +148,6 @@ func WriteTemplate() {
 }
 
 // ExecPathFile executes the default exec file
-func ExecPathFile(waitGroup *sync.WaitGroup, useWaitGroup bool, template configure.RunConfig, target string) {
-	executeTemplate(waitGroup, useWaitGroup, template, target)
+func ExecPathFile(waitGroup *sync.WaitGroup, useWaitGroup bool, template configure.RunConfig, target string) int {
+	return executeTemplate(waitGroup, useWaitGroup, template, target)
 }

@@ -64,10 +64,12 @@ func RunTargets(targets string) {
 		fmt.Println("Sequencially runmode")
 		for _, runTarget := range allTargets {
 			fmt.Println(output.MessageCln(output.ForeBlue, "[exec:seq] ", output.BoldTag, runTarget, " ", output.ForeWhite, templatePath))
-			ExecPathFile(&wg, false, template, runTarget)
+			exitCode := ExecPathFile(&wg, false, template, runTarget)
+			GetLogger().WithField("exitcode", exitCode).Info("RunTarget [Sequencially runmode] done with exitcode")
 		}
 	}
 	fmt.Println(output.MessageCln(output.ForeBlue, "[done] ", output.BoldTag, targets))
+	GetLogger().Info("target task execution done")
 }
 
 func setLogLevelByString(loglevel string) {
@@ -274,20 +276,21 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 							fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " but you should handle error cases                                                "))
 							fmt.Println("\ttarget :\t", output.MessageCln(output.ForeYellow, target))
 							fmt.Println("\tcommand:\t", output.MessageCln(output.ForeYellow, codeLine))
-							return ExitOk
+
+						} else {
+							errMsg := " = exit code from command: "
+							lastMessage := output.MessageCln(output.BackRed, output.ForeYellow, realExitCode, output.CleanTag, output.ForeLightRed, errMsg, output.ForeWhite, codeLine)
+							fmt.Println("\t Exit ", lastMessage)
+							fmt.Println()
+							fmt.Println("\t check the command. if this command can fail you may fit the execution rules. see options:")
+							fmt.Println("\t you may disable a hard exit on error by setting ignoreCmdError: true")
+							fmt.Println("\t if you do so, a Note will remind you, that a error is happend in this case.")
+							fmt.Println()
+							GetLogger().Error("runtime error:", execErr, "exit", realExitCode)
+							os.Exit(realExitCode)
+							// returns the error code
+							return ExitCmdError
 						}
-						errMsg := " = exit code from command: "
-						lastMessage := output.MessageCln(output.BackRed, output.ForeYellow, realExitCode, output.CleanTag, output.ForeLightRed, errMsg, output.ForeWhite, codeLine)
-						fmt.Println("\t Exit ", lastMessage)
-						fmt.Println()
-						fmt.Println("\t check the command. if this command can fail you may fit the execution rules. see options:")
-						fmt.Println("\t you may disable a hard exit on error by setting ignoreCmdError: true")
-						fmt.Println("\t if you do so, a Note will remind you, that a error is happend in this case.")
-						fmt.Println()
-						GetLogger().Error("runtime error:", execErr, "exit", realExitCode)
-						os.Exit(realExitCode)
-						// returns the error code
-						return ExitCmdError
 
 					}
 				}
