@@ -3,6 +3,7 @@ package cmdhandle
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -161,6 +162,9 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				// check requirements
 				canRun, message := checkRequirements(script.Requires)
 				if canRun == false {
+					GetLogger().WithFields(logrus.Fields{
+						"target": target,
+					}).Info("IGNORE because requirements not matching")
 					if script.Options.Displaycmd {
 						fmt.Println(output.MessageCln(output.ForeYellow, " [require] ", output.ForeBlue, message))
 					}
@@ -186,6 +190,12 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						SetPH("RUN."+target+".LOG.LAST", logLine)
 						// the watcher
 						if script.Listener != nil {
+
+							GetLogger().WithFields(logrus.Fields{
+								"cnt":      len(script.Listener),
+								"listener": script.Listener,
+							}).Debug("CHECK Listener")
+
 							for _, listener := range script.Listener {
 								listenReason := configure.StopReasons(listener.Trigger)
 								triggerFound, triggerMessage := checkReason(listenReason, logLine)
@@ -199,10 +209,33 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 										if script.Options.Displaycmd {
 											fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t ", output.ForeGreen, "target:", output.ForeLightGreen, actionDef.Target))
 										}
+
+										hitKeyTargets := "RUN.LISTENER." + target + ".HIT.TARGETS"
+										lastHitTargets := GetPH(hitKeyTargets)
+										if !strings.Contains(lastHitTargets, "("+actionDef.Target+")") {
+											lastHitTargets = lastHitTargets + "(" + actionDef.Target + ")"
+											SetPH(hitKeyTargets, lastHitTargets)
+										}
+
+										hitKeyCnt := "RUN.LISTENER." + actionDef.Target + ".HIT.CNT"
+										lastCnt := GetPH(hitKeyCnt)
+										if lastCnt == "" {
+											SetPH(hitKeyCnt, "1")
+										} else {
+											iCnt, err := strconv.Atoi(lastCnt)
+											if err != nil {
+												GetLogger().Fatal("fail converting trigger count")
+											}
+											iCnt++
+											SetPH(hitKeyCnt, strconv.Itoa(iCnt))
+										}
+
 										GetLogger().WithFields(logrus.Fields{
-											"trigger": triggerMessage,
-											"target":  actionDef.Target,
-										}).Info("trigger called")
+											"trigger":   triggerMessage,
+											"target":    actionDef.Target,
+											"waitgroup": useWaitGroup,
+											"RUN.LISTENER." + target + ".HIT.TARGETS": lastHitTargets,
+										}).Info("TRIGGER Called")
 
 										if useWaitGroup {
 											go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
@@ -216,6 +249,10 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 											"output":  logLine,
 										}).Warn("trigger defined without any target")
 									}
+								} else {
+									GetLogger().WithFields(logrus.Fields{
+										"output": logLine,
+									}).Debug("no trigger found")
 								}
 							}
 						}
@@ -344,6 +381,10 @@ func stringContains(findInHere string, matches []string) bool {
 }
 
 func checkReason(stopReason configure.StopReasons, output string) (bool, string) {
+	GetLogger().WithFields(logrus.Fields{
+		"trigger": stopReason,
+	}).Debug("Check Trigger")
+
 	var message = ""
 	if stopReason.OnoutcountLess > 0 && stopReason.OnoutcountLess > len(output) {
 		message = fmt.Sprint("reason match output len (", len(output), ") is less then ", stopReason.OnoutcountLess)
@@ -358,6 +399,13 @@ func checkReason(stopReason configure.StopReasons, output string) (bool, string)
 		if checkText != "" && strings.Contains(output, checkText) {
 			message = fmt.Sprint("reason match because output contains ", checkText)
 			return true, message
+		}
+		if checkText != "" {
+			GetLogger().WithFields(logrus.Fields{
+				"check": checkText,
+				"with":  output,
+				"from":  stopReason.OnoutContains,
+			}).Debug("OnoutContains NO MATCH")
 		}
 	}
 

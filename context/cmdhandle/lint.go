@@ -50,12 +50,24 @@ func compareContent(a, b interface{}, showBooth bool, size int, right int) {
 	}
 }
 
+// ShowAsYaml prints the generated source of the task file
+func ShowAsYaml() {
+	_, path, exists := GetTemplate()
+	if exists {
+		data, err := GetParsedTemplateSource(path)
+		if err != nil {
+			output.Error("template loading", err)
+			return
+		}
+		fmt.Println(data)
+	}
+}
+
 // LintOut prints the source code and the parsed content
 // in a table view, and marks configured and not configured entries
 // with dfferent colors
 func LintOut(leftcnt, rightcnt int, all bool) {
 	template, path, exists := GetTemplate()
-
 	if exists && rightcnt >= 0 && leftcnt >= 0 {
 		data, err := GetParsedTemplateSource(path)
 		if err != nil {

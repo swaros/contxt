@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/ghodss/yaml"
 )
 
@@ -231,8 +232,9 @@ func HandleJSONMap(tmpl string, m map[string]interface{}) (string, error) {
 			}
 		},
 	}
-	t := template.New("contxt-vars").Funcs(tf)
-	tt, err := t.Parse(tmpl)
+	funcMap := MergeVariableMap(tf, sprig.FuncMap())
+	tpl := template.New("contxt-map-string-func").Funcs(funcMap)
+	tt, err := tpl.Parse(tmpl)
 	if err != nil {
 		return "", err
 	}

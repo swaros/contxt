@@ -201,7 +201,12 @@ you will also see if a unexpected propertie found `,
 			leftLen, _ := cmd.Flags().GetInt("left")
 			rightLen, _ := cmd.Flags().GetInt("right")
 			showall, _ := cmd.Flags().GetBool("full")
-			LintOut(leftLen, rightLen, showall)
+			yamlParse, _ := cmd.Flags().GetBool("yaml")
+			if yamlParse {
+				ShowAsYaml()
+			} else {
+				LintOut(leftLen, rightLen, showall)
+			}
 
 		},
 	}
@@ -294,6 +299,7 @@ func initCobra() {
 	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the width for the source code")
 	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the witdh for the current state view")
 	lintCmd.Flags().Bool("full", false, "print also unset properties")
+	lintCmd.Flags().Bool("yaml", false, "display parsed taskfile as yaml file")
 
 	rootCmd.AddCommand(lintCmd)
 
