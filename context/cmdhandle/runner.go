@@ -23,16 +23,17 @@ var (
 	}
 
 	// cobra stuff
-	showColors  bool
-	loglevel    string
-	pathIndex   int
-	deleteWs    string
-	clearTask   bool
-	setWs       string
-	runAtAll    bool
-	leftLen     int
-	rightLen    int
-	lintShowAll bool
+	showColors    bool
+	loglevel      string
+	pathIndex     int
+	deleteWs      string
+	clearTask     bool
+	setWs         string
+	runAtAll      bool
+	leftLen       int
+	rightLen      int
+	lintShowAll   bool
+	showInvTarget bool
 
 	rootCmd = &cobra.Command{
 		Use:   "contxt",
@@ -241,6 +242,7 @@ you will also see if a unexpected propertie found `,
 
 func checkRunFlags(cmd *cobra.Command, args []string) {
 	runAtAll, _ = cmd.Flags().GetBool("all-workspaces")
+	showInvTarget, _ = cmd.Flags().GetBool("all-targets")
 }
 
 func checkDirFlags(cmd *cobra.Command, args []string) {
@@ -278,6 +280,7 @@ func initCobra() {
 	dirCmd.Flags().StringP("workspace", "w", "", "set workspace. if not exists a new workspace will be created")
 
 	runCmd.Flags().BoolP("all-workspaces", "a", false, "run targets in all workspaces")
+	runCmd.Flags().Bool("all-targets", false, "show all targets. including invisible")
 
 	createCmd.AddCommand(createImport)
 
@@ -430,7 +433,9 @@ func printTargets() {
 		if len(template.Task) > 0 {
 			fmt.Println(output.MessageCln(output.BoldTag, "existing targets:"))
 			for _, tasks := range template.Task {
-				fmt.Println("\t", tasks.ID)
+				if showInvTarget || !tasks.Options.Invisible {
+					fmt.Println("\t", tasks.ID)
+				}
 			}
 		} else {
 			fmt.Println(output.MessageCln("that is what we gor so far:"))
@@ -480,7 +485,9 @@ func printPaths() {
 			if exists {
 				outTasks := ""
 				for _, tasks := range template.Task {
-					outTasks = outTasks + " " + tasks.ID
+					if !tasks.Options.Invisible {
+						outTasks = outTasks + " " + tasks.ID
+					}
 				}
 
 				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, add, path, output.CleanTag, " targets", "[", output.ForeYellow, outTasks, output.CleanTag, "]"))
