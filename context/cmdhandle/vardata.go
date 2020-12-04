@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/tidwall/gjson"
 )
 
@@ -32,8 +34,12 @@ func GetJSONPathValueString(key, path string) string {
 		jsonData, err := json.Marshal(data)
 		if err == nil {
 			value := gjson.Get(string(jsonData), path)
+			GetLogger().WithFields(logrus.Fields{"key": key, "path": path, "value": value}).Debug("placeholder: found map entrie")
 			return value.String()
 		}
+		GetLogger().WithField("key", key).Error("placeholder: error while marshal data")
+	} else {
+		GetLogger().WithField("key", key).Error("placeholder: error by getting data from named map")
 	}
 	return ""
 }

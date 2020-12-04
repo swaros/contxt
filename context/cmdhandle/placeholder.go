@@ -41,6 +41,10 @@ func handlePlaceHolder(line string) string {
 
 func handleMapVars(line string) string {
 	dataKeys := GetDataKeys()
+	if len(dataKeys) == 0 {
+		return line
+	}
+	GetLogger().WithField("key-count", len(dataKeys)).Trace("parsing keymap placeholder")
 	for _, keyname := range dataKeys {
 		lookup := "${" + keyname + ":"
 		if strings.Contains(line, lookup) {
@@ -54,7 +58,11 @@ func handleMapVars(line string) string {
 						GetLogger().Debug("replace ", replace)
 						line = strings.ReplaceAll(line, replace, GetJSONPathValueString(keyname, pathLine))
 					}
+				} else {
+					GetLogger().WithField("key", lookup).Warn("error by getting end position of prefix")
 				}
+			} else {
+				GetLogger().WithField("key", lookup).Warn("error by getting start position of prefix")
 			}
 		}
 	}

@@ -284,7 +284,7 @@ func initCobra() {
 	dirCmd.Flags().StringP("delete", "d", "", "remove workspace")
 	dirCmd.Flags().StringP("workspace", "w", "", "set workspace. if not exists a new workspace will be created")
 
-	runCmd.Flags().BoolP("all-workspaces", "a", false, "run targets in all workspaces")
+	runCmd.Flags().BoolP("all-paths", "a", false, "run targets in all paths in the current workspace")
 	runCmd.Flags().Bool("all-targets", false, "show all targets. including invisible")
 
 	createCmd.AddCommand(createImport)
