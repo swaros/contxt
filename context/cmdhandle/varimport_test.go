@@ -206,3 +206,49 @@ func TestTryParseError(t *testing.T) {
 	}
 
 }
+
+func TestTryParseJsonImport(t *testing.T) {
+	err := cmdhandle.ImportDataFromYAMLFile("test1", "../../docs/test/foreach/importFile.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+	var script []string
+	script = append(script, "#@import-json json-data {\"hello\":\"world\"}")
+
+	cmdhandle.TryParse(script, func(line string) (bool, int) {
+		return false, cmdhandle.ExitOk
+	})
+
+	have, data := cmdhandle.GetData("json-data")
+	if have == false {
+		t.Error("json was not imported")
+	}
+
+	if data["hello"] != "world" {
+		t.Error("import was not working as expected")
+	}
+
+}
+
+func TestTryParseJsonImportByExec(t *testing.T) {
+	err := cmdhandle.ImportDataFromYAMLFile("test1", "../../docs/test/foreach/importFile.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+	var script []string
+	script = append(script, "#@import-json-exec exec-import-data cat ../../docs/test/foreach/forcat.json")
+
+	cmdhandle.TryParse(script, func(line string) (bool, int) {
+		return false, cmdhandle.ExitOk
+	})
+
+	have, data := cmdhandle.GetData("exec-import-data")
+	if have == false {
+		t.Error("json was not imported")
+	}
+
+	if data["main"] == nil {
+		t.Error("import was not working as expected")
+	}
+
+}

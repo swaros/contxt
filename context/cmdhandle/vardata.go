@@ -78,6 +78,17 @@ func ImportDataFromYAMLFile(key string, filename string) error {
 	return nil
 }
 
+// AddJSON imports data by a json String
+func AddJSON(key, jsonString string) error {
+	m := make(map[string]interface{})
+	err := json.Unmarshal([]byte(jsonString), &m)
+	if err != nil {
+		return err
+	}
+	AddData(key, m)
+	return nil
+}
+
 // GetData returns a data Map by the key.
 // or nil if nothing is stored
 func GetData(key string) (bool, map[string]interface{}) {

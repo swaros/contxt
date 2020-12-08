@@ -300,6 +300,7 @@ func initCobra() {
 	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the witdh for the current state view")
 	lintCmd.Flags().Bool("full", false, "print also unset properties")
 	lintCmd.Flags().Bool("yaml", false, "display parsed taskfile as yaml file")
+	lintCmd.Flags().Bool("parse", false, "parse second level keywords (#@...)")
 
 	rootCmd.AddCommand(lintCmd)
 

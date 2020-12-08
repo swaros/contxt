@@ -22,11 +22,13 @@ import (
 )
 
 const (
-	inlineCmdSep = " "
-	startMark    = "#@"
-	inlineMark   = "#@-"
-	iterateMark  = "#@foreach"
-	endMark      = "#@end"
+	inlineCmdSep    = " "
+	startMark       = "#@"
+	inlineMark      = "#@-"
+	iterateMark     = "#@foreach"
+	endMark         = "#@end"
+	fromJSONMark    = "#@import-json"
+	fromJSONCmdMark = "#@import-json-exec"
 )
 
 // TryParse to parse a line and set a value depending on the line command
@@ -36,6 +38,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 	var parsedScript []string
 	var iterationCollect gjson.Result
 	for _, line := range script {
+		line = HandlePlaceHolder(line)
 		if len(line) > len(startMark) && line[0:len(startMark)] == startMark {
 			parts := strings.Split(line, inlineCmdSep)
 			GetLogger().WithField("keywords", parts).Debug("try to parse parts")
@@ -52,13 +55,43 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					output.Error("invalid usage", inlineMark, " only valid while in iteration")
 				}
 				break
+			case fromJSONMark:
+				if len(parts) == 3 {
+					err := AddJSON(parts[1], parts[2])
+					if err != nil {
+						output.Error("import from json string failed", parts[2], err)
+					}
+				} else {
+					output.Error("invalid usage", fromJSONMark, " needs 2 arguments. <keyname> <json-source>")
+				}
+				break
+			case fromJSONCmdMark:
+				if len(parts) >= 3 {
+					returnValue := ""
+					restSlice := parts[2:len(parts)]
+					cmd := strings.Join(restSlice, " ")
+					GetLogger().WithField("slice", restSlice).Info("execute for import-json-exec")
+					ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
+						returnValue = returnValue + output
+						return true
+					}, func(proc *os.Process) {
+						GetLogger().WithField("import-json-proc", proc).Trace("import-json-process")
+					})
+					err := AddJSON(parts[1], returnValue)
+					if err != nil {
+						output.Error("import from json string failed", parts[2], err)
+					}
+				} else {
+					output.Error("invalid usage", fromJSONCmdMark, " needs 2 arguments at least. <keyname> <json-source>")
+				}
+				break
 			case endMark:
 				GetLogger().Debug("ITERATION: DONE")
 				if inIteration {
 					inIteration = false
 					abortFound := false
 					returnCode := ExitOk
-					//returnCode := ExitOk
+
 					iterationCollect.ForEach(func(key gjson.Result, value gjson.Result) bool {
 						var parsedExecLines []string
 						for _, iLine := range iterationLines {

@@ -128,7 +128,7 @@ func LoadIncTempalte(path string) (string, bool) {
 	return "", false
 }
 
-// GetParsedTemplateSource Returnsthe soucecode of the template
+// GetParsedTemplateSource Returns the soucecode of the template
 // including parsing placeholders
 func GetParsedTemplateSource(path string) (string, error) {
 	existing, fileerror := dirhandle.Exists(path)
