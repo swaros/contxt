@@ -208,10 +208,6 @@ func TestTryParseError(t *testing.T) {
 }
 
 func TestTryParseJsonImport(t *testing.T) {
-	err := cmdhandle.ImportDataFromYAMLFile("test1", "../../docs/test/foreach/importFile.yaml")
-	if err != nil {
-		t.Error(err)
-	}
 	var script []string
 	script = append(script, "#@import-json json-data {\"hello\":\"world\"}")
 
@@ -231,10 +227,7 @@ func TestTryParseJsonImport(t *testing.T) {
 }
 
 func TestTryParseJsonImportByExec(t *testing.T) {
-	err := cmdhandle.ImportDataFromYAMLFile("test1", "../../docs/test/foreach/importFile.yaml")
-	if err != nil {
-		t.Error(err)
-	}
+
 	var script []string
 	script = append(script, "#@import-json-exec exec-import-data cat ../../docs/test/foreach/forcat.json")
 
@@ -251,4 +244,20 @@ func TestTryParseJsonImportByExec(t *testing.T) {
 		t.Error("import was not working as expected")
 	}
 
+}
+
+func TestTryParseVar(t *testing.T) {
+
+	var script []string
+	cmdhandle.SetPH("test-var-out", "first")
+	script = append(script, "#@var check-replace-out echo test-${test-var-out}-case")
+
+	cmdhandle.TryParse(script, func(line string) (bool, int) {
+		return false, cmdhandle.ExitOk
+	})
+
+	teststr := cmdhandle.GetPH("check-replace-out")
+	if teststr != "test-first-case" {
+		t.Error("set var by command is not working. got [", teststr, "]")
+	}
 }

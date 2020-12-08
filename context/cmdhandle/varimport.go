@@ -29,6 +29,9 @@ const (
 	endMark         = "#@end"
 	fromJSONMark    = "#@import-json"
 	fromJSONCmdMark = "#@import-json-exec"
+	parseVarsMark   = "#@var"
+	codeLinePH      = "__LINE__"
+	codeKeyPH       = "__KEY__"
 )
 
 // TryParse to parse a line and set a value depending on the line command
@@ -82,7 +85,23 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						output.Error("import from json string failed", parts[2], err)
 					}
 				} else {
-					output.Error("invalid usage", fromJSONCmdMark, " needs 2 arguments at least. <keyname> <json-source>")
+					output.Error("invalid usage", fromJSONCmdMark, " needs 2 arguments at least. <keyname> <bash-command>")
+				}
+				break
+			case parseVarsMark:
+				if len(parts) >= 2 {
+					var returnValues []string
+					restSlice := parts[2:len(parts)]
+					cmd := strings.Join(restSlice, " ")
+					ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
+						returnValues = append(returnValues, output)
+						return true
+					}, func(proc *os.Process) {
+						GetLogger().WithField(parseVarsMark, proc).Trace("sub process")
+					})
+					SetPH(parts[1], HandlePlaceHolder(strings.Join(returnValues, "\n")))
+				} else {
+					output.Error("invalid usage", parseVarsMark, " needs 2 arguments at least. <varibale-name> <bash-command>")
 				}
 				break
 			case endMark:
@@ -95,7 +114,8 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					iterationCollect.ForEach(func(key gjson.Result, value gjson.Result) bool {
 						var parsedExecLines []string
 						for _, iLine := range iterationLines {
-							iLine = strings.Replace(iLine, "__LINE__", value.String(), 1)
+							iLine = strings.Replace(iLine, codeLinePH, value.String(), 1)
+							iLine = strings.Replace(iLine, codeKeyPH, key.String(), 1)
 							parsedExecLines = append(parsedExecLines, iLine)
 						}
 						GetLogger().WithFields(logrus.Fields{
