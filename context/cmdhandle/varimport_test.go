@@ -98,3 +98,26 @@ func TestFolderCheck(t *testing.T) {
 	}
 
 }
+
+func TestTryParse(t *testing.T) {
+	err := cmdhandle.ImportDataFromYAMLFile("test1", "../../docs/test/foreach/importFile.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+	var script []string
+	script = append(script, "not changed")
+	script = append(script, "#@foreach test1 testData.section.simple")
+	script = append(script, "#@- output:[__LINE__]")
+	script = append(script, "#@end")
+	script = append(script, "#not changed to")
+
+	_, newScript := cmdhandle.TryParse(script)
+
+	if len(newScript) < 1 {
+		t.Error("generated script should not be empty")
+	}
+	if len(newScript) != 5 {
+		t.Error("unexpected reusult length ", len(newScript))
+	}
+
+}

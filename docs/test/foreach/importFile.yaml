@@ -1,0 +1,6 @@
+testData:
+   section:
+     simple:
+        - firstLine
+        - secondLine
+        - thirdLine

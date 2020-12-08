@@ -22,7 +22,7 @@ func ImportDataFromJSONFile(key string, filename string) error {
 	if err != nil {
 		return err
 	}
-
+	GetLogger().WithFields(logrus.Fields{"key": key, "file": filename, "value": data}).Trace("variables import")
 	AddData(key, data)
 	return nil
 }
@@ -42,6 +42,29 @@ func GetJSONPathValueString(key, path string) string {
 		GetLogger().WithField("key", key).Error("placeholder: error by getting data from named map")
 	}
 	return ""
+}
+
+// GetJSONPathResult returns the value depending key and path as string
+func GetJSONPathResult(key, path string) (gjson.Result, bool) {
+	ok, data := GetData(key)
+	if ok && data != nil {
+		//mapdata := make(map[string]interface{})
+		jsonData, err := json.Marshal(data)
+		if err == nil {
+			value := gjson.Get(string(jsonData), path)
+			GetLogger().WithFields(logrus.Fields{
+				"key":   key,
+				"path":  path,
+				"value": value.Value()}).Debug("GetJSONPathResult: found map entrie")
+			return value, true
+		}
+		GetLogger().WithField("key", key).Error("GetJSONPathResult: error while marshal data")
+	} else {
+		GetLogger().WithField("key", key).Error("GetJSONPathResult: error by getting data from named map")
+	}
+	return gjson.Result{
+		Index: 0,
+	}, false
 }
 
 // ImportDataFromYAMLFile imports a map from a json file and assign it to a key

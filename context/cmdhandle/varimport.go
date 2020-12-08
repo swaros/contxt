@@ -11,32 +11,96 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/tidwall/gjson"
+
+	"github.com/swaros/contxt/context/output"
+
+	"github.com/sirupsen/logrus"
+
 	"github.com/Masterminds/sprig/v3"
 	"github.com/ghodss/yaml"
 )
 
 const (
-	inlineCmdSep = "::"
-	startMark    = "@"
+	inlineCmdSep = " "
+	startMark    = "#@"
+	inlineMark   = "#@-"
+	iterateMark  = "#@foreach"
+	endMark      = "#@end"
 )
 
 // TryParse to parse a line and set a value depending on the line command
-func TryParse(line string) bool {
-	if line[0:1] == startMark {
-		parts := strings.Split(line, inlineCmdSep)
-		if len(parts) < 3 {
-			return false
+func TryParse(script []string) (bool, []string) {
+	inIteration := false
+	var iterationLines []string
+	var parsedScript []string
+	var iterationCollect gjson.Result
+	for _, line := range script {
+		if len(line) > len(startMark) && line[0:len(startMark)] == startMark {
+			parts := strings.Split(line, inlineCmdSep)
+			GetLogger().WithField("keywords", parts).Debug("try to parse parts")
+			if len(parts) < 1 {
+				parsedScript = append(parsedScript, line)
+				continue
+			}
+			switch parts[0] {
+
+			case inlineMark:
+				if inIteration {
+					iterationLines = append(iterationLines, strings.Replace(line, inlineMark+" ", "", 4))
+					GetLogger().WithField("code", iterationLines).Debug("append to subscript")
+				} else {
+					output.Error("invalid usage", inlineMark, " only valid while in iteration")
+				}
+				break
+			case endMark:
+				GetLogger().Debug("ITERATION: DONE")
+				if inIteration {
+					inIteration = false
+					iterationCollect.ForEach(func(key gjson.Result, value gjson.Result) bool {
+						var parsedExecLines []string
+						for _, iLine := range iterationLines {
+							iLine = strings.Replace(iLine, "__LINE__", value.String(), 1)
+							parsedExecLines = append(parsedExecLines, iLine)
+						}
+						GetLogger().WithFields(logrus.Fields{
+							"key":       key,
+							"value":     value,
+							"subscript": parsedExecLines,
+						}).Debug("... delegate script")
+						_, subs := TryParse(parsedExecLines)
+						for _, subLine := range subs {
+							parsedScript = append(parsedScript, subLine)
+						}
+						return true
+					})
+				}
+
+			case iterateMark:
+				if len(parts) == 3 {
+					impMap, found := GetJSONPathResult(parts[1], parts[2])
+					if !found {
+						output.Error("undefined data from path", parts[1], parts[2])
+					} else {
+						inIteration = true
+						iterationCollect = impMap
+						GetLogger().WithField("data", impMap).Debug("ITERATION: START")
+					}
+				} else {
+					output.Error("invalid arguments", "#@iterate needs <name-of-import> <path-to-data>")
+				}
+				break
+			default:
+				GetLogger().WithField("unknown", parts[0]).Error("there is no command exists")
+			}
+		} else {
+			parsedScript = append(parsedScript, line)
 		}
-
-		switch parts[0] {
-		case "@import":
-			handleImport(parts[1], parts[2])
-			return true
-
-		}
-
 	}
-	return false
+	GetLogger().WithFields(logrus.Fields{
+		"parsed": parsedScript,
+	}).Debug("... parsed result")
+	return false, parsedScript
 }
 
 func handleImport(filename, path string) {
@@ -71,6 +135,9 @@ func ImportYAMLFile(filename string) (map[string]interface{}, error) {
 	if err = json.Unmarshal([]byte(jsond), &m); err != nil {
 		return nil, err
 	}
+	if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
+		traceMap(m, filename)
+	}
 	return m, nil
 
 }
@@ -88,8 +155,23 @@ func ImportJSONFile(fileName string) (map[string]interface{}, error) {
 		GetLogger().Error("ImportJSONFile : Unmarshal :", fileName, " : ", err)
 		return nil, err
 	}
+	if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
+		traceMap(m, fileName)
+	}
 	return m, nil
 
+}
+
+func traceMap(mapShow map[string]interface{}, add string) {
+	for k, v := range mapShow {
+		//mapShow[k] = v
+		//GetLogger().WithField("VAR", v).Trace("imported placeholder from " + add + " " + k)
+		GetLogger().WithFields(logrus.Fields{
+			"source":  add,
+			"key":     k,
+			"content": v,
+		}).Trace("imported content")
+	}
 }
 
 // MergeVariableMap merges two maps

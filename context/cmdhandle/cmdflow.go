@@ -33,7 +33,7 @@ const (
 func RunTargets(targets string) {
 	allTargets := strings.Split(targets, ",")
 	template, templatePath, exists := GetTemplate()
-
+	GetLogger().WithField("targets", allTargets).Info("run targets...")
 	var runSequencially = false
 	if exists {
 		runSequencially = template.Config.Sequencially
@@ -43,8 +43,10 @@ func RunTargets(targets string) {
 	}
 
 	if len(template.Config.Imports) > 0 {
-		GetLogger().WithField("imports", template.Config.Imports).Info("imports")
+		GetLogger().WithField("Import", template.Config.Imports).Info("import second level vars")
 		handleFileImportsToVars(template.Config.Imports)
+	} else {
+		GetLogger().Info("No second level Variables defined")
 	}
 
 	if template.Config.Loglevel != "" {
@@ -120,6 +122,169 @@ func checkRequirements(require configure.Require) (bool, string) {
 	return true, ""
 }
 
+func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason configure.StopReasons, runCfg configure.RunConfig, colorCode, bgCode, codeLine, target string, script configure.Task) (int, bool) {
+	panelSize := 12
+	if script.Options.Panelsize > 0 {
+		panelSize = script.Options.Panelsize
+	}
+	var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
+	replacedLine := HandlePlaceHolder(codeLine)
+	if script.Options.Displaycmd {
+		fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, replacedLine))
+	}
+
+	SetPH("RUN.SCRIPT_LINE", replacedLine)
+
+	// here we execute the current script line
+	execCode, realExitCode, execErr := ExecuteScriptLine(mainCommand, script.Options.Mainparams, replacedLine, func(logLine string) bool {
+
+		SetPH("RUN."+target+".LOG.LAST", logLine)
+		// the watcher
+		if script.Listener != nil {
+
+			GetLogger().WithFields(logrus.Fields{
+				"cnt":      len(script.Listener),
+				"listener": script.Listener,
+			}).Debug("CHECK Listener")
+
+			for _, listener := range script.Listener {
+				listenReason := configure.StopReasons(listener.Trigger)
+				triggerFound, triggerMessage := checkReason(listenReason, logLine)
+				if triggerFound {
+					SetPH("RUN."+target+".LOG.HIT", logLine)
+					if script.Options.Displaycmd {
+						fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t", output.ForeYellow, triggerMessage, output.Dim, " ", logLine))
+					}
+					actionDef := configure.Action(listener.Action)
+					if actionDef.Target != "" {
+						if script.Options.Displaycmd {
+							fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t ", output.ForeGreen, "target:", output.ForeLightGreen, actionDef.Target))
+						}
+
+						hitKeyTargets := "RUN.LISTENER." + target + ".HIT.TARGETS"
+						lastHitTargets := GetPH(hitKeyTargets)
+						if !strings.Contains(lastHitTargets, "("+actionDef.Target+")") {
+							lastHitTargets = lastHitTargets + "(" + actionDef.Target + ")"
+							SetPH(hitKeyTargets, lastHitTargets)
+						}
+
+						hitKeyCnt := "RUN.LISTENER." + actionDef.Target + ".HIT.CNT"
+						lastCnt := GetPH(hitKeyCnt)
+						if lastCnt == "" {
+							SetPH(hitKeyCnt, "1")
+						} else {
+							iCnt, err := strconv.Atoi(lastCnt)
+							if err != nil {
+								GetLogger().Fatal("fail converting trigger count")
+							}
+							iCnt++
+							SetPH(hitKeyCnt, strconv.Itoa(iCnt))
+						}
+
+						GetLogger().WithFields(logrus.Fields{
+							"trigger":   triggerMessage,
+							"target":    actionDef.Target,
+							"waitgroup": useWaitGroup,
+							"RUN.LISTENER." + target + ".HIT.TARGETS": lastHitTargets,
+						}).Info("TRIGGER Called")
+
+						if useWaitGroup {
+							go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+
+						} else {
+							executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+						}
+					} else {
+						GetLogger().WithFields(logrus.Fields{
+							"trigger": triggerMessage,
+							"output":  logLine,
+						}).Warn("trigger defined without any target")
+					}
+				} else {
+					GetLogger().WithFields(logrus.Fields{
+						"output": logLine,
+					}).Debug("no trigger found")
+				}
+			}
+		}
+
+		// print the output by configuration
+		if script.Options.Hideout == false {
+			if script.Options.Format != "" {
+				fmt.Printf(script.Options.Format, logLine)
+			} else {
+				foreColor := defaultString(script.Options.Colorcode, colorCode)
+				bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
+				labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
+
+				outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
+				if script.Options.Stickcursor {
+					fmt.Print("\033[G\033[K")
+				}
+				// prints the codeline
+				fmt.Println(labelStr, outStr)
+				if script.Options.Stickcursor {
+					fmt.Print("\033[A")
+				}
+			}
+		}
+		// do we found a defined reason to stop execution
+		stopReasonFound, message := checkReason(stopReason, logLine)
+		if stopReasonFound {
+			if script.Options.Displaycmd {
+				fmt.Println(output.MessageCln(output.ForeLightCyan, " STOP-HIT ", output.ForeWhite, output.BackBlue, message))
+			}
+			return false
+		}
+		return true
+	}, func(process *os.Process) {
+		pidStr := fmt.Sprintf("%d", process.Pid)
+		SetPH("RUN.PID", pidStr)
+		SetPH("RUN."+target+".PID", pidStr)
+		if script.Options.Displaycmd {
+			fmt.Println(output.MessageCln(output.ForeYellow, " [pid] ", output.ForeBlue, process.Pid))
+		}
+	})
+	if execErr != nil {
+		if script.Options.Displaycmd {
+			fmt.Println(output.MessageCln(output.ForeRed, "execution error: ", output.BackRed, output.ForeWhite, execErr))
+		}
+	}
+	// check execution codes
+	switch execCode {
+	case ExitByStopReason:
+		return ExitByStopReason, true
+	case ExitCmdError:
+		if script.Options.IgnoreCmdError {
+			if script.Stopreasons.Onerror {
+				return ExitByStopReason, true
+			}
+			fmt.Println(output.MessageCln(output.ForeYellow, "NOTE!\t", output.BackLightYellow, output.ForeDarkGrey, " a script execution was failing. no stopreason is set so execution will continued "))
+			fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " if this is expected you can ignore this message.                                 "))
+			fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " but you should handle error cases                                                "))
+			fmt.Println("\ttarget :\t", output.MessageCln(output.ForeYellow, target))
+			fmt.Println("\tcommand:\t", output.MessageCln(output.ForeYellow, codeLine))
+
+		} else {
+			errMsg := " = exit code from command: "
+			lastMessage := output.MessageCln(output.BackRed, output.ForeYellow, realExitCode, output.CleanTag, output.ForeLightRed, errMsg, output.ForeWhite, codeLine)
+			fmt.Println("\t Exit ", lastMessage)
+			fmt.Println()
+			fmt.Println("\t check the command. if this command can fail you may fit the execution rules. see options:")
+			fmt.Println("\t you may disable a hard exit on error by setting ignoreCmdError: true")
+			fmt.Println("\t if you do so, a Note will remind you, that a error is happend in this case.")
+			fmt.Println()
+			GetLogger().Error("runtime error:", execErr, "exit", realExitCode)
+			os.Exit(realExitCode)
+			// returns the error code
+			return ExitCmdError, true
+		}
+	case ExitOk:
+		return ExitOk, false
+	}
+	return ExitNoCode, true
+}
+
 func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string) int {
 	if useWaitGroup {
 		waitGroup.Add(1)
@@ -170,166 +335,21 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					}
 					return ExitByRequirement
 				}
+				// preparing codelines by execute second level commands
+				// that can affect the whole script
+				parsed, _ := TryParse(script.Script)
+				if parsed {
+					GetLogger().Debug("parsing succesfully ")
+				}
 
+				// parsing codelines
+				returnCode := ExitOk
+				abort := false
 				for _, codeLine := range script.Script {
-
-					panelSize := 12
-					if script.Options.Panelsize > 0 {
-						panelSize = script.Options.Panelsize
+					if !abort {
+						returnCode, abort = lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, script)
 					}
-					var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
-					replacedLine := HandlePlaceHolder(codeLine)
-					if script.Options.Displaycmd {
-						fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, replacedLine))
-					}
-					SetPH("RUN.SCRIPT_LINE", replacedLine)
 
-					// here we execute the current script line
-					execCode, realExitCode, execErr := ExecuteScriptLine(mainCommand, script.Options.Mainparams, replacedLine, func(logLine string) bool {
-
-						SetPH("RUN."+target+".LOG.LAST", logLine)
-						// the watcher
-						if script.Listener != nil {
-
-							GetLogger().WithFields(logrus.Fields{
-								"cnt":      len(script.Listener),
-								"listener": script.Listener,
-							}).Debug("CHECK Listener")
-
-							for _, listener := range script.Listener {
-								listenReason := configure.StopReasons(listener.Trigger)
-								triggerFound, triggerMessage := checkReason(listenReason, logLine)
-								if triggerFound {
-									SetPH("RUN."+target+".LOG.HIT", logLine)
-									if script.Options.Displaycmd {
-										fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t", output.ForeYellow, triggerMessage, output.Dim, " ", logLine))
-									}
-									actionDef := configure.Action(listener.Action)
-									if actionDef.Target != "" {
-										if script.Options.Displaycmd {
-											fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t ", output.ForeGreen, "target:", output.ForeLightGreen, actionDef.Target))
-										}
-
-										hitKeyTargets := "RUN.LISTENER." + target + ".HIT.TARGETS"
-										lastHitTargets := GetPH(hitKeyTargets)
-										if !strings.Contains(lastHitTargets, "("+actionDef.Target+")") {
-											lastHitTargets = lastHitTargets + "(" + actionDef.Target + ")"
-											SetPH(hitKeyTargets, lastHitTargets)
-										}
-
-										hitKeyCnt := "RUN.LISTENER." + actionDef.Target + ".HIT.CNT"
-										lastCnt := GetPH(hitKeyCnt)
-										if lastCnt == "" {
-											SetPH(hitKeyCnt, "1")
-										} else {
-											iCnt, err := strconv.Atoi(lastCnt)
-											if err != nil {
-												GetLogger().Fatal("fail converting trigger count")
-											}
-											iCnt++
-											SetPH(hitKeyCnt, strconv.Itoa(iCnt))
-										}
-
-										GetLogger().WithFields(logrus.Fields{
-											"trigger":   triggerMessage,
-											"target":    actionDef.Target,
-											"waitgroup": useWaitGroup,
-											"RUN.LISTENER." + target + ".HIT.TARGETS": lastHitTargets,
-										}).Info("TRIGGER Called")
-
-										if useWaitGroup {
-											go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
-
-										} else {
-											executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
-										}
-									} else {
-										GetLogger().WithFields(logrus.Fields{
-											"trigger": triggerMessage,
-											"output":  logLine,
-										}).Warn("trigger defined without any target")
-									}
-								} else {
-									GetLogger().WithFields(logrus.Fields{
-										"output": logLine,
-									}).Debug("no trigger found")
-								}
-							}
-						}
-
-						// print the output by configuration
-						if script.Options.Hideout == false {
-							if script.Options.Format != "" {
-								fmt.Printf(script.Options.Format, logLine)
-							} else {
-								foreColor := defaultString(script.Options.Colorcode, colorCode)
-								bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
-								labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
-
-								outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
-								if script.Options.Stickcursor {
-									fmt.Print("\033[G\033[K")
-								}
-								// prints the codeline
-								fmt.Println(labelStr, outStr)
-								if script.Options.Stickcursor {
-									fmt.Print("\033[A")
-								}
-							}
-						}
-						// do we found a defined reason to stop execution
-						stopReasonFound, message := checkReason(stopReason, logLine)
-						if stopReasonFound {
-							if script.Options.Displaycmd {
-								fmt.Println(output.MessageCln(output.ForeLightCyan, " STOP-HIT ", output.ForeWhite, output.BackBlue, message))
-							}
-							return false
-						}
-						return true
-					}, func(process *os.Process) {
-						pidStr := fmt.Sprintf("%d", process.Pid)
-						SetPH("RUN.PID", pidStr)
-						SetPH("RUN."+target+".PID", pidStr)
-						if script.Options.Displaycmd {
-							fmt.Println(output.MessageCln(output.ForeYellow, " [pid] ", output.ForeBlue, process.Pid))
-						}
-					})
-					if execErr != nil {
-						if script.Options.Displaycmd {
-							fmt.Println(output.MessageCln(output.ForeRed, "execution error: ", output.BackRed, output.ForeWhite, execErr))
-						}
-					}
-					// check execution codes
-					switch execCode {
-					case ExitByStopReason:
-						return ExitByStopReason
-					case ExitCmdError:
-						if script.Options.IgnoreCmdError {
-							if script.Stopreasons.Onerror {
-								return ExitByStopReason
-							}
-							fmt.Println(output.MessageCln(output.ForeYellow, "NOTE!\t", output.BackLightYellow, output.ForeDarkGrey, " a script execution was failing. no stopreason is set so execution will continued "))
-							fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " if this is expected you can ignore this message.                                 "))
-							fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " but you should handle error cases                                                "))
-							fmt.Println("\ttarget :\t", output.MessageCln(output.ForeYellow, target))
-							fmt.Println("\tcommand:\t", output.MessageCln(output.ForeYellow, codeLine))
-
-						} else {
-							errMsg := " = exit code from command: "
-							lastMessage := output.MessageCln(output.BackRed, output.ForeYellow, realExitCode, output.CleanTag, output.ForeLightRed, errMsg, output.ForeWhite, codeLine)
-							fmt.Println("\t Exit ", lastMessage)
-							fmt.Println()
-							fmt.Println("\t check the command. if this command can fail you may fit the execution rules. see options:")
-							fmt.Println("\t you may disable a hard exit on error by setting ignoreCmdError: true")
-							fmt.Println("\t if you do so, a Note will remind you, that a error is happend in this case.")
-							fmt.Println()
-							GetLogger().Error("runtime error:", execErr, "exit", realExitCode)
-							os.Exit(realExitCode)
-							// returns the error code
-							return ExitCmdError
-						}
-
-					}
 				}
 				// executes next targets if there some defined
 				GetLogger().WithFields(logrus.Fields{
@@ -351,7 +371,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					// for now we execute without a waitgroup
 					executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
 				}
-				return ExitOk
+				return returnCode
 			}
 
 		}
@@ -422,14 +442,14 @@ func handleFileImportsToVars(imports []string) {
 		}
 
 		dirhandle.FileTypeHandler(filename, func(jsonBaseName string) {
-			GetLogger().Debug("loading json File:", filename)
+			GetLogger().Debug("loading json File as second level variables:", filename)
 			if keyname == "" {
 				keyname = jsonBaseName
 			}
 			ImportDataFromJSONFile(keyname, filename)
 
 		}, func(yamlBaseName string) {
-			GetLogger().Debug("loading yaml File:", filename)
+			GetLogger().Debug("loading yaml File: as second level variables", filename)
 			if keyname == "" {
 				keyname = yamlBaseName
 			}
@@ -437,6 +457,8 @@ func handleFileImportsToVars(imports []string) {
 
 		}, func(path string, err error) {
 			GetLogger().Errorln("file not exists:", err)
+			output.Error("varibales file not exists:", err)
+			os.Exit(1)
 		})
 	}
 }
