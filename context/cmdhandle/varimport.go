@@ -30,7 +30,7 @@ const (
 )
 
 // TryParse to parse a line and set a value depending on the line command
-func TryParse(script []string) (bool, []string) {
+func TryParse(script []string, regularScript func(string) (bool, int)) (bool, int, []string) {
 	inIteration := false
 	var iterationLines []string
 	var parsedScript []string
@@ -40,7 +40,6 @@ func TryParse(script []string) (bool, []string) {
 			parts := strings.Split(line, inlineCmdSep)
 			GetLogger().WithField("keywords", parts).Debug("try to parse parts")
 			if len(parts) < 1 {
-				parsedScript = append(parsedScript, line)
 				continue
 			}
 			switch parts[0] {
@@ -57,6 +56,9 @@ func TryParse(script []string) (bool, []string) {
 				GetLogger().Debug("ITERATION: DONE")
 				if inIteration {
 					inIteration = false
+					abortFound := false
+					returnCode := ExitOk
+					//returnCode := ExitOk
 					iterationCollect.ForEach(func(key gjson.Result, value gjson.Result) bool {
 						var parsedExecLines []string
 						for _, iLine := range iterationLines {
@@ -68,12 +70,21 @@ func TryParse(script []string) (bool, []string) {
 							"value":     value,
 							"subscript": parsedExecLines,
 						}).Debug("... delegate script")
-						_, subs := TryParse(parsedExecLines)
+						abort, rCode, subs := TryParse(parsedExecLines, regularScript)
+						returnCode = rCode
 						for _, subLine := range subs {
 							parsedScript = append(parsedScript, subLine)
 						}
+						if abort {
+							abortFound = true
+							return false
+						}
 						return true
 					})
+
+					if abortFound {
+						return true, returnCode, parsedScript
+					}
 				}
 
 			case iterateMark:
@@ -95,12 +106,17 @@ func TryParse(script []string) (bool, []string) {
 			}
 		} else {
 			parsedScript = append(parsedScript, line)
+			abort, returnCode := regularScript(line)
+			if abort {
+				return true, returnCode, parsedScript
+			}
+
 		}
 	}
 	GetLogger().WithFields(logrus.Fields{
 		"parsed": parsedScript,
 	}).Debug("... parsed result")
-	return false, parsedScript
+	return false, ExitOk, parsedScript
 }
 
 func handleImport(filename, path string) {

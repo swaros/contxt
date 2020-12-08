@@ -335,22 +335,27 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					}
 					return ExitByRequirement
 				}
-				// preparing codelines by execute second level commands
-				// that can affect the whole script
-				parsed, _ := TryParse(script.Script)
-				if parsed {
-					GetLogger().Debug("parsing succesfully ")
-				}
 
 				// parsing codelines
 				returnCode := ExitOk
 				abort := false
-				for _, codeLine := range script.Script {
-					if !abort {
-						returnCode, abort = lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, script)
-					}
 
+				// preparing codelines by execute second level commands
+				// that can affect the whole script
+				abort, returnCode, _ = TryParse(script.Script, func(codeLine string) (bool, int) {
+					lineAbort, lineExitCode := lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, script)
+					return lineExitCode, lineAbort
+				})
+				if abort {
+					GetLogger().Debug("abort reason found ")
 				}
+				/*
+					for _, codeLine := range script.Script {
+						if !abort {
+							returnCode, abort = lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, script)
+						}
+
+					}*/
 				// executes next targets if there some defined
 				GetLogger().WithFields(logrus.Fields{
 					"current-target": target,
