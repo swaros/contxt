@@ -5,5 +5,8 @@ testData:
         - secondLine
         - thirdLine
 import:
-  json:
+  keyValue:
+    limit: "100"
+    scale: "yes"
+    message: "it works"
     

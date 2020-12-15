@@ -261,3 +261,57 @@ func TestTryParseVar(t *testing.T) {
 		t.Error("set var by command is not working. got [", teststr, "]")
 	}
 }
+
+/*
+func TestTryParseWithKeys(t *testing.T) {
+	err := cmdhandle.ImportDataFromYAMLFile("test-with-key", "../../docs/test/foreach/importFile.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+	var script []string
+	script = append(script, "not changed")
+	script = append(script, "#@foreach test-with-key testData.section.import.keyValue")
+	script = append(script, "#@- output:[__LINE__]")
+	script = append(script, "#@end")
+	script = append(script, "not changed too")
+	hitCounter := 0
+	_, _, newScript := cmdhandle.TryParse(script, func(line string) (bool, int) {
+		hitCounter++
+		fails := false
+		switch hitCounter {
+		case 1:
+			if line != "not changed" {
+				fails = true
+			}
+		case 2:
+			if line != "output:[firstLine]" {
+				fails = true
+			}
+		case 3:
+			if line != "output:[secondLine]" {
+				fails = true
+			}
+		case 4:
+			if line != "output:[thirdLine]" {
+				fails = true
+			}
+		case 5:
+			if line != "not changed too" {
+				fails = true
+			}
+		}
+		if fails {
+			t.Error("failing because line", hitCounter, "have unexpected content [", line, "]")
+		}
+		return false, cmdhandle.ExitOk
+	})
+
+	if len(newScript) < 1 {
+		t.Error("generated script should not be empty")
+	}
+	if len(newScript) != 5 {
+		t.Error("unexpected result length ", len(newScript))
+	}
+
+}
+*/

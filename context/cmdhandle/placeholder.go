@@ -3,12 +3,15 @@ package cmdhandle
 import (
 	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 var keyValue sync.Map
 
 // SetPH add key value pair
 func SetPH(key, value string) {
+	GetLogger().WithField(key, value).Trace("add/overwrite placeholder")
 	keyValue.Store(key, value)
 }
 
@@ -16,8 +19,10 @@ func SetPH(key, value string) {
 func GetPH(key string) string {
 	result, ok := keyValue.Load(key)
 	if ok {
+		GetLogger().WithField(key, result.(string)).Trace("deliver content from placeholder")
 		return result.(string)
 	}
+	GetLogger().WithField("key", key).Trace("returns empty string because key is not set")
 	return ""
 }
 
@@ -29,6 +34,19 @@ func HandlePlaceHolder(line string) string {
 }
 
 func handlePlaceHolder(line string) string {
+
+	if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
+		keyValue.Range(func(key, value interface{}) bool {
+			keyName := "${" + key.(string) + "}"
+			if strings.Contains(line, keyName) {
+				GetLogger().WithField("line", line).Trace("replace: source")
+				GetLogger().WithField(keyName, value.(string)).Trace("replace: variables")
+			}
+			line = strings.ReplaceAll(line, keyName, value.(string))
+			line = handleMapVars(line)
+			return true
+		})
+	}
 
 	keyValue.Range(func(key, value interface{}) bool {
 		keyName := "${" + key.(string) + "}"
