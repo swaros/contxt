@@ -1,10 +1,10 @@
 --- 
 task: 
   - 
-    id: script
+    id: build
     script: 
-      - "echo 'hallo welt'"
-      - "ls -ga"
+      - rm -rf dist/
+      - goreleaser build
   - 
     id: init
     script: 
