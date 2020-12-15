@@ -14,7 +14,27 @@ var minversion string
 
 // GetVersion deleivers the current build version
 func GetVersion() string {
-	return mainversion + "." + midversion + "." + minversion
+	var outVersion = ""
+	if mainversion != "" {
+		outVersion = mainversion
+	}
+	if midversion != "" {
+		if outVersion != "" {
+			outVersion = outVersion + "." + midversion
+		} else {
+			outVersion = midversion
+		}
+	}
+
+	if minversion != "" {
+		if outVersion != "" {
+			outVersion = outVersion + "." + minversion
+		} else {
+			outVersion = minversion
+		}
+	}
+
+	return outVersion
 }
 
 // GetBuild returns Build time as build NO
