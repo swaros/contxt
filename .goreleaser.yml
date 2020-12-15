@@ -46,7 +46,7 @@ nfpms:
     vendor: swaros
     homepage: https://github.com/swaros/contxt
     maintainer: tziegler <thomas.zglr@googlemail.com>
-    description: context manager for console
+    description: managing paths and jobs in workspaces on console.
     license: MIT
     formats:
       - rpm
