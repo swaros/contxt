@@ -5,6 +5,11 @@ task:
       - rm -rf dist/
       - goreleaser build --skip-validate --rm-dist
       - cd dist/contxt_linux_amd64 && ./contxt version
+  
+  - id: release
+    script:
+      - goreleaser release --skip-validate --rm-dist
+
   - id: init
     script: 
       - "git status"

@@ -39,3 +39,25 @@ changelog:
 
 env_files:  
   github_token: ~/keystore/tokens/goreleaser.token
+
+nfpms:
+ -
+    id: contxt-rpm
+    vendor: swaros
+    homepage: https://github.com/swaros/contxt
+    maintainer: tziegler <thomas.zglr@googlemail.com>
+    description: context manager for console
+    license: MIT
+    formats:
+      - rpm
+      - deb
+
+    rpm:
+      summary: context manager
+      compression: lzma
+
+
+    
+
+
+
