@@ -1,0 +1,12 @@
+testData:
+   section:
+     simple:
+        - firstLine
+        - secondLine
+        - thirdLine
+import:
+  keyValue:
+    limit: "100"
+    scale: "yes"
+    message: "it works"
+    

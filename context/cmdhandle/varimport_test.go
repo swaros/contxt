@@ -98,3 +98,220 @@ func TestFolderCheck(t *testing.T) {
 	}
 
 }
+
+func TestTryParse(t *testing.T) {
+	err := cmdhandle.ImportDataFromYAMLFile("test1", "../../docs/test/foreach/importFile.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+	var script []string
+	script = append(script, "not changed")
+	script = append(script, "#@foreach test1 testData.section.simple")
+	script = append(script, "#@- output:[__LINE__]")
+	script = append(script, "#@end")
+	script = append(script, "not changed too")
+	hitCounter := 0
+	_, _, newScript := cmdhandle.TryParse(script, func(line string) (bool, int) {
+		hitCounter++
+		fails := false
+		switch hitCounter {
+		case 1:
+			if line != "not changed" {
+				fails = true
+			}
+		case 2:
+			if line != "output:[firstLine]" {
+				fails = true
+			}
+		case 3:
+			if line != "output:[secondLine]" {
+				fails = true
+			}
+		case 4:
+			if line != "output:[thirdLine]" {
+				fails = true
+			}
+		case 5:
+			if line != "not changed too" {
+				fails = true
+			}
+		}
+		if fails {
+			t.Error("failing because line", hitCounter, "have unexpected content [", line, "]")
+		}
+		return false, cmdhandle.ExitOk
+	})
+
+	if len(newScript) < 1 {
+		t.Error("generated script should not be empty")
+	}
+	if len(newScript) != 5 {
+		t.Error("unexpected result length ", len(newScript))
+	}
+
+}
+
+func TestTryParseError(t *testing.T) {
+	err := cmdhandle.ImportDataFromYAMLFile("test1", "../../docs/test/foreach/importFile.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+	var script []string
+	script = append(script, "not changed")
+	script = append(script, "#@foreach test1 testData.section.simple")
+	script = append(script, "#@- output:[__LINE__]")
+	script = append(script, "#@end")
+	script = append(script, "not changed too")
+	hitCounter := 0
+	rAbort, rCode, newScript := cmdhandle.TryParse(script, func(line string) (bool, int) {
+		hitCounter++
+		fails := false
+		abort := false
+		returnCode := cmdhandle.ExitOk
+		switch hitCounter {
+		case 1:
+			if line != "not changed" {
+				fails = true
+			}
+		case 2:
+			if line != "output:[firstLine]" {
+				fails = true
+			}
+		case 3:
+			if line != "output:[secondLine]" {
+				fails = true
+			}
+			abort = true
+			returnCode = cmdhandle.ExitByStopReason
+		}
+		if fails {
+			t.Error("failing because line", hitCounter, "have unexpected content [", line, "]")
+		}
+		return abort, returnCode
+	})
+
+	if len(newScript) < 1 {
+		t.Error("generated script should not be empty")
+	}
+	if len(newScript) != 3 {
+		t.Error("unexpected result length ", len(newScript))
+	}
+
+	if rAbort == false {
+		t.Error("unexpected abort result ")
+	}
+
+	if rCode != cmdhandle.ExitByStopReason {
+		t.Error("unexpected return code")
+	}
+
+}
+
+func TestTryParseJsonImport(t *testing.T) {
+	var script []string
+	script = append(script, "#@import-json json-data {\"hello\":\"world\"}")
+
+	cmdhandle.TryParse(script, func(line string) (bool, int) {
+		return false, cmdhandle.ExitOk
+	})
+
+	have, data := cmdhandle.GetData("json-data")
+	if have == false {
+		t.Error("json was not imported")
+	}
+
+	if data["hello"] != "world" {
+		t.Error("import was not working as expected")
+	}
+
+}
+
+func TestTryParseJsonImportByExec(t *testing.T) {
+
+	var script []string
+	script = append(script, "#@import-json-exec exec-import-data cat ../../docs/test/foreach/forcat.json")
+
+	cmdhandle.TryParse(script, func(line string) (bool, int) {
+		return false, cmdhandle.ExitOk
+	})
+
+	have, data := cmdhandle.GetData("exec-import-data")
+	if have == false {
+		t.Error("json was not imported")
+	}
+
+	if data["main"] == nil {
+		t.Error("import was not working as expected")
+	}
+
+}
+
+func TestTryParseVar(t *testing.T) {
+
+	var script []string
+	cmdhandle.SetPH("test-var-out", "first")
+	script = append(script, "#@var check-replace-out echo test-${test-var-out}-case")
+
+	cmdhandle.TryParse(script, func(line string) (bool, int) {
+		return false, cmdhandle.ExitOk
+	})
+
+	teststr := cmdhandle.GetPH("check-replace-out")
+	if teststr != "test-first-case" {
+		t.Error("set var by command is not working. got [", teststr, "]")
+	}
+}
+
+/*
+func TestTryParseWithKeys(t *testing.T) {
+	err := cmdhandle.ImportDataFromYAMLFile("test-with-key", "../../docs/test/foreach/importFile.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+	var script []string
+	script = append(script, "not changed")
+	script = append(script, "#@foreach test-with-key testData.section.import.keyValue")
+	script = append(script, "#@- output:[__LINE__]")
+	script = append(script, "#@end")
+	script = append(script, "not changed too")
+	hitCounter := 0
+	_, _, newScript := cmdhandle.TryParse(script, func(line string) (bool, int) {
+		hitCounter++
+		fails := false
+		switch hitCounter {
+		case 1:
+			if line != "not changed" {
+				fails = true
+			}
+		case 2:
+			if line != "output:[firstLine]" {
+				fails = true
+			}
+		case 3:
+			if line != "output:[secondLine]" {
+				fails = true
+			}
+		case 4:
+			if line != "output:[thirdLine]" {
+				fails = true
+			}
+		case 5:
+			if line != "not changed too" {
+				fails = true
+			}
+		}
+		if fails {
+			t.Error("failing because line", hitCounter, "have unexpected content [", line, "]")
+		}
+		return false, cmdhandle.ExitOk
+	})
+
+	if len(newScript) < 1 {
+		t.Error("generated script should not be empty")
+	}
+	if len(newScript) != 5 {
+		t.Error("unexpected result length ", len(newScript))
+	}
+
+}
+*/

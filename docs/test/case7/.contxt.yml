@@ -1,6 +1,6 @@
 config:
   sequencially: false
-  coloroff: false
+  coloroff: true
 task:
   - id: base
     stopreasons:
@@ -19,8 +19,12 @@ task:
         action:
           target: sub
   - id: sub
+    stopreasons:
+      onerror: true
     options:
       displaycmd: true
+      # have to be set or the whole test will fail 
+      # because of this error
       ignoreCmdError: true
       format: "thread-test-sub:\t[%s]\n"
     script:

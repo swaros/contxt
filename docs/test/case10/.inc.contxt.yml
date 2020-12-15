@@ -1,4 +1,6 @@
 include:
-    basedir: true
+    basedir: false
     folders:
-        - "./"
+        - "imp1.yaml"
+        - "imp2.json"
+        - "imp3.yml"

@@ -1,11 +1,12 @@
 package cmdhandle
 
 import (
-	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/swaros/contxt/context/configure"
@@ -13,214 +14,82 @@ import (
 )
 
 //var log = logrus.New()
-var log = &logrus.Logger{
-	Out:       os.Stdout,
-	Formatter: new(logrus.TextFormatter),
-	Hooks:     make(logrus.LevelHooks),
-	Level:     logrus.ErrorLevel,
-}
-
-func initLogger() {
-	//log.Out = os.Stdout
-	//log.SetLevel(logrus.DebugLevel)
-
-}
-
-// GetLogger is the main Logger instance
-func GetLogger() *logrus.Logger {
-	return log
-}
-
-// MainExecute runs main. parsing flags
-func MainExecute() {
-
-	initLogger()
-
-	var configErr = configure.InitConfig()
-	if configErr != nil {
-		log.Fatal(configErr)
-	}
-	nonParams := true
-
-	// Directory related commands
-	dirCommand := flag.NewFlagSet("dir", flag.ExitOnError)
-
-	addCmd := dirCommand.Bool("add", false, "register current directory in current workspace")
-	pathIndex := dirCommand.Int("i", -1, "get path by index. use -paths to see index and assigned paths")
-	showPaths := dirCommand.Bool("paths", false, "show current paths")
-	showWorkspaces := dirCommand.Bool("list", false, "display all existing workspaces")
-	workSpace := dirCommand.String("w", "", "set current workspace")
-	removeWorkSpace := dirCommand.String("delete", "", "remove workspace")
-	clearPaths := dirCommand.Bool("clear", false, "remove all paths from workspace")
-	info := dirCommand.Bool("info", false, "show current workspace")
-
-	// script execution releated commands
-	scriptCommand := flag.NewFlagSet("run", flag.ExitOnError)
-
-	targets := scriptCommand.String("target", "", "set target. for mutliple targets seperate by ,")
-	allDirs := scriptCommand.Bool("all-paths", false, "run targets in all paths")
-	execute := scriptCommand.String("exec", "", "Execute a command on all paths")
-	execTemplate := scriptCommand.Bool("create-template", false, "write template for path dependeing executions in current folder")
-
-	if len(os.Args) < 2 {
-		printOutHeader()
-		fmt.Println("not enough arguments")
-		fmt.Println(output.MessageCln(output.ForeWhite, "  dir", output.ForeLightCyan, "\tmanaging paths in workspaces"))
-		fmt.Println(output.MessageCln(output.ForeWhite, "  run", output.ForeLightCyan, "\texecuting scripts in workspaces"))
-		os.Exit(1)
+var (
+	log = &logrus.Logger{
+		Out:       os.Stdout,
+		Formatter: new(logrus.TextFormatter),
+		Hooks:     make(logrus.LevelHooks),
+		Level:     logrus.ErrorLevel,
 	}
 
-	switch os.Args[1] {
-	case "dir":
-		dirCommand.Parse(os.Args[2:])
-	case "run":
-		scriptCommand.Parse(os.Args[2:])
-	default:
-		foundATask := doMagicParamOne(os.Args[1])
-		if !foundATask {
-			fmt.Println(output.MessageCln("unexpected command ", output.ForeLightCyan, os.Args[1]))
-			flag.PrintDefaults()
-			os.Exit(1)
-		}
+	// cobra stuff
+	showColors    bool
+	loglevel      string
+	pathIndex     int
+	deleteWs      string
+	clearTask     bool
+	setWs         string
+	runAtAll      bool
+	leftLen       int
+	rightLen      int
+	lintShowAll   bool
+	showInvTarget bool
 
+	rootCmd = &cobra.Command{
+		Use:   "contxt",
+		Short: "worspaces for the shell",
+		Long: `Contxt helps you to organize projects.
+it helps also to execute tasks depending these projects.
+this task can be used to setup and cleanup the workspace 
+if you enter or leave them.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+
+		},
 	}
 
-	if scriptCommand.Parsed() {
-		someRunCmd := false
-		// run against a list of targets just in current dir
-		if *targets != "" && *allDirs == false {
-			nonParams = false
-			someRunCmd = true
-			path, _ := dirhandle.Current()
-			runTargets(path, *targets)
-		}
-
-		// run targets in all paths
-		if *targets != "" && *allDirs == true {
-			nonParams = false
-			someRunCmd = true
-			_, err := dirhandle.Current()
-
-			if err == nil {
-				configure.PathWorker(func(index int, path string) {
-					os.Chdir(path)
-					runTargets(path, *targets)
-				})
+	dirCmd = &cobra.Command{
+		Use:   "dir",
+		Short: "handle workspaces and assigned paths",
+		Long:  "manage workspaces and paths they are assigned",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			checkDirFlags(cmd, args)
+			defaulttask := true
+			if pathIndex >= 0 {
+				dirhandle.PrintDir(pathIndex)
+				defaulttask = false
 			}
 
-		}
+			if clearTask {
+				GetLogger().Info("got clear command")
+				configure.ClearPaths()
+				defaulttask = false
+			}
 
-		// write script template
-		if *execTemplate {
-			someRunCmd = true
-			WriteTemplate()
-		}
+			if deleteWs != "" {
+				GetLogger().WithField("workspace", deleteWs).Info("got remove workspace option")
+				configure.RemoveWorkspace(deleteWs)
+				defaulttask = false
+			}
 
-		// run bash command over all targets
-		// execute command on paths
-		if *execute != "" {
-			someRunCmd = true
-			nonParams = false
-			_, err := dirhandle.Current()
-			var successCount = 0
-			var errorCount = 0
-			if err == nil {
-				configure.PathWorker(func(index int, path string) {
-					fmt.Print(output.MessageCln("execute on ", output.ForeWhite, path))
-					os.Chdir(path)
-					_, _, err := ExecuteScriptLine("bash", []string{"-c"}, *execute, func(output string) bool {
-						fmt.Println(output)
-						return true
-					}, func(process *os.Process) {
+			if setWs != "" {
+				GetLogger().WithField("workspace", setWs).Info("create a new worspace")
+				configure.ChangeWorkspace(setWs, callBackOldWs, callBackNewWs)
+				defaulttask = false
+			}
 
-					})
-					if err != nil {
-						errorCount++
-						fmt.Println(output.MessageCln("\t", output.ForeRed, " Error:", err))
-					} else {
-						fmt.Println(output.MessageCln(output.ForeGreen, " OK"))
-						successCount++
-					}
-				})
-			} else {
-				log.Fatal("error getting user dir", err)
+			if defaulttask {
+				printInfo()
 			}
-			fmt.Print("execution done. ")
-			if errorCount > 0 {
-				fmt.Print(output.MessageCln(output.ForeRed, errorCount, output.ForeWhite, " errors "))
-			}
-			if successCount > 0 {
-				fmt.Print(output.MessageCln(output.ForeGreen, successCount, output.ForeWhite, " successes "))
-			}
-			fmt.Println(" ...")
-		}
-		// non defined commands found. check shortcuts
-		if someRunCmd == false {
-			shrtcut := false
-			if len(os.Args) > 2 {
-				log.Debug("got undefined argument. try to figure out meaning of ", os.Args[2])
-				shrtcut = doRunShortCuts(os.Args[2])
-			}
-			if !shrtcut {
-				printOutHeader()
-				fmt.Println(output.MessageCln("to run a single target you can just type ", output.ForeWhite, "contxt run <target-name>"))
-				fmt.Println()
-				scriptCommand.PrintDefaults()
-			}
-		}
+		},
 	}
-	// DIR execution block
-	if dirCommand.Parsed() {
-		someDirCmd := false
 
-		if *addCmd {
-			nonParams = false
-			someDirCmd = true
-			dir, err := dirhandle.Current()
-			if err == nil {
-				fmt.Println(output.MessageCln("add ", output.ForeBlue, dir))
-				configure.AddPath(dir)
-				configure.SaveDefaultConfiguration(true)
-			}
-
-		}
-
-		if *removeWorkSpace != "" {
-			someDirCmd = true
-			nonParams = false
-			configure.RemoveWorkspace(*removeWorkSpace)
-		}
-
-		// changing worksspace
-		if *workSpace != "" {
-			someDirCmd = true
-			nonParams = false
-			configure.ChangeWorkspace(*workSpace, callBackOldWs, callBackNewWs)
-		}
-
-		if *clearPaths {
-			someDirCmd = true
-			nonParams = false
-			configure.ClearPaths()
-		}
-
-		if *showWorkspaces {
-			someDirCmd = true
-			nonParams = false
-			configure.DisplayWorkSpaces()
-		}
-
-		// show info
-		if *info == true {
-			someDirCmd = true
-			nonParams = false
-			printInfo()
-		}
-
-		// show paths
-		if *showPaths == true {
-			someDirCmd = true
-			nonParams = false
+	showPaths = &cobra.Command{
+		Use:   "paths",
+		Short: "show assigned paths",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
 			fmt.Println(output.MessageCln("\t", "paths stored in ", output.ForeCyan, configure.UsedConfig.CurrentSet))
 			dir, err := dirhandle.Current()
 			if err == nil {
@@ -231,20 +100,269 @@ func MainExecute() {
 					fmt.Println(output.MessageCln("\t", "this will be the same as ", output.BoldTag, "cd ", dirhandle.GetDir(count-1)))
 				}
 			}
-
-		}
-
-		// non of the arguments for dir was used
-		if someDirCmd == false && *pathIndex == -1 {
-			printOutHeader()
-			dirCommand.PrintDefaults()
-		}
+		},
 	}
 
-	// if nothing else happens we will change to the first path
-	if nonParams == true && *pathIndex > -1 {
-		dirhandle.PrintDir(*pathIndex)
+	listPaths = &cobra.Command{
+		Use:   "list",
+		Short: "show assigned paths",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			configure.DisplayWorkSpaces()
+		},
 	}
+
+	addPaths = &cobra.Command{
+		Use:   "add",
+		Short: "add current path (pwd) to the current workspace",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			dir, err := dirhandle.Current()
+			if err == nil {
+				fmt.Println(output.MessageCln("add ", output.ForeBlue, dir))
+				configure.AddPath(dir)
+				configure.SaveDefaultConfiguration(true)
+			}
+		},
+	}
+
+	removePath = &cobra.Command{
+		Use:   "rm",
+		Short: "remove current path (pwd) from the current workspace",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			dir, err := dirhandle.Current()
+			if err == nil {
+				fmt.Println(output.MessageCln("try to remove ", output.ForeBlue, dir, output.CleanTag, " from workspace"))
+				removed := configure.RemovePath(dir)
+				if !removed {
+					fmt.Println(output.MessageCln(output.ForeRed, "error", output.CleanTag, " path is not part of the current workspace"))
+					os.Exit(1)
+				} else {
+					fmt.Println(output.MessageCln(output.ForeGreen, "success"))
+					configure.SaveDefaultConfiguration(true)
+				}
+			}
+		},
+	}
+
+	createCmd = &cobra.Command{
+		Use:   "create",
+		Short: "create taskfile templates",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			WriteTemplate()
+		},
+	}
+
+	createImport = &cobra.Command{
+		Use:   "import",
+		Short: "Create importfile that can be used for templating",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			if len(args) == 0 {
+				fmt.Println("No paths submitted")
+				os.Exit(1)
+			}
+			_, path, exists := GetTemplate()
+			if exists {
+				for _, addPath := range args {
+					err := CreateImport(path, addPath)
+					if err != nil {
+						fmt.Println("Error adding imports:", err)
+						os.Exit(1)
+					}
+				}
+			} else {
+				fmt.Println("no taskfile exists. create these first by contxt create")
+				os.Exit(1)
+			}
+
+		},
+	}
+
+	versionCmd = &cobra.Command{
+		Use:   "version",
+		Short: "prints current version",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			fmt.Println("version", configure.GetVersion(), "build", configure.GetBuild())
+		},
+	}
+
+	lintCmd = &cobra.Command{
+		Use:   "lint",
+		Short: "checking the task file",
+		Long: `to check if the task file contains the expected changes.
+use --full to see properties they are nor used.
+you will also see if a unexpected propertie found `,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			leftLen, _ := cmd.Flags().GetInt("left")
+			rightLen, _ := cmd.Flags().GetInt("right")
+			showall, _ := cmd.Flags().GetBool("full")
+			yamlParse, _ := cmd.Flags().GetBool("yaml")
+			if yamlParse {
+				ShowAsYaml()
+			} else {
+				LintOut(leftLen, rightLen, showall)
+			}
+
+		},
+	}
+
+	runCmd = &cobra.Command{
+		Use:   "run",
+		Short: "run a target in contxt.yml task file",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			checkRunFlags(cmd, args)
+			GetLogger().WithField("args", args).Info("Run triggered")
+			GetLogger().WithField("all", runAtAll).Info("all workspaces?")
+
+			if len(args) == 0 {
+				printTargets()
+			}
+
+			for _, arg := range args {
+				GetLogger().WithField("target", arg).Info("try to run target")
+
+				path, err := dirhandle.Current()
+				if err == nil {
+					if runAtAll {
+						configure.PathWorker(func(index int, path string) {
+							GetLogger().WithField("path", path).Info("change dir")
+							os.Chdir(path)
+							runTargets(path, arg)
+						})
+					} else {
+						runTargets(path, arg)
+					}
+				}
+			}
+
+		},
+	}
+)
+
+func checkRunFlags(cmd *cobra.Command, args []string) {
+	runAtAll, _ = cmd.Flags().GetBool("all-workspaces")
+	showInvTarget, _ = cmd.Flags().GetBool("all-targets")
+}
+
+func checkDirFlags(cmd *cobra.Command, args []string) {
+	pindex, err := cmd.Flags().GetInt("index")
+	if err == nil && pindex >= 0 {
+		pathIndex = pindex
+	}
+
+	clearTask, _ = cmd.Flags().GetBool("clear")
+	deleteWs, _ = cmd.Flags().GetString("delete")
+	setWs, _ = cmd.Flags().GetString("workspace")
+
+}
+
+func checkDefaultFlags(cmd *cobra.Command, args []string) {
+	color, err := cmd.Flags().GetBool("coloroff")
+	if err == nil && color == true {
+		output.ColorEnabled = false
+	}
+
+	loglevel, _ = cmd.Flags().GetString("loglevel")
+	setLoggerByArg()
+}
+
+func initCobra() {
+	// create dir command
+	dirCmd.AddCommand(showPaths)
+	dirCmd.AddCommand(addPaths)
+	dirCmd.AddCommand(listPaths)
+	dirCmd.AddCommand(removePath)
+
+	dirCmd.Flags().IntVarP(&pathIndex, "index", "i", -1, "get path by the index in order the paths are stored")
+	dirCmd.Flags().BoolP("clear", "C", false, "remove all path assigments")
+	dirCmd.Flags().StringP("delete", "d", "", "remove workspace")
+	dirCmd.Flags().StringP("workspace", "w", "", "set workspace. if not exists a new workspace will be created")
+
+	runCmd.Flags().BoolP("all-paths", "a", false, "run targets in all paths in the current workspace")
+	runCmd.Flags().Bool("all-targets", false, "show all targets. including invisible")
+
+	createCmd.AddCommand(createImport)
+
+	rootCmd.PersistentFlags().BoolVarP(&showColors, "coloroff", "c", false, "disable usage of colors in output")
+	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", "FATAL", "set loglevel")
+	rootCmd.AddCommand(dirCmd)
+	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(createCmd)
+	rootCmd.AddCommand(versionCmd)
+
+	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the width for the source code")
+	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the witdh for the current state view")
+	lintCmd.Flags().Bool("full", false, "print also unset properties")
+	lintCmd.Flags().Bool("yaml", false, "display parsed taskfile as yaml file")
+	lintCmd.Flags().Bool("parse", false, "parse second level keywords (#@...)")
+
+	rootCmd.AddCommand(lintCmd)
+
+}
+
+func setLoggerByArg() {
+	if loglevel != "" {
+		lvl, err := logrus.ParseLevel(loglevel)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.SetLevel(lvl)
+	}
+}
+
+func initLogger() {
+	//log.Out = os.Stdout
+	//log.SetLevel(logrus.DebugLevel)
+
+}
+
+func executeCobra() error {
+	return rootCmd.Execute()
+}
+
+// GetLogger is the main Logger instance
+func GetLogger() *logrus.Logger {
+	return log
+}
+
+func shortcuts() bool {
+	if len(os.Args) == 2 {
+
+		switch os.Args[1] {
+		case "dir", "run", "create", "version":
+			return false
+		default:
+			foundATask := doMagicParamOne(os.Args[1])
+			return foundATask
+
+		}
+	}
+	return false
+}
+
+// MainExecute runs main. parsing flags
+func MainExecute() {
+	pathIndex = -1
+	initLogger()
+
+	var configErr = configure.InitConfig()
+	if configErr != nil {
+		log.Fatal(configErr)
+	}
+
+	// first handle shortcuts
+	// before we get cobra controll
+	if !shortcuts() {
+		initCobra()
+		executeCobra()
+	}
+
 }
 
 func callBackOldWs(oldws string) bool {
@@ -309,44 +427,30 @@ func doMagicParamOne(param string) bool {
 			result = true
 		}
 	})
-	if !result {
-		fmt.Println(output.MessageCln(output.BoldTag, param, output.CleanTag, " is not a workspace"))
-	}
+
 	return result
 }
 
-func doRunShortCuts(param string) bool {
-	result := false
-	template, _, exists := GetTemplate()
+func printTargets() {
+
+	template, path, exists := GetTemplate()
 	if exists {
-		for _, tasks := range template.Task {
-			if tasks.ID == param {
-				path, _ := dirhandle.Current()
-				runTargets(path, tasks.ID)
-				result = true
-			}
-		}
-	} else {
-		fmt.Println(output.MessageCln(output.ForeRed, "not template exists. you can create one by ", output.CleanTag, " run --create-template"))
-	}
-	if !result {
-		fmt.Println(output.MessageCln(output.BoldTag, param, output.CleanTag, " is not a valid task"))
-		fmt.Println()
-		fmt.Println(output.MessageCln(output.BoldTag, "\ttasks count: ", output.CleanTag, len(template.Task)))
+		fmt.Println(output.MessageCln(output.ForeDarkGrey, "used taskfile:\t", output.CleanTag, path))
+		fmt.Println(output.MessageCln(output.ForeDarkGrey, "tasks count:  \t", output.CleanTag, len(template.Task)))
 		if len(template.Task) > 0 {
-			fmt.Println("\t", "these are the tasks they can be used as shortcut together with run")
+			fmt.Println(output.MessageCln(output.BoldTag, "existing targets:"))
 			for _, tasks := range template.Task {
-				fmt.Println("\t\t", tasks.ID)
+				if showInvTarget || !tasks.Options.Invisible {
+					fmt.Println("\t", tasks.ID)
+				}
 			}
 		} else {
 			fmt.Println(output.MessageCln("that is what we gor so far:"))
 			fmt.Println()
-			LintOut(template)
 		}
+	} else {
+		fmt.Println(output.MessageCln(output.ForeCyan, "no task-file exists. you can create one by ", output.CleanTag, " contxt create"))
 	}
-	fmt.Println()
-
-	return result
 }
 
 func runTargets(path string, targets string) {
@@ -368,27 +472,48 @@ func printPaths() {
 	if err == nil {
 		fmt.Println(output.MessageCln(output.ForeWhite, " current directory: ", output.BoldTag, dir))
 		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace: ", output.BoldTag, configure.UsedConfig.CurrentSet))
-
+		notWorkspace := true
+		pathColor := output.ForeLightBlue
+		if !configure.PathMeightPartOfWs(dir) {
+			pathColor = output.ForeLightMagenta
+		} else {
+			notWorkspace = false
+		}
 		fmt.Println(" contains paths:")
 		configure.PathWorker(func(index int, path string) {
-
 			template, _, exists := GetTemplate()
+			add := ""
+			if strings.Contains(dir, path) {
+				add = output.ResetDim + output.ForeCyan
+			}
+			if dir == path {
+				add = output.ResetDim + output.ForeGreen
+			}
 			if exists {
 				outTasks := ""
 				for _, tasks := range template.Task {
-					outTasks = outTasks + " " + tasks.ID
+					if !tasks.Options.Invisible {
+						outTasks = outTasks + " " + tasks.ID
+					}
 				}
-				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", output.ForeLightBlue, path, output.CleanTag, " targets", "[", output.ForeYellow, outTasks, output.CleanTag, "]"))
+
+				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, add, path, output.CleanTag, " targets", "[", output.ForeYellow, outTasks, output.CleanTag, "]"))
 			} else {
-				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", output.ForeLightBlue, path))
+				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, add, path))
 			}
 		})
-		fmt.Println()
-		fmt.Println(output.MessageCln(" targets can be executes by ", "run -target <targetname>", "(for the current directory)"))
-		fmt.Println(output.MessageCln(" a target can also be executed in all stored paths by ", "run -all-paths -target <targetname>", "independend from current path"))
+		if notWorkspace {
+			fmt.Println()
+			fmt.Println(output.MessageCln(output.BackYellow, output.ForeBlue, " WARNING ! ", output.CleanTag, "\tyou are currently in none of the assigned locations."))
+			fmt.Println("\t\tso maybe you are using the wrong workspace")
+		}
 
 		fmt.Println()
-		fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", "dir -w <workspace>", ""))
+		fmt.Println(output.MessageCln(" targets can be executes by ", output.BoldTag, "contxt run <targetname>", output.CleanTag, "(for the current directory)"))
+		fmt.Println(output.MessageCln(" a target can also be executed in all stored paths by ", output.BoldTag, "contxt run -a <targetname>", output.CleanTag, " independend from current path"))
+
+		fmt.Println()
+		fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", output.BoldTag, "contxt <workspace>", ""))
 		configure.WorkSpaces(func(name string) {
 			if name == configure.UsedConfig.CurrentSet {
 				fmt.Println(output.MessageCln("\t[ ", output.BoldTag, name, output.CleanTag, " ]"))

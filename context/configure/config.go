@@ -85,7 +85,8 @@ func RemoveWorkspace(name string) {
 		if err == nil && cfgExists == true {
 			os.Remove(path)
 		} else {
-			fmt.Println("no configuration found")
+			fmt.Println("no workspace exists with name: ", output.MessageCln(output.ForeLightYellow, name))
+			os.Exit(5)
 		}
 	} else {
 		fmt.Println(err)
@@ -228,7 +229,7 @@ func getConfigPath(fileName string) (string, error) {
 
 // AddPath adding a path if they not already exists
 func AddPath(path string) {
-	if pathExists(path) {
+	if PathExists(path) {
 		fmt.Println(output.MessageCln(output.ForeYellow, "\tthe path is already in set ", output.BoldTag, UsedConfig.CurrentSet))
 		return
 	}
@@ -236,9 +237,41 @@ func AddPath(path string) {
 	UsedConfig.Paths = append(UsedConfig.Paths, path)
 }
 
-func pathExists(pathSearch string) bool {
+// RemovePath removes a path from current set.
+// returns true is path was found and removed
+func RemovePath(path string) bool {
+	var newSlice []string
+	found := false
+	if len(UsedConfig.Paths) < 1 {
+		return false
+	}
+	for _, pathIn := range UsedConfig.Paths {
+		if pathIn != path {
+			newSlice = append(newSlice, pathIn)
+		} else {
+			found = true
+		}
+	}
+	if found {
+		UsedConfig.Paths = newSlice
+	}
+	return found
+}
+
+// PathExists checks if this path is stored in current Workspace
+func PathExists(pathSearch string) bool {
 	for _, path := range UsedConfig.Paths {
 		if pathSearch == path {
+			return true
+		}
+	}
+	return false
+}
+
+// PathMeightPartOfWs checks if the path meight be a part of this workspace
+func PathMeightPartOfWs(pathSearch string) bool {
+	for _, path := range UsedConfig.Paths {
+		if strings.Contains(pathSearch, path) {
 			return true
 		}
 	}

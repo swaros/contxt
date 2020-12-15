@@ -88,6 +88,7 @@ type Options struct {
 	Panelsize      int      `yaml:"panelsize"`
 	Displaycmd     bool     `yaml:"displaycmd"`
 	Hideout        bool     `yaml:"hideout"`
+	Invisible      bool     `yaml:"invisible"`
 	Maincmd        string   `yaml:"maincmd"`
 	Mainparams     []string `yaml:"mainparams"`
 }

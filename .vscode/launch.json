@@ -3,7 +3,7 @@
     // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
-    "configurations": [        
+    "configurations": [
         {
             "name": "Launch list",
             "type": "go",
@@ -14,13 +14,13 @@
             "args": ["dir","-list"]
         },
         {
-            "name": "execute multiple targets",
+            "name": "create imports",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
             "env": {},
-            "args": ["run","-target","script,check,test"]
+            "args": ["create","import"]
         },
         {
             "name": "execute run",
@@ -30,25 +30,7 @@
             "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
             "env": {},
             "args": ["run"]
-        },
-        {
-            "name": "execute -script-all",
-            "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
-            "env": {},
-            "args": ["run", "-all-paths","-target=java"]
-        },
-        {
-            "name": "run test target at all",
-            "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
-            "env": {},
-            "args": ["run", "-all-paths","-target=init"]
-        },
+        },        
         {
             "name": "info",
             "type": "go",
@@ -56,7 +38,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
             "env": {},
-            "args": ["dir","-info"]
+            "args": ["dir"]
         },
         {
             "name": "show paths",
@@ -65,7 +47,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
             "env": {},
-            "args": ["dir","-paths"]
+            "args": ["dir","paths"]
         },
         {
             "name": "test run shortcut",
@@ -75,6 +57,15 @@
             "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
             "env": {},
             "args": ["run","whatever"]
+        },
+        {
+            "name": "lint",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
+            "env": {},
+            "args": ["lint"]
         }
     ]
 }
