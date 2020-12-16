@@ -21,18 +21,28 @@ git clone git@github.com:swaros/contxt.git .
 make
 
 ````
+### Change Dir Function
+
+there is no way to change a directory on console by a program/tool or whatever. of course you can change to any directory while the program
+is running, but all this changes are temporary. so if the program exists, the console is back to directory where the program
+was started.
+
+to change directories depending on paths in the workspace, you need to add a function to **.bashrc** or **.zshrc** that just use the regular
+cd command.
+
 ##### bash
-for bash user install.
-
-````bash
-make install-local
-
-````
 
 for easy switching paths on bash you can run this.
 
 ````bash
 echo  'function cn() { cd $(contxt dir -i "$@"); }' >> ~/.bashrc
+
+````
+
+##### zsh
+
+````zsh
+echo  'function cn() { cd $(contxt dir -i "$@"); }' >> ~/.zshrc
 
 ````
 
