@@ -383,12 +383,14 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						WaitForTasksDone(script.Needs, time.Duration(timeOut)*time.Millisecond, time.Duration(tickTime)*time.Millisecond, func() bool {
 							// still waiting
 							waitHits++
+							GetLogger().Debug("Waiting for Task be done")
 							return true
 						}, func() {
 							// done
 
 						}, func() {
 							// timeout not allowed. hard exit
+							GetLogger().Debug("timeout hit")
 							output.Error("Need Timeout", "waiting for a need timed out after", timeOut, "milliseconds. you may increase timeoutNeeds in Options")
 							os.Exit(1)
 						}, func(needTarget string) bool {
@@ -397,9 +399,26 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 								os.Exit(1)
 								return false
 							}
+							GetLogger().WithFields(logrus.Fields{
+								"needs":   script.Needs,
+								"current": needTarget,
+							}).Info("executeTemplate found a need that is not stated already")
+							// stopping for a couple of time
+							// need to wait if these other task already started by
+							// other options
+							time.Sleep(500 * time.Millisecond)
 							go executeTemplate(waitGroup, useWaitGroup, runCfg, needTarget)
 							return true
 						})
+					} else {
+						// run needs in a sequence
+						for _, targetNeed := range script.Needs {
+							executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, targetNeed)
+							if executionCode != ExitOk {
+								output.Error("Need Task Error", "expected returncode ", ExitOk, " but got exit Code", executionCode)
+								os.Exit(1)
+							}
+						}
 					}
 				}
 
