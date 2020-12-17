@@ -28,6 +28,8 @@ const (
 	ExitCmdError = 103
 	// ExitByRequirement means a requirement was not fulfills
 	ExitByRequirement = 104
+	// ExitAlreadyRunning means the task is not started, because it is already created
+	ExitAlreadyRunning = 105
 )
 
 // RunTargets executes multiple targets
@@ -317,7 +319,12 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 		}).Debug("starting async")
 		defer waitGroup.Done()
 	}
+	// check if task is already running
 
+	if TaskRunning(target) {
+		GetLogger().WithField("task", target).Warning("task would be triggered again while is already running. IGNORED")
+		return ExitAlreadyRunning
+	}
 	incTaskCount(target)
 	defer incTaskDoneCount(target)
 

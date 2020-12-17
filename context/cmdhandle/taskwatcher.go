@@ -43,6 +43,18 @@ func ResetAllTaskInfos() {
 	})
 }
 
+// TaskExists checks if a tak is already created
+func TaskExists(target string) bool {
+	_, found := taskList.Load(target)
+	return found
+}
+
+// TaskRunning checks if a task is already running
+func TaskRunning(target string) bool {
+	info, found := taskList.Load(target)
+	return found && info != nil && info.(TaskDef).count > 0 && info.(TaskDef).count != info.(TaskDef).doneCount
+}
+
 // WaitForTasksDone waits until all the task are done
 // triggers a callback for any tick
 // and one if the state DONE is reached
