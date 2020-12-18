@@ -1,49 +1,131 @@
-# Listener, Needs, runTargets
+# listener
 
-you could define the order of task execution, and if they run simultaneously or not, just by the kind and order of the target parmeters. As described here [here](https://github.com/swaros/contxt/blob/wip/shared/docs/documentation/taskdetailed.md#simultaneously-execution)
-
-but you can also define this behavior in the task file itself.
-this provides more controll about dependencies.
-
-## runTargets
-
-this option defines targets they should start at the same time, together with the task they is called.
+Listener contains a List of Triggers they watch for the output of the script and starts other task depending if
+some keywords are found in the output.
 
 ````yaml
 task:
-  - id: run-all
-    runTargets:
-       - build-backend
-       - build-frontend
+  - id: main
+    script:
+      - echo 'start A'
+      - echo 'start B'
+    listener:
+      - trigger:
+          onoutContains:
+            - start A
+        action:
+          target: task_a
 
-# the 'real' tasks
-  - id: build-backend
+  - id: task_a
     script:
-      - echo "enter Backend"
-      - |
-        for job in git-update run-maven run-test build-artifacts get-coffee update
-        do
-          echo "backend doing .... [$job] "
-          sleep 1
-        done 
-      - echo "leave Backend"
-  - id: build-frontend
-    script:
-      - echo "enter Frontend"
-      - |
-        for job in create wait finalize
-        do
-          echo "frontend ----> $job <---"
-          sleep 1
-        done 
-      - echo "leave Frontend"
-
-  - id: deploy
-    script:
-      - echo "deploy frontend"
-      - echo "deploy backend"
+      - echo 'task a is running'
 ````
-the task **runAll** will now also trigger the execution of 
-**build-backend** and **build-frontend** afterwards.
 
-so a usecase would be `contxt run run-all deploy`
+with this you can react to something that happens while
+execution. 
+
+
+## Usecase Example
+A example would be a local development that uses minikube
+to work with kubernetes. 
+
+````yaml
+task:
+  - id: show_pods
+    script:
+      - kubectl get pods
+````
+
+the task **show_pods** requires minikube is already started. If not you will get a error message.
+
+you have to react to this message and start minikube.
+**contxt** can do this too. in different ways.
+
+### the "human reaction" solution
+
+we will add a task, that runs minikube and if we run in a error from *kubectl* that tells us " *Unable to connect* to the server ..." we will trigger the task.
+
+> we use the option "ignoreCmdError: true" so the execution will not aborted due to the error reported from kubectl
+
+afterwards the show pods command is executed again.
+
+this is how we would react in this case. 
+
+````yaml
+task:
+  # just to start minikube
+  - id: run-minikube
+    script:    
+      - minikube start
+  # if we done...rerun the task    
+    next:
+      - show-pods
+  
+  # show pods
+  - id: show-pods
+    options:
+      # ignore if the command is failing
+      # and continue execution
+      ignoreCmdError: true
+    script:
+      - kubectl get pods
+    # here we define what happens if
+    # we found a error message
+    listener:
+      - trigger:
+          onoutContains:
+            - "Unable to connect"
+        action:
+          target: run-minikube
+````
+this is just a example how trigger can be used to did some "fixes" on the fly.
+this example will work. with a couple of downsides.
+
+ - the execution of kubectl without running minikube takes seconds to realize they is no service running
+ - **run-minkube** is *hard coded* to launch **show-pods**. the whole construct is about one task and not reusable for other tasks
+
+### the solution
+
+to fix that downsides we used the **needs** feature and change the behavior of the script.
+
+instead acting like a human, that run in a error and have to react to them ... and then rerun the task again, we add
+a task that checks if minikube is running, and if not, it starts.
+
+then we define that **show-pods** depends on **check-minikube**
+
+````yaml
+task:
+  # this task is responsible to make sure
+  # minikube is running
+  - id: check-minikube
+    options:
+      # important or we just stopping at all
+      # because minikube status will returning
+      # a error if it not runs
+      ignoreCmdError: true
+    script:
+      - minikube status
+
+    # we just looking if we get the 
+    # status "host: Stopped"
+    listener:
+      - trigger:
+          onoutContains:
+            - "host: Stopped"
+        action:
+          # use script instead of target.
+          # by using target we would break          
+          script:
+            - minikube start
+
+  - id: show-pods
+    # before we run the script, lets check
+    # if minikube is started
+    needs:
+      - check-minikube
+    script:
+      - kubectl get pods
+    
+````
+
+> for task they are used as need it is recommended to use a script action instead of target. A script action is assigned to the current task and target will be get out of scope instead.

@@ -141,9 +141,26 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 				if script.Options.Displaycmd {
 					fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t", output.ForeYellow, triggerMessage, output.Dim, " ", logLine))
 				}
-				actionDef := configure.Action(listener.Action)
-				if actionDef.Target != "" {
 
+				// did this trigger something?
+				someReactionTriggered := false
+				// extract action
+				actionDef := configure.Action(listener.Action)
+
+				// checking script
+				if len(actionDef.Script) > 0 {
+					someReactionTriggered = true
+					for _, triggerScript := range actionDef.Script {
+						GetLogger().WithFields(logrus.Fields{
+							"cmd": triggerScript,
+						}).Debug("TRIGGER SCRIPT ACTION")
+						lineExecuter(waitGroup, useWaitGroup, script.Stopreasons, runCfg, "", "", triggerScript, target, script)
+					}
+
+				}
+
+				if actionDef.Target != "" {
+					someReactionTriggered = true
 					GetLogger().WithFields(logrus.Fields{
 						"target": actionDef.Target,
 					}).Debug("TRIGGER ACTION")
@@ -192,11 +209,12 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 						}).Info("RUN SEQUENCE")
 						executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
 					}
-				} else {
+				}
+				if someReactionTriggered != true {
 					GetLogger().WithFields(logrus.Fields{
 						"trigger": triggerMessage,
 						"output":  logLine,
-					}).Warn("trigger defined without any target")
+					}).Warn("trigger defined without any action")
 				}
 			} else {
 				GetLogger().WithFields(logrus.Fields{
