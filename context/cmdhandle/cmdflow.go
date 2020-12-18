@@ -154,7 +154,7 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 						GetLogger().WithFields(logrus.Fields{
 							"cmd": triggerScript,
 						}).Debug("TRIGGER SCRIPT ACTION")
-						lineExecuter(waitGroup, useWaitGroup, script.Stopreasons, runCfg, "", "", triggerScript, target, script)
+						lineExecuter(waitGroup, useWaitGroup, script.Stopreasons, runCfg, "93", "46", triggerScript, target, script)
 					}
 
 				}

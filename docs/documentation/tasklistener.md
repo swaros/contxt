@@ -1,7 +1,6 @@
 # listener
 
-Listener contains a List of Triggers they watch for the output of the script and starts other task depending if
-some keywords are found in the output.
+Listener contains a List of Triggers they watch for the output of the script and starts other task or sub-scripts depending if some keywords are found in the output.
 
 ````yaml
 task:
@@ -114,7 +113,7 @@ task:
             - "host: Stopped"
         action:
           # use script instead of target.
-          # by using target we would break          
+          # by using target we get out of context
           script:
             - minikube start
 
@@ -129,3 +128,5 @@ task:
 ````
 
 > for task they are used as need it is recommended to use a script action instead of target. A script action is assigned to the current task and target will be get out of scope instead.
+
+at this way you can apply the check for any other task,that needs *minikube* started. 
