@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/context/dirhandle"
@@ -27,6 +28,8 @@ const (
 	ExitCmdError = 103
 	// ExitByRequirement means a requirement was not fulfills
 	ExitByRequirement = 104
+	// ExitAlreadyRunning means the task is not started, because it is already created
+	ExitAlreadyRunning = 105
 )
 
 // RunTargets executes multiple targets
@@ -122,7 +125,107 @@ func checkRequirements(require configure.Require) (bool, string) {
 	return true, ""
 }
 
-func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason configure.StopReasons, runCfg configure.RunConfig, colorCode, bgCode, codeLine, target string, script configure.Task) (int, bool) {
+func listenerWatch(script configure.Task, target, logLine string, waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig) {
+	if script.Listener != nil {
+
+		GetLogger().WithFields(logrus.Fields{
+			"cnt":      len(script.Listener),
+			"listener": script.Listener,
+		}).Debug("CHECK Listener")
+
+		for _, listener := range script.Listener {
+			listenReason := listener.Trigger
+			triggerFound, triggerMessage := checkReason(listenReason, logLine)
+			if triggerFound {
+				SetPH("RUN."+target+".LOG.HIT", logLine)
+				if script.Options.Displaycmd {
+					fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t", output.ForeYellow, triggerMessage, output.Dim, " ", logLine))
+				}
+
+				// did this trigger something?
+				someReactionTriggered := false
+				// extract action
+				actionDef := configure.Action(listener.Action)
+
+				// checking script
+				if len(actionDef.Script) > 0 {
+					someReactionTriggered = true
+					for _, triggerScript := range actionDef.Script {
+						GetLogger().WithFields(logrus.Fields{
+							"cmd": triggerScript,
+						}).Debug("TRIGGER SCRIPT ACTION")
+						lineExecuter(waitGroup, useWaitGroup, script.Stopreasons, runCfg, "93", "46", triggerScript, target, script)
+					}
+
+				}
+
+				if actionDef.Target != "" {
+					someReactionTriggered = true
+					GetLogger().WithFields(logrus.Fields{
+						"target": actionDef.Target,
+					}).Debug("TRIGGER ACTION")
+
+					if script.Options.Displaycmd {
+						fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t ", output.ForeGreen, "target:", output.ForeLightGreen, actionDef.Target))
+					}
+
+					hitKeyTargets := "RUN.LISTENER." + target + ".HIT.TARGETS"
+					lastHitTargets := GetPH(hitKeyTargets)
+					if !strings.Contains(lastHitTargets, "("+actionDef.Target+")") {
+						lastHitTargets = lastHitTargets + "(" + actionDef.Target + ")"
+						SetPH(hitKeyTargets, lastHitTargets)
+					}
+
+					hitKeyCnt := "RUN.LISTENER." + actionDef.Target + ".HIT.CNT"
+					lastCnt := GetPH(hitKeyCnt)
+					if lastCnt == "" {
+						SetPH(hitKeyCnt, "1")
+					} else {
+						iCnt, err := strconv.Atoi(lastCnt)
+						if err != nil {
+							GetLogger().Fatal("fail converting trigger count")
+						}
+						iCnt++
+						SetPH(hitKeyCnt, strconv.Itoa(iCnt))
+					}
+
+					GetLogger().WithFields(logrus.Fields{
+						"trigger":   triggerMessage,
+						"target":    actionDef.Target,
+						"waitgroup": useWaitGroup,
+						"RUN.LISTENER." + target + ".HIT.TARGETS": lastHitTargets,
+					}).Info("TRIGGER Called")
+
+					if useWaitGroup {
+						GetLogger().WithFields(logrus.Fields{
+							"target": actionDef.Target,
+						}).Info("RUN ASYNC")
+
+						go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+
+					} else {
+						GetLogger().WithFields(logrus.Fields{
+							"target": actionDef.Target,
+						}).Info("RUN SEQUENCE")
+						executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+					}
+				}
+				if someReactionTriggered != true {
+					GetLogger().WithFields(logrus.Fields{
+						"trigger": triggerMessage,
+						"output":  logLine,
+					}).Warn("trigger defined without any action")
+				}
+			} else {
+				GetLogger().WithFields(logrus.Fields{
+					"output": logLine,
+				}).Debug("no trigger found")
+			}
+		}
+	}
+}
+
+func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason configure.Trigger, runCfg configure.RunConfig, colorCode, bgCode, codeLine, target string, script configure.Task) (int, bool) {
 	panelSize := 12
 	if script.Options.Panelsize > 0 {
 		panelSize = script.Options.Panelsize
@@ -146,66 +249,7 @@ func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason confi
 				"cnt":      len(script.Listener),
 				"listener": script.Listener,
 			}).Debug("CHECK Listener")
-
-			for _, listener := range script.Listener {
-				listenReason := configure.StopReasons(listener.Trigger)
-				triggerFound, triggerMessage := checkReason(listenReason, logLine)
-				if triggerFound {
-					SetPH("RUN."+target+".LOG.HIT", logLine)
-					if script.Options.Displaycmd {
-						fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t", output.ForeYellow, triggerMessage, output.Dim, " ", logLine))
-					}
-					actionDef := configure.Action(listener.Action)
-					if actionDef.Target != "" {
-						if script.Options.Displaycmd {
-							fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t ", output.ForeGreen, "target:", output.ForeLightGreen, actionDef.Target))
-						}
-
-						hitKeyTargets := "RUN.LISTENER." + target + ".HIT.TARGETS"
-						lastHitTargets := GetPH(hitKeyTargets)
-						if !strings.Contains(lastHitTargets, "("+actionDef.Target+")") {
-							lastHitTargets = lastHitTargets + "(" + actionDef.Target + ")"
-							SetPH(hitKeyTargets, lastHitTargets)
-						}
-
-						hitKeyCnt := "RUN.LISTENER." + actionDef.Target + ".HIT.CNT"
-						lastCnt := GetPH(hitKeyCnt)
-						if lastCnt == "" {
-							SetPH(hitKeyCnt, "1")
-						} else {
-							iCnt, err := strconv.Atoi(lastCnt)
-							if err != nil {
-								GetLogger().Fatal("fail converting trigger count")
-							}
-							iCnt++
-							SetPH(hitKeyCnt, strconv.Itoa(iCnt))
-						}
-
-						GetLogger().WithFields(logrus.Fields{
-							"trigger":   triggerMessage,
-							"target":    actionDef.Target,
-							"waitgroup": useWaitGroup,
-							"RUN.LISTENER." + target + ".HIT.TARGETS": lastHitTargets,
-						}).Info("TRIGGER Called")
-
-						if useWaitGroup {
-							go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
-
-						} else {
-							executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
-						}
-					} else {
-						GetLogger().WithFields(logrus.Fields{
-							"trigger": triggerMessage,
-							"output":  logLine,
-						}).Warn("trigger defined without any target")
-					}
-				} else {
-					GetLogger().WithFields(logrus.Fields{
-						"output": logLine,
-					}).Debug("no trigger found")
-				}
-			}
+			listenerWatch(script, target, logLine, waitGroup, useWaitGroup, runCfg)
 		}
 
 		// print the output by configuration
@@ -293,10 +337,18 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 		}).Debug("starting async")
 		defer waitGroup.Done()
 	}
+	// check if task is already running
+
+	if TaskRunning(target) {
+		GetLogger().WithField("task", target).Warning("task would be triggered again while is already running. IGNORED")
+		return ExitAlreadyRunning
+	}
+	incTaskCount(target)
+	defer incTaskDoneCount(target)
 
 	GetLogger().WithFields(logrus.Fields{
 		"target": target,
-	}).Info("LOOKING for target")
+	}).Info("executeTemplate LOOKING for target")
 
 	if len(runCfg.Task) > 0 {
 
@@ -314,22 +366,20 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 			if strings.EqualFold(target, script.ID) {
 				GetLogger().WithFields(logrus.Fields{
 					"target": target,
-				}).Info("EXECUTE target")
+				}).Info("executeTemplate EXECUTE target")
 				targetFound = true
 				// first get the task related variables
 				for keyName, variable := range script.Variables {
 					SetPH(keyName, HandlePlaceHolder(variable))
 				}
 
-				// convert to stopReason struct
-				stopReason := configure.StopReasons(script.Stopreasons)
-
+				stopReason := script.Stopreasons
 				// check requirements
 				canRun, message := checkRequirements(script.Requires)
 				if canRun == false {
 					GetLogger().WithFields(logrus.Fields{
 						"target": target,
-					}).Info("IGNORE because requirements not matching")
+					}).Info("executeTemplate IGNORE because requirements not matching")
 					if script.Options.Displaycmd {
 						fmt.Println(output.MessageCln(output.ForeYellow, " [require] ", output.ForeBlue, message))
 					}
@@ -339,6 +389,90 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				// parsing codelines
 				returnCode := ExitOk
 				abort := false
+
+				// checking needs
+				if len(script.Needs) > 0 {
+					GetLogger().WithFields(logrus.Fields{
+						"needs": script.Needs,
+					}).Info("executeTemplate NEEDS found")
+					if useWaitGroup {
+						waitHits := 0
+						timeOut := script.Options.TimeoutNeeds
+						if timeOut < 1 {
+							timeOut = 300000 // 5 minutes in milliseconds as default
+						}
+						tickTime := script.Options.TickTimeNeeds
+						if tickTime < 1 {
+							tickTime = 1000 // 1 second as ticktime
+						}
+						WaitForTasksDone(script.Needs, time.Duration(timeOut)*time.Millisecond, time.Duration(tickTime)*time.Millisecond, func() bool {
+							// still waiting
+							waitHits++
+							GetLogger().Debug("Waiting for Task be done")
+							return true
+						}, func() {
+							// done
+
+						}, func() {
+							// timeout not allowed. hard exit
+							GetLogger().Debug("timeout hit")
+							output.Error("Need Timeout", "waiting for a need timed out after", timeOut, "milliseconds. you may increase timeoutNeeds in Options")
+							os.Exit(1)
+						}, func(needTarget string) bool {
+							if script.Options.NoAutoRunNeeds {
+								output.Error("Need Task not started", "expected task ", target, " not running. autostart disbabled")
+								os.Exit(1)
+								return false
+							}
+							GetLogger().WithFields(logrus.Fields{
+								"needs":   script.Needs,
+								"current": needTarget,
+							}).Info("executeTemplate found a need that is not stated already")
+							// stopping for a couple of time
+							// need to wait if these other task already started by
+							// other options
+							time.Sleep(500 * time.Millisecond)
+							go executeTemplate(waitGroup, useWaitGroup, runCfg, needTarget)
+							return true
+						})
+					} else {
+						// run needs in a sequence
+						for _, targetNeed := range script.Needs {
+							executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, targetNeed)
+							if executionCode != ExitOk {
+								output.Error("Need Task Error", "expected returncode ", ExitOk, " but got exit Code", executionCode)
+								os.Exit(1)
+							}
+						}
+					}
+				}
+
+				// targets that should be started as well
+				if len(script.RunTargets) > 0 {
+					for _, runTrgt := range script.RunTargets {
+						if useWaitGroup {
+							go executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt)
+						} else {
+							executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt)
+						}
+					}
+					// workaround til the async runnig is refactored
+					// now we need to give the subtask time to run and update the waitgroup
+					duration := time.Second
+					time.Sleep(duration)
+				}
+
+				// check if we have script lines.
+				// if not, we need at least to check
+				// 'now' listener
+				if len(script.Script) < 1 {
+					GetLogger().Debug("no script lines defined. run listener anyway")
+					listenerWatch(script, target, "", waitGroup, useWaitGroup, runCfg)
+					// workaround til the async runnig is refactored
+					// now we need to give the subtask time to run and update the waitgroup
+					duration := time.Second
+					time.Sleep(duration)
+				}
 
 				// preparing codelines by execute second level commands
 				// that can affect the whole script
@@ -360,7 +494,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				GetLogger().WithFields(logrus.Fields{
 					"current-target": target,
 					"nexts":          script.Next,
-				}).Debug("next definition")
+				}).Debug("executeTemplate next definition")
 				for _, nextTarget := range script.Next {
 					if script.Options.Displaycmd {
 						fmt.Println(output.MessageCln(output.ForeYellow, " [next] ", output.ForeBlue, nextTarget))
@@ -405,22 +539,26 @@ func stringContains(findInHere string, matches []string) bool {
 	return false
 }
 
-func checkReason(stopReason configure.StopReasons, output string) (bool, string) {
+func checkReason(checkReason configure.Trigger, output string) (bool, string) {
 	GetLogger().WithFields(logrus.Fields{
-		"trigger": stopReason,
+		"trigger": checkReason,
 	}).Debug("Check Trigger")
 
 	var message = ""
-	if stopReason.OnoutcountLess > 0 && stopReason.OnoutcountLess > len(output) {
-		message = fmt.Sprint("reason match output len (", len(output), ") is less then ", stopReason.OnoutcountLess)
+	if checkReason.Now {
+		message = fmt.Sprint("reason now match always")
 		return true, message
 	}
-	if stopReason.OnoutcountMore > 0 && stopReason.OnoutcountMore < len(output) {
-		message = fmt.Sprint("reason match output len (", len(output), ") is more then ", stopReason.OnoutcountMore)
+	if checkReason.OnoutcountLess > 0 && checkReason.OnoutcountLess > len(output) {
+		message = fmt.Sprint("reason match output len (", len(output), ") is less then ", checkReason.OnoutcountLess)
+		return true, message
+	}
+	if checkReason.OnoutcountMore > 0 && checkReason.OnoutcountMore < len(output) {
+		message = fmt.Sprint("reason match output len (", len(output), ") is more then ", checkReason.OnoutcountMore)
 		return true, message
 	}
 
-	for _, checkText := range stopReason.OnoutContains {
+	for _, checkText := range checkReason.OnoutContains {
 		if checkText != "" && strings.Contains(output, checkText) {
 			message = fmt.Sprint("reason match because output contains ", checkText)
 			return true, message
@@ -429,7 +567,7 @@ func checkReason(stopReason configure.StopReasons, output string) (bool, string)
 			GetLogger().WithFields(logrus.Fields{
 				"check": checkText,
 				"with":  output,
-				"from":  stopReason.OnoutContains,
+				"from":  checkReason.OnoutContains,
 			}).Debug("OnoutContains NO MATCH")
 		}
 	}

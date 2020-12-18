@@ -8,7 +8,7 @@ task:
   
   - id: release
     script:
-      - goreleaser release --skip-validate --rm-dist
+      - goreleaser release --skip-validate --rm-dist --release-notes=./docs/CHANGELOG.md
 
   - id: init
     script: 

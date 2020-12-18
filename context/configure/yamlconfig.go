@@ -68,16 +68,6 @@ type Require struct {
 	Variables   map[string]string `yaml:"variables,omitempty"`
 }
 
-// Stopreasons defines reasons to stop execution of the script
-// all of them depends currently on parsing the output
-// or just if a error happens by trying to execute a script-line
-type Stopreasons struct {
-	Onerror        bool     `yaml:"onerror"`
-	OnoutcountLess int      `yaml:"onoutcountLess"`
-	OnoutcountMore int      `yaml:"onoutcountMore"`
-	OnoutContains  []string `yaml:"onoutContains"`
-}
-
 // Options are the per-task options
 type Options struct {
 	IgnoreCmdError bool     `yaml:"ignoreCmdError"`
@@ -91,6 +81,9 @@ type Options struct {
 	Invisible      bool     `yaml:"invisible"`
 	Maincmd        string   `yaml:"maincmd"`
 	Mainparams     []string `yaml:"mainparams"`
+	NoAutoRunNeeds bool     `yaml:"noAutoRunNeeds"`
+	TimeoutNeeds   int      `yaml:"timeoutNeeds"`
+	TickTimeNeeds  int      `yaml:"tickTimeNeeds"`
 }
 
 // Trigger are part of listener. The defines
@@ -101,6 +94,7 @@ type Trigger struct {
 	OnoutcountLess int      `yaml:"onoutcountLess"`
 	OnoutcountMore int      `yaml:"onoutcountMore"`
 	OnoutContains  []string `yaml:"onoutContains"`
+	Now            bool     `yaml:"now"`
 }
 
 // Action defines what should happens Next.
@@ -122,58 +116,11 @@ type Task struct {
 	ID          string            `yaml:"id"`
 	Variables   map[string]string `yaml:"variables,omitempty"`
 	Requires    Require           `yaml:"require"`
-	Stopreasons Stopreasons       `yaml:"stopreasons"`
+	Stopreasons Trigger           `yaml:"stopreasons"`
 	Options     Options           `yaml:"options"`
 	Script      []string          `yaml:"script"`
 	Listener    []Listener        `yaml:"listener"`
 	Next        []string          `yaml:"next"`
+	RunTargets  []string          `yaml:"runTargets"`
+	Needs       []string          `yaml:"needs"`
 }
-
-/*
-// RunConfig defines the structure of the local stored execution files
-type RunConfigOld struct {
-	Config struct {
-		Sequencially bool              `yaml:"sequencially"`
-		Coloroff     bool              `yaml:"coloroff"`
-		LogLevel     string            `yaml:"loglevel"`
-		Variables    map[string]string `yaml:"variables,omitempty"`
-		Imports      []string          `yAML:"imports"`
-	} `yaml:"config"`
-	Task []struct {
-		ID          string            `yaml:"id"`
-		Variables   map[string]string `yaml:"variables,omitempty"`
-		Stopreasons struct {
-			Onerror        bool     `yaml:"onerror"`
-			OnoutcountLess int      `yaml:"onoutcountLess"`
-			OnoutcountMore int      `yaml:"onoutcountMore"`
-			OnoutContains  []string `yaml:"onoutContains"`
-		} `yaml:"stopreasons"`
-		Options struct {
-			Format         string   `yaml:"format"`
-			Stickcursor    bool     `yaml:"stickcursor"`
-			IgnoreCmdError bool     `yaml:"ignoreCmdError"`
-			Colorcode      string   `yaml:"colorcode"`
-			Bgcolorcode    string   `yaml:"bgcolorcode"`
-			Panelsize      int      `yaml:"panelsize"`
-			Displaycmd     bool     `yaml:"displaycmd"`
-			Hideout        bool     `yaml:"hideout"`
-			Maincmd        string   `yaml:"maincmd"`
-			Mainparams     []string `yaml:"mainparams"`
-		} `yaml:"options"`
-		Script   []string `yaml:"script"`
-		Listener []struct {
-			Trigger struct {
-				Onerror        bool     `yaml:"onerror"`
-				OnoutcountLess int      `yaml:"onoutcountLess"`
-				OnoutcountMore int      `yaml:"onoutcountMore"`
-				OnoutContains  []string `yaml:"onoutContains"`
-			} `yaml:"trigger"`
-			Action struct {
-				Target  string   `yaml:"target"`
-				Stopall bool     `yaml:"stopall"`
-				Script  []string `yaml:"script"`
-			} `yaml:"action"`
-		} `yaml:"listener"`
-	} `yaml:"task"`
-}
-*/

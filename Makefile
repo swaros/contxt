@@ -8,6 +8,7 @@ install-local: test build
 
 clean:
 	rm -f ./bin/contxt
+	rm -rf ./dist
 
 test-all:
 	go test -v ./...
