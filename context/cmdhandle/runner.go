@@ -246,7 +246,7 @@ you will also see if a unexpected propertie found `,
 )
 
 func checkRunFlags(cmd *cobra.Command, args []string) {
-	runAtAll, _ = cmd.Flags().GetBool("all-workspaces")
+	runAtAll, _ = cmd.Flags().GetBool("all-paths")
 	showInvTarget, _ = cmd.Flags().GetBool("all-targets")
 }
 
