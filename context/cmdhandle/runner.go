@@ -37,7 +37,7 @@ var (
 
 	rootCmd = &cobra.Command{
 		Use:   "contxt",
-		Short: "worspaces for the shell",
+		Short: "workspaces for the shell",
 		Long: `Contxt helps you to organize projects.
 it helps also to execute tasks depending these projects.
 this task can be used to setup and cleanup the workspace 
@@ -95,6 +95,32 @@ fish:
 			case "fish":
 				cmd.Root().GenFishCompletion(os.Stdout, true)
 			}
+		},
+	}
+
+	gotoCmd = &cobra.Command{
+		Use:   "switch",
+		Short: "switch workspace",
+		Long: `switch the workspace to a existing ones. 
+all defined onEnter and onLeave task will be executed 
+if these task are defined
+`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) > 0 {
+				for _, arg := range args {
+					doMagicParamOne(arg)
+				}
+			}
+		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			targets, found := configure.GetWorkSpacesAsList()
+			if !found {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return targets, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
 
@@ -365,6 +391,7 @@ func initCobra() {
 	rootCmd.AddCommand(lintCmd)
 
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(gotoCmd)
 
 }
 
