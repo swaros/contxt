@@ -292,6 +292,16 @@ you will also see if a unexpected propertie found `,
 			}
 
 		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			targets, found := targetsAsMap()
+			if !found {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return targets, cobra.ShellCompDirectiveNoFileComp
+		},
 	}
 )
 
@@ -481,6 +491,23 @@ func doMagicParamOne(param string) bool {
 	})
 
 	return result
+}
+
+func targetsAsMap() ([]string, bool) {
+	var targets []string
+	found := false
+	template, _, exists := GetTemplate()
+	if exists {
+		if len(template.Task) > 0 {
+			for _, tasks := range template.Task {
+				if !tasks.Options.Invisible {
+					found = true
+					targets = append(targets, tasks.ID)
+				}
+			}
+		}
+	}
+	return targets, found
 }
 
 func printTargets() {
