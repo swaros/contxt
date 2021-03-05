@@ -59,9 +59,9 @@ Bash:
 
   # To load completions for each session, execute once:
   # Linux:
-  $ yourprogram completion bash > /etc/bash_completion.d/yourprogram
+  $ contxt completion bash > /etc/bash_completion.d/contxt
   # macOS:
-  $ yourprogram completion bash > /usr/local/etc/bash_completion.d/yourprogram
+  $ contxt completion bash > /usr/local/etc/bash_completion.d/contxt
 
 Zsh:
 
@@ -71,16 +71,16 @@ Zsh:
   $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
   # To load completions for each session, execute once:
-  $ yourprogram completion zsh > "${fpath[1]}/_yourprogram"
+  $ contxt completion zsh > "${fpath[1]}/_contxt"
 
   # You will need to start a new shell for this setup to take effect.
 
 fish:
 
-  $ yourprogram completion fish | source
+  $ contxt completion fish | source
 
   # To load completions for each session, execute once:
-  $ yourprogram completion fish > ~/.config/fish/completions/yourprogram.fish
+  $ contxt completion fish > ~/.config/fish/completions/contxt.fish
 
   `,
 		DisableFlagsInUseLine: true,

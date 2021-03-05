@@ -5,6 +5,7 @@ build: test
 
 install-local: test build
 	cp ./bin/contxt ~/.local/bin/
+	source <(contxt completion bash)
 
 clean:
 	rm -f ./bin/contxt
