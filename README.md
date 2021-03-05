@@ -23,7 +23,7 @@ make
 ````
 ### Change Dir Function
 
-there is no way to change a directory on console by a program/tool or whatever. of course you can change to any directory while the program
+there is no way to change a directory on console by a program/tool or whatever. of course, you can change to any directory while the program
 is running, but all this changes are temporary. so if the program exists, the console is back to directory where the program
 was started.
 
@@ -48,7 +48,11 @@ echo  'function cn() { cd $(contxt dir -i "$@"); }' >> ~/.zshrc
 
 now you can switch to any path fast by his index number like `cn 0` (after openening a new bash)
 
-  
+### console completion
+
+run `contxt completion --help` to show how you can enable completion. 
+
+for bash you need to run `source <(contxt completion bash)`. this you can also add to youre ~/.bashrc
 
 ### workspaces
 
