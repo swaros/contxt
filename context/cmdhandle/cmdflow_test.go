@@ -281,3 +281,24 @@ func TestCase14Imports(t *testing.T) {
 		}
 	})
 }
+
+func TestCase14Needs(t *testing.T) {
+	caseRunner("15", t, func(t *testing.T) {
+
+		cmdhandle.RunTargets("start")
+
+		usertest := cmdhandle.GetPH("RUN.start.LOG.LAST")
+		needOneRuns := cmdhandle.GetPH("RUN.need_one.LOG.LAST")
+		needTwoRuns := cmdhandle.GetPH("RUN.need_two.LOG.LAST")
+		if needOneRuns != "done need_one" {
+			t.Error("NEEDS needOne should be executed [done need_one] we got : ", needOneRuns)
+		}
+		if needTwoRuns != "done need_two" {
+			t.Error("NEEDS needTwo should be executed [done need_two] we got : ", needTwoRuns)
+		}
+
+		if usertest != "the-main-task" {
+			t.Error("did not get expected result instead [the-main-task] we got : ", usertest)
+		}
+	})
+}

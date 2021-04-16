@@ -57,7 +57,7 @@ func RunTargets(targets string) {
 	}
 
 	var wg sync.WaitGroup
-	if runSequencially == false {
+	if !runSequencially {
 		// run in thread
 		for _, runTarget := range allTargets {
 			wg.Add(1)
@@ -376,7 +376,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				stopReason := script.Stopreasons
 				// check requirements
 				canRun, message := checkRequirements(script.Requires)
-				if canRun == false {
+				if !canRun {
 					GetLogger().WithFields(logrus.Fields{
 						"target": target,
 					}).Info("executeTemplate IGNORE because requirements not matching")
@@ -399,7 +399,10 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						waitHits := 0
 						timeOut := script.Options.TimeoutNeeds
 						if timeOut < 1 {
+							GetLogger().Info("No timeoutNeeds value set. using default of 300000")
 							timeOut = 300000 // 5 minutes in milliseconds as default
+						} else {
+							GetLogger().WithField("timeout", timeOut).Info("timeout for task " + target)
 						}
 						tickTime := script.Options.TickTimeNeeds
 						if tickTime < 1 {
@@ -416,7 +419,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						}, func() {
 							// timeout not allowed. hard exit
 							GetLogger().Debug("timeout hit")
-							output.Error("Need Timeout", "waiting for a need timed out after", timeOut, "milliseconds. you may increase timeoutNeeds in Options")
+							output.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
 							os.Exit(1)
 						}, func(needTarget string) bool {
 							if script.Options.NoAutoRunNeeds {
