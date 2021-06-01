@@ -37,6 +37,40 @@ func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) {
 
 }
 
+func TestVariableReset(t *testing.T) {
+	folderRunner("./../../docs/test/valueRedefine", t, func(t *testing.T) {
+		cmdhandle.RunTargets("case1")
+		test1Result := cmdhandle.GetPH("RUN.case1.LOG.LAST")
+		if test1Result != "initial" {
+			t.Error("result 1 should be 'initial'.", test1Result)
+		}
+
+		cmdhandle.RunTargets("case2")
+		test2Result := cmdhandle.GetPH("RUN.case2.LOG.LAST")
+		if test2Result != "in-case-2" {
+			t.Error("result 2 should be 'in-case-2'.", test1Result)
+		}
+
+		cmdhandle.RunTargets("case1,case2")
+		test3Result := cmdhandle.GetPH("RUN.case2.LOG.LAST")
+		if test3Result != "in-case-2" {
+			t.Error("result 2 should be 'in-case-2'.", test1Result)
+		}
+
+		// testing main variables do not reset already changes variables
+		cmdhandle.RunTargets("case2,case1")
+		test4Result := cmdhandle.GetPH("RUN.case2.LOG.LAST")
+		if test4Result != "in-case-2" {
+			t.Error("result 2 should be 'in-case-2'.", test1Result)
+		}
+
+		test5Result := cmdhandle.GetPH("RUN.case1.LOG.LAST")
+		if test5Result != "in-case-2" {
+			t.Error("result 2 should be 'in-case-2'.", test1Result)
+		}
+	})
+}
+
 func TestCase0(t *testing.T) {
 	caseRunner("0", t, func(t *testing.T) {
 		cmdhandle.RunTargets("test1,test2")

@@ -35,7 +35,6 @@ func TestPrintColoredChanges(t *testing.T) {
 				t.Error("colorcode is the same again", colorCode, "prevoius", last)
 			}
 		}
-		last = colorCode
 	}
 
 }

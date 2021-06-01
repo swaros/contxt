@@ -32,7 +32,6 @@ var (
 	runAtAll      bool
 	leftLen       int
 	rightLen      int
-	lintShowAll   bool
 	showInvTarget bool
 
 	rootCmd = &cobra.Command{
@@ -350,7 +349,7 @@ func checkDirFlags(cmd *cobra.Command, args []string) {
 
 func checkDefaultFlags(cmd *cobra.Command, args []string) {
 	color, err := cmd.Flags().GetBool("coloroff")
-	if err == nil && color == true {
+	if err == nil && color {
 		output.ColorEnabled = false
 	}
 

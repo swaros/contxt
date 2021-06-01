@@ -172,10 +172,6 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 	return false, ExitOk, parsedScript
 }
 
-func handleImport(filename, path string) {
-
-}
-
 // YAMLToMap Convert yaml source string into map
 func YAMLToMap(source string) (map[string]interface{}, error) {
 	jsond, jerr := yaml.YAMLToJSON([]byte(source))
