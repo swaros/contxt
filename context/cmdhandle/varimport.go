@@ -57,7 +57,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					output.Error("invalid usage", inlineMark, " only valid while in iteration")
 				}
-				break
+
 			case fromJSONMark:
 				if len(parts) == 3 {
 					err := AddJSON(parts[1], parts[2])
@@ -67,7 +67,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					output.Error("invalid usage", fromJSONMark, " needs 2 arguments. <keyname> <json-source>")
 				}
-				break
+
 			case fromJSONCmdMark:
 				if len(parts) >= 3 {
 					returnValue := ""
@@ -87,7 +87,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					output.Error("invalid usage", fromJSONCmdMark, " needs 2 arguments at least. <keyname> <bash-command>")
 				}
-				break
+
 			case parseVarsMark:
 				if len(parts) >= 2 {
 					var returnValues []string
@@ -103,7 +103,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					output.Error("invalid usage", parseVarsMark, " needs 2 arguments at least. <varibale-name> <bash-command>")
 				}
-				break
+
 			case endMark:
 				GetLogger().Debug("ITERATION: DONE")
 				if inIteration {
@@ -153,7 +153,6 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					output.Error("invalid arguments", "#@iterate needs <name-of-import> <path-to-data>")
 				}
-				break
 			default:
 				GetLogger().WithField("unknown", parts[0]).Error("there is no command exists")
 			}
@@ -298,12 +297,10 @@ func ImportFolder(path string, templatePath string) (map[string]interface{}, err
 				GetLogger().WithField("file", path).Debug("parsing included file (JSON)")
 				jsonMap, loaderr = ImportJSONFile(path)
 				hit = true
-				break
 			case ".yaml", ".yml":
 				GetLogger().WithField("file", path).Debug("parsing included file (YAML)")
 				jsonMap, loaderr = ImportYAMLFile(path)
 				hit = true
-				break
 			}
 			if loaderr != nil {
 				return loaderr
