@@ -91,7 +91,12 @@ func setLogLevelByString(loglevel string) {
 func checkRequirements(require configure.Require) (bool, string) {
 	// check file exists
 	for _, fileExists := range require.Exists {
+		fileExists = handlePlaceHolder(fileExists)
 		fexists, err := dirhandle.Exists(fileExists)
+		GetLogger().WithFields(logrus.Fields{
+			"path":   fileExists,
+			"result": fexists,
+		}).Debug("path exists? result=true means valid for require")
 		if err != nil || !fexists {
 
 			return false, "required file (" + fileExists + ") not found "
@@ -100,7 +105,12 @@ func checkRequirements(require configure.Require) (bool, string) {
 
 	// check file not exists
 	for _, fileNotExists := range require.NotExists {
+		fileNotExists = handlePlaceHolder(fileNotExists)
 		fexists, err := dirhandle.Exists(fileNotExists)
+		GetLogger().WithFields(logrus.Fields{
+			"path":   fileNotExists,
+			"result": fexists,
+		}).Debug("path NOT exists? result=true means not valid for require")
 		if err != nil || fexists {
 			return false, "unexpected file (" + fileNotExists + ")  found "
 		}

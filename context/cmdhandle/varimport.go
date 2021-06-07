@@ -93,13 +93,24 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					var returnValues []string
 					restSlice := parts[2:len(parts)]
 					cmd := strings.Join(restSlice, " ")
-					ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
+					internalCode, cmdCode, errorFromCm := ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
 						returnValues = append(returnValues, output)
 						return true
 					}, func(proc *os.Process) {
 						GetLogger().WithField(parseVarsMark, proc).Trace("sub process")
 					})
-					SetPH(parts[1], HandlePlaceHolder(strings.Join(returnValues, "\n")))
+
+					if internalCode == ExitOk && errorFromCm == nil && cmdCode == 0 {
+						GetLogger().WithField("values", returnValues).Trace("got values")
+						SetPH(parts[1], HandlePlaceHolder(strings.Join(returnValues, "\n")))
+					} else {
+						GetLogger().WithFields(logrus.Fields{
+							"returnCode": cmdCode,
+							"error":      errorFromCm.Error,
+						}).Error("subcommand failed.")
+						output.Error("Subcommand failed", cmd, " ... was used to get json context.")
+					}
+
 				} else {
 					output.Error("invalid usage", parseVarsMark, " needs 2 arguments at least. <varibale-name> <bash-command>")
 				}

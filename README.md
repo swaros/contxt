@@ -116,3 +116,8 @@ be added to the workspace.
 
 ##### show all paths in current workspace
 `contxt dir -paths` prints all assigned paths. any path have index.
+
+
+##### used libraries 
+
+for parsing json by paths https://github.com/tidwall/gjson 
