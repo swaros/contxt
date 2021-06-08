@@ -15,6 +15,7 @@ import (
 func compareContent(a, b interface{}, showBooth bool, size int, right int) {
 	diffOut := pretty.Compare(a, b)
 	diffParts := strings.Split(diffOut, "\n")
+	var errors []string
 	i := 0
 	for _, line := range diffParts {
 		backColor := output.BackWhite
@@ -31,9 +32,9 @@ func compareContent(a, b interface{}, showBooth bool, size int, right int) {
 			i++
 		}
 		if rightDiff {
-			rgt := getMaxLineString("  unsupported element", right)
+			errors = append(errors, "unsupported: "+line)
+			rgt := getMaxLineString("  unsupported element ", right)
 			line = getMaxLineString(line, size)
-
 			backColor := output.BackYellow
 			if i%2 == 0 {
 				backColor = output.BackLightYellow
@@ -47,6 +48,14 @@ func compareContent(a, b interface{}, showBooth bool, size int, right int) {
 			fmt.Println(output.MessageCln(backColor, output.ForeBlue, line))
 		}
 
+	}
+
+	if len(errors) > 0 {
+		fmt.Println(output.MessageCln(output.ForeWhite, "found unsupported elements. you can add --full for showing supported elements"))
+	}
+
+	for _, errMsg := range errors {
+		fmt.Println(output.MessageCln(output.ForeYellow, errMsg))
 	}
 }
 

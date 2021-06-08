@@ -31,8 +31,7 @@ func TestAddAndGet(t *testing.T) {
 	}
 
 	numberOne := gotData["testnumber"]
-	var checkNumber float64
-	checkNumber = 77
+	var checkNumber float64 = 77
 	if numberOne != checkNumber {
 		t.Error("expected number was 77 but got ", numberOne)
 	}

@@ -1,0 +1,16 @@
+config:
+  sequencially: false
+  coloroff: true
+  variables:
+    testval: initial
+task:
+  - id: case1
+    script:      
+      - echo ${testval}
+  
+  - id: case2
+    variables:
+      testval: in-case-2
+    script:      
+      - echo ${testval}
+    

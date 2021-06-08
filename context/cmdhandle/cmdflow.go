@@ -57,7 +57,7 @@ func RunTargets(targets string) {
 	}
 
 	var wg sync.WaitGroup
-	if runSequencially == false {
+	if !runSequencially {
 		// run in thread
 		for _, runTarget := range allTargets {
 			wg.Add(1)
@@ -91,8 +91,13 @@ func setLogLevelByString(loglevel string) {
 func checkRequirements(require configure.Require) (bool, string) {
 	// check file exists
 	for _, fileExists := range require.Exists {
+		fileExists = handlePlaceHolder(fileExists)
 		fexists, err := dirhandle.Exists(fileExists)
-		if err != nil || fexists == false {
+		GetLogger().WithFields(logrus.Fields{
+			"path":   fileExists,
+			"result": fexists,
+		}).Debug("path exists? result=true means valid for require")
+		if err != nil || !fexists {
 
 			return false, "required file (" + fileExists + ") not found "
 		}
@@ -100,8 +105,13 @@ func checkRequirements(require configure.Require) (bool, string) {
 
 	// check file not exists
 	for _, fileNotExists := range require.NotExists {
+		fileNotExists = handlePlaceHolder(fileNotExists)
 		fexists, err := dirhandle.Exists(fileNotExists)
-		if err != nil || fexists == true {
+		GetLogger().WithFields(logrus.Fields{
+			"path":   fileNotExists,
+			"result": fexists,
+		}).Debug("path NOT exists? result=true means not valid for require")
+		if err != nil || fexists {
 			return false, "unexpected file (" + fileNotExists + ")  found "
 		}
 	}
@@ -129,9 +139,9 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 	if script.Listener != nil {
 
 		GetLogger().WithFields(logrus.Fields{
-			"cnt":      len(script.Listener),
+			"count":    len(script.Listener),
 			"listener": script.Listener,
-		}).Debug("CHECK Listener")
+		}).Debug("testing Listener")
 
 		for _, listener := range script.Listener {
 			listenReason := listener.Trigger
@@ -210,7 +220,7 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 						executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
 					}
 				}
-				if someReactionTriggered != true {
+				if !someReactionTriggered {
 					GetLogger().WithFields(logrus.Fields{
 						"trigger": triggerMessage,
 						"output":  logLine,
@@ -253,7 +263,7 @@ func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason confi
 		}
 
 		// print the output by configuration
-		if script.Options.Hideout == false {
+		if !script.Options.Hideout {
 			if script.Options.Format != "" {
 				fmt.Printf(script.Options.Format, logLine)
 			} else {
@@ -354,7 +364,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 
 		// main variables
 		for keyName, variable := range runCfg.Config.Variables {
-			SetPH(keyName, HandlePlaceHolder(variable))
+			SetIfNotExists(keyName, HandlePlaceHolder(variable))
 		}
 
 		colorCode := systools.CreateColorCode()
@@ -376,7 +386,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				stopReason := script.Stopreasons
 				// check requirements
 				canRun, message := checkRequirements(script.Requires)
-				if canRun == false {
+				if !canRun {
 					GetLogger().WithFields(logrus.Fields{
 						"target": target,
 					}).Info("executeTemplate IGNORE because requirements not matching")
@@ -399,7 +409,10 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						waitHits := 0
 						timeOut := script.Options.TimeoutNeeds
 						if timeOut < 1 {
+							GetLogger().Info("No timeoutNeeds value set. using default of 300000")
 							timeOut = 300000 // 5 minutes in milliseconds as default
+						} else {
+							GetLogger().WithField("timeout", timeOut).Info("timeout for task " + target)
 						}
 						tickTime := script.Options.TickTimeNeeds
 						if tickTime < 1 {
@@ -416,7 +429,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						}, func() {
 							// timeout not allowed. hard exit
 							GetLogger().Debug("timeout hit")
-							output.Error("Need Timeout", "waiting for a need timed out after", timeOut, "milliseconds. you may increase timeoutNeeds in Options")
+							output.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
 							os.Exit(1)
 						}, func(needTarget string) bool {
 							if script.Options.NoAutoRunNeeds {
@@ -520,6 +533,10 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 			GetLogger().Error("Target can not be found: ", target)
 		}
 	}
+	GetLogger().WithFields(logrus.Fields{
+		"target": target,
+	}).Info("executeTemplate. target do not contains tasks")
+
 	return ExitNoCode
 }
 
@@ -530,6 +547,7 @@ func defaultString(line string, defaultString string) string {
 	return line
 }
 
+/*
 func stringContains(findInHere string, matches []string) bool {
 	for _, check := range matches {
 		if check != "" && strings.Contains(findInHere, check) {
@@ -537,16 +555,20 @@ func stringContains(findInHere string, matches []string) bool {
 		}
 	}
 	return false
-}
+}*/
 
 func checkReason(checkReason configure.Trigger, output string) (bool, string) {
 	GetLogger().WithFields(logrus.Fields{
-		"trigger": checkReason,
-	}).Debug("Check Trigger")
+		"contains":   checkReason.OnoutContains,
+		"onError":    checkReason.Onerror,
+		"onLess":     checkReason.OnoutcountLess,
+		"onMore":     checkReason.OnoutcountMore,
+		"testing-at": output,
+	}).Debug("Checking Trigger")
 
 	var message = ""
 	if checkReason.Now {
-		message = fmt.Sprint("reason now match always")
+		message = "reason now match always"
 		return true, message
 	}
 	if checkReason.OnoutcountLess > 0 && checkReason.OnoutcountLess > len(output) {

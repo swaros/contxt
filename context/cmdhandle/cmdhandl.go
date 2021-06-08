@@ -90,7 +90,7 @@ func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callb
 			"keep-running": keepRunning,
 			"out":          m,
 		}).Info("handle-result")
-		if keepRunning == false {
+		if !keepRunning {
 			cmd.Process.Kill()
 			return ExitByStopReason, 0, err
 		}

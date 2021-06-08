@@ -3,6 +3,8 @@ package cmdhandle
 import (
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 var taskList sync.Map
@@ -65,11 +67,13 @@ func TaskRunning(target string) bool {
 // on returning false it will be counted as isDone
 func WaitForTasksDone(tasks []string, timeOut, tickTime time.Duration, stillWait func() bool, isDone func(), timeOutHandle func(), notStartet func(string) bool) {
 	running := true
+	allDone := false
 	for running {
 		doneCount := 0
 		for _, targetName := range tasks {
 			taskInfo, found := taskList.Load(targetName)
-			if found == false && notStartet(targetName) == false {
+			GetLogger().WithField("task", targetName).Trace("checking taskWait for needs")
+			if !found && !notStartet(targetName) {
 				GetLogger().WithField("task", targetName).Error("could not check against task that was never started")
 				doneCount++
 			}
@@ -83,20 +87,31 @@ func WaitForTasksDone(tasks []string, timeOut, tickTime time.Duration, stillWait
 		}
 
 		if doneCount == len(tasks) {
-			GetLogger().WithField("tasks", tasks).Info("Task-wait-check done regular")
+			GetLogger().WithFields(logrus.Fields{"tasks": tasks, "doneCount": doneCount, "taskCount": len(tasks)}).Info("Task-wait-check done regular")
+			allDone = true
 			isDone()
 			return
 		}
 		if stillWait() {
+			GetLogger().WithField("sleep", tickTime).Info("Task-wait-check waiting")
 			time.Sleep(tickTime)
 		} else {
 			GetLogger().WithField("tasks", tasks).Info("Task-wait-check done by abort. stillWait() will no longer wait")
+			allDone = true
 			isDone()
 			return
 		}
 		time.AfterFunc(timeOut, func() {
-			GetLogger().WithField("tasks", tasks).Warning("Task-wait-check done by Timeout.")
-			timeOutHandle()
+			if !allDone {
+				GetLogger().WithField("tasks", tasks).Warning("Task-wait-check running in Timeout-Check.")
+				GetLogger().WithFields(logrus.Fields{
+					"timeOut":   timeOut,
+					"doneFlag":  allDone,
+					"tasks":     tasks,
+					"doneCount": doneCount,
+					"taskCount": len(tasks)}).Info("timeout variables")
+				timeOutHandle()
+			}
 			running = false
 		})
 	}

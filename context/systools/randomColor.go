@@ -80,7 +80,7 @@ func CreateColorCode() string {
 	// hardcoded way to check if a backgroundcolor
 	// is usable with forground color
 	// might be replaced in future with something else
-	for colorCombinationisFine() == false {
+	for !colorCombinationisFine() {
 		CreateColorCode()
 	}
 	return CurrentColor
@@ -234,11 +234,12 @@ func GetCodeBg(code string) string {
 	return "\033[" + code + "m"
 }
 
+/*
 func getCodeFg(code string) string {
 
 	return "\033[1;" + code + "m"
 
-}
+}*/
 
 // GetDefaultBg Get the Default Background
 func GetDefaultBg() string {

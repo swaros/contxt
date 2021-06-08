@@ -15,6 +15,14 @@ func SetPH(key, value string) {
 	keyValue.Store(key, value)
 }
 
+func SetIfNotExists(key, value string) {
+	_, ok := keyValue.Load(key)
+	if !ok {
+		keyValue.Store(key, value)
+	}
+
+}
+
 // GetPH the content og the key
 func GetPH(key string) string {
 	result, ok := keyValue.Load(key)

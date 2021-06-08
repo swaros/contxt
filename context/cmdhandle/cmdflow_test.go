@@ -37,6 +37,40 @@ func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) {
 
 }
 
+func TestVariableReset(t *testing.T) {
+	folderRunner("./../../docs/test/valueRedefine", t, func(t *testing.T) {
+		cmdhandle.RunTargets("case1")
+		test1Result := cmdhandle.GetPH("RUN.case1.LOG.LAST")
+		if test1Result != "initial" {
+			t.Error("result 1 should be 'initial'.", test1Result)
+		}
+
+		cmdhandle.RunTargets("case2")
+		test2Result := cmdhandle.GetPH("RUN.case2.LOG.LAST")
+		if test2Result != "in-case-2" {
+			t.Error("result 2 should be 'in-case-2'.", test1Result)
+		}
+
+		cmdhandle.RunTargets("case1,case2")
+		test3Result := cmdhandle.GetPH("RUN.case2.LOG.LAST")
+		if test3Result != "in-case-2" {
+			t.Error("result 2 should be 'in-case-2'.", test1Result)
+		}
+
+		// testing main variables do not reset already changes variables
+		cmdhandle.RunTargets("case2,case1")
+		test4Result := cmdhandle.GetPH("RUN.case2.LOG.LAST")
+		if test4Result != "in-case-2" {
+			t.Error("result 2 should be 'in-case-2'.", test1Result)
+		}
+
+		test5Result := cmdhandle.GetPH("RUN.case1.LOG.LAST")
+		if test5Result != "in-case-2" {
+			t.Error("result 2 should be 'in-case-2'.", test1Result)
+		}
+	})
+}
+
 func TestCase0(t *testing.T) {
 	caseRunner("0", t, func(t *testing.T) {
 		cmdhandle.RunTargets("test1,test2")
@@ -278,6 +312,27 @@ func TestCase14Imports(t *testing.T) {
 		usertest := cmdhandle.GetPH("RUN.usertest.LOG.LAST")
 		if usertest != "hello john miller" {
 			t.Error("user data import looks not working. got ", usertest)
+		}
+	})
+}
+
+func TestCase14Needs(t *testing.T) {
+	caseRunner("15", t, func(t *testing.T) {
+
+		cmdhandle.RunTargets("start")
+
+		usertest := cmdhandle.GetPH("RUN.start.LOG.LAST")
+		needOneRuns := cmdhandle.GetPH("RUN.need_one.LOG.LAST")
+		needTwoRuns := cmdhandle.GetPH("RUN.need_two.LOG.LAST")
+		if needOneRuns != "done need_one" {
+			t.Error("NEEDS needOne should be executed [done need_one] we got : ", needOneRuns)
+		}
+		if needTwoRuns != "done need_two" {
+			t.Error("NEEDS needTwo should be executed [done need_two] we got : ", needTwoRuns)
+		}
+
+		if usertest != "the-main-task" {
+			t.Error("did not get expected result instead [the-main-task] we got : ", usertest)
 		}
 	})
 }

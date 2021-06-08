@@ -1,0 +1,31 @@
+config:
+    sequencially: false
+    coloroff: true
+    loglevel: debug
+
+task:
+    - id: start
+      options:
+        timeoutNeeds: 100
+      needs:
+        - need_one
+        - need_two 
+      script:
+        - echo "fake some long running jobs to run in the timeout"
+        - echo "fake-start"
+        - sleep 0.2
+        - echo "the-main-task"
+    
+    - id: need_one
+      script:
+        - echo "wait 4 seconds"
+        #- sleep 4 
+        - echo "done need_one" 
+    - id: need_two
+      script:
+        - echo "wait 2 seconds"
+        #- sleep 2 
+        - echo "done need_two" 
+        
+      
+      

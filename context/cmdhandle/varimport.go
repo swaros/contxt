@@ -57,7 +57,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					output.Error("invalid usage", inlineMark, " only valid while in iteration")
 				}
-				break
+
 			case fromJSONMark:
 				if len(parts) == 3 {
 					err := AddJSON(parts[1], parts[2])
@@ -67,7 +67,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					output.Error("invalid usage", fromJSONMark, " needs 2 arguments. <keyname> <json-source>")
 				}
-				break
+
 			case fromJSONCmdMark:
 				if len(parts) >= 3 {
 					returnValue := ""
@@ -87,23 +87,34 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					output.Error("invalid usage", fromJSONCmdMark, " needs 2 arguments at least. <keyname> <bash-command>")
 				}
-				break
+
 			case parseVarsMark:
 				if len(parts) >= 2 {
 					var returnValues []string
 					restSlice := parts[2:len(parts)]
 					cmd := strings.Join(restSlice, " ")
-					ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
+					internalCode, cmdCode, errorFromCm := ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
 						returnValues = append(returnValues, output)
 						return true
 					}, func(proc *os.Process) {
 						GetLogger().WithField(parseVarsMark, proc).Trace("sub process")
 					})
-					SetPH(parts[1], HandlePlaceHolder(strings.Join(returnValues, "\n")))
+
+					if internalCode == ExitOk && errorFromCm == nil && cmdCode == 0 {
+						GetLogger().WithField("values", returnValues).Trace("got values")
+						SetPH(parts[1], HandlePlaceHolder(strings.Join(returnValues, "\n")))
+					} else {
+						GetLogger().WithFields(logrus.Fields{
+							"returnCode": cmdCode,
+							"error":      errorFromCm.Error,
+						}).Error("subcommand failed.")
+						output.Error("Subcommand failed", cmd, " ... was used to get json context.")
+					}
+
 				} else {
 					output.Error("invalid usage", parseVarsMark, " needs 2 arguments at least. <varibale-name> <bash-command>")
 				}
-				break
+
 			case endMark:
 				GetLogger().Debug("ITERATION: DONE")
 				if inIteration {
@@ -153,7 +164,6 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					output.Error("invalid arguments", "#@iterate needs <name-of-import> <path-to-data>")
 				}
-				break
 			default:
 				GetLogger().WithField("unknown", parts[0]).Error("there is no command exists")
 			}
@@ -170,10 +180,6 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 		"parsed": parsedScript,
 	}).Debug("... parsed result")
 	return false, ExitOk, parsedScript
-}
-
-func handleImport(filename, path string) {
-
 }
 
 // YAMLToMap Convert yaml source string into map
@@ -302,12 +308,10 @@ func ImportFolder(path string, templatePath string) (map[string]interface{}, err
 				GetLogger().WithField("file", path).Debug("parsing included file (JSON)")
 				jsonMap, loaderr = ImportJSONFile(path)
 				hit = true
-				break
 			case ".yaml", ".yml":
 				GetLogger().WithField("file", path).Debug("parsing included file (YAML)")
 				jsonMap, loaderr = ImportYAMLFile(path)
 				hit = true
-				break
 			}
 			if loaderr != nil {
 				return loaderr

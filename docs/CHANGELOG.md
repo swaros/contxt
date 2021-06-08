@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [0.0.9] - 2020-12-18
 ### [Added]
 -  **script** support for Trigger action besides **target**. this is important together with needs to not make sure to get not out of scope.
 -  **needs** checks if a target was already started. this task will be started automatically if the was not started already

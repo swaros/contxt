@@ -32,12 +32,11 @@ var (
 	runAtAll      bool
 	leftLen       int
 	rightLen      int
-	lintShowAll   bool
 	showInvTarget bool
 
 	rootCmd = &cobra.Command{
 		Use:   "contxt",
-		Short: "worspaces for the shell",
+		Short: "workspaces for the shell",
 		Long: `Contxt helps you to organize projects.
 it helps also to execute tasks depending these projects.
 this task can be used to setup and cleanup the workspace 
@@ -45,6 +44,82 @@ if you enter or leave them.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
 
+		},
+	}
+
+	completionCmd = &cobra.Command{
+		Use:   "completion [bash|zsh|fish|powershell]",
+		Short: "Generate completion script",
+		Long: `To load completions:
+
+Bash:
+
+  $ source <(contxt completion bash)
+
+  # To load completions for each session, execute once:
+  # Linux:
+  $ contxt completion bash > /etc/bash_completion.d/contxt
+  # macOS:
+  $ contxt completion bash > /usr/local/etc/bash_completion.d/contxt
+
+Zsh:
+
+  # If shell completion is not already enabled in your environment,
+  # you will need to enable it.  You can execute the following once:
+
+  $ echo "autoload -U compinit; compinit" >> ~/.zshrc
+
+  # To load completions for each session, execute once:
+  $ contxt completion zsh > "${fpath[1]}/_contxt"
+
+  # You will need to start a new shell for this setup to take effect.
+
+fish:
+
+  $ contxt completion fish | source
+
+  # To load completions for each session, execute once:
+  $ contxt completion fish > ~/.config/fish/completions/contxt.fish
+
+  `,
+		DisableFlagsInUseLine: true,
+		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+		Args:                  cobra.ExactValidArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			switch args[0] {
+			case "bash":
+				cmd.Root().GenBashCompletion(os.Stdout)
+			case "zsh":
+				cmd.Root().GenZshCompletion(os.Stdout)
+			case "fish":
+				cmd.Root().GenFishCompletion(os.Stdout, true)
+			}
+		},
+	}
+
+	gotoCmd = &cobra.Command{
+		Use:   "switch",
+		Short: "switch workspace",
+		Long: `switch the workspace to a existing ones. 
+all defined onEnter and onLeave task will be executed 
+if these task are defined
+`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) > 0 {
+				for _, arg := range args {
+					doMagicParamOne(arg)
+				}
+			}
+		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			targets, found := configure.GetWorkSpacesAsList()
+			if !found {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return targets, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
 
@@ -242,11 +317,21 @@ you will also see if a unexpected propertie found `,
 			}
 
 		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			targets, found := targetsAsMap()
+			if !found {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return targets, cobra.ShellCompDirectiveNoFileComp
+		},
 	}
 )
 
 func checkRunFlags(cmd *cobra.Command, args []string) {
-	runAtAll, _ = cmd.Flags().GetBool("all-workspaces")
+	runAtAll, _ = cmd.Flags().GetBool("all-paths")
 	showInvTarget, _ = cmd.Flags().GetBool("all-targets")
 }
 
@@ -264,7 +349,7 @@ func checkDirFlags(cmd *cobra.Command, args []string) {
 
 func checkDefaultFlags(cmd *cobra.Command, args []string) {
 	color, err := cmd.Flags().GetBool("coloroff")
-	if err == nil && color == true {
+	if err == nil && color {
 		output.ColorEnabled = false
 	}
 
@@ -303,6 +388,9 @@ func initCobra() {
 	lintCmd.Flags().Bool("parse", false, "parse second level keywords (#@...)")
 
 	rootCmd.AddCommand(lintCmd)
+
+	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(gotoCmd)
 
 }
 
@@ -429,6 +517,23 @@ func doMagicParamOne(param string) bool {
 	})
 
 	return result
+}
+
+func targetsAsMap() ([]string, bool) {
+	var targets []string
+	found := false
+	template, _, exists := GetTemplate()
+	if exists {
+		if len(template.Task) > 0 {
+			for _, tasks := range template.Task {
+				if !tasks.Options.Invisible {
+					found = true
+					targets = append(targets, tasks.ID)
+				}
+			}
+		}
+	}
+	return targets, found
 }
 
 func printTargets() {
