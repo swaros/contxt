@@ -390,7 +390,7 @@ func initCobra() {
 	createCmd.AddCommand(createImport)
 
 	rootCmd.PersistentFlags().BoolVarP(&showColors, "coloroff", "c", false, "disable usage of colors in output")
-	rootCmd.PersistentFlags().BoolVarP(&showHints, "nohints", "n", false, "disbale printing hints on/off")
+	rootCmd.PersistentFlags().BoolVarP(&showHints, "nohints", "n", false, "disable printing hints")
 	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", "FATAL", "set loglevel")
 	rootCmd.AddCommand(dirCmd)
 	rootCmd.AddCommand(runCmd)
