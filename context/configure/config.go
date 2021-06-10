@@ -82,7 +82,7 @@ func RemoveWorkspace(name string) {
 	path, err := getConfigPath(name + ".json")
 	if err == nil {
 		var cfgExists, err = exists(path)
-		if err == nil && cfgExists == true {
+		if err == nil && cfgExists {
 			os.Remove(path)
 		} else {
 			fmt.Println("no workspace exists with name: ", output.MessageCln(output.ForeLightYellow, name))
@@ -130,8 +130,8 @@ func ListWorkSpaces() []string {
 
 // DisplayWorkSpaces prints out all workspaces
 func DisplayWorkSpaces() {
-	var files []string
-	files = ListWorkSpaces()
+	//var files []string
+	files := ListWorkSpaces()
 
 	if len(files) > 0 {
 		for _, file := range files {
@@ -176,8 +176,8 @@ func GetWorkSpacesAsList() ([]string, bool) {
 
 // WorkSpaces handler to iterate all workspaces
 func WorkSpaces(callback func(string)) {
-	var files []string
-	files = ListWorkSpaces()
+	//var files []string
+	files := ListWorkSpaces()
 
 	if len(files) > 0 {
 		for _, file := range files {
@@ -193,6 +193,11 @@ func WorkSpaces(callback func(string)) {
 			}
 		}
 	}
+}
+
+// SetLastIndex stores the last used index to get back to them after switch
+func SetLastIndex(index int) {
+
 }
 
 // ShowPaths : display all stored paths in the workspace

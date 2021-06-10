@@ -33,6 +33,8 @@ var (
 	leftLen       int
 	rightLen      int
 	showInvTarget bool
+	uselastIndex  bool
+	showHints     bool
 
 	rootCmd = &cobra.Command{
 		Use:   "contxt",
@@ -136,6 +138,12 @@ if these task are defined
 				defaulttask = false
 			}
 
+			if uselastIndex {
+				GetLogger().WithField("dirIndex", configure.UsedConfig.LastIndex).Debug("current stored index")
+				dirhandle.PrintDir(configure.UsedConfig.LastIndex)
+				defaulttask = false
+			}
+
 			if clearTask {
 				GetLogger().Info("got clear command")
 				configure.ClearPaths()
@@ -169,7 +177,7 @@ if these task are defined
 			dir, err := dirhandle.Current()
 			if err == nil {
 				count := configure.ShowPaths(dir)
-				if count > 0 {
+				if count > 0 && !showHints {
 					fmt.Println()
 					fmt.Println(output.MessageCln("\t", "to change directory depending stored path you can write ", output.BoldTag, "cd $(", os.Args[0], " -i ", count-1, ")", output.CleanTag, " in bash"))
 					fmt.Println(output.MessageCln("\t", "this will be the same as ", output.BoldTag, "cd ", dirhandle.GetDir(count-1)))
@@ -340,10 +348,16 @@ func checkDirFlags(cmd *cobra.Command, args []string) {
 	if err == nil && pindex >= 0 {
 		pathIndex = pindex
 	}
+	GetLogger().WithFields(logrus.Fields{"current": configure.UsedConfig.LastIndex, "index": pindex}).Trace("Index detection")
+	if pindex >= 0 && pindex != configure.UsedConfig.LastIndex {
+		configure.UsedConfig.LastIndex = pindex
+		configure.SaveDefaultConfiguration(true)
+	}
 
 	clearTask, _ = cmd.Flags().GetBool("clear")
 	deleteWs, _ = cmd.Flags().GetString("delete")
 	setWs, _ = cmd.Flags().GetString("workspace")
+	uselastIndex, _ = cmd.Flags().GetBool("last")
 
 }
 
@@ -366,6 +380,7 @@ func initCobra() {
 
 	dirCmd.Flags().IntVarP(&pathIndex, "index", "i", -1, "get path by the index in order the paths are stored")
 	dirCmd.Flags().BoolP("clear", "C", false, "remove all path assigments")
+	dirCmd.Flags().BoolP("last", "l", false, "get last used path index number")
 	dirCmd.Flags().StringP("delete", "d", "", "remove workspace")
 	dirCmd.Flags().StringP("workspace", "w", "", "set workspace. if not exists a new workspace will be created")
 
@@ -375,6 +390,7 @@ func initCobra() {
 	createCmd.AddCommand(createImport)
 
 	rootCmd.PersistentFlags().BoolVarP(&showColors, "coloroff", "c", false, "disable usage of colors in output")
+	rootCmd.PersistentFlags().BoolVarP(&showHints, "nohints", "n", false, "disbale printing hints on/off")
 	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", "FATAL", "set loglevel")
 	rootCmd.AddCommand(dirCmd)
 	rootCmd.AddCommand(runCmd)
@@ -612,13 +628,18 @@ func printPaths() {
 			fmt.Println(output.MessageCln(output.BackYellow, output.ForeBlue, " WARNING ! ", output.CleanTag, "\tyou are currently in none of the assigned locations."))
 			fmt.Println("\t\tso maybe you are using the wrong workspace")
 		}
+		if !showHints {
+			fmt.Println()
+			fmt.Println(output.MessageCln(" targets can be executes by ", output.BoldTag, "contxt run <targetname>", output.CleanTag, "(for the current directory)"))
+			fmt.Println(output.MessageCln(" a target can also be executed in all stored paths by ", output.BoldTag, "contxt run -a <targetname>", output.CleanTag, " independend from current path"))
+		}
 
 		fmt.Println()
-		fmt.Println(output.MessageCln(" targets can be executes by ", output.BoldTag, "contxt run <targetname>", output.CleanTag, "(for the current directory)"))
-		fmt.Println(output.MessageCln(" a target can also be executed in all stored paths by ", output.BoldTag, "contxt run -a <targetname>", output.CleanTag, " independend from current path"))
-
-		fmt.Println()
-		fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", output.BoldTag, "contxt <workspace>", ""))
+		if !showHints {
+			fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", output.BoldTag, "contxt <workspace>", ""))
+		} else {
+			fmt.Println(output.MessageCln(" all workspaces:"))
+		}
 		configure.WorkSpaces(func(name string) {
 			if name == configure.UsedConfig.CurrentSet {
 				fmt.Println(output.MessageCln("\t[ ", output.BoldTag, name, output.CleanTag, " ]"))

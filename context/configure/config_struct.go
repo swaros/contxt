@@ -4,6 +4,7 @@ package configure
 type Configuration struct {
 	CurrentSet string
 	Paths      []string
+	LastIndex  int
 }
 
 // CommandLine defines a line of commands that can be executed
