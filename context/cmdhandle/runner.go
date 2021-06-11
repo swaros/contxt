@@ -85,7 +85,7 @@ fish:
 
   `,
 		DisableFlagsInUseLine: true,
-		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+		ValidArgs:             []string{"bash", "zsh", "fish"},
 		Args:                  cobra.ExactValidArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			switch args[0] {
@@ -294,6 +294,39 @@ you will also see if a unexpected propertie found `,
 		},
 	}
 
+	installCmd = &cobra.Command{
+		Use:   "install",
+		Short: "install shell functions",
+		Long: `updates shell related files to get contxt running
+		as shortcut ctx. this will allow changing directories depending
+		on a context switch.
+		`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+		},
+	}
+
+	installBashRc = &cobra.Command{
+		Use:   "bashrc",
+		Short: "updates bashrc for using ctx alias",
+		Long: `writes needed functions into the users private .bashrc file.
+		This includes code completion and the ctx alias.
+		`,
+		Run: func(cmd *cobra.Command, args []string) {
+			BashUser()
+		},
+	}
+
+	installFish = &cobra.Command{
+		Use:   "fish",
+		Short: "create fish shell env for ctx",
+		Long: `create needed fish functions, auto completion for ctx
+		`,
+		Run: func(cmd *cobra.Command, args []string) {
+			FishUpdate()
+		},
+	}
+
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "run a target in contxt.yml task file",
@@ -358,7 +391,6 @@ func checkDirFlags(cmd *cobra.Command, args []string) {
 	deleteWs, _ = cmd.Flags().GetString("delete")
 	setWs, _ = cmd.Flags().GetString("workspace")
 	uselastIndex, _ = cmd.Flags().GetBool("last")
-
 }
 
 func checkDefaultFlags(cmd *cobra.Command, args []string) {
@@ -407,6 +439,10 @@ func initCobra() {
 
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(gotoCmd)
+
+	installCmd.AddCommand(installBashRc)
+	installCmd.AddCommand(installFish)
+	rootCmd.AddCommand(installCmd)
 
 }
 

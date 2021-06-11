@@ -174,7 +174,7 @@ include:
 
 #### auto create .bashrc contnt
 
-````
+````shell
 ### begin contxt bashrc
 function cn() { cd $(contxt dir -i "$@"); }
 function ctx() {        
