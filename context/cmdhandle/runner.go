@@ -323,7 +323,7 @@ you will also see if a unexpected propertie found `,
 		Long: `create needed fish functions, auto completion for ctx
 		`,
 		Run: func(cmd *cobra.Command, args []string) {
-			FishUpdate()
+			FishUpdate(cmd)
 		},
 	}
 

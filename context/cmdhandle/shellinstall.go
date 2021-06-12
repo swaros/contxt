@@ -1,12 +1,14 @@
 package cmdhandle
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/user"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/swaros/contxt/context/dirhandle"
@@ -20,12 +22,12 @@ func UserDirectory() (string, error) {
 	return usr.HomeDir, err
 }
 
-func FishUpdate() {
+func FishUpdate(cmd *cobra.Command) {
 	FishFunctionUpdate()
-	FishCompletionUpdate()
+	FishCompletionUpdate(cmd)
 }
 
-func FishCompletionUpdate() {
+func FishCompletionUpdate(cmd *cobra.Command) {
 	usrDir, err := UserDirectory()
 	if err == nil && usrDir != "" {
 		// completion dir Exists ?
@@ -37,6 +39,25 @@ func FishCompletionUpdate() {
 			}
 		}
 	}
+	cmpltn := new(bytes.Buffer)
+	cmd.Root().GenFishCompletion(cmpltn, true)
+
+	origin := cmpltn.String()
+	ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
+	WriteFileIfNotExists(usrDir+"/.config/fish/completions/contxt.fish", origin)
+	WriteFileIfNotExists(usrDir+"/.config/fish/completions/ctx.fish", ctxCmpltn)
+
+}
+
+func WriteFileIfNotExists(filename, content string) (int, error) {
+	funcExists, funcErr := dirhandle.Exists(filename)
+	if funcErr == nil && !funcExists {
+		ioutil.WriteFile(filename, []byte(content), 0644)
+		return 0, nil
+	} else if funcExists {
+		return 1, nil
+	}
+	return 2, funcErr
 
 }
 
