@@ -33,3 +33,11 @@ type RequireCheck struct {
 	FileExists    []string
 	FileNotExists []string
 }
+
+type GitVersionInfo struct {
+	HashUsed    string
+	Reference   string
+	Repositiory string
+	Path        string
+	Exists      bool
+}

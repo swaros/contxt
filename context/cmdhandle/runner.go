@@ -125,6 +125,23 @@ if these task are defined
 		},
 	}
 
+	workspaceCmd = &cobra.Command{
+		Use:   "workspace",
+		Short: "create new workspace if not exists, and use them",
+		Long: `create a new workspace if not exists.
+if the workspace is exists, we will just use them.
+you need to set the name for the workspace`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			workspace, _ := cmd.Flags().GetString("name")
+			if workspace == "" {
+				output.Error("paramater missing", "name is required")
+			} else {
+				configure.ChangeWorkspace(workspace, callBackOldWs, callBackNewWs)
+			}
+		},
+	}
+
 	dirCmd = &cobra.Command{
 		Use:   "dir",
 		Short: "handle workspaces and assigned paths",
@@ -443,6 +460,9 @@ func initCobra() {
 	installCmd.AddCommand(installBashRc)
 	installCmd.AddCommand(installFish)
 	rootCmd.AddCommand(installCmd)
+
+	workspaceCmd.Flags().String("name", "", "set the name for the workspace. REQUIRED")
+	rootCmd.AddCommand(workspaceCmd)
 
 }
 

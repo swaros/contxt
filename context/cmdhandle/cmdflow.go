@@ -45,6 +45,7 @@ func RunTargets(targets string) {
 		}
 	}
 
+	// handle all imports
 	if len(template.Config.Imports) > 0 {
 		GetLogger().WithField("Import", template.Config.Imports).Info("import second level vars")
 		handleFileImportsToVars(template.Config.Imports)
@@ -57,6 +58,23 @@ func RunTargets(targets string) {
 	}
 
 	var wg sync.WaitGroup
+
+	// handle all shared usages
+	if len(template.Config.Use) > 0 {
+		GetLogger().WithField("uses", template.Config.Use).Info("found external dependecy")
+		for _, shared := range template.Config.Use {
+			externalPath := HandleUsecase(shared)
+			GetLogger().WithField("path", externalPath).Info("shared contxt location")
+			currentDir, _ := dirhandle.Current()
+			os.Chdir(externalPath)
+			for _, runTarget := range allTargets {
+				fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED CONTXT ", output.BoldTag, shared, "] ", runTarget, " ", output.ForeWhite, templatePath))
+				RunTargets(runTarget)
+			}
+			os.Chdir(currentDir)
+		}
+	}
+
 	if !runSequencially {
 		// run in thread
 		for _, runTarget := range allTargets {
@@ -67,7 +85,6 @@ func RunTargets(targets string) {
 		wg.Wait()
 	} else {
 		// trun one by one
-		fmt.Println("Sequencially runmode")
 		for _, runTarget := range allTargets {
 			fmt.Println(output.MessageCln(output.ForeBlue, "[exec:seq] ", output.BoldTag, runTarget, " ", output.ForeWhite, templatePath))
 			exitCode := ExecPathFile(&wg, false, template, runTarget)
@@ -529,7 +546,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 		}
 
 		if !targetFound {
-			fmt.Println(output.MessageCln(output.ForeRed, "target not found: ", output.BackRed, output.ForeWhite, target))
+			fmt.Println(output.MessageCln(output.ForeYellow, "target not defined: ", output.ForeWhite, target))
 			GetLogger().Error("Target can not be found: ", target)
 		}
 	}
