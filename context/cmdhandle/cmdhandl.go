@@ -50,6 +50,7 @@ func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, useWaitGroup bool, target 
 }
 
 // ExecuteScriptLine executes a simple shell script
+// returns internal exitsCode, process existcode, error
 func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callback func(string) bool, startInfo func(*os.Process)) (int, int, error) {
 
 	// default behavior. -c param is not set by default

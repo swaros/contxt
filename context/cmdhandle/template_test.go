@@ -58,7 +58,7 @@ func TestGetVarImport(t *testing.T) {
 			}
 		}
 
-		cmdhandle.RunTargets("script")
+		cmdhandle.RunTargets("script", true)
 		test1Result := cmdhandle.GetPH("RUN.script.LOG.LAST")
 		if test1Result == "" {
 			t.Error("result 1 should not be empty.", test1Result)

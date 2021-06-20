@@ -82,4 +82,5 @@ in this case it will just set the context to the local **minikube** to make sure
 
 ##### used libraries 
 
+go/template extension https://github.com/Masterminds/sprig [template docu](http://masterminds.github.io/sprig/)
 for parsing json by paths https://github.com/tidwall/gjson 

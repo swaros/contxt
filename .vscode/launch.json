@@ -6,13 +6,13 @@
     "configurations": [
     
         {
-            "name": "Launch list",
+            "name": "Launch shared list",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
             "env": {},
-            "args": ["dir","-list"]
+            "args": ["shared","list"]
         },
         {
             "name": "create imports",

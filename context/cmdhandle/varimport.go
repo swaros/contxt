@@ -284,11 +284,17 @@ func ImportFolders(templatePath string, paths ...string) (string, error) {
 	return template, nil
 }
 
-// ImportFolder reads folder recusiv and reads all .json, .yml and .yaml files
+func GetOriginMap() map[string]interface{} {
+	mapOrigin := make(map[string]interface{})
+	return mapOrigin
+}
+
+// ImportFolder reads folder recursiv and reads all .json, .yml and .yaml files
 func ImportFolder(path string, templatePath string) (map[string]interface{}, error) {
 
-	var mapOrigin map[string]interface{}
-	mapOrigin = make(map[string]interface{})
+	//var mapOrigin map[string]interface{}
+	//mapOrigin = make(map[string]interface{})
+	mapOrigin := GetOriginMap()
 
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -317,13 +323,17 @@ func ImportFolder(path string, templatePath string) (map[string]interface{}, err
 				return loaderr
 			}
 			if hit {
+				GetLogger().WithFields(logrus.Fields{
+					"origin":   mapOrigin,
+					"imported": jsonMap,
+				}).Trace("merged Variable map")
 				mapOrigin = MergeVariableMap(jsonMap, mapOrigin)
+				GetLogger().WithField("result", mapOrigin).Trace("result of merge")
 			}
 		}
 
 		return nil
 	})
-
 	return mapOrigin, err
 }
 

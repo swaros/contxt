@@ -39,26 +39,26 @@ func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) {
 
 func TestVariableReset(t *testing.T) {
 	folderRunner("./../../docs/test/valueRedefine", t, func(t *testing.T) {
-		cmdhandle.RunTargets("case1")
+		cmdhandle.RunTargets("case1", true)
 		test1Result := cmdhandle.GetPH("RUN.case1.LOG.LAST")
 		if test1Result != "initial" {
 			t.Error("result 1 should be 'initial'.", test1Result)
 		}
 
-		cmdhandle.RunTargets("case2")
+		cmdhandle.RunTargets("case2", true)
 		test2Result := cmdhandle.GetPH("RUN.case2.LOG.LAST")
 		if test2Result != "in-case-2" {
 			t.Error("result 2 should be 'in-case-2'.", test1Result)
 		}
 
-		cmdhandle.RunTargets("case1,case2")
+		cmdhandle.RunTargets("case1,case2", true)
 		test3Result := cmdhandle.GetPH("RUN.case2.LOG.LAST")
 		if test3Result != "in-case-2" {
 			t.Error("result 2 should be 'in-case-2'.", test1Result)
 		}
 
 		// testing main variables do not reset already changes variables
-		cmdhandle.RunTargets("case2,case1")
+		cmdhandle.RunTargets("case2,case1", true)
 		test4Result := cmdhandle.GetPH("RUN.case2.LOG.LAST")
 		if test4Result != "in-case-2" {
 			t.Error("result 2 should be 'in-case-2'.", test1Result)
@@ -73,7 +73,7 @@ func TestVariableReset(t *testing.T) {
 
 func TestCase0(t *testing.T) {
 	caseRunner("0", t, func(t *testing.T) {
-		cmdhandle.RunTargets("test1,test2")
+		cmdhandle.RunTargets("test1,test2", true)
 		test1Result := cmdhandle.GetPH("RUN.test1.LOG.LAST")
 		if test1Result == "" {
 			t.Error("result 1 should not be empty.", test1Result)
@@ -93,7 +93,7 @@ func TestCase0(t *testing.T) {
 func TestRunTargetCase1(t *testing.T) {
 
 	caseRunner("1", t, func(t *testing.T) {
-		cmdhandle.RunTargets("case1_1,case1_2")
+		cmdhandle.RunTargets("case1_1,case1_2", true)
 		test1Result := cmdhandle.GetPH("RUN.case1_1.LOG.LAST")
 		if test1Result == "" {
 			t.Error("result 1 should not be empty.", test1Result)
@@ -119,7 +119,7 @@ func TestRunTargetCase1(t *testing.T) {
 func TestRunTargetCase2(t *testing.T) {
 
 	caseRunner("2", t, func(t *testing.T) {
-		cmdhandle.RunTargets("base")
+		cmdhandle.RunTargets("base", true)
 		test1Result := cmdhandle.GetPH("RUN.base.LOG.HIT")
 		if test1Result != "start-task-2" {
 			t.Error("unexpected result ", test1Result)
@@ -135,7 +135,7 @@ func TestRunTargetCase2(t *testing.T) {
 func TestRunTargetCase3(t *testing.T) {
 	// testing PID of my own and the parent process
 	caseRunner("3", t, func(t *testing.T) {
-		cmdhandle.RunTargets("base")
+		cmdhandle.RunTargets("base", true)
 		test1Result := cmdhandle.GetPH("RUN.base.LOG.HIT")
 		if test1Result != "launch" {
 			t.Error("unexpected result ", test1Result)
@@ -152,13 +152,13 @@ func TestRunTargetCase3(t *testing.T) {
 func TestCase4(t *testing.T) {
 	caseRunner("4", t, func(t *testing.T) {
 		//stopped because log entrie to big
-		cmdhandle.RunTargets("base")
+		cmdhandle.RunTargets("base", true)
 		log := cmdhandle.GetPH("RUN.base.LOG.LAST")
 		if log != "sub 4-6" {
 			t.Error("last log entrie should not be:", log)
 		}
 
-		cmdhandle.RunTargets("contains")
+		cmdhandle.RunTargets("contains", true)
 		log = cmdhandle.GetPH("RUN.contains.LOG.LAST")
 		if log != "come and die" {
 			t.Error("last log entrie should not be", log)
@@ -169,7 +169,7 @@ func TestCase4(t *testing.T) {
 func TestCase5(t *testing.T) {
 	caseRunner("5", t, func(t *testing.T) {
 		//contains a mutliline shell script
-		cmdhandle.RunTargets("base")
+		cmdhandle.RunTargets("base", true)
 		log := cmdhandle.GetPH("RUN.base.LOG.LAST")
 		if log != "line4" {
 			t.Error("last log entrie should not be", log)
@@ -180,7 +180,7 @@ func TestCase5(t *testing.T) {
 // testing the thread run. do we wait for the subjobs also if they run longer then then main Task?
 func TestCase6(t *testing.T) {
 	caseRunner("6", t, func(t *testing.T) {
-		cmdhandle.RunTargets("base")
+		cmdhandle.RunTargets("base", true)
 		log := cmdhandle.GetPH("RUN.sub.LOG.LAST")
 		if log != "sub-end" {
 			t.Error("failed wait for ending subrun. last log entrie should be 'sub-end' got [", log, "] instead")
@@ -192,7 +192,7 @@ func TestCase6(t *testing.T) {
 // testing error handling by script fails
 func TestCase7(t *testing.T) {
 	caseRunner("7", t, func(t *testing.T) {
-		cmdhandle.RunTargets("base")
+		cmdhandle.RunTargets("base", true)
 		logMain := cmdhandle.GetPH("RUN.base.LOG.LAST")
 		if logMain != "done-main" {
 			t.Error("last runstep should be excuted. but stopped on:", logMain)
@@ -209,7 +209,7 @@ func TestCase7(t *testing.T) {
 // test variables. replace set at config variables to hallo-welt
 func TestCase8(t *testing.T) {
 	caseRunner("8", t, func(t *testing.T) {
-		cmdhandle.RunTargets("base")
+		cmdhandle.RunTargets("base", true)
 		logMain := cmdhandle.GetPH("RUN.base.LOG.LAST")
 		if logMain != "hallo-welt" {
 			t.Error("variable should be replaced. but got:", logMain)
@@ -220,7 +220,7 @@ func TestCase8(t *testing.T) {
 // test variables. replace set at config variables to hallo-welt but then overwrittn in task to hello-world
 func TestCase9(t *testing.T) {
 	caseRunner("9", t, func(t *testing.T) {
-		cmdhandle.RunTargets("base,test2")
+		cmdhandle.RunTargets("base,test2", true)
 		logMain := cmdhandle.GetPH("RUN.base.LOG.LAST")
 		if logMain != "hello-world" {
 			t.Error("variable should be replaced. but got:", logMain)
@@ -235,7 +235,7 @@ func TestCase9(t *testing.T) {
 func TestCase12Requires(t *testing.T) {
 	caseRunner("12", t, func(t *testing.T) {
 		os.Setenv("TESTCASE_12_VAL", "HELLO")
-		cmdhandle.RunTargets("test1,test2,test3,test4,test5,test6")
+		cmdhandle.RunTargets("test1,test2,test3,test4,test5,test6", true)
 		logMain := cmdhandle.GetPH("RUN.test1.LOG.LAST")
 		if logMain != "run_a" {
 			t.Error("got unexpected result:", logMain)
@@ -271,7 +271,7 @@ func TestCase12Requires(t *testing.T) {
 func TestCase13Next(t *testing.T) {
 	caseRunner("13", t, func(t *testing.T) {
 
-		cmdhandle.RunTargets("start")
+		cmdhandle.RunTargets("start", true)
 		logMain := cmdhandle.GetPH("RUN.start.LOG.LAST")
 		if logMain != "start" {
 			t.Error("got unexpected result:(", logMain, ")")
@@ -298,7 +298,7 @@ func TestCase13Next(t *testing.T) {
 func TestCase14Imports(t *testing.T) {
 	caseRunner("14", t, func(t *testing.T) {
 
-		cmdhandle.RunTargets("start,usertest")
+		cmdhandle.RunTargets("start,usertest", true)
 		check := cmdhandle.GetJSONPathValueString("import.yaml", "testdata.check")
 		if check != "hello" {
 			t.Error("expect hello but got", check)
@@ -319,7 +319,7 @@ func TestCase14Imports(t *testing.T) {
 func TestCase14Needs(t *testing.T) {
 	caseRunner("15", t, func(t *testing.T) {
 
-		cmdhandle.RunTargets("start")
+		cmdhandle.RunTargets("start", true)
 
 		usertest := cmdhandle.GetPH("RUN.start.LOG.LAST")
 		needOneRuns := cmdhandle.GetPH("RUN.need_one.LOG.LAST")

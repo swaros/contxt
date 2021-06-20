@@ -386,6 +386,40 @@ you will also see if a unexpected propertie found `,
 			return targets, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
+	sharedCmd = &cobra.Command{
+		Use:   "shared",
+		Short: "manage shared tasks",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+		},
+	}
+
+	sharedListCmd = &cobra.Command{
+		Use:   "list",
+		Short: "list local shared tasks",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			sharedDirs, _ := ListUseCases(false)
+			for _, sharedPath := range sharedDirs {
+				fmt.Println(sharedPath)
+			}
+		},
+	}
+
+	sharedUpdateCmd = &cobra.Command{
+		Use:   "update",
+		Short: "updates shared uses if possible (git based)",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			useCases, err := ListUseCases(true)
+			if err == nil {
+				for _, path := range useCases {
+					fmt.Println(output.MessageCln("check usage ", output.ForeCyan, path))
+					UpdateUseCase(path)
+				}
+			}
+		},
+	}
 )
 
 func checkRunFlags(cmd *cobra.Command, args []string) {
@@ -463,6 +497,10 @@ func initCobra() {
 
 	workspaceCmd.Flags().String("name", "", "set the name for the workspace. REQUIRED")
 	rootCmd.AddCommand(workspaceCmd)
+
+	sharedCmd.AddCommand(sharedListCmd)
+	sharedCmd.AddCommand(sharedUpdateCmd)
+	rootCmd.AddCommand(sharedCmd)
 
 }
 
@@ -545,7 +583,7 @@ func callBackOldWs(oldws string) bool {
 				"templateFile": templateFile,
 				"target":       onleaveTarget,
 			}).Info("execute leave-action")
-			RunTargets(onleaveTarget)
+			RunTargets(onleaveTarget, true)
 
 		}
 
@@ -572,7 +610,7 @@ func callBackNewWs(newWs string) {
 				"templateFile": templateFile,
 				"target":       onEnterTarget,
 			}).Info("execute enter-action")
-			RunTargets(onEnterTarget)
+			RunTargets(onEnterTarget, true)
 		}
 
 	})
@@ -631,7 +669,7 @@ func printTargets() {
 }
 
 func runTargets(path string, targets string) {
-	RunTargets(targets)
+	RunTargets(targets, true)
 }
 
 func printOutHeader() {

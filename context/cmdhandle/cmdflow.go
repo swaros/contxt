@@ -32,8 +32,50 @@ const (
 	ExitAlreadyRunning = 105
 )
 
+func RunShared(targets string) {
+
+	allTargets := strings.Split(targets, ",")
+	template, templatePath, exists := GetTemplate()
+	if !exists {
+		return
+	}
+
+	if template.Config.Loglevel != "" {
+		setLogLevelByString(template.Config.Loglevel)
+	}
+
+	GetLogger().WithField("targets", allTargets).Info("SHARED START run targets...")
+
+	// handle all shared usages
+	if len(template.Config.Use) > 0 {
+		GetLogger().WithField("uses", template.Config.Use).Info("found external dependecy")
+		fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED loop]"))
+		for _, shared := range template.Config.Use {
+			fmt.Println(output.MessageCln(output.ForeCyan, "[...SHARED CONTXT >>>][", output.ForeBlue, shared+"] "))
+			externalPath := HandleUsecase(shared)
+			GetLogger().WithField("path", externalPath).Info("shared contxt location")
+			currentDir, _ := dirhandle.Current()
+			os.Chdir(externalPath)
+			for _, runTarget := range allTargets {
+				fmt.Println(output.MessageCln(output.ForeCyan, output.ForeGreen, runTarget, output.ForeYellow, " [ external:", output.ForeWhite, externalPath, output.ForeYellow, "] ", output.ForeDarkGrey, templatePath))
+				RunTargets(runTarget, false)
+				fmt.Println(output.MessageCln(output.ForeCyan, output.ForeBlue, shared+"] ", output.ForeGreen, runTarget, " DONE"))
+			}
+			os.Chdir(currentDir)
+		}
+		fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED done]"))
+	}
+	GetLogger().WithField("targets", allTargets).Info("  SHARED DONE run targets...")
+}
+
 // RunTargets executes multiple targets
-func RunTargets(targets string) {
+func RunTargets(targets string, sharedRun bool) {
+
+	if sharedRun {
+		// run shared use
+		RunShared(targets)
+	}
+
 	allTargets := strings.Split(targets, ",")
 	template, templatePath, exists := GetTemplate()
 	GetLogger().WithField("targets", allTargets).Info("run targets...")
@@ -45,14 +87,6 @@ func RunTargets(targets string) {
 		}
 	}
 
-	// handle all imports
-	if len(template.Config.Imports) > 0 {
-		GetLogger().WithField("Import", template.Config.Imports).Info("import second level vars")
-		handleFileImportsToVars(template.Config.Imports)
-	} else {
-		GetLogger().Info("No second level Variables defined")
-	}
-
 	if template.Config.Loglevel != "" {
 		setLogLevelByString(template.Config.Loglevel)
 	}
@@ -60,19 +94,29 @@ func RunTargets(targets string) {
 	var wg sync.WaitGroup
 
 	// handle all shared usages
-	if len(template.Config.Use) > 0 {
-		GetLogger().WithField("uses", template.Config.Use).Info("found external dependecy")
-		for _, shared := range template.Config.Use {
-			externalPath := HandleUsecase(shared)
-			GetLogger().WithField("path", externalPath).Info("shared contxt location")
-			currentDir, _ := dirhandle.Current()
-			os.Chdir(externalPath)
-			for _, runTarget := range allTargets {
-				fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED CONTXT ", output.BoldTag, shared, "] ", runTarget, " ", output.ForeWhite, templatePath))
-				RunTargets(runTarget)
+	/*
+		if len(template.Config.Use) > 0 {
+			GetLogger().WithField("uses", template.Config.Use).Info("found external dependecy")
+			for _, shared := range template.Config.Use {
+				externalPath := HandleUsecase(shared)
+				GetLogger().WithField("path", externalPath).Info("shared contxt location")
+				currentDir, _ := dirhandle.Current()
+				os.Chdir(externalPath)
+				for _, runTarget := range allTargets {
+					fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED CONTXT ", output.BoldTag, shared, "] ", runTarget, " ", output.ForeWhite, templatePath))
+					RunTargets(runTarget)
+				}
+				os.Chdir(currentDir)
 			}
-			os.Chdir(currentDir)
 		}
+	*/
+
+	// handle all imports
+	if len(template.Config.Imports) > 0 {
+		GetLogger().WithField("Import", template.Config.Imports).Info("import second level vars")
+		handleFileImportsToVars(template.Config.Imports)
+	} else {
+		GetLogger().Info("No second level Variables defined")
 	}
 
 	if !runSequencially {
