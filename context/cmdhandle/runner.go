@@ -345,6 +345,16 @@ you will also see if a unexpected propertie found `,
 		},
 	}
 
+	installZsh = &cobra.Command{
+		Use:   "zsh",
+		Short: "create zsh shell env for ctx",
+		Long: `create needed zsh functions and auto completion for zsh
+		`,
+		Run: func(cmd *cobra.Command, args []string) {
+			ZshUpdate(cmd)
+		},
+	}
+
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "run a target in contxt.yml task file",
@@ -502,6 +512,7 @@ func initCobra() {
 
 	installCmd.AddCommand(installBashRc)
 	installCmd.AddCommand(installFish)
+	installCmd.AddCommand(installZsh)
 	rootCmd.AddCommand(installCmd)
 
 	workspaceCmd.Flags().String("name", "", "set the name for the workspace. REQUIRED")

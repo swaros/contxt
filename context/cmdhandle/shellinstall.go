@@ -144,6 +144,71 @@ source <(ctxcompletion)
 
 }
 
+func ZshUpdate(cmd *cobra.Command) {
+	ZshUser()
+	updateZshFunctions(cmd)
+}
+
+func zshFuncDir() string {
+	fpath := os.Getenv("FPATH")
+	if fpath != "" {
+		paths := strings.Split(fpath, ":")
+		return paths[0]
+	}
+	return fpath
+}
+
+func updateZshFunctions(cmd *cobra.Command) {
+	funcDir := zshFuncDir()
+	if funcDir != "" {
+		contxtPath := funcDir + "/_contxt"
+		ctxPath := funcDir + "/_ctx"
+		fmt.Println(funcDir)
+
+		cmpltn := new(bytes.Buffer)
+		cmd.Root().GenZshCompletion(cmpltn)
+
+		origin := cmpltn.String()
+		ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
+
+		WriteFileIfNotExists(contxtPath, origin)
+		WriteFileIfNotExists(ctxPath, ctxCmpltn)
+	}
+}
+
+func ZshUser() {
+	zshrcAdd := `
+### begin contxt zshrc
+function cn() { cd $(contxt dir -i "$@"); }
+function ctx() {        
+	contxt "$@";
+        case $1 in
+          switch)          
+          cd $(contxt dir --last);
+          contxt dir paths --coloroff --nohints
+          ;;
+        esac
+}
+### end of contxt zshrc
+	`
+	usrDir, err := UserDirectory()
+	if err == nil && usrDir != "" {
+		ok, errDh := dirhandle.Exists(usrDir + "/.zshrc")
+		if errDh == nil && ok {
+			fmt.Println(usrDir + "/.zshrc")
+			fine, errmsg := updateExistingFile(usrDir+"/.zshrc", zshrcAdd, "### begin contxt zshrc")
+			if !fine {
+				output.Error("zshrc update failed", errmsg)
+			} else {
+				fmt.Println(output.MessageCln(output.ForeGreen, "success", output.CleanTag, "  ", output.ForeCyan, " "))
+			}
+		} else {
+			output.Error("missing .zshrc", "could not find expected "+usrDir+"/.zshrc")
+		}
+	}
+
+}
+
 func updateExistingFile(filename, content, doNotContain string) (bool, string) {
 	ok, errDh := dirhandle.Exists(filename)
 	errmsg := ""
