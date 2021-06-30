@@ -35,6 +35,7 @@ var (
 	showInvTarget bool
 	uselastIndex  bool
 	showHints     bool
+	preVars       map[string]string
 
 	rootCmd = &cobra.Command{
 		Use:   "contxt",
@@ -353,6 +354,13 @@ you will also see if a unexpected propertie found `,
 			GetLogger().WithField("args", args).Info("Run triggered")
 			GetLogger().WithField("all", runAtAll).Info("all workspaces?")
 
+			//if preVars != nil {
+			for preKey, preValue := range preVars {
+				GetLogger().WithFields(logrus.Fields{"key": preKey, "val": preValue}).Info("prevalue set by argument")
+				SetPH(preKey, preValue)
+			}
+			//}
+
 			if len(args) == 0 {
 				printTargets()
 			}
@@ -469,6 +477,7 @@ func initCobra() {
 
 	runCmd.Flags().BoolP("all-paths", "a", false, "run targets in all paths in the current workspace")
 	runCmd.Flags().Bool("all-targets", false, "show all targets. including invisible")
+	runCmd.Flags().StringToStringVarP(&preVars, "var", "v", nil, "set variables by keyname and value.")
 
 	createCmd.AddCommand(createImport)
 
