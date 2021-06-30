@@ -72,7 +72,7 @@ func FishFunctionUpdate() {
     end
 end`
 	cnFunc := `function cn
-	cd (contxt dir -i $argv)
+	cd (contxt dir find $argv)
 end`
 
 	usrDir, err := UserDirectory()
@@ -105,7 +105,7 @@ end`
 func BashUser() {
 	bashrcAdd := `
 ### begin contxt bashrc
-function cn() { cd $(contxt dir -i "$@"); }
+function cn() { cd $(contxt dir find "$@"); }
 function ctx() {        
 	contxt "$@";
         case $1 in
@@ -179,7 +179,7 @@ func updateZshFunctions(cmd *cobra.Command) {
 func ZshUser() {
 	zshrcAdd := `
 ### begin contxt zshrc
-function cn() { cd $(contxt dir -i "$@"); }
+function cn() { cd $(contxt dir find "$@"); }
 function ctx() {        
 	contxt "$@";
         case $1 in

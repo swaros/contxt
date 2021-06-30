@@ -3,6 +3,7 @@ package cmdhandle
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -197,10 +198,50 @@ you need to set the name for the workspace`,
 				count := configure.ShowPaths(dir)
 				if count > 0 && !showHints {
 					fmt.Println()
-					fmt.Println(output.MessageCln("\t", "to change directory depending stored path you can write ", output.BoldTag, "cd $(", os.Args[0], " -i ", count-1, ")", output.CleanTag, " in bash"))
+					fmt.Println(output.MessageCln("\t", "if you have installed the shell functions ", output.ForeDarkGrey, "(contxt install bash|zsh|fish)", output.CleanTag, " change the directory by ", output.BoldTag, "cn ", count-1))
 					fmt.Println(output.MessageCln("\t", "this will be the same as ", output.BoldTag, "cd ", dirhandle.GetDir(count-1)))
 				}
 			}
+		},
+	}
+
+	findPath = &cobra.Command{
+		Use:   "find",
+		Short: "find path by a part of them",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			useIndex := -1
+			usePath := "."
+			if len(args) == 0 {
+				dirhandle.PrintDir(configure.UsedConfig.LastIndex)
+			} else {
+				configure.PathWorker(func(index int, path string) {
+					for _, search := range args {
+						found := strings.Contains(path, search)
+						if found {
+							useIndex = index
+							usePath = path
+							GetLogger().WithFields(logrus.Fields{"index": useIndex, "path": usePath}).Debug("Found match by comparing strings")
+						} else {
+							// this part is not found. but maybe it is a index number?
+							sIndex, err := strconv.Atoi(search)
+							if err == nil && index == sIndex {
+								useIndex = index
+								usePath = path
+								GetLogger().WithFields(logrus.Fields{"index": useIndex, "path": usePath}).Debug("Found match by using param as index")
+							}
+						}
+					}
+				})
+
+				if useIndex >= 0 && useIndex != configure.UsedConfig.LastIndex {
+					configure.UsedConfig.LastIndex = useIndex
+					configure.SaveDefaultConfiguration(true)
+				}
+
+				fmt.Println(usePath)
+			}
+
 		},
 	}
 
@@ -478,6 +519,7 @@ func initCobra() {
 	dirCmd.AddCommand(addPaths)
 	dirCmd.AddCommand(listPaths)
 	dirCmd.AddCommand(removePath)
+	dirCmd.AddCommand(findPath)
 
 	dirCmd.Flags().IntVarP(&pathIndex, "index", "i", -1, "get path by the index in order the paths are stored")
 	dirCmd.Flags().BoolP("clear", "C", false, "remove all path assigments")
