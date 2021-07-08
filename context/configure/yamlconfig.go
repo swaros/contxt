@@ -58,6 +58,7 @@ type Config struct {
 	Variables    map[string]string `yaml:"variables,omitempty"`
 	Autorun      Autorun           `yaml:"autorun"`
 	Imports      []string          `yaml:"imports"`
+	Use          []string          `yaml:"use"`
 }
 
 // Require defines what is required to execute the task

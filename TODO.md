@@ -169,3 +169,31 @@ include:
 ##### IMPLEMENTATION
 
 ![task Status](https://img.shields.io/badge/status-open-red)
+
+---
+
+#### auto create .bashrc contnt
+
+````shell
+### begin contxt bashrc
+function cn() { cd $(contxt dir -i "$@"); }
+function ctx() {        
+	contxt "$@";
+        case $1 in
+          switch)          
+          cd $(contxt dir --last);
+          contxt dir paths --coloroff --nohints
+          ;;
+        esac
+}
+function ctxcompletion() {        
+        ORIG=$(contxt completion bash)
+        CM="contxt"
+        CT="ctx"
+        CTXC="${ORIG//$CM/$CT}"
+        echo "$CTXC"
+}
+source <(contxt completion bash)
+source <(ctxcompletion)
+### end of contxt bashrc
+````

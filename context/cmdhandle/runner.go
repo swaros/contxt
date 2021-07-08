@@ -3,6 +3,7 @@ package cmdhandle
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -33,6 +34,9 @@ var (
 	leftLen       int
 	rightLen      int
 	showInvTarget bool
+	uselastIndex  bool
+	showHints     bool
+	preVars       map[string]string
 
 	rootCmd = &cobra.Command{
 		Use:   "contxt",
@@ -83,7 +87,7 @@ fish:
 
   `,
 		DisableFlagsInUseLine: true,
-		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+		ValidArgs:             []string{"bash", "zsh", "fish"},
 		Args:                  cobra.ExactValidArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			switch args[0] {
@@ -123,6 +127,23 @@ if these task are defined
 		},
 	}
 
+	workspaceCmd = &cobra.Command{
+		Use:   "workspace",
+		Short: "create new workspace if not exists, and use them",
+		Long: `create a new workspace if not exists.
+if the workspace is exists, we will just use them.
+you need to set the name for the workspace`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			workspace, _ := cmd.Flags().GetString("name")
+			if workspace == "" {
+				output.Error("paramater missing", "name is required")
+			} else {
+				configure.ChangeWorkspace(workspace, callBackOldWs, callBackNewWs)
+			}
+		},
+	}
+
 	dirCmd = &cobra.Command{
 		Use:   "dir",
 		Short: "handle workspaces and assigned paths",
@@ -133,6 +154,12 @@ if these task are defined
 			defaulttask := true
 			if pathIndex >= 0 {
 				dirhandle.PrintDir(pathIndex)
+				defaulttask = false
+			}
+
+			if uselastIndex {
+				GetLogger().WithField("dirIndex", configure.UsedConfig.LastIndex).Debug("current stored index")
+				dirhandle.PrintDir(configure.UsedConfig.LastIndex)
 				defaulttask = false
 			}
 
@@ -169,12 +196,52 @@ if these task are defined
 			dir, err := dirhandle.Current()
 			if err == nil {
 				count := configure.ShowPaths(dir)
-				if count > 0 {
+				if count > 0 && !showHints {
 					fmt.Println()
-					fmt.Println(output.MessageCln("\t", "to change directory depending stored path you can write ", output.BoldTag, "cd $(", os.Args[0], " -i ", count-1, ")", output.CleanTag, " in bash"))
+					fmt.Println(output.MessageCln("\t", "if you have installed the shell functions ", output.ForeDarkGrey, "(contxt install bash|zsh|fish)", output.CleanTag, " change the directory by ", output.BoldTag, "cn ", count-1))
 					fmt.Println(output.MessageCln("\t", "this will be the same as ", output.BoldTag, "cd ", dirhandle.GetDir(count-1)))
 				}
 			}
+		},
+	}
+
+	findPath = &cobra.Command{
+		Use:   "find",
+		Short: "find path by a part of them",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			useIndex := -1
+			usePath := "."
+			if len(args) == 0 {
+				dirhandle.PrintDir(configure.UsedConfig.LastIndex)
+			} else {
+				configure.PathWorker(func(index int, path string) {
+					for _, search := range args {
+						found := strings.Contains(path, search)
+						if found {
+							useIndex = index
+							usePath = path
+							GetLogger().WithFields(logrus.Fields{"index": useIndex, "path": usePath}).Debug("Found match by comparing strings")
+						} else {
+							// this part is not found. but maybe it is a index number?
+							sIndex, err := strconv.Atoi(search)
+							if err == nil && index == sIndex {
+								useIndex = index
+								usePath = path
+								GetLogger().WithFields(logrus.Fields{"index": useIndex, "path": usePath}).Debug("Found match by using param as index")
+							}
+						}
+					}
+				})
+
+				if useIndex >= 0 && useIndex != configure.UsedConfig.LastIndex {
+					configure.UsedConfig.LastIndex = useIndex
+					configure.SaveDefaultConfiguration(true)
+				}
+
+				fmt.Println(usePath)
+			}
+
 		},
 	}
 
@@ -286,6 +353,49 @@ you will also see if a unexpected propertie found `,
 		},
 	}
 
+	installCmd = &cobra.Command{
+		Use:   "install",
+		Short: "install shell functions",
+		Long: `updates shell related files to get contxt running
+		as shortcut ctx. this will allow changing directories depending
+		on a context switch.
+		`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+		},
+	}
+
+	installBashRc = &cobra.Command{
+		Use:   "bashrc",
+		Short: "updates bashrc for using ctx alias",
+		Long: `writes needed functions into the users private .bashrc file.
+		This includes code completion and the ctx alias.
+		`,
+		Run: func(cmd *cobra.Command, args []string) {
+			BashUser()
+		},
+	}
+
+	installFish = &cobra.Command{
+		Use:   "fish",
+		Short: "create fish shell env for ctx",
+		Long: `create needed fish functions, auto completion for ctx
+		`,
+		Run: func(cmd *cobra.Command, args []string) {
+			FishUpdate(cmd)
+		},
+	}
+
+	installZsh = &cobra.Command{
+		Use:   "zsh",
+		Short: "create zsh shell env for ctx",
+		Long: `create needed zsh functions and auto completion for zsh
+		`,
+		Run: func(cmd *cobra.Command, args []string) {
+			ZshUpdate(cmd)
+		},
+	}
+
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "run a target in contxt.yml task file",
@@ -294,6 +404,13 @@ you will also see if a unexpected propertie found `,
 			checkRunFlags(cmd, args)
 			GetLogger().WithField("args", args).Info("Run triggered")
 			GetLogger().WithField("all", runAtAll).Info("all workspaces?")
+
+			//if preVars != nil {
+			for preKey, preValue := range preVars {
+				GetLogger().WithFields(logrus.Fields{"key": preKey, "val": preValue}).Info("prevalue set by argument")
+				SetPH(preKey, preValue)
+			}
+			//}
 
 			if len(args) == 0 {
 				printTargets()
@@ -328,6 +445,40 @@ you will also see if a unexpected propertie found `,
 			return targets, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
+	sharedCmd = &cobra.Command{
+		Use:   "shared",
+		Short: "manage shared tasks",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+		},
+	}
+
+	sharedListCmd = &cobra.Command{
+		Use:   "list",
+		Short: "list local shared tasks",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			sharedDirs, _ := ListUseCases(false)
+			for _, sharedPath := range sharedDirs {
+				fmt.Println(sharedPath)
+			}
+		},
+	}
+
+	sharedUpdateCmd = &cobra.Command{
+		Use:   "update",
+		Short: "updates shared uses if possible (git based)",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			useCases, err := ListUseCases(true)
+			if err == nil {
+				for _, path := range useCases {
+					fmt.Println(output.MessageCln("check usage ", output.ForeCyan, path))
+					UpdateUseCase(path)
+				}
+			}
+		},
+	}
 )
 
 func checkRunFlags(cmd *cobra.Command, args []string) {
@@ -340,11 +491,16 @@ func checkDirFlags(cmd *cobra.Command, args []string) {
 	if err == nil && pindex >= 0 {
 		pathIndex = pindex
 	}
+	GetLogger().WithFields(logrus.Fields{"current": configure.UsedConfig.LastIndex, "index": pindex}).Trace("Index detection")
+	if pindex >= 0 && pindex != configure.UsedConfig.LastIndex {
+		configure.UsedConfig.LastIndex = pindex
+		configure.SaveDefaultConfiguration(true)
+	}
 
 	clearTask, _ = cmd.Flags().GetBool("clear")
 	deleteWs, _ = cmd.Flags().GetString("delete")
 	setWs, _ = cmd.Flags().GetString("workspace")
-
+	uselastIndex, _ = cmd.Flags().GetBool("last")
 }
 
 func checkDefaultFlags(cmd *cobra.Command, args []string) {
@@ -363,18 +519,22 @@ func initCobra() {
 	dirCmd.AddCommand(addPaths)
 	dirCmd.AddCommand(listPaths)
 	dirCmd.AddCommand(removePath)
+	dirCmd.AddCommand(findPath)
 
 	dirCmd.Flags().IntVarP(&pathIndex, "index", "i", -1, "get path by the index in order the paths are stored")
 	dirCmd.Flags().BoolP("clear", "C", false, "remove all path assigments")
+	dirCmd.Flags().BoolP("last", "l", false, "get last used path index number")
 	dirCmd.Flags().StringP("delete", "d", "", "remove workspace")
 	dirCmd.Flags().StringP("workspace", "w", "", "set workspace. if not exists a new workspace will be created")
 
 	runCmd.Flags().BoolP("all-paths", "a", false, "run targets in all paths in the current workspace")
 	runCmd.Flags().Bool("all-targets", false, "show all targets. including invisible")
+	runCmd.Flags().StringToStringVarP(&preVars, "var", "v", nil, "set variables by keyname and value.")
 
 	createCmd.AddCommand(createImport)
 
 	rootCmd.PersistentFlags().BoolVarP(&showColors, "coloroff", "c", false, "disable usage of colors in output")
+	rootCmd.PersistentFlags().BoolVarP(&showHints, "nohints", "n", false, "disable printing hints")
 	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", "FATAL", "set loglevel")
 	rootCmd.AddCommand(dirCmd)
 	rootCmd.AddCommand(runCmd)
@@ -391,6 +551,18 @@ func initCobra() {
 
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(gotoCmd)
+
+	installCmd.AddCommand(installBashRc)
+	installCmd.AddCommand(installFish)
+	installCmd.AddCommand(installZsh)
+	rootCmd.AddCommand(installCmd)
+
+	workspaceCmd.Flags().String("name", "", "set the name for the workspace. REQUIRED")
+	rootCmd.AddCommand(workspaceCmd)
+
+	sharedCmd.AddCommand(sharedListCmd)
+	sharedCmd.AddCommand(sharedUpdateCmd)
+	rootCmd.AddCommand(sharedCmd)
 
 }
 
@@ -473,7 +645,7 @@ func callBackOldWs(oldws string) bool {
 				"templateFile": templateFile,
 				"target":       onleaveTarget,
 			}).Info("execute leave-action")
-			RunTargets(onleaveTarget)
+			RunTargets(onleaveTarget, true)
 
 		}
 
@@ -500,7 +672,7 @@ func callBackNewWs(newWs string) {
 				"templateFile": templateFile,
 				"target":       onEnterTarget,
 			}).Info("execute enter-action")
-			RunTargets(onEnterTarget)
+			RunTargets(onEnterTarget, true)
 		}
 
 	})
@@ -559,7 +731,7 @@ func printTargets() {
 }
 
 func runTargets(path string, targets string) {
-	RunTargets(targets)
+	RunTargets(targets, true)
 }
 
 func printOutHeader() {
@@ -612,13 +784,18 @@ func printPaths() {
 			fmt.Println(output.MessageCln(output.BackYellow, output.ForeBlue, " WARNING ! ", output.CleanTag, "\tyou are currently in none of the assigned locations."))
 			fmt.Println("\t\tso maybe you are using the wrong workspace")
 		}
+		if !showHints {
+			fmt.Println()
+			fmt.Println(output.MessageCln(" targets can be executes by ", output.BoldTag, "contxt run <targetname>", output.CleanTag, "(for the current directory)"))
+			fmt.Println(output.MessageCln(" a target can also be executed in all stored paths by ", output.BoldTag, "contxt run -a <targetname>", output.CleanTag, " independend from current path"))
+		}
 
 		fmt.Println()
-		fmt.Println(output.MessageCln(" targets can be executes by ", output.BoldTag, "contxt run <targetname>", output.CleanTag, "(for the current directory)"))
-		fmt.Println(output.MessageCln(" a target can also be executed in all stored paths by ", output.BoldTag, "contxt run -a <targetname>", output.CleanTag, " independend from current path"))
-
-		fmt.Println()
-		fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", output.BoldTag, "contxt <workspace>", ""))
+		if !showHints {
+			fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", output.BoldTag, "contxt <workspace>", ""))
+		} else {
+			fmt.Println(output.MessageCln(" all workspaces:"))
+		}
 		configure.WorkSpaces(func(name string) {
 			if name == configure.UsedConfig.CurrentSet {
 				fmt.Println(output.MessageCln("\t[ ", output.BoldTag, name, output.CleanTag, " ]"))

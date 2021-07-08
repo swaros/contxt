@@ -4,6 +4,7 @@ package configure
 type Configuration struct {
 	CurrentSet string
 	Paths      []string
+	LastIndex  int
 }
 
 // CommandLine defines a line of commands that can be executed
@@ -31,4 +32,12 @@ type ExecuteDefinition struct {
 type RequireCheck struct {
 	FileExists    []string
 	FileNotExists []string
+}
+
+type GitVersionInfo struct {
+	HashUsed    string
+	Reference   string
+	Repositiory string
+	Path        string
+	Exists      bool
 }

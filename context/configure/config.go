@@ -15,17 +15,89 @@ import (
 
 const (
 	// DefaultConfigFileName is the main config json file name.
-	DefaultConfigFileName = "config.json"
+	DefaultConfigFileName = "contxt_current_config.json"
 	// DefaultPath this is the default path to store gocd configurations
 	DefaultPath = "/.contxt/"
 	// DefaultWorkspace this is the main configuration workspace
-	DefaultWorkspace = "default"
+	DefaultWorkspace = "default_contxt_ws"
 	// MirrorPath path for local mirror
 	MirrorPath = "mirror/"
+
+	Sharedpath = "shared/"
 )
 
 // UsedConfig is the the current used configuration
 var UsedConfig Configuration
+
+var badCharacters = []string{
+	"../",
+	"<!--",
+	"-->",
+	"<",
+	">",
+	"'",
+	"\"",
+	"&",
+	"$",
+	"#",
+	"{", "}", "[", "]", "=",
+	";", "?", "%20", "%22",
+	"%3c",   // <
+	"%253c", // <
+	"%3e",   // >
+	"",      // > -- fill in with % 0 e - without spaces in between
+	"%28",   // (
+	"%29",   // )
+	"%2528", // (
+	"%26",   // &
+	"%24",   // $
+	"%3f",   // ?
+	"%3b",   // ;
+	"%3d",   // =
+}
+
+func RemoveBadCharacters(input string, dictionary []string) string {
+
+	temp := input
+
+	for _, badChar := range dictionary {
+		temp = strings.Replace(temp, badChar, "", -1)
+	}
+	return temp
+}
+
+func SanitizeFilename(name string, relativePath bool) string {
+
+	// default settings
+	var badDictionary []string = badCharacters
+
+	if name == "" {
+		return name
+	}
+
+	// if relativePath is TRUE, we preserve the path in the filename
+	// If FALSE and will cause upper path foldername to merge with filename
+	// USE WITH CARE!!!
+
+	if !relativePath {
+		// add additional bad characters
+		badDictionary = append(badCharacters, "./")
+		badDictionary = append(badDictionary, "/")
+	}
+
+	// trim(remove)white space
+	trimmed := strings.TrimSpace(name)
+
+	// trim(remove) white space in between characters
+	trimmed = strings.Replace(trimmed, " ", "", -1)
+
+	// remove bad characters from filename
+	trimmed = RemoveBadCharacters(trimmed, badDictionary)
+
+	stripped := strings.Replace(trimmed, "\\", "", -1)
+
+	return stripped
+}
 
 func getUserDir() (string, error) {
 	usr, err := user.Current()
@@ -33,6 +105,16 @@ func getUserDir() (string, error) {
 		log.Fatal(err)
 	}
 	return usr.HomeDir, err
+}
+
+func GetSharedPath(sharedName string) (string, error) {
+	fileName := SanitizeFilename(sharedName, true)
+	sharedDir, err := getConfigPath(Sharedpath)
+	if err == nil {
+		var configPath = sharedDir + fileName
+		return configPath, err
+	}
+	return "", err
 }
 
 // InitConfig initilize the configuration files
@@ -82,7 +164,7 @@ func RemoveWorkspace(name string) {
 	path, err := getConfigPath(name + ".json")
 	if err == nil {
 		var cfgExists, err = exists(path)
-		if err == nil && cfgExists == true {
+		if err == nil && cfgExists {
 			os.Remove(path)
 		} else {
 			fmt.Println("no workspace exists with name: ", output.MessageCln(output.ForeLightYellow, name))
@@ -130,8 +212,8 @@ func ListWorkSpaces() []string {
 
 // DisplayWorkSpaces prints out all workspaces
 func DisplayWorkSpaces() {
-	var files []string
-	files = ListWorkSpaces()
+	//var files []string
+	files := ListWorkSpaces()
 
 	if len(files) > 0 {
 		for _, file := range files {
@@ -176,8 +258,8 @@ func GetWorkSpacesAsList() ([]string, bool) {
 
 // WorkSpaces handler to iterate all workspaces
 func WorkSpaces(callback func(string)) {
-	var files []string
-	files = ListWorkSpaces()
+	//var files []string
+	files := ListWorkSpaces()
 
 	if len(files) > 0 {
 		for _, file := range files {
@@ -193,6 +275,11 @@ func WorkSpaces(callback func(string)) {
 			}
 		}
 	}
+}
+
+// SetLastIndex stores the last used index to get back to them after switch
+func SetLastIndex(index int) {
+
 }
 
 // ShowPaths : display all stored paths in the workspace
@@ -214,7 +301,7 @@ func ShowPaths(current string) int {
 func PathWorker(callback func(int, string)) {
 	cnt := len(UsedConfig.Paths)
 	if cnt < 1 {
-		fmt.Println(output.MessageCln("\t", output.ForeRed, "no paths actually stored"))
+		fmt.Println(output.MessageCln("\t", output.ForeYellow, "no paths actually stored ", output.ForeDarkGrey, UsedConfig.CurrentSet))
 		return
 	}
 	for index, path := range UsedConfig.Paths {
@@ -310,7 +397,7 @@ func checkSetup() error {
 		var configPath = homeDir + DefaultPath + DefaultConfigFileName
 		pathExists, err := exists(dirPath)
 		// path dos not exists. create it
-		if pathExists == false && err == nil {
+		if !pathExists && err == nil {
 			err := os.Mkdir(dirPath, os.ModePerm)
 			if err != nil {
 				log.Fatal(err)
@@ -320,12 +407,12 @@ func checkSetup() error {
 
 		configFileExists, err := exists(configPath)
 		// no config file exists. create default config
-		if configFileExists == false && err == nil {
+		if !configFileExists && err == nil {
 			createDefaultConfig()
 		}
 
 		// load config file
-		if configFileExists == true && err == nil {
+		if configFileExists && err == nil {
 			loadConfigurationFile(configPath)
 			if UsedConfig.CurrentSet == "" {
 				UsedConfig.CurrentSet = DefaultWorkspace
@@ -347,6 +434,7 @@ func checkSetup() error {
 	return err
 }
 
+/*
 func getUserConfig() (string, error) {
 	homeDir, err := getUserDir()
 	if err == nil {
@@ -354,7 +442,7 @@ func getUserConfig() (string, error) {
 	}
 	return homeDir, err
 }
-
+*/
 func exists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
