@@ -617,6 +617,9 @@ func MainExecute() {
 		log.Fatal(configErr)
 	}
 
+	currentDir, _ := dirhandle.Current()
+	SetPH("CTX_PWD", currentDir)
+
 	// first handle shortcuts
 	// before we get cobra controll
 	if !shortcuts() {
