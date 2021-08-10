@@ -42,7 +42,7 @@ func SharedFolderExecuter(template configure.RunConfig, locationHandle func(stri
 			os.Chdir(externalPath)
 			locationHandle(externalPath, currentDir)
 			os.Chdir(currentDir)
-		}		
+		}
 	}
 }
 

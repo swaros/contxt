@@ -267,6 +267,7 @@ func ImportFolders(templatePath string, paths ...string) (string, error) {
 	}
 
 	for _, path := range paths {
+		path = HandlePlaceHolder(path)
 		GetLogger().WithField("folder", path).Debug("process path")
 		pathMap, parseErr := ImportFolder(path, templatePath)
 		if parseErr != nil {
