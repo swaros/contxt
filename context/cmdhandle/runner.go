@@ -438,7 +438,8 @@ you will also see if a unexpected propertie found `,
 			if len(args) != 0 {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
-			targets, found := targetsAsMap()
+			//targets, found := targetsAsMap()
+			targets, found := getAllTargets()
 			if !found {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
@@ -689,6 +690,28 @@ func doMagicParamOne(param string) bool {
 	})
 
 	return result
+}
+
+func getAllTargets() ([]string, bool) {
+	plainTargets, found := targetsAsMap()
+	template, _, exists := GetTemplate()
+	if exists {
+		shareds := detectSharedTargetsAsMap(template)
+		plainTargets = append(plainTargets, shareds...)
+	}
+	return plainTargets, exists && found
+}
+
+func detectSharedTargetsAsMap(current configure.RunConfig) []string {
+	var targets []string
+	SharedFolderExecuter(current, func(sharedDir, currentDir string) {
+		sharedTargets, have := targetsAsMap()
+		if have {
+			targets = append(targets, sharedTargets...)
+		}
+	})
+
+	return targets
 }
 
 func targetsAsMap() ([]string, bool) {

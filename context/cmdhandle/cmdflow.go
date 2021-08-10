@@ -32,6 +32,20 @@ const (
 	ExitAlreadyRunning = 105
 )
 
+func SharedFolderExecuter(template configure.RunConfig, locationHandle func(string, string)) {
+	if len(template.Config.Use) > 0 {
+		GetLogger().WithField("uses", template.Config.Use).Info("shared executer")
+		for _, shared := range template.Config.Use {
+			externalPath := HandleUsecase(shared)
+			GetLogger().WithField("path", externalPath).Info("shared contxt location")
+			currentDir, _ := dirhandle.Current()
+			os.Chdir(externalPath)
+			locationHandle(externalPath, currentDir)
+			os.Chdir(currentDir)
+		}		
+	}
+}
+
 func RunShared(targets string) {
 
 	allTargets := strings.Split(targets, ",")
@@ -71,7 +85,12 @@ func RunShared(targets string) {
 // RunTargets executes multiple targets
 func RunTargets(targets string, sharedRun bool) {
 
+	SetPH("CTX_TARGETS", targets)
+
 	if sharedRun {
+		// do it here makes sure we are not in the shared scope
+		currentDir, _ := dirhandle.Current()
+		SetPH("CTX_PWD", currentDir)
 		// run shared use
 		RunShared(targets)
 	}
@@ -122,6 +141,7 @@ func RunTargets(targets string, sharedRun bool) {
 	if !runSequencially {
 		// run in thread
 		for _, runTarget := range allTargets {
+			SetPH("CTX_TARGET", runTarget)
 			wg.Add(1)
 			fmt.Println(output.MessageCln(output.ForeBlue, "[exec:async] ", output.BoldTag, runTarget, " ", output.ForeWhite, templatePath))
 			go ExecuteTemplateWorker(&wg, true, runTarget, template)
@@ -130,6 +150,7 @@ func RunTargets(targets string, sharedRun bool) {
 	} else {
 		// trun one by one
 		for _, runTarget := range allTargets {
+			SetPH("CTX_TARGET", runTarget)
 			fmt.Println(output.MessageCln(output.ForeBlue, "[exec:seq] ", output.BoldTag, runTarget, " ", output.ForeWhite, templatePath))
 			exitCode := ExecPathFile(&wg, false, template, runTarget)
 			GetLogger().WithField("exitcode", exitCode).Info("RunTarget [Sequencially runmode] done with exitcode")
