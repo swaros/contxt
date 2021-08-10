@@ -71,7 +71,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 			case fromJSONCmdMark:
 				if len(parts) >= 3 {
 					returnValue := ""
-					restSlice := parts[2:len(parts)]
+					restSlice := parts[2:]
 					cmd := strings.Join(restSlice, " ")
 					GetLogger().WithField("slice", restSlice).Info("execute for import-json-exec")
 					ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
@@ -91,7 +91,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 			case parseVarsMark:
 				if len(parts) >= 2 {
 					var returnValues []string
-					restSlice := parts[2:len(parts)]
+					restSlice := parts[2:]
 					cmd := strings.Join(restSlice, " ")
 					internalCode, cmdCode, errorFromCm := ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
 						returnValues = append(returnValues, output)
@@ -136,9 +136,8 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						}).Debug("... delegate script")
 						abort, rCode, subs := TryParse(parsedExecLines, regularScript)
 						returnCode = rCode
-						for _, subLine := range subs {
-							parsedScript = append(parsedScript, subLine)
-						}
+						parsedScript = append(parsedScript, subs...)
+
 						if abort {
 							abortFound = true
 							return false
