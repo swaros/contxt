@@ -751,6 +751,15 @@ func printTargets() {
 			fmt.Println(output.MessageCln("that is what we gor so far:"))
 			fmt.Println()
 		}
+
+		sharedTargets := detectSharedTargetsAsMap(template)
+		if len(sharedTargets) > 0 {
+
+			for _, stasks := range sharedTargets {
+				fmt.Println("\t", stasks, output.MessageCln(output.ForeDarkGrey, " shared", output.CleanTag))
+			}
+
+		}
 	} else {
 		fmt.Println(output.MessageCln(output.ForeCyan, "no task-file exists. you can create one by ", output.CleanTag, " contxt create"))
 	}
