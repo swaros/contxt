@@ -199,22 +199,63 @@ func checkRequirements(require configure.Require) (bool, string) {
 	}
 	// check environment variable is set
 
-	for name, value := range require.Environment {
-		envVar := os.Getenv(name)
-		if envVar != value {
-			return false, "environment variable[" + name + "] not matching with " + value
+	for name, pattern := range require.Environment {
+		envVar, envExists := os.LookupEnv(name)
+		if !envExists || !StringMatchTest(pattern, envVar) {
+			if envExists {
+				return false, "environment variable[" + name + "] not matching with " + pattern
+			}
+			return false, "environment variable[" + name + "] not exists"
 		}
 	}
 
 	// check variables
-	for name, value := range require.Variables {
-		defVar := GetPH(name)
-		if defVar != value {
-			return false, "runtime variable variable[" + name + "] not matching with " + value
+	for name, pattern := range require.Variables {
+		defVar, defExists := GetPHExists(name)
+		if !defExists || !StringMatchTest(pattern, defVar) {
+			if defExists {
+				return false, "runtime variable[" + name + "] not matching with " + pattern
+			}
+			return false, "runtime variable[" + name + "] not exists "
 		}
 	}
 
 	return true, ""
+}
+
+// StringMatchTest test a pattern and a value.
+// in this example: myvar: "=hello"
+// the patter is "=hello" and the value should be "hello" for a match
+func StringMatchTest(pattern, value string) bool {
+	first := pattern
+	maybeMatch := value
+	if len(pattern) > 1 {
+		maybeMatch = pattern[1:]
+		first = pattern[0:1]
+	}
+	switch first {
+	case "?":
+		GetLogger().WithFields(logrus.Fields{"pattern": pattern, "value": value, "check": first, "result": (value != "")}).Debug("check anything then empty")
+		return (value != "")
+	case "=":
+		GetLogger().WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch == value)}).Debug("check equal")
+		return (maybeMatch == value)
+	case "!":
+		GetLogger().WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch != value)}).Debug("check not equal")
+		return (maybeMatch != value)
+	case ">":
+		GetLogger().WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch < value)}).Debug("check greather then")
+		return (value > maybeMatch)
+	case "<":
+		GetLogger().WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch > value)}).Debug("check lower then")
+		return (value < maybeMatch)
+	case "*":
+		GetLogger().WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch > value)}).Debug("check lower then")
+		return (value != "")
+	default:
+		GetLogger().WithFields(logrus.Fields{"pattern": pattern, "value": value, "check": first, "result": (value != "")}).Debug("check equal against plain values")
+		return (pattern == value)
+	}
 }
 
 func listenerWatch(script configure.Task, target, logLine string, waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig) {
@@ -471,6 +512,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				if !canRun {
 					GetLogger().WithFields(logrus.Fields{
 						"target": target,
+						"reason": message,
 					}).Info("executeTemplate IGNORE because requirements not matching")
 					if script.Options.Displaycmd {
 						fmt.Println(output.MessageCln(output.ForeYellow, " [require] ", output.ForeBlue, message))
