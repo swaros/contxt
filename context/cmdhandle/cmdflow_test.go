@@ -336,3 +336,58 @@ func TestCase14Needs(t *testing.T) {
 		}
 	})
 }
+
+func TestStringMatcher(t *testing.T) {
+	// positive expectations
+	if !cmdhandle.StringMatchTest("=test", "test") {
+		t.Error("expect TRUE, =test should match with test")
+	}
+
+	if !cmdhandle.StringMatchTest("test", "test") {
+		t.Error("expect TRUE, test should not match with test")
+	}
+
+	if !cmdhandle.StringMatchTest(">50", "51") {
+		t.Error("expect TRUE, 51 should accepted as greater then 50")
+	}
+
+	if !cmdhandle.StringMatchTest("<50", "49") {
+		t.Error("expect TRUE, 49 should accepted as lower then 50")
+	}
+	if !cmdhandle.StringMatchTest("?", "something") {
+		t.Error("expect TRUE, ? should match with anything")
+	}
+
+	// negative tests result expected
+	if cmdhandle.StringMatchTest("=test", "test2") {
+		t.Error("expect FALSE, =test should not match with test2")
+	}
+
+	if cmdhandle.StringMatchTest("!test", "test") {
+		t.Error("expect FALSE, !test should (not) match with test by condition")
+	}
+
+	if cmdhandle.StringMatchTest(">test20", "test15") {
+		t.Error("expect FALSE, test20 is greater then test15")
+	}
+
+	if cmdhandle.StringMatchTest("<test20", "test35") {
+		t.Error("expect FALSE, test20 is lower then test35")
+	}
+
+	if cmdhandle.StringMatchTest("", "something") {
+		t.Error("expect FALSE, empty should not match")
+	}
+
+	if !cmdhandle.StringMatchTest("", "") {
+		t.Error("expect TRUE, empty should match to empty")
+	}
+
+	if cmdhandle.StringMatchTest("*", "") {
+		t.Error("expect FALSE, not-empty (*) placeholder should not match with empty")
+	}
+
+	if !cmdhandle.StringMatchTest("*", "something") {
+		t.Error("expect TRUE, not-empty placeholder should match with something")
+	}
+}

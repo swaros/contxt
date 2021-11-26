@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/imdario/mergo"
 	"github.com/tidwall/gjson"
 
 	"github.com/swaros/contxt/context/output"
@@ -72,17 +73,31 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				if len(parts) >= 3 {
 					returnValue := ""
 					restSlice := parts[2:]
+					keyname := parts[1]
 					cmd := strings.Join(restSlice, " ")
-					GetLogger().WithField("slice", restSlice).Info("execute for import-json-exec")
-					ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
+					GetLogger().WithFields(logrus.Fields{"key": keyname, "cmd": restSlice}).Info("execute for import-json-exec")
+					//GetLogger().WithField("slice", restSlice).Info("execute for import-json-exec")
+					execCode, realExitCode, execErr := ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
 						returnValue = returnValue + output
+						GetLogger().WithField("cmd-output", output).Info("result of command")
 						return true
 					}, func(proc *os.Process) {
 						GetLogger().WithField("import-json-proc", proc).Trace("import-json-process")
 					})
-					err := AddJSON(parts[1], returnValue)
-					if err != nil {
-						output.Error("import from json string failed", parts[2], err)
+
+					if execErr != nil {
+						GetLogger().WithFields(logrus.Fields{
+							"intern":       execCode,
+							"process-exit": realExitCode,
+							"key":          keyname,
+							"cmd":          restSlice}).Error("execute for import-json-exec failed")
+					} else {
+
+						err := AddJSON(keyname, returnValue)
+						if err != nil {
+							GetLogger().WithField("error-on-parsing-string", returnValue).Debug("result of command")
+							output.Error("import from json string failed", err, ' ', returnValue)
+						}
 					}
 				} else {
 					output.Error("invalid usage", fromJSONCmdMark, " needs 2 arguments at least. <keyname> <bash-command>")
@@ -250,16 +265,16 @@ func traceMap(mapShow map[string]interface{}, add string) {
 
 // MergeVariableMap merges two maps
 func MergeVariableMap(mapin map[string]interface{}, maporigin map[string]interface{}) map[string]interface{} {
-	for k, v := range mapin {
-		maporigin[k] = v
+	if err := mergo.Merge(&maporigin, mapin, mergo.WithOverride); err != nil {
+		output.Error("FATAL", "error while trying merge map")
+		os.Exit(10)
 	}
 	return maporigin
 }
 
 // ImportFolders import a list of folders recusiv
 func ImportFolders(templatePath string, paths ...string) (string, error) {
-	var mapOrigin map[string]interface{}
-	mapOrigin = make(map[string]interface{})
+	mapOrigin := GetOriginMap()
 
 	template, terr := ImportFileContent(templatePath)
 	if terr != nil {
@@ -274,6 +289,7 @@ func ImportFolders(templatePath string, paths ...string) (string, error) {
 			return "", parseErr
 		}
 		mapOrigin = MergeVariableMap(pathMap, mapOrigin)
+		UpdateOriginMap(mapOrigin)
 	}
 	result, herr := HandleJSONMap(template, mapOrigin)
 	if herr != nil {
@@ -285,8 +301,19 @@ func ImportFolders(templatePath string, paths ...string) (string, error) {
 }
 
 func GetOriginMap() map[string]interface{} {
+	exists, storedData := GetData("CTX_VAR_MAP")
+	if exists {
+		GetLogger().WithField("DATA", storedData).Trace("returning existing Variables map")
+		return storedData
+	}
 	mapOrigin := make(map[string]interface{})
+	GetLogger().Trace("returning NEW Variables map")
 	return mapOrigin
+}
+
+func UpdateOriginMap(mapData map[string]interface{}) {
+	GetLogger().WithField("DATA", mapData).Trace("update variables map")
+	AddData("CTX_VAR_MAP", mapData)
 }
 
 // ImportFolder reads folder recursiv and reads all .json, .yml and .yaml files
