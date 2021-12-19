@@ -1,0 +1,20 @@
+config:
+  coloroff: true
+task:
+  - id: check-eq
+    options:
+      variables:
+         test: okay
+    script:
+      - echo start
+      - "#@if-equals okay okay"
+      - echo inline
+      - "#@end"
+
+  - id: check-noeq
+    script:
+      - echo start2
+      - "#@if-equals okay notokay"
+      - echo inline
+      - "#@end"
+    

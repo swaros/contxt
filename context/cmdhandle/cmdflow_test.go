@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
 
 	"github.com/swaros/contxt/context/cmdhandle"
@@ -35,6 +36,22 @@ func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) {
 	testFunc(t)
 	os.Chdir(old)
 
+}
+
+func TestRunIfEquals(t *testing.T) {
+	folderRunner("./../../docs/test/ifequals", t, func(t *testing.T) {
+		cmdhandle.RunTargets("check-eq", true)
+		test1Result := cmdhandle.GetPH("RUN.check-eq.LOG.LAST")
+		if test1Result != "inline" {
+			t.Error("result 2 should be 'inline'.", test1Result)
+		}
+
+		cmdhandle.RunTargets("check-noeq", true)
+		test2Result := cmdhandle.GetPH("RUN.check-noeq.LOG.LAST")
+		if test2Result != "start2" {
+			t.Error("result 2 should be 'start2'.", test2Result)
+		}
+	})
 }
 
 func TestVariableReset(t *testing.T) {
@@ -85,7 +102,7 @@ func TestCase0(t *testing.T) {
 		}
 
 		if test2Result != "runs" {
-			t.Error("result 2 should be 'runs' instead we got.", test2Result)
+			t.Error("result 2 should be 'runs' instead we got.", "["+test2Result+"]")
 		}
 	})
 }
@@ -109,7 +126,7 @@ func TestRunTargetCase1(t *testing.T) {
 		}
 
 		scriptLast := cmdhandle.GetPH("RUN.SCRIPT_LINE")
-		if scriptLast != "echo 'runs'" {
+		if scriptLast != "echo runs" {
 			t.Error("unexpected result [", scriptLast, "]")
 		}
 	})
@@ -134,6 +151,9 @@ func TestRunTargetCase2(t *testing.T) {
 
 func TestRunTargetCase3(t *testing.T) {
 	// testing PID of my own and the parent process
+	if configure.GetOs() == "windows" {
+		return
+	}
 	caseRunner("3", t, func(t *testing.T) {
 		cmdhandle.RunTargets("base", true)
 		test1Result := cmdhandle.GetPH("RUN.base.LOG.HIT")

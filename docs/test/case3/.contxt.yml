@@ -6,8 +6,8 @@ task:
         displaycmd: true
         panelsize: 10
       script:       
-        - "echo 'launch'"
-        - "echo '${RUN.PID}'"
+        - "echo launch"
+        - "echo ${RUN.PID}"
       listener:
         - trigger:
             onoutContains:
@@ -19,4 +19,4 @@ task:
       options:
         displaycmd: true
       script:
-        - "echo '${RUN.base.PID}'"
+        - "echo ${RUN.base.PID}"

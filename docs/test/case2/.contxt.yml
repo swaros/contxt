@@ -5,8 +5,8 @@ task:
       options:
         displaycmd: true
       script:
-        - "echo 'start-task-2'"
-        - "echo 'something-else'"
+        - "echo start-task-2"
+        - "echo something-else"
       listener:
         - trigger:
             onoutContains:
@@ -18,4 +18,4 @@ task:
       options:
         displaycmd: true
       script:
-        - "echo 'im-task-2'"
+        - "echo im-task-2"

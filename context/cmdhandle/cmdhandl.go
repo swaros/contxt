@@ -38,7 +38,7 @@ const (
 	DefaultCommandFallBack = "bash"
 
 	// On windows we have a different default
-	DefaultCommandFallBackWindows = "cmd"
+	DefaultCommandFallBackWindows = "powershell"
 )
 
 // ExecuteTemplateWorker runs ExecCurrentPathTemplate in context of a waitgroup
@@ -55,7 +55,7 @@ func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, useWaitGroup bool, target 
 func GetDefaultCmdOpts(ShellToUse string, cmdArg []string) []string {
 	if configure.GetOs() == "windows" {
 		if cmdArg == nil && ShellToUse == DefaultCommandFallBackWindows {
-			cmdArg = []string{"/C"}
+			cmdArg = []string{"-nologo", "-noprofile"}
 		}
 	} else {
 		if cmdArg == nil && ShellToUse == DefaultCommandFallBack {

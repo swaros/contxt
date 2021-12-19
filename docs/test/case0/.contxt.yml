@@ -4,7 +4,7 @@ config:
 task:
     - id: test1
       script:
-        - "pwd"
+        - "echo something"
     - id: test2
       script:
-        - "echo 'runs'"
+        - "echo runs"
