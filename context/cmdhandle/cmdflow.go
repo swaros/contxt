@@ -364,6 +364,9 @@ func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason confi
 		panelSize = script.Options.Panelsize
 	}
 	var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
+	if configure.GetOs() == "windows" {
+		mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBackWindows)
+	}
 	replacedLine := HandlePlaceHolder(codeLine)
 	if script.Options.Displaycmd {
 		fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, replacedLine))

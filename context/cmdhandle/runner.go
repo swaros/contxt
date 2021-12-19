@@ -607,11 +607,15 @@ func shortcuts() bool {
 	return false
 }
 
+func InitDefaultVars() {
+	SetPH("CTX_OS", configure.GetOs())
+}
+
 // MainExecute runs main. parsing flags
 func MainExecute() {
 	pathIndex = -1
 	initLogger()
-
+	InitDefaultVars()
 	var configErr = configure.InitConfig()
 	if configErr != nil {
 		log.Fatal(configErr)
