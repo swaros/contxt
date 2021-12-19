@@ -191,8 +191,11 @@ func TestCase5(t *testing.T) {
 		//contains a mutliline shell script
 		cmdhandle.RunTargets("base", true)
 		log := cmdhandle.GetPH("RUN.base.LOG.LAST")
+		if log == "" {
+			t.Error("got empty result. that is not expected")
+		}
 		if log != "line4" {
-			t.Error("last log entrie should not be", log)
+			t.Error("expected 'line4'...but got ", log)
 		}
 	})
 }
@@ -247,7 +250,7 @@ func TestCase9(t *testing.T) {
 		}
 		test2 := cmdhandle.GetPH("RUN.test2.LOG.LAST")
 		if test2 != "lets go" {
-			t.Error("placeholder was not used in task variables. got:", test2)
+			t.Error("placeholder was not used in task variables. got:[", test2, "]")
 		}
 	})
 }

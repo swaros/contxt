@@ -16,4 +16,4 @@ task:
     variables:
       message: "${part1} ${part2}"
     script:
-      - echo ${message}
+      - echo "${message}"

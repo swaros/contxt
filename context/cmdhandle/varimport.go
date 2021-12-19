@@ -14,6 +14,7 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/tidwall/gjson"
 
+	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/sirupsen/logrus"
@@ -32,6 +33,7 @@ const (
 	fromJSONCmdMark = "#@import-json-exec"
 	parseVarsMark   = "#@var"
 	equalsMark      = "#@if-equals"
+	osCheck         = "#@if-os"
 	codeLinePH      = "__LINE__"
 	codeKeyPH       = "__KEY__"
 )
@@ -53,6 +55,20 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				continue
 			}
 			switch parts[0] {
+
+			case osCheck:
+				if !inIfState {
+					if len(parts) == 2 {
+						leftEq := parts[1]
+						rightEq := configure.GetOs()
+						inIfState = true
+						ifState = leftEq == rightEq
+					} else {
+						output.Error("invalid usage", equalsMark, "need: str1 str2 ")
+					}
+				} else {
+					output.Error("invalid usage", equalsMark, " can not be used in another if")
+				}
 
 			case equalsMark:
 				if !inIfState {
