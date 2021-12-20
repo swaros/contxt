@@ -52,6 +52,20 @@ func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, useWaitGroup bool, target 
 
 }
 
+func GetExecDefaults() (string, []string) {
+	cmd := GetDefaultCmd()
+	var args []string
+	args = GetDefaultCmdOpts(cmd, args)
+	return cmd, args
+}
+
+func GetDefaultCmd() string {
+	if configure.GetOs() == "windows" {
+		return DefaultCommandFallBackWindows
+	}
+	return DefaultCommandFallBack
+}
+
 func GetDefaultCmdOpts(ShellToUse string, cmdArg []string) []string {
 	if configure.GetOs() == "windows" {
 		if cmdArg == nil && ShellToUse == DefaultCommandFallBackWindows {

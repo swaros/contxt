@@ -110,7 +110,8 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					cmd := strings.Join(restSlice, " ")
 					GetLogger().WithFields(logrus.Fields{"key": keyname, "cmd": restSlice}).Info("execute for import-json-exec")
 					//GetLogger().WithField("slice", restSlice).Info("execute for import-json-exec")
-					execCode, realExitCode, execErr := ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
+					exec, args := GetExecDefaults()
+					execCode, realExitCode, execErr := ExecuteScriptLine(exec, args, cmd, func(output string) bool {
 						returnValue = returnValue + output
 						GetLogger().WithField("cmd-output", output).Info("result of command")
 						return true
@@ -141,7 +142,8 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					var returnValues []string
 					restSlice := parts[2:]
 					cmd := strings.Join(restSlice, " ")
-					internalCode, cmdCode, errorFromCm := ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
+					exec, args := GetExecDefaults()
+					internalCode, cmdCode, errorFromCm := ExecuteScriptLine(exec, args, cmd, func(output string) bool {
 						returnValues = append(returnValues, output)
 						return true
 					}, func(proc *os.Process) {

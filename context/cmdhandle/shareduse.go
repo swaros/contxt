@@ -168,7 +168,8 @@ func executeGitUpdate(path string) int {
 	currentDir, _ := dirhandle.Current()
 	os.Chdir(path)
 	gitCmd := "git fetch"
-	exitCode, _, _ := ExecuteScriptLine("bash", []string{"-c"}, gitCmd, func(feed string) bool {
+	exec, args := GetExecDefaults()
+	exitCode, _, _ := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
 		fmt.Println(output.MessageCln("\tgit: ", output.ForeLightYellow, feed))
 		return true
 	}, func(process *os.Process) {
@@ -182,7 +183,8 @@ func executeGitUpdate(path string) int {
 // first argument is the hash and the second one is the version
 func checkGitVersionInfo(usecase string, callback func(string, string)) (int, int, error) {
 	gitCmd := "git ls-remote --refs https://github.com/" + usecase
-	internalExitCode, cmdError, err := ExecuteScriptLine("bash", []string{"-c"}, gitCmd, func(feed string) bool {
+	exec, args := GetExecDefaults()
+	internalExitCode, cmdError, err := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
 		gitInfo := strings.Split(feed, "\t")
 		if len(gitInfo) >= 2 {
 			callback(gitInfo[0], gitInfo[1])
@@ -207,7 +209,8 @@ func createUseByGit(usecase, pathTouse string) string {
 	GetLogger().WithFields(logrus.Fields{"use": usecase, "path": pathTouse, "version": version}).Debug("Import Usecase")
 	path := ""
 	gitCmd := "git ls-remote --refs https://github.com/" + usecase
-	internalExitCode, cmdError, _ := ExecuteScriptLine("bash", []string{"-c"}, gitCmd, func(feed string) bool {
+	exec, args := GetExecDefaults()
+	internalExitCode, cmdError, _ := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
 		gitInfo := strings.Split(feed, "\t")
 		if len(gitInfo) >= 2 && gitInfo[1] == version {
 			GetLogger().WithFields(logrus.Fields{"git-info": gitInfo, "cnt": len(gitInfo)}).Debug("found matching version")
@@ -286,7 +289,8 @@ func takeCareAboutRepo(pathTouse string, config configure.GitVersionInfo) config
 
 			gitCmd := "git clone https://github.com/" + config.Repositiory + ".git " + pathTouse + "/source"
 			GetLogger().WithField("cmd", gitCmd).Info("using git to create ne checkout from repo")
-			codeInt, codeCmd, err := ExecuteScriptLine("bash", []string{"-c"}, gitCmd, func(feed string) bool {
+			exec, args := GetExecDefaults()
+			codeInt, codeCmd, err := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
 				fmt.Println(feed)
 				return true
 			}, func(process *os.Process) {
