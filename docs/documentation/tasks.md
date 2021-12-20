@@ -82,6 +82,18 @@ task:
 
 #### variables
 
+````yaml
+config:
+  variables:
+     hostname: "localhost"
+     update-command: git stash && git pull --rebase && git stash pop
+````
+to use them just write `${hostname}`. variables can be used in values only. 
+> if you like to being more flexible, contxt supports [sprig](http://masterminds.github.io/sprig/) 
+> by reading external `yaml` or `json` files. 
+> use `ctx create import <filename>` to create a relationship
+> to the files that should be used for templating
+
 variables are placeholder that can be set globaly or in a task. but any variable is accesible globaly allways, even if you define them in a task.
 **also keep in mind:** that means variables are not bound to a scope. 
 
