@@ -8,8 +8,7 @@ this will looks like this
 task:
   - id: script
     script:
-      - echo 'hallo welt'
-      - ls -ga
+      - echo "hello world"
 ````
 #### list and run a task
 with `contxt run` you will see all targets they can be started. 
@@ -29,34 +28,117 @@ to start the task just add the name to the run option `contxt run script`
 ````bash
 contxt run script
 [exec:async] script /home/user/project/.contxt.yml
-     script :   hallo welt 
-     script :   insgesamt 112 
-     script :   drwxrwxr-x. 10 tziegler  4096 16. Nov 08:06 . 
-     script :   drwxrwxr-x.  6 tziegler  4096 23. Okt 07:58 .. 
-     script :   drwxrwxr-x.  2 tziegler  4096 16. Nov 08:01 bin 
-     script :   drwxrwxr-x.  3 tziegler  4096  8. Okt 09:39 cmd 
-     script :   -rw-rw-r--.  1 tziegler    90  8. Okt 09:33 config.go 
-     script :   drwxrwxr-x.  7 tziegler  4096 14. Nov 12:48 context 
-     script :   -rw-rw-r--.  1 tziegler   142 21. Okt 12:16 .contxt.yml 
-     script :   drwxrwxr-x.  5 tziegler  4096 16. Nov 08:06 docs 
-     script :   drwxrwxr-x.  8 tziegler  4096 14. Nov 12:49 .git 
-     script :   drwxrwxr-x.  3 tziegler  4096  8. Okt 10:33 .github 
-     script :   -rw-rw-r--.  1 tziegler   273  8. Okt 10:21 .gitignore 
-     script :   -rw-rw-r--.  1 tziegler   310 14. Nov 12:49 go.mod 
-     script :   -rw-rw-r--.  1 tziegler 33032 14. Nov 12:49 go.sum 
-     script :   drwxrwxr-x.  2 tziegler  4096  8. Okt 09:29 internal 
-     script :   -rw-rw-r--.  1 tziegler  1071  8. Okt 09:16 LICENSE 
-     script :   -rw-rw-r--.  1 tziegler   747 14. Nov 12:48 Makefile 
-     script :   -rw-rw-r--.  1 tziegler  3246 14. Nov 12:49 README.md 
-     script :   -rw-rw-r--.  1 tziegler  4841 14. Nov 12:48 TODO.md 
-     script :   drwxrwxr-x.  2 tziegler  4096 14. Nov 12:49 .vscode 
+     script :   hello world 
 [done] script
 ````
+
+## structure 
+
+the structure differs to most of all other yaml based task runners or ci tools. contxt using a list of task and not a `[string]task` list.
+this results in a structure that may seems a little bit more complicated.
+but this allows us to define a task with different behaviors depending on some requirements. 
+
+like this.
+
+````yaml
+task:
+   - id: task
+     require:
+       system: linux
+     script:
+       - echo "hello linux"
+
+   - id: task
+     require:
+       system: windows
+     script:
+       - echo "hello windows"
+````
+in this case, we still execute this task on any system `ctx run task` but depending on the operating system, only the task that matches the requirements will be executed.
+
+you can also combine these as much if you like,for example to have a task that will runs allways, and othes they will check if the can run or not.
+
+````yaml
+task:
+   - id: task
+     script:
+       - echo "the current directory is "
+       
+   - id: task
+     require:
+       system: linux
+     script:
+       - pwd
+
+   - id: task
+     require:
+       system: windows
+     script:
+       - echo %CD%
+````
+### config
+
+**config** is a root element that defines the behavior of the task runner. 
+
+#### variables
+
+variables are placeholder that can be set globaly or in a task. but any variable is accesible globaly allways, even if you define them in a task.
+**also keep in mind:** that means variables are not bound to a scope. 
+
+to explain:
+
+````yaml
+config:
+config:
+  variables:
+     test-output: hello
+task:
+   - id: testvar
+     script:
+       - echo "${test-output} world"
+       
+   - id: rewrite
+     variables:
+       test-output: "rescue the "
+     script:
+       - echo "${test-output} world"
+
+````
+
+because we can run mutlipe targets at ones, we will do this now `ctx run testvar rewrite`. 
+
+````bash
+[exec:async] testvar /home/example4/.contxt.yml
+   testvar : hello world
+[done] testvar
+[exec:async] rewrite /home/example4/.contxt.yml
+   rewrite : rescue the  world
+[done] rewrite
+
+````
+
+so first **testvar** just prints the content of the global defined variable `${test-output}`.
+
+afterwards **rewrite** is executed and redefines these variable and prints them.
+and because this is a global change, it would be affect any other following tasks.
+
+so if we exectue the same in different order `ctx run rewrite testvar`, we got a different outcome.
+````bash
+[exec:async] rewrite /home/tziegler/code/playground/go/ctx-examples/example4/.contxt.yml
+   rewrite : rescue the  world
+[done] rewrite
+[exec:async] testvar /home/tziegler/code/playground/go/ctx-examples/example4/.contxt.yml
+   testvar : rescue the  world
+[done] testvar
+````
+now booth of the targets have the same content of the variable, because `rewrite` changed the value before `testvar` is executed.
+
 #### run task from anywhere
 by default **contxt** will run task in the current directory. but you can also run all task in the current workspace.
 `contxt run script -a`
 then **contxt** iterates over all assigned paths, checks if a task file exists, and if they have a task named *script*.
-if this is the case this task will be executed in this path.
+
+if this is the case, this task will be executed in this path.
 > this also means that you should name you targets with care. a task name that exists in different paths should 
 > do the same. so for example it is not a good idea to make dangerous task and name them like init.
 > a task name should always reflect the job he have to do.
@@ -77,5 +159,7 @@ there is additional output what is not interesting yet. you will see all targets
 so if you use `contxt run init -a` the task will be executed in path no **0** and **1**.
 if you use `contxt run build -a` it will run on target no **0** only because no other path a target named **build**
 and if you run `contxt run clean -a` it will run on target **0** and **2**
+
+###
 
 
