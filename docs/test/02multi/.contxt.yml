@@ -1,0 +1,16 @@
+config:  
+  sequencially: false
+  coloroff: true
+
+task:
+   - id: task
+     require:
+       system: linux
+     script:
+       - echo "hello linux"
+
+   - id: task
+     require:
+       system: windows
+     script:
+       - echo "hello windows"
