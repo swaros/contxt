@@ -89,7 +89,6 @@ to explain:
 
 ````yaml
 config:
-config:
   variables:
      test-output: hello
 task:
@@ -99,7 +98,7 @@ task:
        
    - id: rewrite
      variables:
-       test-output: "rescue the "
+       test-output: "rescue the"
      script:
        - echo "${test-output} world"
 
@@ -112,7 +111,7 @@ because we can run mutlipe targets at ones, we will do this now `ctx run testvar
    testvar : hello world
 [done] testvar
 [exec:async] rewrite /home/example4/.contxt.yml
-   rewrite : rescue the  world
+   rewrite : rescue the world
 [done] rewrite
 
 ````
