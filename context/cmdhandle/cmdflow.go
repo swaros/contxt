@@ -171,6 +171,15 @@ func setLogLevelByString(loglevel string) {
 }
 
 func checkRequirements(require configure.Require) (bool, string) {
+	// check operating system
+	if require.System != "" {
+		match := !StringMatchTest(require.System, configure.GetOs())
+		if !match {
+			return false, "operating system " + configure.GetOs() + " is not matching with " + require.System
+		}
+		return true, "matching os found " + require.System
+	}
+
 	// check file exists
 	for _, fileExists := range require.Exists {
 		fileExists = handlePlaceHolder(fileExists)
@@ -364,6 +373,9 @@ func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason confi
 		panelSize = script.Options.Panelsize
 	}
 	var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
+	if configure.GetOs() == "windows" {
+		mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBackWindows)
+	}
 	replacedLine := HandlePlaceHolder(codeLine)
 	if script.Options.Displaycmd {
 		fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, replacedLine))

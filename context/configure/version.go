@@ -1,5 +1,10 @@
 package configure
 
+import (
+	"runtime"
+	"strings"
+)
+
 // undefined variables they will be
 // set by the linker
 // example: go build -ldflags "-X github.com/swaros/contxt/context/configure.minversion=1-alpha -X github.com/swaros/contxt/context/configure.midversion=0 -X github.com/swaros/contxt/context/configure.mainversion=0"
@@ -11,6 +16,7 @@ var build string
 var mainversion string
 var midversion string
 var minversion string
+var operatingSystem string
 
 // GetVersion deleivers the current build version
 func GetVersion() string {
@@ -35,6 +41,13 @@ func GetVersion() string {
 	}
 
 	return outVersion
+}
+
+func GetOs() string {
+	if operatingSystem == "" {
+		return strings.ToLower(runtime.GOOS)
+	}
+	return strings.ToLower(operatingSystem)
 }
 
 // GetBuild returns Build time as build NO

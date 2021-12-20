@@ -14,6 +14,7 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/tidwall/gjson"
 
+	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/sirupsen/logrus"
@@ -31,6 +32,8 @@ const (
 	fromJSONMark    = "#@import-json"
 	fromJSONCmdMark = "#@import-json-exec"
 	parseVarsMark   = "#@var"
+	equalsMark      = "#@if-equals"
+	osCheck         = "#@if-os"
 	codeLinePH      = "__LINE__"
 	codeKeyPH       = "__KEY__"
 )
@@ -38,6 +41,8 @@ const (
 // TryParse to parse a line and set a value depending on the line command
 func TryParse(script []string, regularScript func(string) (bool, int)) (bool, int, []string) {
 	inIteration := false
+	inIfState := false
+	ifState := true
 	var iterationLines []string
 	var parsedScript []string
 	var iterationCollect gjson.Result
@@ -50,6 +55,34 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				continue
 			}
 			switch parts[0] {
+
+			case osCheck:
+				if !inIfState {
+					if len(parts) == 2 {
+						leftEq := parts[1]
+						rightEq := configure.GetOs()
+						inIfState = true
+						ifState = leftEq == rightEq
+					} else {
+						output.Error("invalid usage", equalsMark, "need: str1 str2 ")
+					}
+				} else {
+					output.Error("invalid usage", equalsMark, " can not be used in another if")
+				}
+
+			case equalsMark:
+				if !inIfState {
+					if len(parts) == 3 {
+						leftEq := parts[1]
+						rightEq := parts[2]
+						inIfState = true
+						ifState = leftEq == rightEq
+					} else {
+						output.Error("invalid usage", equalsMark, "need: str1 str2 ")
+					}
+				} else {
+					output.Error("invalid usage", equalsMark, " can not be used in another if")
+				}
 
 			case inlineMark:
 				if inIteration {
@@ -131,8 +164,14 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				}
 
 			case endMark:
-				GetLogger().Debug("ITERATION: DONE")
+
+				if inIfState {
+					GetLogger().Debug("IF: DONE")
+					inIfState = false
+					ifState = true
+				}
 				if inIteration {
+					GetLogger().Debug("ITERATION: DONE")
 					inIteration = false
 					abortFound := false
 					returnCode := ExitOk
@@ -183,11 +222,15 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 			}
 		} else {
 			parsedScript = append(parsedScript, line)
-			abort, returnCode := regularScript(line)
-			if abort {
-				return true, returnCode, parsedScript
+			// execute the *real* script lines
+			if ifState {
+				abort, returnCode := regularScript(line)
+				if abort {
+					return true, returnCode, parsedScript
+				}
+			} else {
+				GetLogger().WithField("code", line).Debug("ignored because of if state")
 			}
-
 		}
 	}
 	GetLogger().WithFields(logrus.Fields{
