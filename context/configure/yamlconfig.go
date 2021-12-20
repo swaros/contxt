@@ -67,6 +67,7 @@ type Require struct {
 	NotExists   []string          `yaml:"notExists"`
 	Environment map[string]string `yaml:"environment,omitempty"`
 	Variables   map[string]string `yaml:"variables,omitempty"`
+	System      string            `yaml:"system,omitempty"`
 }
 
 // Options are the per-task options

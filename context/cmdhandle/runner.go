@@ -438,7 +438,8 @@ you will also see if a unexpected propertie found `,
 			if len(args) != 0 {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
-			targets, found := targetsAsMap()
+			//targets, found := targetsAsMap()
+			targets, found := getAllTargets()
 			if !found {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
@@ -606,15 +607,22 @@ func shortcuts() bool {
 	return false
 }
 
+func InitDefaultVars() {
+	SetPH("CTX_OS", configure.GetOs())
+}
+
 // MainExecute runs main. parsing flags
 func MainExecute() {
 	pathIndex = -1
 	initLogger()
-
+	InitDefaultVars()
 	var configErr = configure.InitConfig()
 	if configErr != nil {
 		log.Fatal(configErr)
 	}
+
+	currentDir, _ := dirhandle.Current()
+	SetPH("CTX_PWD", currentDir)
 
 	// first handle shortcuts
 	// before we get cobra controll
@@ -691,6 +699,28 @@ func doMagicParamOne(param string) bool {
 	return result
 }
 
+func getAllTargets() ([]string, bool) {
+	plainTargets, found := targetsAsMap()
+	template, _, exists := GetTemplate()
+	if exists {
+		shareds := detectSharedTargetsAsMap(template)
+		plainTargets = append(plainTargets, shareds...)
+	}
+	return plainTargets, exists && found
+}
+
+func detectSharedTargetsAsMap(current configure.RunConfig) []string {
+	var targets []string
+	SharedFolderExecuter(current, func(sharedDir, currentDir string) {
+		sharedTargets, have := targetsAsMap()
+		if have {
+			targets = append(targets, sharedTargets...)
+		}
+	})
+
+	return targets
+}
+
 func targetsAsMap() ([]string, bool) {
 	var targets []string
 	found := false
@@ -724,6 +754,15 @@ func printTargets() {
 		} else {
 			fmt.Println(output.MessageCln("that is what we gor so far:"))
 			fmt.Println()
+		}
+
+		sharedTargets := detectSharedTargetsAsMap(template)
+		if len(sharedTargets) > 0 {
+
+			for _, stasks := range sharedTargets {
+				fmt.Println("\t", stasks, output.MessageCln(output.ForeDarkGrey, " shared", output.CleanTag))
+			}
+
 		}
 	} else {
 		fmt.Println(output.MessageCln(output.ForeCyan, "no task-file exists. you can create one by ", output.CleanTag, " contxt create"))

@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
-## [0.1.2] - til now
+## [0.1.3] - 2021-12-19
+### [Added]
+- **os-version-switch** added support for different os versions. tested on linux, windows. `CTX_OS` contains the os like *linux* or *windows* depending on the system. (runtime.GOOS is used, so no hardcoded enum). 
+-  **#@if-os** added a contxt if statetment that will accept following lines in a script section only, if the operation system matches. til `#@end`
+-  **#@if-equals** added a if statetement for scrit sections, that will check if 2 variables ar equals. til `#@end`
+-  **require variables/environments** added checkfor greater, lower equals and not equals. `VARNAME : ">500"` 
+-  **require system** added require check for the operation system
+-  **CTX_TARGET** variable added for the current executed Target.
+### [changes]
+-  **https://github.com/imdario/mergo** used instead of own implementation for merging maps.
+## [0.1.2] - 2021-07-08
 ### [Added]
 -  **shared task** storing task in the users contxt folder they can be used by the new **use** statement.it can be used in any .contxt.yml taskfile. afterwards any targets from this shared context can used in the run command.
 -  **gitlab based shared task** shared task can be fetched from gitlab by the nameing of the task. the content will be fetched by using git. 

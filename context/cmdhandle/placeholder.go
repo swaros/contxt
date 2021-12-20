@@ -23,7 +23,18 @@ func SetIfNotExists(key, value string) {
 
 }
 
-// GetPH the content og the key
+// GetPH the content of the key as string. if exists.
+func GetPHExists(key string) (string, bool) {
+	result, ok := keyValue.Load(key)
+	if ok {
+		return result.(string), ok
+	}
+	return "", ok
+}
+
+// GetPH the content of the key. but at least a empty
+// string if not exists. so this is not usefull
+// to test if the PH was set.
 func GetPH(key string) string {
 	result, ok := keyValue.Load(key)
 	if ok {

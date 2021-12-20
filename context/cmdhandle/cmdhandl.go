@@ -36,6 +36,9 @@ const (
 
 	// DefaultCommandFallBack is used if no command is defined
 	DefaultCommandFallBack = "bash"
+
+	// On windows we have a different default
+	DefaultCommandFallBackWindows = "powershell"
 )
 
 // ExecuteTemplateWorker runs ExecCurrentPathTemplate in context of a waitgroup
@@ -49,15 +52,37 @@ func ExecuteTemplateWorker(waitGroup *sync.WaitGroup, useWaitGroup bool, target 
 
 }
 
+func GetExecDefaults() (string, []string) {
+	cmd := GetDefaultCmd()
+	var args []string
+	args = GetDefaultCmdOpts(cmd, args)
+	return cmd, args
+}
+
+func GetDefaultCmd() string {
+	if configure.GetOs() == "windows" {
+		return DefaultCommandFallBackWindows
+	}
+	return DefaultCommandFallBack
+}
+
+func GetDefaultCmdOpts(ShellToUse string, cmdArg []string) []string {
+	if configure.GetOs() == "windows" {
+		if cmdArg == nil && ShellToUse == DefaultCommandFallBackWindows {
+			cmdArg = []string{"-nologo", "-noprofile"}
+		}
+	} else {
+		if cmdArg == nil && ShellToUse == DefaultCommandFallBack {
+			cmdArg = []string{"-c"}
+		}
+	}
+	return cmdArg
+}
+
 // ExecuteScriptLine executes a simple shell script
 // returns internal exitsCode, process existcode, error
 func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callback func(string) bool, startInfo func(*os.Process)) (int, int, error) {
-
-	// default behavior. -c param is not set by default
-	if cmdArg == nil && ShellToUse == DefaultCommandFallBack {
-		cmdArg = []string{"-c"}
-	}
-
+	cmdArg = GetDefaultCmdOpts(ShellToUse, cmdArg)
 	cmdArg = append(cmdArg, command)
 	cmd := exec.Command(ShellToUse, cmdArg...)
 

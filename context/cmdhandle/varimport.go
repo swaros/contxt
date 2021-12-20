@@ -11,8 +11,10 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/imdario/mergo"
 	"github.com/tidwall/gjson"
 
+	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/sirupsen/logrus"
@@ -30,6 +32,8 @@ const (
 	fromJSONMark    = "#@import-json"
 	fromJSONCmdMark = "#@import-json-exec"
 	parseVarsMark   = "#@var"
+	equalsMark      = "#@if-equals"
+	osCheck         = "#@if-os"
 	codeLinePH      = "__LINE__"
 	codeKeyPH       = "__KEY__"
 )
@@ -37,6 +41,8 @@ const (
 // TryParse to parse a line and set a value depending on the line command
 func TryParse(script []string, regularScript func(string) (bool, int)) (bool, int, []string) {
 	inIteration := false
+	inIfState := false
+	ifState := true
 	var iterationLines []string
 	var parsedScript []string
 	var iterationCollect gjson.Result
@@ -49,6 +55,34 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				continue
 			}
 			switch parts[0] {
+
+			case osCheck:
+				if !inIfState {
+					if len(parts) == 2 {
+						leftEq := parts[1]
+						rightEq := configure.GetOs()
+						inIfState = true
+						ifState = leftEq == rightEq
+					} else {
+						output.Error("invalid usage", equalsMark, "need: str1 str2 ")
+					}
+				} else {
+					output.Error("invalid usage", equalsMark, " can not be used in another if")
+				}
+
+			case equalsMark:
+				if !inIfState {
+					if len(parts) == 3 {
+						leftEq := parts[1]
+						rightEq := parts[2]
+						inIfState = true
+						ifState = leftEq == rightEq
+					} else {
+						output.Error("invalid usage", equalsMark, "need: str1 str2 ")
+					}
+				} else {
+					output.Error("invalid usage", equalsMark, " can not be used in another if")
+				}
 
 			case inlineMark:
 				if inIteration {
@@ -71,18 +105,33 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 			case fromJSONCmdMark:
 				if len(parts) >= 3 {
 					returnValue := ""
-					restSlice := parts[2:len(parts)]
+					restSlice := parts[2:]
+					keyname := parts[1]
 					cmd := strings.Join(restSlice, " ")
-					GetLogger().WithField("slice", restSlice).Info("execute for import-json-exec")
-					ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
+					GetLogger().WithFields(logrus.Fields{"key": keyname, "cmd": restSlice}).Info("execute for import-json-exec")
+					//GetLogger().WithField("slice", restSlice).Info("execute for import-json-exec")
+					exec, args := GetExecDefaults()
+					execCode, realExitCode, execErr := ExecuteScriptLine(exec, args, cmd, func(output string) bool {
 						returnValue = returnValue + output
+						GetLogger().WithField("cmd-output", output).Info("result of command")
 						return true
 					}, func(proc *os.Process) {
 						GetLogger().WithField("import-json-proc", proc).Trace("import-json-process")
 					})
-					err := AddJSON(parts[1], returnValue)
-					if err != nil {
-						output.Error("import from json string failed", parts[2], err)
+
+					if execErr != nil {
+						GetLogger().WithFields(logrus.Fields{
+							"intern":       execCode,
+							"process-exit": realExitCode,
+							"key":          keyname,
+							"cmd":          restSlice}).Error("execute for import-json-exec failed")
+					} else {
+
+						err := AddJSON(keyname, returnValue)
+						if err != nil {
+							GetLogger().WithField("error-on-parsing-string", returnValue).Debug("result of command")
+							output.Error("import from json string failed", err, ' ', returnValue)
+						}
 					}
 				} else {
 					output.Error("invalid usage", fromJSONCmdMark, " needs 2 arguments at least. <keyname> <bash-command>")
@@ -91,9 +140,10 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 			case parseVarsMark:
 				if len(parts) >= 2 {
 					var returnValues []string
-					restSlice := parts[2:len(parts)]
+					restSlice := parts[2:]
 					cmd := strings.Join(restSlice, " ")
-					internalCode, cmdCode, errorFromCm := ExecuteScriptLine("bash", []string{"-c"}, cmd, func(output string) bool {
+					exec, args := GetExecDefaults()
+					internalCode, cmdCode, errorFromCm := ExecuteScriptLine(exec, args, cmd, func(output string) bool {
 						returnValues = append(returnValues, output)
 						return true
 					}, func(proc *os.Process) {
@@ -116,8 +166,14 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				}
 
 			case endMark:
-				GetLogger().Debug("ITERATION: DONE")
+
+				if inIfState {
+					GetLogger().Debug("IF: DONE")
+					inIfState = false
+					ifState = true
+				}
 				if inIteration {
+					GetLogger().Debug("ITERATION: DONE")
 					inIteration = false
 					abortFound := false
 					returnCode := ExitOk
@@ -136,9 +192,8 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						}).Debug("... delegate script")
 						abort, rCode, subs := TryParse(parsedExecLines, regularScript)
 						returnCode = rCode
-						for _, subLine := range subs {
-							parsedScript = append(parsedScript, subLine)
-						}
+						parsedScript = append(parsedScript, subs...)
+
 						if abort {
 							abortFound = true
 							return false
@@ -169,11 +224,15 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 			}
 		} else {
 			parsedScript = append(parsedScript, line)
-			abort, returnCode := regularScript(line)
-			if abort {
-				return true, returnCode, parsedScript
+			// execute the *real* script lines
+			if ifState {
+				abort, returnCode := regularScript(line)
+				if abort {
+					return true, returnCode, parsedScript
+				}
+			} else {
+				GetLogger().WithField("code", line).Debug("ignored because of if state")
 			}
-
 		}
 	}
 	GetLogger().WithFields(logrus.Fields{
@@ -251,16 +310,16 @@ func traceMap(mapShow map[string]interface{}, add string) {
 
 // MergeVariableMap merges two maps
 func MergeVariableMap(mapin map[string]interface{}, maporigin map[string]interface{}) map[string]interface{} {
-	for k, v := range mapin {
-		maporigin[k] = v
+	if err := mergo.Merge(&maporigin, mapin, mergo.WithOverride); err != nil {
+		output.Error("FATAL", "error while trying merge map")
+		os.Exit(10)
 	}
 	return maporigin
 }
 
 // ImportFolders import a list of folders recusiv
 func ImportFolders(templatePath string, paths ...string) (string, error) {
-	var mapOrigin map[string]interface{}
-	mapOrigin = make(map[string]interface{})
+	mapOrigin := GetOriginMap()
 
 	template, terr := ImportFileContent(templatePath)
 	if terr != nil {
@@ -268,12 +327,14 @@ func ImportFolders(templatePath string, paths ...string) (string, error) {
 	}
 
 	for _, path := range paths {
+		path = HandlePlaceHolder(path)
 		GetLogger().WithField("folder", path).Debug("process path")
 		pathMap, parseErr := ImportFolder(path, templatePath)
 		if parseErr != nil {
 			return "", parseErr
 		}
 		mapOrigin = MergeVariableMap(pathMap, mapOrigin)
+		UpdateOriginMap(mapOrigin)
 	}
 	result, herr := HandleJSONMap(template, mapOrigin)
 	if herr != nil {
@@ -285,8 +346,19 @@ func ImportFolders(templatePath string, paths ...string) (string, error) {
 }
 
 func GetOriginMap() map[string]interface{} {
+	exists, storedData := GetData("CTX_VAR_MAP")
+	if exists {
+		GetLogger().WithField("DATA", storedData).Trace("returning existing Variables map")
+		return storedData
+	}
 	mapOrigin := make(map[string]interface{})
+	GetLogger().Trace("returning NEW Variables map")
 	return mapOrigin
+}
+
+func UpdateOriginMap(mapData map[string]interface{}) {
+	GetLogger().WithField("DATA", mapData).Trace("update variables map")
+	AddData("CTX_VAR_MAP", mapData)
 }
 
 // ImportFolder reads folder recursiv and reads all .json, .yml and .yaml files

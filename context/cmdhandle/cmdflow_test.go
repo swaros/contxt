@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
 
 	"github.com/swaros/contxt/context/cmdhandle"
@@ -35,6 +36,22 @@ func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) {
 	testFunc(t)
 	os.Chdir(old)
 
+}
+
+func TestRunIfEquals(t *testing.T) {
+	folderRunner("./../../docs/test/ifequals", t, func(t *testing.T) {
+		cmdhandle.RunTargets("check-eq", true)
+		test1Result := cmdhandle.GetPH("RUN.check-eq.LOG.LAST")
+		if test1Result != "inline" {
+			t.Error("result 2 should be 'inline'.", test1Result)
+		}
+
+		cmdhandle.RunTargets("check-noeq", true)
+		test2Result := cmdhandle.GetPH("RUN.check-noeq.LOG.LAST")
+		if test2Result != "start2" {
+			t.Error("result 2 should be 'start2'.", test2Result)
+		}
+	})
 }
 
 func TestVariableReset(t *testing.T) {
@@ -85,7 +102,7 @@ func TestCase0(t *testing.T) {
 		}
 
 		if test2Result != "runs" {
-			t.Error("result 2 should be 'runs' instead we got.", test2Result)
+			t.Error("result 2 should be 'runs' instead we got.", "["+test2Result+"]")
 		}
 	})
 }
@@ -109,7 +126,7 @@ func TestRunTargetCase1(t *testing.T) {
 		}
 
 		scriptLast := cmdhandle.GetPH("RUN.SCRIPT_LINE")
-		if scriptLast != "echo 'runs'" {
+		if scriptLast != "echo runs" {
 			t.Error("unexpected result [", scriptLast, "]")
 		}
 	})
@@ -134,6 +151,9 @@ func TestRunTargetCase2(t *testing.T) {
 
 func TestRunTargetCase3(t *testing.T) {
 	// testing PID of my own and the parent process
+	if configure.GetOs() == "windows" {
+		return
+	}
 	caseRunner("3", t, func(t *testing.T) {
 		cmdhandle.RunTargets("base", true)
 		test1Result := cmdhandle.GetPH("RUN.base.LOG.HIT")
@@ -171,8 +191,11 @@ func TestCase5(t *testing.T) {
 		//contains a mutliline shell script
 		cmdhandle.RunTargets("base", true)
 		log := cmdhandle.GetPH("RUN.base.LOG.LAST")
+		if log == "" {
+			t.Error("got empty result. that is not expected")
+		}
 		if log != "line4" {
-			t.Error("last log entrie should not be", log)
+			t.Error("expected 'line4'...but got ", log)
 		}
 	})
 }
@@ -227,7 +250,7 @@ func TestCase9(t *testing.T) {
 		}
 		test2 := cmdhandle.GetPH("RUN.test2.LOG.LAST")
 		if test2 != "lets go" {
-			t.Error("placeholder was not used in task variables. got:", test2)
+			t.Error("placeholder was not used in task variables. got:[", test2, "]")
 		}
 	})
 }
@@ -335,4 +358,59 @@ func TestCase14Needs(t *testing.T) {
 			t.Error("did not get expected result instead [the-main-task] we got : ", usertest)
 		}
 	})
+}
+
+func TestStringMatcher(t *testing.T) {
+	// positive expectations
+	if !cmdhandle.StringMatchTest("=test", "test") {
+		t.Error("expect TRUE, =test should match with test")
+	}
+
+	if !cmdhandle.StringMatchTest("test", "test") {
+		t.Error("expect TRUE, test should not match with test")
+	}
+
+	if !cmdhandle.StringMatchTest(">50", "51") {
+		t.Error("expect TRUE, 51 should accepted as greater then 50")
+	}
+
+	if !cmdhandle.StringMatchTest("<50", "49") {
+		t.Error("expect TRUE, 49 should accepted as lower then 50")
+	}
+	if !cmdhandle.StringMatchTest("?", "something") {
+		t.Error("expect TRUE, ? should match with anything")
+	}
+
+	// negative tests result expected
+	if cmdhandle.StringMatchTest("=test", "test2") {
+		t.Error("expect FALSE, =test should not match with test2")
+	}
+
+	if cmdhandle.StringMatchTest("!test", "test") {
+		t.Error("expect FALSE, !test should (not) match with test by condition")
+	}
+
+	if cmdhandle.StringMatchTest(">test20", "test15") {
+		t.Error("expect FALSE, test20 is greater then test15")
+	}
+
+	if cmdhandle.StringMatchTest("<test20", "test35") {
+		t.Error("expect FALSE, test20 is lower then test35")
+	}
+
+	if cmdhandle.StringMatchTest("", "something") {
+		t.Error("expect FALSE, empty should not match")
+	}
+
+	if !cmdhandle.StringMatchTest("", "") {
+		t.Error("expect TRUE, empty should match to empty")
+	}
+
+	if cmdhandle.StringMatchTest("*", "") {
+		t.Error("expect FALSE, not-empty (*) placeholder should not match with empty")
+	}
+
+	if !cmdhandle.StringMatchTest("*", "something") {
+		t.Error("expect TRUE, not-empty placeholder should match with something")
+	}
 }
