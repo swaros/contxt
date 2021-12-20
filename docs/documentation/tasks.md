@@ -118,16 +118,16 @@ because we can run mutlipe targets at ones, we will do this now `ctx run testvar
 
 so first **testvar** just prints the content of the global defined variable `${test-output}`.
 
-afterwards **rewrite** is executed and redefines these variable and prints them.
+afterwards **rewrite** is executed and redefines these variable.
 and because this is a global change, it would be affect any other following tasks.
 
 so if we exectue the same in different order `ctx run rewrite testvar`, we got a different outcome.
 ````bash
 [exec:async] rewrite /home/tziegler/code/playground/go/ctx-examples/example4/.contxt.yml
-   rewrite : rescue the  world
+   rewrite : rescue the world
 [done] rewrite
 [exec:async] testvar /home/tziegler/code/playground/go/ctx-examples/example4/.contxt.yml
-   testvar : rescue the  world
+   testvar : rescue the world
 [done] testvar
 ````
 now booth of the targets have the same content of the variable, because `rewrite` changed the value before `testvar` is executed.
