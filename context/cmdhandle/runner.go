@@ -609,6 +609,9 @@ func shortcuts() bool {
 
 func InitDefaultVars() {
 	SetPH("CTX_OS", configure.GetOs())
+	if configure.GetOs() == "windows" {
+		output.ColorEnabled = false
+	}
 }
 
 // MainExecute runs main. parsing flags
