@@ -287,7 +287,6 @@ task:
 
 ````bash
 [exec:async] script /home/tziegler/code/playground/go/ctx-examples/example5/.contxt.yml
-     script :   import example 
      script :   used image is postgres 
      script :   you have to use example as password 
      script :   a adminer instance is running too on port 8080:8080 
