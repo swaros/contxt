@@ -284,6 +284,17 @@ task:
       - echo "you have to use ${docker-compose.yml:services.db.environment.POSTGRES_PASSWORD} as password"
       - echo "a adminer instance is running too on port ${docker-compose.yml:services.adminer.ports.0}"
 ````
+
+````bash
+[exec:async] script /home/tziegler/code/playground/go/ctx-examples/example5/.contxt.yml
+     script :   import example 
+     script :   used image is postgres 
+     script :   you have to use example as password 
+     script :   a adminer instance is running too on port 8080:8080 
+[done] script
+
+````
+
 ##### import short cuts
 especially if you have to use long paths (for example if have to use files in different directories) it would make sense to use a shortcut instead. you just need to write them behind the file name in the import list.
 
