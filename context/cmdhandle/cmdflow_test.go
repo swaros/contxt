@@ -38,6 +38,28 @@ func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) {
 
 }
 
+func TestMultipleTargets(t *testing.T) {
+	folderRunner("./../../docs/test/01multi", t, func(t *testing.T) {
+		cmdhandle.RunTargets("task", true)
+		test1Result := cmdhandle.GetPH("RUN.task.LOG.LAST")
+		if test1Result != "hello 2" {
+			t.Error("result 2 should be 'hello 2'.", test1Result)
+		}
+	})
+}
+
+func TestMultipleTargetsOs(t *testing.T) {
+	folderRunner("./../../docs/test/02multi", t, func(t *testing.T) {
+		cmdhandle.RunTargets("task", true)
+		test1Result := cmdhandle.GetPH("RUN.task.LOG.LAST")
+		if configure.GetOs() == "linux" {
+			if test1Result != "hello linux" {
+				t.Error("result 2 should be 'hello 2'. got[", test1Result, "]")
+			}
+		}
+	})
+}
+
 func TestRunIfEquals(t *testing.T) {
 	folderRunner("./../../docs/test/ifequals", t, func(t *testing.T) {
 		cmdhandle.RunTargets("check-eq", true)
@@ -284,9 +306,13 @@ func TestCase12Requires(t *testing.T) {
 			t.Error("got unexpected result for test5. got:", test5, "test should not run because variable check")
 		}
 
+		varValue := cmdhandle.GetPH("test_var")
+		if varValue == "HELLO_KLAUS" {
+			t.Error("Expected value 'HELLO_KLAUS' not in placeholder 'test_var'. got instead: ", varValue)
+		}
 		test6 := cmdhandle.GetPH("RUN.test6.LOG.LAST")
-		if test6 != "run_f" {
-			t.Error("got unexpected result for test6. got:", test6, "test should run because variable check")
+		if test6 != "" {
+			t.Error("got unexpected result for test6. got:[", test6, "]test should run because variable check")
 		}
 	})
 }

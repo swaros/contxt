@@ -165,8 +165,8 @@ func WriteTemplate() {
 	var demoContent = `task:
   - id: script
     script:
-      - echo 'hallo welt'
-      - ls -ga`
+      - echo "hello world"
+`
 	err := ioutil.WriteFile(path, []byte(demoContent), 0644)
 	if err != nil {
 		fmt.Println(err)

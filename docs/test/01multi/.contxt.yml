@@ -1,0 +1,12 @@
+config:  
+  sequencially: false
+  coloroff: true
+
+task:
+   - id: task
+     script:
+       - echo "hello 1"
+
+   - id: task
+     script:
+       - echo "hello 2"
