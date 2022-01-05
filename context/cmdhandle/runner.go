@@ -405,12 +405,11 @@ you will also see if a unexpected propertie found `,
 			GetLogger().WithField("args", args).Info("Run triggered")
 			GetLogger().WithField("all", runAtAll).Info("all workspaces?")
 
-			//if preVars != nil {
+			// set variables by argument
 			for preKey, preValue := range preVars {
 				GetLogger().WithFields(logrus.Fields{"key": preKey, "val": preValue}).Info("prevalue set by argument")
 				SetPH(preKey, preValue)
 			}
-			//}
 
 			if len(args) == 0 {
 				printTargets()
@@ -724,20 +723,37 @@ func detectSharedTargetsAsMap(current configure.RunConfig) []string {
 	return targets
 }
 
+func ExistInStrMap(testStr string, check []string) bool {
+	for _, str := range check {
+		if strings.TrimSpace(str) == strings.TrimSpace(testStr) {
+			return true
+		}
+	}
+	return false
+}
+
 func targetsAsMap() ([]string, bool) {
 	var targets []string
-	found := false
 	template, _, exists := GetTemplate()
 	if exists {
-		if len(template.Task) > 0 {
-			for _, tasks := range template.Task {
-				if !tasks.Options.Invisible {
-					found = true
-					targets = append(targets, tasks.ID)
-				}
+		return templateTargetsAsMap(template)
+	}
+	return targets, false
+}
+
+func templateTargetsAsMap(template configure.RunConfig) ([]string, bool) {
+	var targets []string
+	found := false
+
+	if len(template.Task) > 0 {
+		for _, tasks := range template.Task {
+			if !ExistInStrMap(tasks.ID, targets) && (!tasks.Options.Invisible || showInvTarget) {
+				found = true
+				targets = append(targets, strings.TrimSpace(tasks.ID))
 			}
 		}
 	}
+
 	return targets, found
 }
 
@@ -749,10 +765,9 @@ func printTargets() {
 		fmt.Println(output.MessageCln(output.ForeDarkGrey, "tasks count:  \t", output.CleanTag, len(template.Task)))
 		if len(template.Task) > 0 {
 			fmt.Println(output.MessageCln(output.BoldTag, "existing targets:"))
-			for _, tasks := range template.Task {
-				if showInvTarget || !tasks.Options.Invisible {
-					fmt.Println("\t", tasks.ID)
-				}
+			taskList, _ := templateTargetsAsMap(template)
+			for _, tasks := range taskList {
+				fmt.Println("\t", tasks)
 			}
 		} else {
 			fmt.Println(output.MessageCln("that is what we gor so far:"))
@@ -810,10 +825,9 @@ func printPaths() {
 			}
 			if exists {
 				outTasks := ""
-				for _, tasks := range template.Task {
-					if !tasks.Options.Invisible {
-						outTasks = outTasks + " " + tasks.ID
-					}
+				targets, _ := templateTargetsAsMap(template)
+				for _, tasks := range targets {
+					outTasks = outTasks + " " + tasks
 				}
 
 				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, add, path, output.CleanTag, " targets", "[", output.ForeYellow, outTasks, output.CleanTag, "]"))
