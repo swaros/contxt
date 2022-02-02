@@ -400,7 +400,8 @@ func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason confi
 		// print the output by configuration
 		if !script.Options.Hideout {
 			if script.Options.Format != "" {
-				fmt.Printf(script.Options.Format, logLine)
+				format := handlePlaceHolder(script.Options.Format)
+				fmt.Printf(format, logLine)
 			} else {
 				foreColor := defaultString(script.Options.Colorcode, colorCode)
 				bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
