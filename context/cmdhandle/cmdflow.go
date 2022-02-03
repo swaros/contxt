@@ -399,23 +399,24 @@ func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason confi
 
 		// print the output by configuration
 		if !script.Options.Hideout {
+			foreColor := defaultString(script.Options.Colorcode, colorCode)
+			bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
+			labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
 			if script.Options.Format != "" {
 				format := handlePlaceHolder(script.Options.Format)
-				fmt.Printf(format, logLine)
-			} else {
-				foreColor := defaultString(script.Options.Colorcode, colorCode)
-				bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
-				labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
+				fomatedOutStr := output.Message(fmt.Sprintf(format, target))
+				labelStr = systools.LabelPrintWithArg(fomatedOutStr, foreColor, bgColor, 1)
+			}
 
-				outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
-				if script.Options.Stickcursor {
-					fmt.Print("\033[G\033[K")
-				}
-				// prints the codeline
-				fmt.Println(labelStr, outStr)
-				if script.Options.Stickcursor {
-					fmt.Print("\033[A")
-				}
+			outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
+			if script.Options.Stickcursor {
+				fmt.Print("\033[G\033[K")
+			}
+			// prints the codeline
+			fmt.Println(labelStr, outStr)
+			if script.Options.Stickcursor {
+				fmt.Print("\033[A")
+
 			}
 		}
 		// do we found a defined reason to stop execution
