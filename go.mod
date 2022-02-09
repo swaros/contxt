@@ -1,6 +1,6 @@
 module github.com/swaros/contxt
 
-go 1.13
+go 1.17
 
 require (
 	github.com/Masterminds/sprig/v3 v3.1.0
