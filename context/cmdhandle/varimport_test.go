@@ -11,6 +11,7 @@ func clearStrings(compare string) string {
 	compare = strings.ReplaceAll(compare, " ", "")
 	compare = strings.ReplaceAll(compare, "\n", "")
 	compare = strings.ReplaceAll(compare, "\t", "")
+	compare = strings.ReplaceAll(compare, "\r", "")
 	return compare
 }
 
