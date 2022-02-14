@@ -525,6 +525,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 	}).Info("executeTemplate LOOKING for target")
 
 	if len(runCfg.Task) > 0 {
+		returnCode := ExitOk
 
 		// main variables
 		for keyName, variable := range runCfg.Config.Variables {
@@ -535,172 +536,180 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 		bgCode := systools.CurrentBgColor
 		SetPH("RUN.TARGET", target)
 		targetFound := false
-		//for _, script := range runCfg.Task {
-		script := mergeTargets(target, runCfg)
-		// check if we have found the target
-		if strings.EqualFold(target, script.ID) {
-			GetLogger().WithFields(logrus.Fields{
-				"target": target,
-			}).Info("executeTemplate EXECUTE target")
-			targetFound = true
-			// first get the task related variables
-			for keyName, variable := range script.Variables {
-				SetPH(keyName, HandlePlaceHolder(variable))
-			}
 
-			stopReason := script.Stopreasons
-			// check requirements
-			canRun, message := checkRequirements(script.Requires)
-			if !canRun {
-				GetLogger().WithFields(logrus.Fields{
-					"target": target,
-					"reason": message,
-				}).Info("executeTemplate IGNORE because requirements not matching")
-				if script.Options.Displaycmd {
-					fmt.Println(output.MessageCln(output.ForeYellow, " [require] ", output.ForeBlue, message))
-				}
-				return ExitByRequirement
-			}
-
-			// parsing codelines
-			returnCode := ExitOk
-			abort := false
-
-			// checking needs
-			if len(script.Needs) > 0 {
-				GetLogger().WithFields(logrus.Fields{
-					"needs": script.Needs,
-				}).Info("executeTemplate NEEDS found")
-				if useWaitGroup {
-					waitHits := 0
-					timeOut := script.Options.TimeoutNeeds
-					if timeOut < 1 {
-						GetLogger().Info("No timeoutNeeds value set. using default of 300000")
-						timeOut = 300000 // 5 minutes in milliseconds as default
-					} else {
-						GetLogger().WithField("timeout", timeOut).Info("timeout for task " + target)
-					}
-					tickTime := script.Options.TickTimeNeeds
-					if tickTime < 1 {
-						tickTime = 1000 // 1 second as ticktime
-					}
-					WaitForTasksDone(script.Needs, time.Duration(timeOut)*time.Millisecond, time.Duration(tickTime)*time.Millisecond, func() bool {
-						// still waiting
-						waitHits++
-						GetLogger().Debug("Waiting for Task be done")
-						return true
-					}, func() {
-						// done
-
-					}, func() {
-						// timeout not allowed. hard exit
-						GetLogger().Debug("timeout hit")
-						output.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
-						os.Exit(1)
-					}, func(needTarget string) bool {
-						if script.Options.NoAutoRunNeeds {
-							output.Error("Need Task not started", "expected task ", target, " not running. autostart disbabled")
-							os.Exit(1)
-							return false
-						}
-						GetLogger().WithFields(logrus.Fields{
-							"needs":   script.Needs,
-							"current": needTarget,
-						}).Info("executeTemplate found a need that is not stated already")
-						// stopping for a couple of time
-						// need to wait if these other task already started by
-						// other options
-						time.Sleep(500 * time.Millisecond)
-						go executeTemplate(waitGroup, useWaitGroup, runCfg, needTarget)
-						return true
-					})
-				} else {
-					// run needs in a sequence
-					for _, targetNeed := range script.Needs {
-						executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, targetNeed)
-						if executionCode != ExitOk {
-							output.Error("Need Task Error", "expected returncode ", ExitOk, " but got exit Code", executionCode)
-							os.Exit(1)
-						}
-					}
+		var taskList []configure.Task
+		// should we merge all task before?
+		if runCfg.Config.MergeTasks {
+			mergedScript := mergeTargets(target, runCfg)
+			taskList = append(taskList, mergedScript)
+		} else {
+			for _, script := range runCfg.Task {
+				if strings.EqualFold(target, script.ID) {
+					taskList = append(taskList, script)
 				}
 			}
-
-			// targets that should be started as well
-			if len(script.RunTargets) > 0 {
-				for _, runTrgt := range script.RunTargets {
-					if useWaitGroup {
-						go executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt)
-					} else {
-						executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt)
-					}
-				}
-				// workaround til the async runnig is refactored
-				// now we need to give the subtask time to run and update the waitgroup
-				duration := time.Second
-				time.Sleep(duration)
-			}
-
-			// check if we have script lines.
-			// if not, we need at least to check
-			// 'now' listener
-			if len(script.Script) < 1 {
-				GetLogger().Debug("no script lines defined. run listener anyway")
-				listenerWatch(script, target, "", waitGroup, useWaitGroup, runCfg)
-				// workaround til the async runnig is refactored
-				// now we need to give the subtask time to run and update the waitgroup
-				duration := time.Second
-				time.Sleep(duration)
-			}
-
-			// preparing codelines by execute second level commands
-			// that can affect the whole script
-			abort, returnCode, _ = TryParse(script.Script, func(codeLine string) (bool, int) {
-				lineAbort, lineExitCode := lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, script)
-				return lineExitCode, lineAbort
-			})
-			if abort {
-				GetLogger().Debug("abort reason found ")
-			}
-			/*
-				for _, codeLine := range script.Script {
-					if !abort {
-						returnCode, abort = lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, script)
-					}
-
-				}*/
-			// executes next targets if there some defined
-			GetLogger().WithFields(logrus.Fields{
-				"current-target": target,
-				"nexts":          script.Next,
-			}).Debug("executeTemplate next definition")
-			for _, nextTarget := range script.Next {
-				if script.Options.Displaycmd {
-					fmt.Println(output.MessageCln(output.ForeYellow, " [next] ", output.ForeBlue, nextTarget))
-				}
-				/* ---- something is wrong with my logic dependig execution not in a sequence (useWaitGroup == true)
-				if useWaitGroup {
-					go executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
-
-				} else {
-					executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
-				}*/
-
-				// for now we execute without a waitgroup
-				executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
-			}
-			return returnCode
 		}
 
+		// check if we have found the target
+		for _, script := range taskList {
+			if strings.EqualFold(target, script.ID) {
+				GetLogger().WithFields(logrus.Fields{
+					"target": target,
+				}).Info("executeTemplate EXECUTE target")
+				targetFound = true
+
+				stopReason := script.Stopreasons
+				// check requirements
+				canRun, message := checkRequirements(script.Requires)
+				if !canRun {
+					GetLogger().WithFields(logrus.Fields{
+						"target": target,
+						"reason": message,
+					}).Info("executeTemplate IGNORE because requirements not matching")
+					if script.Options.Displaycmd {
+						fmt.Println(output.MessageCln(output.ForeYellow, " [require] ", output.ForeBlue, message))
+					}
+					// ---- return ExitByRequirement
+					continue
+				}
+				// get the task related variables
+				for keyName, variable := range script.Variables {
+					SetPH(keyName, HandlePlaceHolder(variable))
+				}
+				// parsing codelines
+
+				abort := false
+
+				// checking needs
+				if len(script.Needs) > 0 {
+					GetLogger().WithFields(logrus.Fields{
+						"needs": script.Needs,
+					}).Info("executeTemplate NEEDS found")
+					if useWaitGroup {
+						waitHits := 0
+						timeOut := script.Options.TimeoutNeeds
+						if timeOut < 1 {
+							GetLogger().Info("No timeoutNeeds value set. using default of 300000")
+							timeOut = 300000 // 5 minutes in milliseconds as default
+						} else {
+							GetLogger().WithField("timeout", timeOut).Info("timeout for task " + target)
+						}
+						tickTime := script.Options.TickTimeNeeds
+						if tickTime < 1 {
+							tickTime = 1000 // 1 second as ticktime
+						}
+						WaitForTasksDone(script.Needs, time.Duration(timeOut)*time.Millisecond, time.Duration(tickTime)*time.Millisecond, func() bool {
+							// still waiting
+							waitHits++
+							GetLogger().Debug("Waiting for Task be done")
+							return true
+						}, func() {
+							// done
+
+						}, func() {
+							// timeout not allowed. hard exit
+							GetLogger().Debug("timeout hit")
+							output.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
+							os.Exit(1)
+						}, func(needTarget string) bool {
+							if script.Options.NoAutoRunNeeds {
+								output.Error("Need Task not started", "expected task ", target, " not running. autostart disbabled")
+								os.Exit(1)
+								return false
+							}
+							GetLogger().WithFields(logrus.Fields{
+								"needs":   script.Needs,
+								"current": needTarget,
+							}).Info("executeTemplate found a need that is not stated already")
+							// stopping for a couple of time
+							// need to wait if these other task already started by
+							// other options
+							time.Sleep(500 * time.Millisecond)
+							go executeTemplate(waitGroup, useWaitGroup, runCfg, needTarget)
+							return true
+						})
+					} else {
+						// run needs in a sequence
+						for _, targetNeed := range script.Needs {
+							executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, targetNeed)
+							if executionCode != ExitOk {
+								output.Error("Need Task Error", "expected returncode ", ExitOk, " but got exit Code", executionCode)
+								os.Exit(1)
+							}
+						}
+					}
+				}
+
+				// targets that should be started as well
+				if len(script.RunTargets) > 0 {
+					for _, runTrgt := range script.RunTargets {
+						if useWaitGroup {
+							go executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt)
+						} else {
+							executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt)
+						}
+					}
+					// workaround til the async runnig is refactored
+					// now we need to give the subtask time to run and update the waitgroup
+					duration := time.Second
+					time.Sleep(duration)
+				}
+
+				// check if we have script lines.
+				// if not, we need at least to check
+				// 'now' listener
+				if len(script.Script) < 1 {
+					GetLogger().Debug("no script lines defined. run listener anyway")
+					listenerWatch(script, target, "", waitGroup, useWaitGroup, runCfg)
+					// workaround til the async runnig is refactored
+					// now we need to give the subtask time to run and update the waitgroup
+					duration := time.Second
+					time.Sleep(duration)
+				}
+
+				// preparing codelines by execute second level commands
+				// that can affect the whole script
+				abort, returnCode, _ = TryParse(script.Script, func(codeLine string) (bool, int) {
+					lineAbort, lineExitCode := lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, script)
+					return lineExitCode, lineAbort
+				})
+				if abort {
+					GetLogger().Debug("abort reason found ")
+				}
+				// executes next targets if there some defined
+				GetLogger().WithFields(logrus.Fields{
+					"current-target": target,
+					"nexts":          script.Next,
+				}).Debug("executeTemplate next definition")
+				for _, nextTarget := range script.Next {
+					if script.Options.Displaycmd {
+						fmt.Println(output.MessageCln(output.ForeYellow, " [next] ", output.ForeBlue, nextTarget))
+					}
+					/* ---- something is wrong with my logic dependig execution not in a sequence (useWaitGroup == true)
+					if useWaitGroup {
+						go executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
+
+					} else {
+						executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
+					}*/
+
+					// for now we execute without a waitgroup
+					executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
+				}
+
+				//return returnCode
+			}
+		}
 		if !targetFound {
 			fmt.Println(output.MessageCln(output.ForeYellow, "target not defined: ", output.ForeWhite, target))
 			GetLogger().Error("Target can not be found: ", target)
 		}
-	}
-	GetLogger().WithFields(logrus.Fields{
-		"target": target,
-	}).Info("executeTemplate. target do not contains tasks")
 
+		GetLogger().WithFields(logrus.Fields{
+			"target": target,
+		}).Info("executeTemplate. target do not contains tasks")
+		return returnCode
+	}
 	return ExitNoCode
 }
 

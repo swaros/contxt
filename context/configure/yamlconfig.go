@@ -59,6 +59,7 @@ type Config struct {
 	Autorun      Autorun           `yaml:"autorun"`
 	Imports      []string          `yaml:"imports"`
 	Use          []string          `yaml:"use"`
+	MergeTasks   bool              `yaml:"mergetasks"`
 }
 
 // Require defines what is required to execute the task
