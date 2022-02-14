@@ -3,5 +3,9 @@ config:
     - test-local-import
 task:
   - id: script
+    bullshit:
+      whatever: "yes"
+    options:
+      displaycmd: true
     script:
       - echo "hello world"

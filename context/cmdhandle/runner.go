@@ -33,6 +33,7 @@ var (
 	runAtAll      bool
 	leftLen       int
 	rightLen      int
+	yamlIndent    int
 	showInvTarget bool
 	uselastIndex  bool
 	showHints     bool
@@ -344,8 +345,9 @@ you will also see if a unexpected propertie found `,
 			rightLen, _ := cmd.Flags().GetInt("right")
 			showall, _ := cmd.Flags().GetBool("full")
 			yamlParse, _ := cmd.Flags().GetBool("yaml")
+			yamlIndent, _ := cmd.Flags().GetInt("indent")
 			if yamlParse {
-				ShowAsYaml(showall)
+				ShowAsYaml(true, !showall, yamlIndent)
 			} else {
 				success := LintOut(leftLen, rightLen, showall)
 				if !success {
@@ -546,6 +548,7 @@ func initCobra() {
 
 	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the width for the source code")
 	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the witdh for the current state view")
+	lintCmd.Flags().IntVar(&rightLen, "indent", 2, "set indent for yaml output by using lint --yaml")
 	lintCmd.Flags().Bool("full", false, "print also unset properties")
 	lintCmd.Flags().Bool("yaml", false, "display parsed taskfile as yaml file")
 	lintCmd.Flags().Bool("parse", false, "parse second level keywords (#@...)")

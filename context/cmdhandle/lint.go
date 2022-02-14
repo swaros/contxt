@@ -63,17 +63,63 @@ func compareContent(a, b interface{}, showBooth bool, size int, right int) bool 
 	return noDiff
 }
 
+func trySupressDefaults(yamlString string) string {
+	ln := "\n"
+	outStr := ""
+	// first find all defauls values
+	lines := strings.Split(yamlString, ln)
+	for _, line := range lines {
+		checks := strings.Split(line, ": ")
+		if len(checks) == 2 {
+			// these should have all possible defaults as values.
+			if checks[1] != "[]" && checks[1] != "" && checks[1] != "\"\"" && checks[1] != "false" && checks[1] != "0" {
+				outStr = outStr + line + ln
+			}
+		} else {
+			outStr = outStr + line + ln
+		}
+	}
+	// next find empty nodes
+	lines = strings.Split(outStr, ln)
+	newOut := ""
+	max := len(lines)
+	for index, recheck := range lines {
+		if index > 0 && recheck != "" {
+
+			last := recheck[len(recheck)-1:]
+			if last == ":" && index < max {
+				nextStr := lines[index+1]
+				lastNext := nextStr[len(nextStr)-1:]
+				if lastNext != ":" {
+					newOut = newOut + recheck + ln
+				}
+			} else {
+				newOut = newOut + recheck + ln
+			}
+
+		} else {
+			newOut = newOut + recheck + ln
+		}
+	}
+	return newOut
+}
+
 // ShowAsYaml prints the generated source of the task file
-func ShowAsYaml(fullparsed bool) {
+func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
 	template, path, exists := GetTemplate()
 	var b bytes.Buffer
 	if exists {
 		if fullparsed {
 			yamlEncoder := yaml.NewEncoder(&b)
-			yamlEncoder.SetIndent(4)
+			yamlEncoder.SetIndent(indent)
 			conerr := yamlEncoder.Encode(&template)
 			if conerr == nil {
-				fmt.Println(b.String())
+				if trySupress {
+					fmt.Println(trySupressDefaults(b.String()))
+				} else {
+					fmt.Println(b.String())
+				}
+
 			} else {
 				output.Error("error parsing template", conerr)
 				os.Exit(1)
