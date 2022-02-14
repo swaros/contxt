@@ -1,0 +1,7 @@
+config:
+  require:
+    - test-local-import
+task:
+  - id: script
+    script:
+      - echo "hello world"
