@@ -345,9 +345,12 @@ you will also see if a unexpected propertie found `,
 			showall, _ := cmd.Flags().GetBool("full")
 			yamlParse, _ := cmd.Flags().GetBool("yaml")
 			if yamlParse {
-				ShowAsYaml()
+				ShowAsYaml(showall)
 			} else {
-				LintOut(leftLen, rightLen, showall)
+				success := LintOut(leftLen, rightLen, showall)
+				if !success {
+					os.Exit(1)
+				}
 			}
 
 		},

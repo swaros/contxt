@@ -1,6 +1,7 @@
 package cmdhandle
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strconv"
@@ -9,13 +10,14 @@ import (
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/kylelemons/godebug/pretty"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
-func compareContent(a, b interface{}, showBooth bool, size int, right int) {
+func compareContent(a, b interface{}, showBooth bool, size int, right int) bool {
 	diffOut := pretty.Compare(a, b)
 	diffParts := strings.Split(diffOut, "\n")
 	var errors []string
+	noDiff := true
 	i := 0
 	for _, line := range diffParts {
 		backColor := output.BackWhite
@@ -51,37 +53,53 @@ func compareContent(a, b interface{}, showBooth bool, size int, right int) {
 	}
 
 	if len(errors) > 0 {
+		noDiff = false
 		fmt.Println(output.MessageCln(output.ForeWhite, "found unsupported elements. you can add --full for showing supported elements"))
 	}
 
 	for _, errMsg := range errors {
 		fmt.Println(output.MessageCln(output.ForeYellow, errMsg))
 	}
+	return noDiff
 }
 
 // ShowAsYaml prints the generated source of the task file
-func ShowAsYaml() {
-	_, path, exists := GetTemplate()
+func ShowAsYaml(fullparsed bool) {
+	template, path, exists := GetTemplate()
+	var b bytes.Buffer
 	if exists {
-		data, err := GetParsedTemplateSource(path)
-		if err != nil {
-			output.Error("template loading", err)
-			return
+		if fullparsed {
+			yamlEncoder := yaml.NewEncoder(&b)
+			yamlEncoder.SetIndent(4)
+			conerr := yamlEncoder.Encode(&template)
+			if conerr == nil {
+				fmt.Println(b.String())
+			} else {
+				output.Error("error parsing template", conerr)
+				os.Exit(1)
+			}
+
+		} else {
+			data, err := GetParsedTemplateSource(path)
+			if err != nil {
+				output.Error("template loading", err)
+				os.Exit(1)
+			}
+			fmt.Println(data)
 		}
-		fmt.Println(data)
 	}
 }
 
 // LintOut prints the source code and the parsed content
 // in a table view, and marks configured and not configured entries
 // with dfferent colors
-func LintOut(leftcnt, rightcnt int, all bool) {
+func LintOut(leftcnt, rightcnt int, all bool) bool {
 	template, path, exists := GetTemplate()
 	if exists && rightcnt >= 0 && leftcnt >= 0 {
 		data, err := GetParsedTemplateSource(path)
 		if err != nil {
 			output.Error("template loading", err)
-			return
+			return false
 		}
 		origMap, yerr := YAMLToMap(data)
 		if yerr == nil {
@@ -94,7 +112,7 @@ func LintOut(leftcnt, rightcnt int, all bool) {
 					os.Exit(1)
 				}
 
-				compareContent(origMap, m, all, leftcnt, rightcnt)
+				return compareContent(origMap, m, all, leftcnt, rightcnt)
 			}
 
 		} else {
@@ -105,6 +123,7 @@ func LintOut(leftcnt, rightcnt int, all bool) {
 	} else {
 		output.Error("template not found ", path)
 	}
+	return false
 }
 
 func getMaxLineString(line string, length int) string {
