@@ -576,6 +576,17 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				for keyName, variable := range script.Variables {
 					SetPH(keyName, HandlePlaceHolder(variable))
 				}
+				backToDir := ""
+				// if working dir is set change to them
+				if script.Options.WorkingDir != "" {
+					backToDir, _ = dirhandle.Current()
+					chDirError := os.Chdir(HandlePlaceHolder(script.Options.WorkingDir))
+					if chDirError != nil {
+						output.Error("Workspace setting seems invalid ", chDirError)
+						os.Exit(10)
+					}
+				}
+
 				// parsing codelines
 
 				abort := false
@@ -698,7 +709,12 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				}
 
 				//return returnCode
+				// back to old dir if workpace usage was set
+				if backToDir != "" {
+					os.Chdir(backToDir)
+				}
 			}
+
 		}
 		if !targetFound {
 			fmt.Println(output.MessageCln(output.ForeYellow, "target not defined: ", output.ForeWhite, target))

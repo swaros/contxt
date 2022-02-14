@@ -365,7 +365,7 @@ func TestCase14Imports(t *testing.T) {
 	})
 }
 
-func TestCase14Needs(t *testing.T) {
+func TestCase15Needs(t *testing.T) {
 	caseRunner("15", t, func(t *testing.T) {
 
 		cmdhandle.RunTargets("start", true)
@@ -383,6 +383,39 @@ func TestCase14Needs(t *testing.T) {
 		if usertest != "the-main-task" {
 			t.Error("did not get expected result instead [the-main-task] we got : ", usertest)
 		}
+	})
+}
+
+func TestCase16WorkingDir(t *testing.T) {
+	caseRunner("16", t, func(t *testing.T) {
+		old, derr := dirhandle.Current()
+		if derr != nil {
+			t.Error(derr)
+		}
+		cmdhandle.RunTargets("origin_dir", true)
+		origin_dir := clearStrings(cmdhandle.GetPH("RUN.origin_dir.LOG.LAST"))
+		oldChkStr := clearStrings(old)
+
+		if origin_dir != oldChkStr {
+			t.Error("do not get the expected folder ", oldChkStr, origin_dir)
+		}
+
+		cmdhandle.RunTargets("sub_a", true)
+		expected := "testcase_run_check_7725569sjghfghf"
+		current := cmdhandle.GetPH("RUN.sub_a.LOG.LAST")
+		if current != expected {
+			t.Error("we expected file content from test.txt in subfolder sub_a which is ", expected, " but got ", current)
+		}
+
+		newDir, nerr := dirhandle.Current()
+		if nerr != nil {
+			t.Error(derr)
+		}
+
+		if newDir != old {
+			t.Error("directory have to beeing set back to old dir after rinning task with a workingdir. but we are still at ", newDir)
+		}
+
 	})
 }
 

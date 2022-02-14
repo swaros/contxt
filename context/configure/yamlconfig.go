@@ -87,6 +87,7 @@ type Options struct {
 	NoAutoRunNeeds bool     `yaml:"noAutoRunNeeds"`
 	TimeoutNeeds   int      `yaml:"timeoutNeeds"`
 	TickTimeNeeds  int      `yaml:"tickTimeNeeds"`
+	WorkingDir     string   `yaml:"workingdir"`
 }
 
 // Trigger are part of listener. The defines

@@ -1,0 +1,16 @@
+config:
+    sequencially: true  
+task:
+    - id: origin_dir
+      require:
+        system: linux
+      script:
+        - "pwd"
+    
+    - id: sub_a
+      options:
+        workingdir: ${CTX_PWD}/sub_a
+      require:
+        system: linux
+      script:
+        - cat test.txt
