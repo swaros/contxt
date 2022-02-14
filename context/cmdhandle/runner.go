@@ -348,11 +348,9 @@ you will also see if a unexpected propertie found `,
 			yamlIndent, _ := cmd.Flags().GetInt("indent")
 			if yamlParse {
 				ShowAsYaml(true, !showall, yamlIndent)
+				LintOut(leftLen, 0, false, true)
 			} else {
-				success := LintOut(leftLen, rightLen, showall)
-				if !success {
-					os.Exit(1)
-				}
+				LintOut(leftLen, rightLen, showall, false)
 			}
 
 		},

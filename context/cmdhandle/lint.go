@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func compareContent(a, b interface{}, showBooth bool, size int, right int) bool {
+func compareContent(a, b interface{}, showBooth bool, size int, right int, noOut bool) bool {
 	diffOut := pretty.Compare(a, b)
 	diffParts := strings.Split(diffOut, "\n")
 	var errors []string
@@ -30,7 +30,9 @@ func compareContent(a, b interface{}, showBooth bool, size int, right int) bool 
 		if leftDiff && showBooth {
 			lft := getMaxLineString("", size)
 			line = getMaxLineString(line, right)
-			fmt.Println(output.MessageCln(backColor, output.ForeYellow, output.Dim, lft, line))
+			if !noOut {
+				fmt.Println(output.MessageCln(backColor, output.ForeYellow, output.Dim, lft, line))
+			}
 			i++
 		}
 		if rightDiff {
@@ -42,19 +44,23 @@ func compareContent(a, b interface{}, showBooth bool, size int, right int) bool 
 				backColor = output.BackLightYellow
 			}
 			i++
-			fmt.Println(output.MessageCln(backColor, output.BoldTag, output.ForeDarkGrey, line, output.ForeRed, output.BoldTag, rgt))
+			if !noOut {
+				fmt.Println(output.MessageCln(backColor, output.BoldTag, output.ForeDarkGrey, line, output.ForeRed, output.BoldTag, rgt))
+			}
 		}
 		if !leftDiff && !rightDiff {
 			line = getMaxLineString(line, size+right)
 			i++
-			fmt.Println(output.MessageCln(backColor, output.ForeBlue, line))
+			if !noOut {
+				fmt.Println(output.MessageCln(backColor, output.ForeBlue, line))
+			}
 		}
 
 	}
 
 	if len(errors) > 0 {
 		noDiff = false
-		fmt.Println(output.MessageCln(output.ForeWhite, "found unsupported elements. you can add --full for showing supported elements"))
+		output.Error("found unsupported elements.", "count of errors:", len(errors))
 	}
 
 	for _, errMsg := range errors {
@@ -139,7 +145,7 @@ func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
 // LintOut prints the source code and the parsed content
 // in a table view, and marks configured and not configured entries
 // with dfferent colors
-func LintOut(leftcnt, rightcnt int, all bool) bool {
+func LintOut(leftcnt, rightcnt int, all bool, noOut bool) bool {
 	template, path, exists := GetTemplate()
 	if exists && rightcnt >= 0 && leftcnt >= 0 {
 		data, err := GetParsedTemplateSource(path)
@@ -158,7 +164,7 @@ func LintOut(leftcnt, rightcnt int, all bool) bool {
 					os.Exit(1)
 				}
 
-				return compareContent(origMap, m, all, leftcnt, rightcnt)
+				return compareContent(origMap, m, all, leftcnt, rightcnt, noOut)
 			}
 
 		} else {
