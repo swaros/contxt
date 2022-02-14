@@ -548,7 +548,7 @@ func initCobra() {
 
 	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the width for the source code")
 	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the witdh for the current state view")
-	lintCmd.Flags().IntVar(&rightLen, "indent", 2, "set indent for yaml output by using lint --yaml")
+	lintCmd.Flags().IntVar(&yamlIndent, "indent", 2, "set indent for yaml output by using lint --yaml")
 	lintCmd.Flags().Bool("full", false, "print also unset properties")
 	lintCmd.Flags().Bool("yaml", false, "display parsed taskfile as yaml file")
 	lintCmd.Flags().Bool("parse", false, "parse second level keywords (#@...)")
