@@ -614,6 +614,23 @@ func InitDefaultVars() {
 	SetPH("CTX_OS", configure.GetOs())
 	if configure.GetOs() == "windows" {
 		output.ColorEnabled = false
+		if os.Getenv("CTX_COLOR") == "ON" {
+			output.ColorEnabled = true
+		} else {
+			cmd := "$PSVersionTable.PSVersion.Major"
+			cmdArg := []string{"-nologo", "-noprofile"}
+			version := ""
+			ExecuteScriptLine(DefaultCommandFallBackWindows, cmdArg, cmd, func(s string) bool {
+				version = s
+				return true
+			}, func(p *os.Process) {
+
+			})
+			SetPH("CTX_PS_VERSION", version)
+			if version >= "7" {
+				output.ColorEnabled = true
+			}
+		}
 	}
 }
 
@@ -798,6 +815,9 @@ func runTargets(path string, targets string) {
 func printOutHeader() {
 	fmt.Println(output.MessageCln(output.BoldTag, output.ForeWhite, "cont(e)xt ", output.CleanTag, configure.GetVersion()))
 	fmt.Println(output.MessageCln(output.Dim, " build-no [", output.ResetDim, configure.GetBuild(), output.Dim, "]"))
+	if configure.GetOs() == "windows" {
+		fmt.Println(output.MessageCln(output.BoldTag, output.ForeWhite, " powershell version ", output.CleanTag, GetPH("CTX_PS_VERSION")))
+	}
 }
 
 func printInfo() {
