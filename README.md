@@ -15,12 +15,13 @@ to *fix* this issue, contxt will be mapped by a shell function called **ctx**.
 for bash you just need to run `contxt install bash`. this will update user related shell init scripts. 
 for **zsh** use `contxt install zsh` and for **fish** use `contxt install fish` instead.
 #### windows
-currently the windows version have to be builded. there are now prebuild files exists right now.
-so checkout this repo and run `winbuild.bat`
+currently the windows version have to be builded. there are no prebuild files exists right now.
+
+so checkout this repo and run `winbuild.bat`. the binary (.exe) can be found afterwards in the bin folder.
 
 ##### powershell 7 support
 the default shell on windows is `powershell`. 
-if you have **powershell 7** installed you can set these as default shell as environment variable. `$env:CTX_DEFAULT_CMD = "pwsh"`
+if you have **powershell 7** installed, you can set these as default shell as environment variable. `$env:CTX_DEFAULT_CMD = "pwsh"`
 
 > **pwsh** is one of the possible commands for powershell. they exists also others for previews etc. fit them if needed.
 
