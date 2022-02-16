@@ -60,6 +60,12 @@ func GetExecDefaults() (string, []string) {
 }
 
 func GetDefaultCmd() string {
+
+	envCmd := os.Getenv("CTX_DEFAULT_CMD")
+	if envCmd != "" {
+		return envCmd
+	}
+
 	if configure.GetOs() == "windows" {
 		return DefaultCommandFallBackWindows
 	}

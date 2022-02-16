@@ -620,7 +620,7 @@ func InitDefaultVars() {
 			cmd := "$PSVersionTable.PSVersion.Major"
 			cmdArg := []string{"-nologo", "-noprofile"}
 			version := ""
-			ExecuteScriptLine(DefaultCommandFallBackWindows, cmdArg, cmd, func(s string) bool {
+			ExecuteScriptLine(GetDefaultCmd(), cmdArg, cmd, func(s string) bool {
 				version = s
 				return true
 			}, func(p *os.Process) {
