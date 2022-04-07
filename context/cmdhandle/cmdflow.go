@@ -66,7 +66,7 @@ func RunShared(targets string) {
 		GetLogger().WithField("uses", template.Config.Use).Info("found external dependecy")
 		fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED loop]"))
 		for _, shared := range template.Config.Use {
-			fmt.Println(output.MessageCln(output.ForeCyan, "[...SHARED CONTXT >>>][", output.ForeBlue, shared+"] "))
+			fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED CONTXT][", output.ForeBlue, shared, output.ForeCyan, "] "))
 			externalPath := HandleUsecase(shared)
 			GetLogger().WithField("path", externalPath).Info("shared contxt location")
 			currentDir, _ := dirhandle.Current()
@@ -74,7 +74,7 @@ func RunShared(targets string) {
 			for _, runTarget := range allTargets {
 				fmt.Println(output.MessageCln(output.ForeCyan, output.ForeGreen, runTarget, output.ForeYellow, " [ external:", output.ForeWhite, externalPath, output.ForeYellow, "] ", output.ForeDarkGrey, templatePath))
 				RunTargets(runTarget, false)
-				fmt.Println(output.MessageCln(output.ForeCyan, output.ForeBlue, shared+"] ", output.ForeGreen, runTarget, " DONE"))
+				fmt.Println(output.MessageCln(output.ForeCyan, "["+output.ForeBlue, shared+"] ", output.ForeGreen, runTarget, " DONE"))
 			}
 			os.Chdir(currentDir)
 		}

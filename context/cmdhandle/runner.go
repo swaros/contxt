@@ -346,11 +346,16 @@ you will also see if a unexpected propertie found `,
 			showall, _ := cmd.Flags().GetBool("full")
 			yamlParse, _ := cmd.Flags().GetBool("yaml")
 			yamlIndent, _ := cmd.Flags().GetInt("indent")
+			okay := false
 			if yamlParse {
 				ShowAsYaml(true, !showall, yamlIndent)
-				LintOut(leftLen, 0, false, true)
+				okay = LintOut(leftLen, 0, false, true)
 			} else {
-				LintOut(leftLen, rightLen, showall, false)
+				okay = LintOut(leftLen, rightLen, showall, false)
+			}
+
+			if !okay {
+				os.Exit(1)
 			}
 
 		},
@@ -651,7 +656,12 @@ func MainExecute() {
 	// before we get cobra controll
 	if !shortcuts() {
 		initCobra()
-		executeCobra()
+		err := executeCobra()
+		if err != nil {
+			output.Error("error", err)
+			os.Exit(1)
+		}
+
 	}
 
 }
