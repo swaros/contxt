@@ -770,6 +770,7 @@ func checkReason(checkReason configure.Trigger, output string) (bool, string) {
 	}
 
 	for _, checkText := range checkReason.OnoutContains {
+		checkText = HandlePlaceHolder(checkText)
 		if checkText != "" && strings.Contains(output, checkText) {
 			message = fmt.Sprint("reason match because output contains ", checkText)
 			return true, message
