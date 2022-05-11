@@ -32,6 +32,7 @@ const (
 	fromJSONMark    = "#@import-json"
 	fromJSONCmdMark = "#@import-json-exec"
 	parseVarsMark   = "#@var"
+	setvarMark      = "#@set"
 	equalsMark      = "#@if-equals"
 	osCheck         = "#@if-os"
 	codeLinePH      = "__LINE__"
@@ -136,7 +137,14 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					output.Error("invalid usage", fromJSONCmdMark, " needs 2 arguments at least. <keyname> <bash-command>")
 				}
-
+			case setvarMark:
+				if len(parts) >= 2 {
+					setKeyname := parts[1]
+					setValue := strings.Join(parts[2:], " ")
+					SetPH(setKeyname, HandlePlaceHolder(setValue))
+				} else {
+					output.Error("invalid usage", setvarMark, " needs 2 arguments at least. <keyname> <value>")
+				}
 			case parseVarsMark:
 				if len(parts) >= 2 {
 					var returnValues []string

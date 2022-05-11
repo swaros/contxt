@@ -263,6 +263,18 @@ func TestTryParseVar(t *testing.T) {
 	}
 }
 
+func TestSetVar(t *testing.T) {
+	var script []string
+	script = append(script, "#@set test-var-set hello")
+	cmdhandle.TryParse(script, func(line string) (bool, int) {
+		return false, cmdhandle.ExitOk
+	})
+	teststr := cmdhandle.GetPH("test-var-set")
+	if teststr != "hello" {
+		t.Error("set var by command is not working. got [", teststr, "]")
+	}
+}
+
 /*
 func TestTryParseWithKeys(t *testing.T) {
 	err := cmdhandle.ImportDataFromYAMLFile("test-with-key", "../../docs/test/foreach/importFile.yaml")
