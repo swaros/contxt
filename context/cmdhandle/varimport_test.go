@@ -15,6 +15,23 @@ func clearStrings(compare string) string {
 	return compare
 }
 
+func TestParseArgLine(t *testing.T) {
+	param1 := `i sayed 'Hello you' and got the response 'fuck you'`
+	params, found := cmdhandle.GetArgQuotedEntries(param1)
+	if !found {
+		t.Error("nothing found. that should not happens")
+	}
+	if len(params) > 2 {
+		t.Error("unexcpected amout if entries", params)
+	}
+
+	allFounds := cmdhandle.SplitQuoted(param1, " ")
+	if len(allFounds) != 8 {
+		t.Error("unexpected amount of strings ", len(allFounds))
+	}
+
+}
+
 func TestParsingFile(t *testing.T) {
 	fileName := "../../docs/test/varimport/test1.json"
 	jsonMap, err := cmdhandle.ImportJSONFile(fileName)

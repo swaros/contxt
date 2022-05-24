@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -34,6 +36,7 @@ const (
 	parseVarsMark   = "#@var"
 	setvarMark      = "#@set"
 	equalsMark      = "#@if-equals"
+	notEqualsMark   = "#@if-not-equals"
 	osCheck         = "#@if-os"
 	codeLinePH      = "__LINE__"
 	codeKeyPH       = "__KEY__"
@@ -50,7 +53,9 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 	for _, line := range script {
 		line = HandlePlaceHolder(line)
 		if len(line) > len(startMark) && line[0:len(startMark)] == startMark {
-			parts := strings.Split(line, inlineCmdSep)
+			//parts := strings.Split(line, inlineCmdSep)
+			parts := SplitQuoted(line, inlineCmdSep)
+
 			GetLogger().WithField("keywords", parts).Debug("try to parse parts")
 			if len(parts) < 1 {
 				continue
@@ -65,10 +70,10 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						inIfState = true
 						ifState = leftEq == rightEq
 					} else {
-						output.Error("invalid usage", equalsMark, "need: str1 str2 ")
+						output.Error("invalid usage ", equalsMark, " need: str1 str2 ")
 					}
 				} else {
-					output.Error("invalid usage", equalsMark, " can not be used in another if")
+					output.Error("invalid usage ", equalsMark, " can not be used in another if")
 				}
 
 			case equalsMark:
@@ -78,11 +83,27 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						rightEq := parts[2]
 						inIfState = true
 						ifState = leftEq == rightEq
+						GetLogger().WithFields(logrus.Fields{"condition": ifState, "left": leftEq, "right": rightEq}).Debug(equalsMark)
 					} else {
-						output.Error("invalid usage", equalsMark, "need: str1 str2 ")
+						output.Error("invalid usage ", equalsMark, " need: str1 str2 (got:", len(parts), ")")
 					}
 				} else {
-					output.Error("invalid usage", equalsMark, " can not be used in another if")
+					output.Error("invalid usage ", equalsMark, " can not be used in another if")
+				}
+
+			case notEqualsMark:
+				if !inIfState {
+					if len(parts) == 3 {
+						leftEq := parts[1]
+						rightEq := parts[2]
+						inIfState = true
+						ifState = leftEq != rightEq
+						GetLogger().WithFields(logrus.Fields{"condition": ifState, "left": leftEq, "right": rightEq}).Debug(notEqualsMark)
+					} else {
+						output.Error("invalid usage ", notEqualsMark, " need: str1 str2 (got:", len(parts), ")")
+					}
+				} else {
+					output.Error("invalid usage ", equalsMark, " can not be used in another if")
 				}
 
 			case inlineMark:
@@ -247,6 +268,48 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 		"parsed": parsedScript,
 	}).Debug("... parsed result")
 	return false, ExitOk, parsedScript
+}
+
+func GetArgQuotedEntries(oristr string) ([]string, bool) {
+	var result []string
+	found := false
+	re := regexp.MustCompile(`'[^']+'`)
+	newStrs := re.FindAllString(oristr, -1)
+	for _, s := range newStrs {
+		found = true
+		result = append(result, s)
+
+	}
+	return result, found
+}
+
+func SplitQuoted(oristr string, sep string) []string {
+	var result []string
+	var placeHolder map[string]string = make(map[string]string)
+
+	found := false
+	re := regexp.MustCompile(`'[^']+'`)
+	newStrs := re.FindAllString(oristr, -1)
+	i := 0
+	for _, s := range newStrs {
+		pl := "[$" + strconv.Itoa(i) + "]"
+		placeHolder[pl] = strings.ReplaceAll(s, `'`, "")
+		oristr = strings.Replace(oristr, s, pl, 1)
+		found = true
+		i++
+	}
+	result = strings.Split(oristr, sep)
+	if !found {
+		return result
+	}
+
+	for index, val := range result {
+		if orgStr, fnd := placeHolder[val]; fnd {
+			result[index] = orgStr
+		}
+	}
+
+	return result
 }
 
 // YAMLToMap Convert yaml source string into map
