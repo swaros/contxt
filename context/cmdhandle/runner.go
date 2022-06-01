@@ -333,6 +333,42 @@ you need to set the name for the workspace`,
 		},
 	}
 
+	exportCmd = &cobra.Command{
+		Use:   "export",
+		Short: "exports the script section of an target like a bash script",
+		Long: `for extracting tasks commands in a format that can be executed as a shell script.
+this will be a plain export without handling dynamic generated placeholders (default placeholders will be parsed)  and contxt macros.
+also go-template imports will be handled.
+		`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			for _, target := range args {
+				outStr, err := ExportTask(target)
+				if err == nil {
+					fmt.Println("# --- -------------- ---------- ----- ------ ")
+					fmt.Println("# --- contxt export of target " + target)
+					fmt.Println("# --- -------------- ---------- ----- ------ ")
+					fmt.Println()
+					fmt.Println(handlePlaceHolder(outStr))
+				} else {
+					panic(err)
+				}
+
+			}
+		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			//targets, found := targetsAsMap()
+			targets, found := getAllTargets()
+			if !found {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return targets, cobra.ShellCompDirectiveNoFileComp
+		},
+	}
+
 	lintCmd = &cobra.Command{
 		Use:   "lint",
 		Short: "checking the task file",
@@ -548,6 +584,7 @@ func initCobra() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(createCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(exportCmd)
 
 	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the width for the source code")
 	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the witdh for the current state view")
