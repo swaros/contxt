@@ -8,6 +8,7 @@ import (
 	"os/user"
 	"path/filepath"
 
+	"github.com/imdario/mergo"
 	"github.com/swaros/contxt/context/output"
 
 	"github.com/swaros/contxt/context/configure"
@@ -64,6 +65,31 @@ func GetTemplate() (configure.RunConfig, string, bool) {
 	}
 	ctemplate, err := GetPwdTemplate(foundPath)
 	if err == nil {
+		// checking required shared templates
+		// and merge them into the current template
+		if len(ctemplate.Config.Require) > 0 {
+			for _, reqSource := range ctemplate.Config.Require {
+				GetLogger().WithField("path", reqSource).Debug("handle required ")
+				fullPath, pathError := CheckUseConfig(reqSource)
+				if pathError == nil {
+					GetLogger().WithField("path", fullPath).Info("require path resolved")
+					subTemplate, tError := GetPwdTemplate(fullPath + string(os.PathSeparator) + DefaultExecYaml)
+					if tError == nil {
+						mergo.Merge(&ctemplate, subTemplate, mergo.WithOverride, mergo.WithAppendSlice)
+						GetLogger().WithField("template", ctemplate).Debug("merged")
+					} else {
+						GetLogger().Error(tError)
+						os.Exit(31)
+					}
+				} else {
+					GetLogger().Error(pathError)
+					os.Exit(31)
+				}
+			}
+		} else {
+			GetLogger().Debug("no required files configured")
+		}
+
 		return ctemplate, foundPath, true
 	}
 

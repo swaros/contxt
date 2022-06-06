@@ -34,6 +34,7 @@ func TestTimout(t *testing.T) {
 	}
 }
 
+/*
 func TestRegular(t *testing.T) {
 	ResetAllTaskInfos()
 	incTaskCount("testTask")
@@ -72,7 +73,7 @@ func TestRegular(t *testing.T) {
 		t.Error("done should be called..", waitHits)
 	}
 }
-
+*/
 func TestNeverStarts(t *testing.T) {
 	ResetAllTaskInfos()
 

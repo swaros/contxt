@@ -130,7 +130,7 @@ task:
      require:
        system: windows
      script:
-       - echo %cd%
+       - Get-Location | Foreach-Object { $_.Path }
 ````
 ## config
 

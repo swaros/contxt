@@ -33,6 +33,7 @@ var (
 	runAtAll      bool
 	leftLen       int
 	rightLen      int
+	yamlIndent    int
 	showInvTarget bool
 	uselastIndex  bool
 	showHints     bool
@@ -332,6 +333,42 @@ you need to set the name for the workspace`,
 		},
 	}
 
+	exportCmd = &cobra.Command{
+		Use:   "export",
+		Short: "exports the script section of an target like a bash script",
+		Long: `for extracting tasks commands in a format that can be executed as a shell script.
+this will be a plain export without handling dynamic generated placeholders (default placeholders will be parsed)  and contxt macros.
+also go-template imports will be handled.
+		`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			for _, target := range args {
+				outStr, err := ExportTask(target)
+				if err == nil {
+					fmt.Println("# --- -------------- ---------- ----- ------ ")
+					fmt.Println("# --- contxt export of target " + target)
+					fmt.Println("# --- -------------- ---------- ----- ------ ")
+					fmt.Println()
+					fmt.Println(handlePlaceHolder(outStr))
+				} else {
+					panic(err)
+				}
+
+			}
+		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			//targets, found := targetsAsMap()
+			targets, found := getAllTargets()
+			if !found {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return targets, cobra.ShellCompDirectiveNoFileComp
+		},
+	}
+
 	lintCmd = &cobra.Command{
 		Use:   "lint",
 		Short: "checking the task file",
@@ -344,10 +381,17 @@ you will also see if a unexpected propertie found `,
 			rightLen, _ := cmd.Flags().GetInt("right")
 			showall, _ := cmd.Flags().GetBool("full")
 			yamlParse, _ := cmd.Flags().GetBool("yaml")
+			yamlIndent, _ := cmd.Flags().GetInt("indent")
+			okay := false
 			if yamlParse {
-				ShowAsYaml()
+				ShowAsYaml(true, false, yamlIndent)
+				okay = LintOut(leftLen, 0, false, true)
 			} else {
-				LintOut(leftLen, rightLen, showall)
+				okay = LintOut(leftLen, rightLen, showall, false)
+			}
+
+			if !okay {
+				os.Exit(1)
 			}
 
 		},
@@ -405,12 +449,11 @@ you will also see if a unexpected propertie found `,
 			GetLogger().WithField("args", args).Info("Run triggered")
 			GetLogger().WithField("all", runAtAll).Info("all workspaces?")
 
-			//if preVars != nil {
+			// set variables by argument
 			for preKey, preValue := range preVars {
 				GetLogger().WithFields(logrus.Fields{"key": preKey, "val": preValue}).Info("prevalue set by argument")
 				SetPH(preKey, preValue)
 			}
-			//}
 
 			if len(args) == 0 {
 				printTargets()
@@ -541,9 +584,11 @@ func initCobra() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(createCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(exportCmd)
 
 	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the width for the source code")
 	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the witdh for the current state view")
+	lintCmd.Flags().IntVar(&yamlIndent, "indent", 2, "set indent for yaml output by using lint --yaml")
 	lintCmd.Flags().Bool("full", false, "print also unset properties")
 	lintCmd.Flags().Bool("yaml", false, "display parsed taskfile as yaml file")
 	lintCmd.Flags().Bool("parse", false, "parse second level keywords (#@...)")
@@ -611,6 +656,23 @@ func InitDefaultVars() {
 	SetPH("CTX_OS", configure.GetOs())
 	if configure.GetOs() == "windows" {
 		output.ColorEnabled = false
+		if os.Getenv("CTX_COLOR") == "ON" {
+			output.ColorEnabled = true
+		} else {
+			cmd := "$PSVersionTable.PSVersion.Major"
+			cmdArg := []string{"-nologo", "-noprofile"}
+			version := ""
+			ExecuteScriptLine(GetDefaultCmd(), cmdArg, cmd, func(s string) bool {
+				version = s
+				return true
+			}, func(p *os.Process) {
+
+			})
+			SetPH("CTX_PS_VERSION", version)
+			if version >= "7" {
+				output.ColorEnabled = true
+			}
+		}
 	}
 }
 
@@ -631,7 +693,12 @@ func MainExecute() {
 	// before we get cobra controll
 	if !shortcuts() {
 		initCobra()
-		executeCobra()
+		err := executeCobra()
+		if err != nil {
+			output.Error("error", err)
+			os.Exit(1)
+		}
+
 	}
 
 }
@@ -724,20 +791,37 @@ func detectSharedTargetsAsMap(current configure.RunConfig) []string {
 	return targets
 }
 
+func ExistInStrMap(testStr string, check []string) bool {
+	for _, str := range check {
+		if strings.TrimSpace(str) == strings.TrimSpace(testStr) {
+			return true
+		}
+	}
+	return false
+}
+
 func targetsAsMap() ([]string, bool) {
 	var targets []string
-	found := false
 	template, _, exists := GetTemplate()
 	if exists {
-		if len(template.Task) > 0 {
-			for _, tasks := range template.Task {
-				if !tasks.Options.Invisible {
-					found = true
-					targets = append(targets, tasks.ID)
-				}
+		return templateTargetsAsMap(template)
+	}
+	return targets, false
+}
+
+func templateTargetsAsMap(template configure.RunConfig) ([]string, bool) {
+	var targets []string
+	found := false
+
+	if len(template.Task) > 0 {
+		for _, tasks := range template.Task {
+			if !ExistInStrMap(tasks.ID, targets) && (!tasks.Options.Invisible || showInvTarget) {
+				found = true
+				targets = append(targets, strings.TrimSpace(tasks.ID))
 			}
 		}
 	}
+
 	return targets, found
 }
 
@@ -749,10 +833,9 @@ func printTargets() {
 		fmt.Println(output.MessageCln(output.ForeDarkGrey, "tasks count:  \t", output.CleanTag, len(template.Task)))
 		if len(template.Task) > 0 {
 			fmt.Println(output.MessageCln(output.BoldTag, "existing targets:"))
-			for _, tasks := range template.Task {
-				if showInvTarget || !tasks.Options.Invisible {
-					fmt.Println("\t", tasks.ID)
-				}
+			taskList, _ := templateTargetsAsMap(template)
+			for _, tasks := range taskList {
+				fmt.Println("\t", tasks)
 			}
 		} else {
 			fmt.Println(output.MessageCln("that is what we gor so far:"))
@@ -779,6 +862,9 @@ func runTargets(path string, targets string) {
 func printOutHeader() {
 	fmt.Println(output.MessageCln(output.BoldTag, output.ForeWhite, "cont(e)xt ", output.CleanTag, configure.GetVersion()))
 	fmt.Println(output.MessageCln(output.Dim, " build-no [", output.ResetDim, configure.GetBuild(), output.Dim, "]"))
+	if configure.GetOs() == "windows" {
+		fmt.Println(output.MessageCln(output.BoldTag, output.ForeWhite, " powershell version ", output.CleanTag, GetPH("CTX_PS_VERSION")))
+	}
 }
 
 func printInfo() {
@@ -810,10 +896,9 @@ func printPaths() {
 			}
 			if exists {
 				outTasks := ""
-				for _, tasks := range template.Task {
-					if !tasks.Options.Invisible {
-						outTasks = outTasks + " " + tasks.ID
-					}
+				targets, _ := templateTargetsAsMap(template)
+				for _, tasks := range targets {
+					outTasks = outTasks + " " + tasks
 				}
 
 				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, add, path, output.CleanTag, " targets", "[", output.ForeYellow, outTasks, output.CleanTag, "]"))

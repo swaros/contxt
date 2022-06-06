@@ -1,0 +1,30 @@
+config:
+    sequencially: true  
+task:
+    - id: origin_dir
+      require:
+        system: linux
+      script:
+        - "pwd"
+    
+    - id: origin_dir
+      require:
+        system: windows
+      script:
+        - Get-Location | Foreach-Object { $_.Path }
+
+    - id: sub_a
+      options:
+        workingdir: ${CTX_PWD}/sub_a
+      require:
+        system: linux
+      script:
+        - cat test.txt
+  
+    - id: sub_a
+      options:
+        workingdir: ${CTX_PWD}/sub_a
+      require:
+        system: windows
+      script:
+        - type test.txt

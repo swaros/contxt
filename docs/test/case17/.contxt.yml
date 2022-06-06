@@ -1,0 +1,9 @@
+config:
+  require:
+    - test-local-import
+task:
+  - id: script
+    options:
+      displaycmd: true
+    script:
+      - echo "hello world"

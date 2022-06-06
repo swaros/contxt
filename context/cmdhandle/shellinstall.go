@@ -108,9 +108,10 @@ func BashUser() {
 function cn() { cd $(contxt dir find "$@"); }
 function ctx() {        
 	contxt "$@";
+	[ $? -eq 0 ]  || return 1
         case $1 in
           switch)          
-          cd $(contxt dir --last);
+          cd $(contxt dir --last);		  
           contxt dir paths --coloroff --nohints
           ;;
         esac
@@ -182,6 +183,7 @@ func ZshUser() {
 function cn() { cd $(contxt dir find "$@"); }
 function ctx() {        
 	contxt "$@";
+	[ $? -eq 0 ]  || return $?
         case $1 in
           switch)          
           cd $(contxt dir --last);

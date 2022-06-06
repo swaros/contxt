@@ -59,6 +59,8 @@ type Config struct {
 	Autorun      Autorun           `yaml:"autorun"`
 	Imports      []string          `yaml:"imports"`
 	Use          []string          `yaml:"use"`
+	Require      []string          `yaml:"require"`
+	MergeTasks   bool              `yaml:"mergetasks"`
 }
 
 // Require defines what is required to execute the task
@@ -86,6 +88,7 @@ type Options struct {
 	NoAutoRunNeeds bool     `yaml:"noAutoRunNeeds"`
 	TimeoutNeeds   int      `yaml:"timeoutNeeds"`
 	TickTimeNeeds  int      `yaml:"tickTimeNeeds"`
+	WorkingDir     string   `yaml:"workingdir"`
 }
 
 // Trigger are part of listener. The defines
