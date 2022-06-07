@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/swaros/contxt/context/cmdhandle"
+	"github.com/swaros/contxt/context/configure"
 )
 
 func clearStrings(compare string) string {
@@ -247,7 +248,11 @@ func TestTryParseJsonImport(t *testing.T) {
 func TestTryParseJsonImportByExec(t *testing.T) {
 
 	var script []string
-	script = append(script, "#@import-json-exec exec-import-data cat ../../docs/test/foreach/forcat.json")
+	if configure.GetOs() == "windows" {
+		return // skip on windows
+	} else {
+		script = append(script, "#@import-json-exec exec-import-data cat ../../docs/test/foreach/forcat.json")
+	}
 
 	cmdhandle.TryParse(script, func(line string) (bool, int) {
 		return false, cmdhandle.ExitOk
@@ -265,7 +270,9 @@ func TestTryParseJsonImportByExec(t *testing.T) {
 }
 
 func TestTryParseVar(t *testing.T) {
-
+	if configure.GetOs() == "windows" {
+		return // skip on windows
+	}
 	var script []string
 	cmdhandle.SetPH("test-var-out", "first")
 	script = append(script, "#@var check-replace-out echo test-${test-var-out}-case")
