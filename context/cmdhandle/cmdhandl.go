@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -63,6 +64,7 @@ func GetDefaultCmd() string {
 
 	envCmd := os.Getenv("CTX_DEFAULT_CMD")
 	if envCmd != "" {
+		GetLogger().WithField("defaultcmd", envCmd).Info("Got default cmd from environment")
 		return envCmd
 	}
 
@@ -74,6 +76,10 @@ func GetDefaultCmd() string {
 
 func GetDefaultCmdOpts(ShellToUse string, cmdArg []string) []string {
 	if configure.GetOs() == "windows" {
+		if envCmd := os.Getenv("CTX_DEFAULT_CMD_ARGUMENTS"); envCmd != "" {
+			GetLogger().WithField("arguments", envCmd).Info("Got cmd arguments form environment")
+			return strings.Split(envCmd, " ")
+		}
 		if cmdArg == nil && ShellToUse == DefaultCommandFallBackWindows {
 			cmdArg = []string{"-nologo", "-noprofile"}
 		}

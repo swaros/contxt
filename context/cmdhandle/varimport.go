@@ -187,7 +187,8 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 							"returnCode": cmdCode,
 							"error":      errorFromCm.Error,
 						}).Error("subcommand failed.")
-						output.Error("Subcommand failed", cmd, " ... was used to get json context.")
+						output.Error("Subcommand failed", cmd, " ... was used to get json context. ", errorFromCm.Error())
+						output.Error("cmd:", exec, "  ", args, " ", cmd)
 					}
 
 				} else {

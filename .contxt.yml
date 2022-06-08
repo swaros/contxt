@@ -1,15 +1,49 @@
---- 
 task: 
-  - id: build
-    script: 
-      - rm -rf dist/
-      - goreleaser build --skip-validate --rm-dist
-      - cd dist/contxt_linux_amd64 && ./contxt version
-  
-  - id: release
+  - id: test
     script:
-      - goreleaser release --skip-validate --rm-dist --release-notes=./docs/CHANGELOG.md
+      - go test -v ./...
 
-  - id: init
-    script: 
-      - "git status"
+  - id: set-version
+    require:
+      system: linux
+    script:
+      - "#@var main-version cat docs/mainversion"
+      - "#@var mid-version cat docs/midversion"
+      - "#@var minor-version cat docs/minversion"
+      - "#@var build-hash date -u +.%Y%m%d.%H%M%S"
+      - "#@set bin-out contxt"
+
+  - id: set-version
+    options:
+      displaycmd: true
+      maincmd: pwsh
+      mainparams:
+        - "-Command"
+    require:
+      system: windows
+    script:
+      - "#@var main-version type docs/mainversion"
+      - "#@var mid-version type docs/midversion"
+      - "#@var minor-version type docs/minversion"
+      - "#@set build-hash windows"
+      - "#@set bin-out contxt.exe"
+
+  - id: set-version
+    script:
+     - echo "version ${main-version}.${mid-version}.${minor-version} ${build-hash} out ${bin-out}"
+
+  - id: build
+    needs:
+      - set-version
+    require:
+      variables:
+        main-version: "*"
+        mid-version: "*"
+        minor-version: "*"
+        bin-out: "*"
+
+    script:
+      - echo "build start"
+      - go build -ldflags "-X github.com/swaros/contxt/context/configure.minversion=${main-version} -X github.com/swaros/contxt/context/configure.midversion=${mid-version} -X github.com/swaros/contxt/context/configure.mainversion=${minor-version} -X github.com/swaros/contxt/context/configure.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
+  
+
