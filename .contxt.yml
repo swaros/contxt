@@ -35,6 +35,10 @@ task:
   - id: build
     needs:
       - set-version
+    next:
+      - build-exec
+
+  - id: build-exec
     require:
       variables:
         main-version: "*"
