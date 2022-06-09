@@ -172,6 +172,8 @@ func TestRunTargetCase2(t *testing.T) {
 	})
 }
 
+// TBH: not sure if these is not too specific
+/*
 func TestRunTargetCase3(t *testing.T) {
 	// testing PID of my own and the parent process
 	if configure.GetOs() == "windows" {
@@ -190,7 +192,7 @@ func TestRunTargetCase3(t *testing.T) {
 		}
 	})
 
-}
+}*/
 
 func TestCase4(t *testing.T) {
 	caseRunner("4", t, func(t *testing.T) {
