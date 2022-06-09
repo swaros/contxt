@@ -1,9 +1,13 @@
 task: 
   - id: test
     script:
-      - go test -v ./...
+      - go clean -testcache ./..
+      - go test ./...
 
   - id: set-version
+    options:
+      displaycmd: true
+      invisible: true
     require:
       system: linux
     script:
@@ -16,6 +20,7 @@ task:
   - id: set-version
     options:
       displaycmd: true
+      invisible: true
       maincmd: pwsh
       mainparams:
         - "-Command"
@@ -29,6 +34,9 @@ task:
       - "#@set bin-out contxt.exe"
 
   - id: set-version
+    options:
+      displaycmd: true
+      invisible: true
     script:
      - echo "version ${main-version}.${mid-version}.${minor-version} ${build-hash} out ${bin-out}"
 
@@ -39,15 +47,28 @@ task:
       - build-exec
 
   - id: build-exec
+    options:
+      displaycmd: true
+      invisible: true
     require:
       variables:
         main-version: "*"
         mid-version: "*"
         minor-version: "*"
         bin-out: "*"
-
+    next:
+      - verify-build
     script:
       - echo "build start"
-      - go build -ldflags "-X github.com/swaros/contxt/context/configure.minversion=${main-version} -X github.com/swaros/contxt/context/configure.midversion=${mid-version} -X github.com/swaros/contxt/context/configure.mainversion=${minor-version} -X github.com/swaros/contxt/context/configure.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
-  
+      - go build -ldflags "-X github.com/swaros/contxt/context/configure.minversion=${minor-version} -X github.com/swaros/contxt/context/configure.midversion=${mid-version} -X github.com/swaros/contxt/context/configure.mainversion=${main-version} -X github.com/swaros/contxt/context/configure.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
+
+  - id: verify-build
+    options:
+      displaycmd: true
+      invisible: true
+    require:
+      exists:
+        - bin/${bin-out}
+    script:
+       - bin/${bin-out} version
 
