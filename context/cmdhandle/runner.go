@@ -349,7 +349,7 @@ also go-template imports will be handled.
 					fmt.Println("# --- contxt export of target " + target)
 					fmt.Println("# --- -------------- ---------- ----- ------ ")
 					fmt.Println()
-					fmt.Println(handlePlaceHolder(outStr))
+					fmt.Println(HandlePlaceHolder(outStr))
 				} else {
 					panic(err)
 				}

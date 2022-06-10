@@ -52,15 +52,16 @@ type Autorun struct {
 
 // Config is the main Configuration part of the Template.
 type Config struct {
-	Sequencially bool              `yaml:"sequencially"`
-	Coloroff     bool              `yaml:"coloroff"`
-	Loglevel     string            `yaml:"loglevel"`
-	Variables    map[string]string `yaml:"variables,omitempty"`
-	Autorun      Autorun           `yaml:"autorun"`
-	Imports      []string          `yaml:"imports"`
-	Use          []string          `yaml:"use"`
-	Require      []string          `yaml:"require"`
-	MergeTasks   bool              `yaml:"mergetasks"`
+	Sequencially  bool              `yaml:"sequencially"`
+	Coloroff      bool              `yaml:"coloroff"`
+	Loglevel      string            `yaml:"loglevel"`
+	Variables     map[string]string `yaml:"variables,omitempty"`
+	Autorun       Autorun           `yaml:"autorun"`
+	Imports       []string          `yaml:"imports"`
+	Use           []string          `yaml:"use"`
+	Require       []string          `yaml:"require"`
+	MergeTasks    bool              `yaml:"mergetasks"`
+	AllowMutliRun bool              `yaml:"allowmultiplerun"`
 }
 
 // Require defines what is required to execute the task

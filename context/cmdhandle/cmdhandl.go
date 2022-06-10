@@ -187,5 +187,6 @@ func WriteTemplate() {
 
 // ExecPathFile executes the default exec file
 func ExecPathFile(waitGroup *sync.WaitGroup, useWaitGroup bool, template configure.RunConfig, target string) int {
-	return executeTemplate(waitGroup, useWaitGroup, template, target)
+	var scopeVars map[string]string = make(map[string]string)
+	return executeTemplate(waitGroup, useWaitGroup, template, target, scopeVars)
 }

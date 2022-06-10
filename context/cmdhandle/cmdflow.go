@@ -182,7 +182,7 @@ func checkRequirements(require configure.Require) (bool, string) {
 
 	// check file exists
 	for _, fileExists := range require.Exists {
-		fileExists = handlePlaceHolder(fileExists)
+		fileExists = HandlePlaceHolder(fileExists)
 		fexists, err := dirhandle.Exists(fileExists)
 		GetLogger().WithFields(logrus.Fields{
 			"path":   fileExists,
@@ -196,7 +196,7 @@ func checkRequirements(require configure.Require) (bool, string) {
 
 	// check file not exists
 	for _, fileNotExists := range require.NotExists {
-		fileNotExists = handlePlaceHolder(fileNotExists)
+		fileNotExists = HandlePlaceHolder(fileNotExists)
 		fexists, err := dirhandle.Exists(fileNotExists)
 		GetLogger().WithFields(logrus.Fields{
 			"path":   fileNotExists,
@@ -292,11 +292,12 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 				// checking script
 				if len(actionDef.Script) > 0 {
 					someReactionTriggered = true
+					var dummyArgs map[string]string = make(map[string]string)
 					for _, triggerScript := range actionDef.Script {
 						GetLogger().WithFields(logrus.Fields{
 							"cmd": triggerScript,
 						}).Debug("TRIGGER SCRIPT ACTION")
-						lineExecuter(waitGroup, useWaitGroup, script.Stopreasons, runCfg, "93", "46", triggerScript, target, script)
+						lineExecuter(waitGroup, useWaitGroup, script.Stopreasons, runCfg, "93", "46", triggerScript, target, dummyArgs, script)
 					}
 
 				}
@@ -337,19 +338,19 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 						"waitgroup": useWaitGroup,
 						"RUN.LISTENER." + target + ".HIT.TARGETS": lastHitTargets,
 					}).Info("TRIGGER Called")
-
+					var scopeVars map[string]string = make(map[string]string)
 					if useWaitGroup {
 						GetLogger().WithFields(logrus.Fields{
 							"target": actionDef.Target,
 						}).Info("RUN ASYNC")
 
-						go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+						go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target, scopeVars)
 
 					} else {
 						GetLogger().WithFields(logrus.Fields{
 							"target": actionDef.Target,
 						}).Info("RUN SEQUENCE")
-						executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+						executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target, scopeVars)
 					}
 				}
 				if !someReactionTriggered {
@@ -367,7 +368,16 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 	}
 }
 
-func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason configure.Trigger, runCfg configure.RunConfig, colorCode, bgCode, codeLine, target string, script configure.Task) (int, bool) {
+func lineExecuter(
+	waitGroup *sync.WaitGroup,
+	useWaitGroup bool,
+	stopReason configure.Trigger,
+	runCfg configure.RunConfig,
+	colorCode, bgCode,
+	codeLine,
+	target string,
+	arguments map[string]string,
+	script configure.Task) (int, bool) {
 	panelSize := 12
 	if script.Options.Panelsize > 0 {
 		panelSize = script.Options.Panelsize
@@ -376,7 +386,7 @@ func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason confi
 	if configure.GetOs() == "windows" {
 		mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBackWindows)
 	}
-	replacedLine := HandlePlaceHolder(codeLine)
+	replacedLine := HandlePlaceHolderWithScope(codeLine, arguments)
 	if script.Options.Displaycmd {
 		fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, replacedLine))
 	}
@@ -403,7 +413,7 @@ func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason confi
 			bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
 			labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
 			if script.Options.Format != "" {
-				format := handlePlaceHolder(script.Options.Format)
+				format := HandlePlaceHolderWithScope(script.Options.Format, script.Variables)
 				fomatedOutStr := output.Message(fmt.Sprintf(format, target))
 				labelStr = systools.LabelPrintWithArg(fomatedOutStr, foreColor, bgColor, 1)
 			}
@@ -503,7 +513,7 @@ func mergeTargets(target string, runCfg configure.RunConfig) configure.Task {
 	return checkTasks
 }
 
-func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string) int {
+func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string, scopeVars map[string]string) int {
 	if useWaitGroup {
 		waitGroup.Add(1)
 		GetLogger().WithFields(logrus.Fields{
@@ -513,7 +523,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 	}
 	// check if task is already running
 
-	if TaskRunning(target) {
+	if !runCfg.Config.AllowMutliRun && TaskRunning(target) {
 		GetLogger().WithField("task", target).Warning("task would be triggered again while is already running. IGNORED")
 		return ExitAlreadyRunning
 	}
@@ -554,7 +564,8 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 		for _, script := range taskList {
 			if strings.EqualFold(target, script.ID) {
 				GetLogger().WithFields(logrus.Fields{
-					"target": target,
+					"target":    target,
+					"scopeVars": scopeVars,
 				}).Info("executeTemplate EXECUTE target")
 				targetFound = true
 
@@ -575,12 +586,13 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				// get the task related variables
 				for keyName, variable := range script.Variables {
 					SetPH(keyName, HandlePlaceHolder(variable))
+					scopeVars[keyName] = variable
 				}
 				backToDir := ""
 				// if working dir is set change to them
 				if script.Options.WorkingDir != "" {
 					backToDir, _ = dirhandle.Current()
-					chDirError := os.Chdir(HandlePlaceHolder(script.Options.WorkingDir))
+					chDirError := os.Chdir(HandlePlaceHolderWithScope(script.Options.WorkingDir, scopeVars))
 					if chDirError != nil {
 						output.Error("Workspace setting seems invalid ", chDirError)
 						os.Exit(10)
@@ -609,6 +621,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						if tickTime < 1 {
 							tickTime = 1000 // 1 second as ticktime
 						}
+						//cleared := SplitArgs(script.Needs, "arg-", func(s string, m map[string]string) {})
 						WaitForTasksDone(script.Needs, time.Duration(timeOut)*time.Millisecond, time.Duration(tickTime)*time.Millisecond, func() bool {
 							// still waiting
 							waitHits++
@@ -622,7 +635,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 							GetLogger().Debug("timeout hit")
 							output.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
 							os.Exit(1)
-						}, func(needTarget string) bool {
+						}, func(needTarget string, args map[string]string) bool {
 							if script.Options.NoAutoRunNeeds {
 								output.Error("Need Task not started", "expected task ", target, " not running. autostart disbabled")
 								os.Exit(1)
@@ -636,13 +649,28 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 							// need to wait if these other task already started by
 							// other options
 							time.Sleep(500 * time.Millisecond)
-							go executeTemplate(waitGroup, useWaitGroup, runCfg, needTarget)
+
+							if merr := mergo.Merge(&scopeVars, args, mergo.WithOverride); merr != nil {
+								GetLogger().Error("Error while merging arguments")
+								os.Exit(10)
+							} else {
+								GetLogger().WithField("args", args).Debug("merge arguments to scopeVars")
+							}
+							go executeTemplate(waitGroup, useWaitGroup, runCfg, needTarget, scopeVars)
 							return true
 						})
 					} else {
 						// run needs in a sequence
 						for _, targetNeed := range script.Needs {
-							executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, targetNeed)
+
+							clearedNeed, argmap := StringSplitArgs(targetNeed, "arg")
+							if merr := mergo.Merge(&scopeVars, argmap); merr != nil {
+								GetLogger().Error("Error while merging arguments")
+								os.Exit(10)
+							} else {
+								GetLogger().WithField("args", argmap).Debug("merge arguments to scopeVars")
+							}
+							executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, clearedNeed, scopeVars)
 							if executionCode != ExitOk {
 								output.Error("Need Task Error", "expected returncode ", ExitOk, " but got exit Code", executionCode)
 								os.Exit(1)
@@ -655,9 +683,9 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				if len(script.RunTargets) > 0 {
 					for _, runTrgt := range script.RunTargets {
 						if useWaitGroup {
-							go executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt)
+							go executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt, scopeVars)
 						} else {
-							executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt)
+							executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt, scopeVars)
 						}
 					}
 					// workaround til the async runnig is refactored
@@ -681,7 +709,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				// preparing codelines by execute second level commands
 				// that can affect the whole script
 				abort, returnCode, _ = TryParse(script.Script, func(codeLine string) (bool, int) {
-					lineAbort, lineExitCode := lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, script)
+					lineAbort, lineExitCode := lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, scopeVars, script)
 					return lineExitCode, lineAbort
 				})
 				if abort {
@@ -705,7 +733,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					}*/
 
 					// for now we execute without a waitgroup
-					executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
+					executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget, scopeVars)
 				}
 
 				//return returnCode

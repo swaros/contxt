@@ -21,7 +21,7 @@ func TestTimout(t *testing.T) {
 	}, func() {}, func() {
 		// timeout
 		timeOutHit = true
-	}, func(target string) bool {
+	}, func(target string, args map[string]string) bool {
 		return true
 	})
 
@@ -93,7 +93,7 @@ func TestNeverStarts(t *testing.T) {
 	}, func() {
 		// timeout
 		timeOutHit = true
-	}, func(target string) bool {
+	}, func(target string, args map[string]string) bool {
 		notStartedCalled = true
 		return false
 	})

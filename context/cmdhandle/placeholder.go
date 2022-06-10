@@ -47,14 +47,32 @@ func GetPH(key string) string {
 
 // HandlePlaceHolder replaces all defined placeholders
 func HandlePlaceHolder(line string) string {
+	var scopeVars map[string]string = make(map[string]string)
 	for {
-		return handlePlaceHolder(line)
+		return handlePlaceHolder(line, scopeVars)
 	}
 }
 
-func handlePlaceHolder(line string) string {
+func HandlePlaceHolderWithScope(line string, scopeVars map[string]string) string {
+	for {
+		return handlePlaceHolder(line, scopeVars)
+	}
+}
 
+func handlePlaceHolder(line string, scopeVars map[string]string) string {
+
+	// this block is for logging at trace level only
 	if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
+
+		for key, value := range scopeVars {
+			keyName := "${" + key + "}"
+			if strings.Contains(line, keyName) {
+				GetLogger().WithField("line", line).Trace("scope replace: source")
+				GetLogger().WithField(keyName, value).Trace("scope replace: variables")
+			}
+			line = strings.ReplaceAll(line, keyName, value)
+		}
+
 		keyValue.Range(func(key, value interface{}) bool {
 			keyName := "${" + key.(string) + "}"
 			if strings.Contains(line, keyName) {
@@ -67,12 +85,21 @@ func handlePlaceHolder(line string) string {
 		})
 	}
 
+	for key, value := range scopeVars {
+		keyName := "${" + key + "}"
+		if strings.Contains(line, keyName) {
+			GetLogger().WithField("line", line).Trace("scope replace: source")
+			GetLogger().WithField(keyName, value).Trace("scope replace: variables")
+		}
+		line = strings.ReplaceAll(line, keyName, value)
+	}
+
 	keyValue.Range(func(key, value interface{}) bool {
 		keyName := "${" + key.(string) + "}"
 		line = strings.ReplaceAll(line, keyName, value.(string))
-		line = handleMapVars(line)
 		return true
 	})
+	line = handleMapVars(line)
 	return line
 }
 
