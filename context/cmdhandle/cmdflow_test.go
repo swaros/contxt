@@ -482,3 +482,10 @@ func TestStringMatcher(t *testing.T) {
 		t.Error("expect TRUE, not-empty placeholder should match with something")
 	}
 }
+
+func TestNeedWithArgs(t *testing.T) {
+	folderRunner("./../../docs/test/needWArgs", t, func(t *testing.T) {
+		cmdhandle.RunTargets("test-need", false)
+
+	})
+}

@@ -113,24 +113,6 @@ func RunTargets(targets string, sharedRun bool) {
 
 	var wg sync.WaitGroup
 
-	// handle all shared usages
-	/*
-		if len(template.Config.Use) > 0 {
-			GetLogger().WithField("uses", template.Config.Use).Info("found external dependecy")
-			for _, shared := range template.Config.Use {
-				externalPath := HandleUsecase(shared)
-				GetLogger().WithField("path", externalPath).Info("shared contxt location")
-				currentDir, _ := dirhandle.Current()
-				os.Chdir(externalPath)
-				for _, runTarget := range allTargets {
-					fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED CONTXT ", output.BoldTag, shared, "] ", runTarget, " ", output.ForeWhite, templatePath))
-					RunTargets(runTarget)
-				}
-				os.Chdir(currentDir)
-			}
-		}
-	*/
-
 	// handle all imports
 	if len(template.Config.Imports) > 0 {
 		GetLogger().WithField("Import", template.Config.Imports).Info("import second level vars")
@@ -635,7 +617,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 							GetLogger().Error("an defined task (need) hits the timeout")
 							output.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
 							os.Exit(1)
-						}, func(needTarget string, args map[string]string) bool {
+						}, func(needTargetWArgs string, needTarget string, args map[string]string) bool {
 							if script.Options.NoAutoRunNeeds {
 								output.Error("Need Task not started", "expected task ", target, " not running. autostart disbabled")
 								os.Exit(1)

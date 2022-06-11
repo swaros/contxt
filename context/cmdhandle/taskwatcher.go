@@ -65,7 +65,7 @@ func TaskRunning(target string) bool {
 // and the timeout callback is triggered
 // the callback for notStarted must return true if they handle this issue.
 // on returning false it will be counted as isDone
-func WaitForTasksDone(tasks []string, timeOut, tickTime time.Duration, stillWait func() bool, isDone func(), timeOutHandle func(), notStartet func(string, map[string]string) bool) {
+func WaitForTasksDone(tasks []string, timeOut, tickTime time.Duration, stillWait func() bool, isDone func(), timeOutHandle func(), notStartet func(string, string, map[string]string) bool) {
 	running := true
 	allDone := false
 	for running {
@@ -73,9 +73,9 @@ func WaitForTasksDone(tasks []string, timeOut, tickTime time.Duration, stillWait
 		for _, targetFullName := range tasks {
 			targetName, args := StringSplitArgs(targetFullName, "arg")
 			taskInfo, found := taskList.Load(targetName)
-			GetLogger().WithField("task", targetName).Trace("checking taskWait for needs")
-			if !found && !notStartet(targetName, args) {
-				GetLogger().WithField("task", targetName).Error("could not check against task that was never started")
+			GetLogger().WithField("task", targetFullName).Trace("checking taskWait for needs")
+			if !found && !notStartet(targetFullName, targetName, args) {
+				GetLogger().WithField("task", targetFullName).Error("could not check against task that was never started")
 				doneCount++
 			}
 			if found && taskInfo.(TaskDef).done {
