@@ -21,9 +21,14 @@ func caseRunner(id string, t *testing.T, testFunc func(t *testing.T)) {
 	if derr != nil {
 		t.Error(derr)
 	}
-	os.Chdir("./../../docs/test/case" + id)
-	testFunc(t)
-	os.Chdir(old)
+	dir := "./../../docs/test/case" + id
+	cmdhandle.GetLogger().Debug("--- [CR] TESTING FILE " + dir)
+	if err := os.Chdir(dir); err == nil {
+		testFunc(t)
+		os.Chdir(old)
+	} else {
+		t.Error(err)
+	}
 
 }
 
@@ -376,10 +381,10 @@ func TestCase15Needs(t *testing.T) {
 		usertest := cmdhandle.GetPH("RUN.start.LOG.LAST")
 		needOneRuns := cmdhandle.GetPH("RUN.need_one.LOG.LAST")
 		needTwoRuns := cmdhandle.GetPH("RUN.need_two.LOG.LAST")
-		if needOneRuns != "done need_one" {
+		if needOneRuns != "<<< 1 >>> done need_one" {
 			t.Error("NEEDS needOne should be executed [done need_one] we got : ", needOneRuns)
 		}
-		if needTwoRuns != "done need_two" {
+		if needTwoRuns != "<<< 2 >>> done need_two" {
 			t.Error("NEEDS needTwo should be executed [done need_two] we got : ", needTwoRuns)
 		}
 

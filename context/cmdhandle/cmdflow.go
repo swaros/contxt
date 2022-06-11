@@ -625,14 +625,14 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						WaitForTasksDone(script.Needs, time.Duration(timeOut)*time.Millisecond, time.Duration(tickTime)*time.Millisecond, func() bool {
 							// still waiting
 							waitHits++
-							GetLogger().Debug("Waiting for Task be done")
+							GetLogger().WithField("hitcounter", waitHits).Debug("Waiting for Task be done")
 							return true
 						}, func() {
 							// done
 
 						}, func() {
 							// timeout not allowed. hard exit
-							GetLogger().Debug("timeout hit")
+							GetLogger().Error("an defined task (need) hits the timeout")
 							output.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
 							os.Exit(1)
 						}, func(needTarget string, args map[string]string) bool {
