@@ -8,6 +8,15 @@ task:
       - go env | grep GOVERSION
       - go version 
  
+  - id: go-check
+    require:
+      system: windows
+    script:
+      - echo ${GOROOT}
+      - go env | Select-String GOROOT
+      - go env | Select-String GOVERSION
+      - go version
+
   - id: test
     script:
       - go clean -testcache ./..
@@ -20,6 +29,8 @@ task:
       - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/systools
       - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/output
       - go test -failfast -timeout 60s -v github.com/swaros/contxt/context/cmdhandle
+      - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/configure
+      - go test -failfast -timeout 60s -v github.com/swaros/contxt/context/dirhandle
 
   - id: set-version
     options:

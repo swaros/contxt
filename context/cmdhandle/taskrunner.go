@@ -75,11 +75,13 @@ func (t *TaskWatched) trackStart() bool {
 		if t.CanRun != nil {
 			return t.CanRun(t)
 		}
+		t.Log("allready runs ", t.task.RunId)
 		return false
 	}
 	t.task.Started = true
 	t.task.RunningCount = 1
 	t.task.Done = false
+	t.Log("save runtime tracking for task ", t.task.RunId)
 	procTracker.Store(t.task.RunId, t.task)
 	return true
 
@@ -117,6 +119,7 @@ func (t *TaskWatched) ReportDone() {
 }
 
 func (t *TaskWatched) Run() error {
+	t.Log(" --> run func \t", t.taskName, " id ", t.task.RunId)
 	if t.Exec == nil {
 		return errors.New("body function exec is undefined")
 	}
@@ -147,7 +150,6 @@ func (t *TaskWatched) Run() error {
 		}
 
 	})
-
 	if err := t.Exec(t); err != nil {
 		return err
 	}
@@ -178,45 +180,51 @@ func (Tg *TaskGroup) Exec() {
 	for _, tsk := range Tg.tasks {
 		if tsk.Async {
 			tsk.Log(" -> exec async \t", tsk.taskName, " id ", tsk.task.RunId)
-			for _, task := range Tg.tasks {
-
-				waitGroup.Add(1)
-				go func(tsk TaskWatched) {
-					defer waitGroup.Done()
-					err := tsk.Run()
-					if err != nil {
-						errors <- err
-						return
-					}
-
-				}(task)
-			}
+			waitGroup.Add(1)
+			go func(tsk TaskWatched) {
+				defer waitGroup.Done()
+				err := tsk.Run()
+				if err != nil {
+					errors <- err
+					return
+				}
+			}(tsk)
 
 		} else {
 			tsk.Log(" => exec regular \t", tsk.taskName, " id ", tsk.task.RunId)
 			tsk.Run()
 		}
 	}
-	GetLogger().Debug("waiting task beeing done")
+	GetLogger().Debug("waiting alls tasks beeing done")
 	go func() {
 		waitGroup.Wait()
 		close(errors)
 	}()
-	GetLogger().Debug("task done")
+	GetLogger().Debug("all tasks are done")
 
 }
 
-func (Tg *TaskGroup) Wait() {
+func (Tg *TaskGroup) Wait(wait time.Duration, timeOut time.Duration) {
+	var timeOutHit bool = false
+	time.AfterFunc(timeOut, func() {
+		timeOutHit = true
+	})
 	for {
 		canExists := true
 		all := len(Tg.tasks)
 		for indx, tsk := range Tg.tasks {
+			indOut := indx + 1
+			time.Sleep(wait)
 			if tsk.IsRunning() {
 				canExists = false
-				tsk.Log(" <-> task ", tsk.taskName, " still running ", indx, "/", all)
+				tsk.Log(" x task ", tsk.taskName, " still running ", indOut, "/", all)
 			} else {
-				tsk.Log(" ✓ task ", tsk.taskName, " DONE ", indx, "/", all)
+				tsk.Log(" ✓ task ", tsk.taskName, " DONE ", indOut, "/", all)
 			}
+		}
+		if timeOutHit {
+			GetLogger().Info("Timeout reached. Exit wait")
+			return
 		}
 		if canExists {
 

@@ -96,6 +96,29 @@ func TestDelayedTargets(t *testing.T) {
 	}
 }
 
+func verifyTaskSlices(t *testing.T, messages []string, taskList []string) {
+	if len(messages) != len(taskList) {
+		t.Error("unexpected amount of messages ", len(messages), " expected ", len(taskList))
+		t.Log(messages)
+
+	}
+
+	for _, looking := range taskList {
+		hitNr := 0
+		for _, msg := range messages {
+			if strings.EqualFold(looking, msg) {
+				hitNr++
+			}
+		}
+		if hitNr == 0 {
+			t.Error("missing task: ", looking)
+		}
+		if hitNr > 1 {
+			t.Error(looking, " executes more then once. it runs ", hitNr, " times")
+		}
+	}
+}
+
 func TestTaskCreation(t *testing.T) {
 	var messages []string
 	var taskList []string = []string{"first", "second", "last"}
@@ -103,7 +126,7 @@ func TestTaskCreation(t *testing.T) {
 		tw.Async = true
 		tw.Exec = func(state *cmdhandle.TaskWatched) error {
 			messages = append(messages, state.GetName())
-			fmt.Println(" append ", state.GetName(), " ", len(messages))
+			fmt.Println(" --> [EXEC] append ", state.GetName(), " ", len(messages))
 			state.ReportDone()
 			return nil
 		}
@@ -114,21 +137,19 @@ func TestTaskCreation(t *testing.T) {
 	})
 	t.Log("run async start")
 	taskHndl.Exec()
-	taskHndl.Wait()
+	taskHndl.Wait(10*time.Millisecond, 10*time.Second)
 	t.Log("exec is done")
-	if len(messages) != 3 {
-		t.Error("unexpected amount of messages ", len(messages))
-	}
+	verifyTaskSlices(t, messages, taskList)
 }
 
 func TestTaskCreationMixed(t *testing.T) {
 	var messages []string
-	var taskList []string = []string{"async-first", "async-second", "regular-one", "async-third", "regular-next", "regular-last"}
+	var taskList []string = []string{"async-first-1", "async-second-2", "regular-one-3", "async-third-4", "regular-next-5", "regular-last-6"}
 	taskHndl := cmdhandle.CreateMultipleTask(taskList, func(tw *cmdhandle.TaskWatched) {
 		tw.Async = strings.Contains(tw.GetName(), "async")
 		tw.Exec = func(state *cmdhandle.TaskWatched) error {
 			messages = append(messages, state.GetName())
-			fmt.Println(" append ", state.GetName(), " ", len(messages))
+			fmt.Println(" --> [EXEC]  append ", state.GetName(), " ", len(messages))
 			state.ReportDone()
 			return nil
 		}
@@ -139,9 +160,7 @@ func TestTaskCreationMixed(t *testing.T) {
 	})
 	t.Log("run async start")
 	taskHndl.Exec()
-	taskHndl.Wait()
+	taskHndl.Wait(10*time.Millisecond, 10*time.Second)
 	t.Log("exec is done")
-	if len(messages) != len(taskList) {
-		t.Error("unexpected amount of messages ", len(messages))
-	}
+	verifyTaskSlices(t, messages, taskList)
 }
