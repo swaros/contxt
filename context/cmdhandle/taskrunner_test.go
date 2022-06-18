@@ -229,6 +229,7 @@ func TestRuntimeCancelation(t *testing.T) {
 			return cmdhandle.CreateTaskResultContent(nil, "this works")
 		},
 		LoggerFnc: t.Log,
+		Async:     true,
 	}).AddTask("second-run", cmdhandle.TaskWatched{
 		Exec: func(tw *cmdhandle.TaskWatched) cmdhandle.TaskResult {
 			runB = true
@@ -237,7 +238,8 @@ func TestRuntimeCancelation(t *testing.T) {
 			return cmdhandle.CreateTaskResult(nil)
 		},
 		LoggerFnc: t.Log,
-	}).Exec()
+		Async:     true,
+	}).Exec().Wait(1*time.Microsecond, 500*time.Millisecond)
 
 	if !runA {
 		t.Error("first task is not executed")
