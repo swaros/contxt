@@ -2,47 +2,79 @@ package cmdhandle
 
 import (
 	"errors"
+	"strings"
 	"sync"
 	"time"
 )
 
-type timeOutReachedFunc func()
-type timerTickFunction func()
-type canRunFunc func(*TaskWatched) bool
-type getRundIdFunc func() string
-type bodyFunc func(*TaskWatched) error
-type loggerFunc func(...interface{})
-
 var procTracker sync.Map
 
 type TaskRuntimeState struct {
-	AsyncedRunning bool
-	Started        bool
-	TimedOut       bool
-	RunningCount   int
-	Done           bool
-	RunId          string
+	// flag that will be true if the task is started already. or start is initiated
+	Started bool
+	// flag that is true if the task is timed out. not equals to Done
+	TimedOut bool
+	// flag if task is done
+	Done bool
+	// the runId. equals to the taskname
+	RunId string
+}
+
+// simple container used to get the result
+// from task
+type TaskResult struct {
+	Error   error
+	Content interface{}
 }
 
 type TaskWatched struct {
-	task             TaskRuntimeState
-	taskName         string
-	IsGlobalScope    bool
-	TaskArgs         map[string]string
+	// current runtime states
+	task TaskRuntimeState
+	// taskname that should be unique
+	taskName string
+	// arguments for the task
+	TaskArgs map[string]string
+	// if true, no error will be raised, if the same task will tried to be executed twice
 	NoErrorIfBlocked bool
-	TimeOutTiming    time.Duration
-	TimeOutHandler   timeOutReachedFunc
-	CanRun           canRunFunc
-	TimerTick        timerTickFunction
-	GetRunId         getRundIdFunc
-	Exec             bodyFunc
-	LoggerFnc        loggerFunc
-	Async            bool
+	// maximum of allowed runtime for the task
+	TimeOutTiming time.Duration
+	// optional callback. if set, these function is called. that is ment to be informed and for doing some cleanups.
+	// but it can not interrupt the timeeout.
+	TimeOutHandler func()
+	// optional callback. this method can decide, if this task could be started again.
+	// so this method will be executed only on the second try to run this task.
+	CanRunAgain func(*TaskWatched) bool
+	// can be set to define a custom taskid by some logic
+	GetRunId func() string
+	// the main function that contains the logic
+	Exec func(*TaskWatched) TaskResult
+	// simple callback that can be used for regular output or loggings
+	LoggerFnc func(...interface{})
+	// if true, the task will be started async.
+	Async bool
+	// callback for the execution result
+	ResultFnc func(TaskResult)
 }
 
 type TaskGroup struct {
 	tasks []TaskWatched
-	Async bool
+	// simple callback that can be used for regular output or loggings
+	LoggerFnc func(...interface{})
+}
+
+// helper to creates a task result
+func CreateTaskResult(err error) TaskResult {
+	return TaskResult{
+		Error: err,
+	}
+}
+
+// helper to creates a task result
+func CreateTaskResultContent(err error, content interface{}) TaskResult {
+	return TaskResult{
+		Error:   err,
+		Content: content,
+	}
 }
 
 func (t *TaskWatched) Init(name string) {
@@ -72,14 +104,13 @@ func (t *TaskWatched) trackStart() bool {
 	if _, exists := procTracker.Load(t.task.RunId); exists {
 		// if a decion method defined we ask them.
 		// if not we disagree
-		if t.CanRun != nil {
-			return t.CanRun(t)
+		if t.CanRunAgain != nil {
+			return t.CanRunAgain(t)
 		}
 		t.Log("allready runs ", t.task.RunId)
 		return false
 	}
 	t.task.Started = true
-	t.task.RunningCount = 1
 	t.task.Done = false
 	t.Log("save runtime tracking for task ", t.task.RunId)
 	procTracker.Store(t.task.RunId, t.task)
@@ -118,18 +149,22 @@ func (t *TaskWatched) ReportDone() {
 	}
 }
 
-func (t *TaskWatched) Run() error {
+func (t *TaskWatched) Run() TaskResult {
 	t.Log(" --> run func \t", t.taskName, " id ", t.task.RunId)
+	var taskRes TaskResult
 	if t.Exec == nil {
-		return errors.New("body function exec is undefined")
+		t.ReportDone()
+		taskRes.Error = errors.New("body function exec is undefined")
+		return taskRes
 	}
 	// starting the body function and track the execution
 	// first we check if can start the task
 	if !t.trackStart() {
 		if t.NoErrorIfBlocked {
-			return nil
+			return taskRes
 		}
-		return errors.New("task is already running")
+		taskRes.Error = errors.New("task is already running")
+		return taskRes
 	}
 
 	time.AfterFunc(t.TimeOutTiming, func() {
@@ -150,11 +185,12 @@ func (t *TaskWatched) Run() error {
 		}
 
 	})
-	if err := t.Exec(t); err != nil {
-		return err
+	defer t.ReportDone()
+	res := t.Exec(t)
+	if t.ResultFnc != nil {
+		t.ResultFnc(res)
 	}
-
-	return nil
+	return res
 }
 
 func (t *TaskWatched) GetName() string {
@@ -174,20 +210,42 @@ func CreateMultipleTask(tasks []string, modifyTask func(*TaskWatched)) TaskGroup
 	return taskGrp
 }
 
-func (Tg *TaskGroup) Exec() {
+func (Tg *TaskGroup) GetTask(name string) (bool, TaskWatched) {
+	for _, tw := range Tg.tasks {
+		if strings.EqualFold(tw.taskName, name) {
+			return true, tw
+		}
+	}
+	return false, TaskWatched{}
+}
+
+func (Tg *TaskGroup) AddTask(name string, wg TaskWatched) *TaskGroup {
+	wg.Init(name)
+	Tg.tasks = append(Tg.tasks, wg)
+	return Tg
+}
+
+// counts the amount of task they are async tasks
+func (Tg *TaskGroup) getAsyncCount() int {
+	cnt := 0
+	for _, tsk := range Tg.tasks {
+		if tsk.Async && tsk.Exec != nil {
+			cnt++
+		}
+	}
+	return cnt
+}
+
+func (Tg *TaskGroup) Exec() *TaskGroup {
 	var waitGroup sync.WaitGroup
-	errors := make(chan error, len(Tg.tasks))
+	taskReturns := make(chan TaskResult, Tg.getAsyncCount())
 	for _, tsk := range Tg.tasks {
 		if tsk.Async {
 			tsk.Log(" -> exec async \t", tsk.taskName, " id ", tsk.task.RunId)
 			waitGroup.Add(1)
 			go func(tsk TaskWatched) {
 				defer waitGroup.Done()
-				err := tsk.Run()
-				if err != nil {
-					errors <- err
-					return
-				}
+				taskReturns <- tsk.Run()
 			}(tsk)
 
 		} else {
@@ -195,15 +253,22 @@ func (Tg *TaskGroup) Exec() {
 			tsk.Run()
 		}
 	}
-	GetLogger().Debug("waiting alls tasks beeing done")
+	Tg.Log("waiting all tasks beeing done")
 	go func() {
 		waitGroup.Wait()
-		close(errors)
+		close(taskReturns)
 	}()
-	GetLogger().Debug("all tasks are done")
-
+	Tg.Log("all tasks are done")
+	return Tg
 }
 
+func (Tg *TaskGroup) Log(msg ...interface{}) {
+	if Tg.LoggerFnc != nil {
+		Tg.LoggerFnc(msg...)
+	}
+}
+
+// Wait until all task are done, indepenet from any channel and waitgroup blocks
 func (Tg *TaskGroup) Wait(wait time.Duration, timeOut time.Duration) {
 	var timeOutHit bool = false
 	time.AfterFunc(timeOut, func() {
@@ -223,11 +288,11 @@ func (Tg *TaskGroup) Wait(wait time.Duration, timeOut time.Duration) {
 			}
 		}
 		if timeOutHit {
-			GetLogger().Info("Timeout reached. Exit wait")
+			Tg.Log("Timeout reached. Exit wait")
 			return
 		}
 		if canExists {
-
+			Tg.Log("regular wait exit. all task done")
 			return
 		}
 	}

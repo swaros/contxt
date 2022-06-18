@@ -14,17 +14,17 @@ func TestBasicRun(t *testing.T) {
 	var runner cmdhandle.TaskWatched
 	runner.Init("testcase")
 	counter := 10
-	runner.Exec = func(state *cmdhandle.TaskWatched) error {
+	runner.Exec = func(state *cmdhandle.TaskWatched) cmdhandle.TaskResult {
 		fmt.Println("this is working")
 		// we just increase the counter, so we have something we can check, if the
 		// function was executed
 		counter += 10
-		return nil
+		return cmdhandle.CreateTaskResult(nil)
 	}
 
 	// now starts
-	if err := runner.Run(); err != nil {
-		t.Error(err)
+	if res := runner.Run(); res.Error != nil {
+		t.Error(res.Error)
 	}
 
 	if counter == 10 {
@@ -32,7 +32,7 @@ func TestBasicRun(t *testing.T) {
 	}
 
 	// we try to run a second time, now we should get an error
-	if err := runner.Run(); err == nil {
+	if res := runner.Run(); res.Error == nil {
 		t.Error("error expected. the second run should be not allowed")
 	}
 	// if the method would be executed twice, the counter should have increased
@@ -45,8 +45,8 @@ func TestBasicRun(t *testing.T) {
 
 	runner.NoErrorIfBlocked = true
 	// we try to run a third time, but now no error should be triggered
-	if err := runner.Run(); err != nil {
-		t.Error(err)
+	if res := runner.Run(); res.Error != nil {
+		t.Error(res.Error)
 	}
 	// but also on the third try, the method should just ignored and not increase the counter
 	if counter != 20 {
@@ -59,9 +59,8 @@ func TestDelayedTargets(t *testing.T) {
 	tmoutHdnlTriggered := false
 
 	var task cmdhandle.TaskWatched = cmdhandle.TaskWatched{
-		IsGlobalScope: true,
 		TimeOutTiming: 1 * time.Millisecond,
-		CanRun: func(task *cmdhandle.TaskWatched) bool {
+		CanRunAgain: func(task *cmdhandle.TaskWatched) bool {
 			return true
 		},
 		LoggerFnc: func(msg ...interface{}) {
@@ -71,24 +70,24 @@ func TestDelayedTargets(t *testing.T) {
 			t.Log("timeout handler is triggered")
 			tmoutHdnlTriggered = true
 		},
-		Exec: func(state *cmdhandle.TaskWatched) error {
+		Exec: func(state *cmdhandle.TaskWatched) cmdhandle.TaskResult {
 			// we simulate a very pure timeout handling
 			// just by going out, if the timeoutHandler is
 			// set the tmoutHdnlTriggered var to true
 			for i := 0; i < 100; i++ {
 				time.Sleep(5 * time.Millisecond)
 				if tmoutHdnlTriggered {
-					return nil
+					return cmdhandle.CreateTaskResult(nil)
 				}
 			}
 			// if we are still in the game, something went wrong
-			return errors.New("i should not reach this line")
+			return cmdhandle.CreateTaskResult(errors.New("i should not reach this line"))
 		},
 	}
 	task.Init("delayedTest")
 
-	if err := task.Run(); err != nil {
-		t.Error(err)
+	if tres := task.Run(); tres.Error != nil {
+		t.Error(tres.Error)
 	}
 
 	if tmoutHdnlTriggered == false {
@@ -96,6 +95,7 @@ func TestDelayedTargets(t *testing.T) {
 	}
 }
 
+// helper function to verify result of executions
 func verifyTaskSlices(t *testing.T, messages []string, taskList []string) {
 	if len(messages) != len(taskList) {
 		t.Error("unexpected amount of messages ", len(messages), " expected ", len(taskList))
@@ -124,11 +124,11 @@ func TestTaskCreation(t *testing.T) {
 	var taskList []string = []string{"first", "second", "last"}
 	taskHndl := cmdhandle.CreateMultipleTask(taskList, func(tw *cmdhandle.TaskWatched) {
 		tw.Async = true
-		tw.Exec = func(state *cmdhandle.TaskWatched) error {
+		tw.Exec = func(state *cmdhandle.TaskWatched) cmdhandle.TaskResult {
 			messages = append(messages, state.GetName())
 			fmt.Println(" --> [EXEC] append ", state.GetName(), " ", len(messages))
 			state.ReportDone()
-			return nil
+			return cmdhandle.CreateTaskResult(nil)
 		}
 		tw.LoggerFnc = func(msg ...interface{}) {
 			fmt.Println(msg...)
@@ -147,11 +147,10 @@ func TestTaskCreationMixed(t *testing.T) {
 	var taskList []string = []string{"async-first-1", "async-second-2", "regular-one-3", "async-third-4", "regular-next-5", "regular-last-6"}
 	taskHndl := cmdhandle.CreateMultipleTask(taskList, func(tw *cmdhandle.TaskWatched) {
 		tw.Async = strings.Contains(tw.GetName(), "async")
-		tw.Exec = func(state *cmdhandle.TaskWatched) error {
+		tw.Exec = func(state *cmdhandle.TaskWatched) cmdhandle.TaskResult {
 			messages = append(messages, state.GetName())
 			fmt.Println(" --> [EXEC]  append ", state.GetName(), " ", len(messages))
-			state.ReportDone()
-			return nil
+			return cmdhandle.CreateTaskResultContent(nil, "hello world")
 		}
 		tw.LoggerFnc = func(msg ...interface{}) {
 			fmt.Println(msg...)
@@ -163,4 +162,88 @@ func TestTaskCreationMixed(t *testing.T) {
 	taskHndl.Wait(10*time.Millisecond, 10*time.Second)
 	t.Log("exec is done")
 	verifyTaskSlices(t, messages, taskList)
+}
+
+func TestTaskCreationAndTimeout(t *testing.T) {
+	var taskGrp cmdhandle.TaskGroup = cmdhandle.TaskGroup{}
+	hitTimout := false
+	task2executed := false
+	taskGrp.AddTask("test1", cmdhandle.TaskWatched{
+		Async: true,
+		Exec: func(tw *cmdhandle.TaskWatched) cmdhandle.TaskResult {
+			for {
+				time.Sleep(5 * time.Millisecond)
+				if hitTimout {
+					return cmdhandle.CreateTaskResult(nil)
+				}
+			}
+		},
+		NoErrorIfBlocked: true,
+		TimeOutTiming:    10 * time.Millisecond,
+		LoggerFnc: func(i ...interface{}) {
+			t.Log(i...)
+		},
+		TimeOutHandler: func() {
+			hitTimout = true
+		},
+	}).AddTask("Test2", cmdhandle.TaskWatched{
+		Async: true,
+		Exec: func(tw *cmdhandle.TaskWatched) cmdhandle.TaskResult {
+			task2executed = true
+			return cmdhandle.CreateTaskResultContent(nil, "dada")
+		},
+		ResultFnc: func(rs cmdhandle.TaskResult) {
+			if rs.Content == nil {
+				t.Error("result content is nil.", rs)
+			} else {
+				if !strings.EqualFold("dada", rs.Content.(string)) {
+					t.Error("invalid result from second task.", rs)
+				}
+			}
+		},
+	}).Exec().Wait(1*time.Millisecond, 500*time.Second)
+
+	if !hitTimout {
+		t.Error("no timeout hit")
+	}
+
+	if !task2executed {
+		t.Error("second task is not executed")
+	}
+
+}
+
+func TestRuntimeCancelation(t *testing.T) {
+
+	runA := false
+	runB := false
+
+	var taskGrp cmdhandle.TaskGroup = cmdhandle.TaskGroup{
+		LoggerFnc: t.Log,
+	}
+	taskGrp.AddTask("first-run", cmdhandle.TaskWatched{
+		Exec: func(tw *cmdhandle.TaskWatched) cmdhandle.TaskResult {
+			runA = true
+			tw.Log(" --- taskA here")
+			time.Sleep(5 * time.Millisecond)
+			return cmdhandle.CreateTaskResultContent(nil, "this works")
+		},
+		LoggerFnc: t.Log,
+	}).AddTask("second-run", cmdhandle.TaskWatched{
+		Exec: func(tw *cmdhandle.TaskWatched) cmdhandle.TaskResult {
+			runB = true
+			tw.Log(" --- taskB here")
+			time.Sleep(15 * time.Millisecond)
+			return cmdhandle.CreateTaskResult(nil)
+		},
+		LoggerFnc: t.Log,
+	}).Exec()
+
+	if !runA {
+		t.Error("first task is not executed")
+	}
+
+	if !runB {
+		t.Error("second task is not executed")
+	}
 }
