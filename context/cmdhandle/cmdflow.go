@@ -84,10 +84,13 @@ func RunShared(targets string) {
 }
 
 // RunTargets executes multiple targets
+// the targets string can have multiple targets
+// seperated by comma
 func RunTargets(targets string, sharedRun bool) {
 
 	SetPH("CTX_TARGETS", targets)
 
+	// this flag should only true on the first execution
 	if sharedRun {
 		// do it here makes sure we are not in the shared scope
 		currentDir, _ := dirhandle.Current()
@@ -468,6 +471,7 @@ func lineExecuter(
 	return ExitNoCode, true
 }
 
+// merge a list of task to an single task.
 func mergeTargets(target string, runCfg configure.RunConfig) configure.Task {
 	var checkTasks configure.Task
 	first := true
@@ -498,39 +502,52 @@ func mergeTargets(target string, runCfg configure.RunConfig) configure.Task {
 func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string, scopeVars map[string]string) int {
 	if useWaitGroup {
 		waitGroup.Add(1)
-		GetLogger().WithFields(logrus.Fields{
-			"waitgroup": waitGroup,
-		}).Debug("starting async")
 		defer waitGroup.Done()
 	}
 	// check if task is already running
-
+	// this check depends on the target name.
 	if !runCfg.Config.AllowMutliRun && TaskRunning(target) {
 		GetLogger().WithField("task", target).Warning("task would be triggered again while is already running. IGNORED")
 		return ExitAlreadyRunning
 	}
+	// increment task counter
 	incTaskCount(target)
 	defer incTaskDoneCount(target)
 
 	GetLogger().WithFields(logrus.Fields{
 		"target": target,
-	}).Info("executeTemplate LOOKING for target")
+	}).Debug("executeTemplate LOOKING for target")
 
+	// Checking if the Tasklist have something
+	// to handle
 	if len(runCfg.Task) > 0 {
 		returnCode := ExitOk
 
-		// main variables
+		// the main variables will be set at first
+		// but only if the they not already exists
+		// from other task or by start argument
 		for keyName, variable := range runCfg.Config.Variables {
 			SetIfNotExists(keyName, HandlePlaceHolder(variable))
 		}
-
+		// set the colorcodes for the labels on left side of screen
 		colorCode := systools.CreateColorCode()
 		bgCode := systools.CurrentBgColor
+
+		// updates global variables
 		SetPH("RUN.TARGET", target)
+
+		// this flag is only used
+		// for a "target not found" message later
 		targetFound := false
 
+		// oure tasklist that will use later
 		var taskList []configure.Task
-		// should we merge all task before?
+
+		// depending on the config
+		// we merge the tasks and handle them as one task,
+		// or we keep them as a list of tasks what would
+		// keep more flexibility.
+		// by merging task we can loose runtime definitions
 		if runCfg.Config.MergeTasks {
 			mergedScript := mergeTargets(target, runCfg)
 			taskList = append(taskList, mergedScript)
@@ -581,84 +598,41 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					}
 				}
 
-				// parsing codelines
-
+				// just the abort flag.
 				abort := false
 
-				// checking needs
+				// -- NEEDS
+				// needs are task, the have to be startet once
+				// before we continue.
+				// any need can have his own needs they needs to
+				// be executed
 				if len(script.Needs) > 0 {
-					GetLogger().WithFields(logrus.Fields{
-						"needs": script.Needs,
-					}).Info("executeTemplate NEEDS found")
-					if useWaitGroup {
-						waitHits := 0
-						timeOut := script.Options.TimeoutNeeds
-						if timeOut < 1 {
-							GetLogger().Info("No timeoutNeeds value set. using default of 300000")
-							timeOut = 300000 // 5 minutes in milliseconds as default
-						} else {
-							GetLogger().WithField("timeout", timeOut).Info("timeout for task " + target)
-						}
-						tickTime := script.Options.TickTimeNeeds
-						if tickTime < 1 {
-							tickTime = 1000 // 1 second as ticktime
-						}
-						//cleared := SplitArgs(script.Needs, "arg-", func(s string, m map[string]string) {})
-						WaitForTasksDone(script.Needs, time.Duration(timeOut)*time.Millisecond, time.Duration(tickTime)*time.Millisecond, func() bool {
-							// still waiting
-							waitHits++
-							GetLogger().WithField("hitcounter", waitHits).Debug("Waiting for Task be done")
-							return true
-						}, func() {
-							// done
-
-						}, func() {
-							// timeout not allowed. hard exit
-							GetLogger().Error("an defined task (need) hits the timeout")
-							output.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
-							os.Exit(1)
-						}, func(needTargetWArgs string, needTarget string, args map[string]string) bool {
-							if script.Options.NoAutoRunNeeds {
-								output.Error("Need Task not started", "expected task ", target, " not running. autostart disbabled")
-								os.Exit(1)
-								return false
-							}
-							GetLogger().WithFields(logrus.Fields{
-								"needs":   script.Needs,
-								"current": needTarget,
-							}).Info("executeTemplate found a need that is not stated already")
-							// stopping for a couple of time
-							// need to wait if these other task already started by
-							// other options
-							time.Sleep(500 * time.Millisecond)
-
-							if merr := mergo.Merge(&scopeVars, args, mergo.WithOverride); merr != nil {
-								GetLogger().Error("Error while merging arguments")
-								os.Exit(10)
-							} else {
-								GetLogger().WithField("args", args).Debug("merge arguments to scopeVars")
-							}
-							go executeTemplate(waitGroup, useWaitGroup, runCfg, needTarget, scopeVars)
-							return true
-						})
-					} else {
-						// run needs in a sequence
-						for _, targetNeed := range script.Needs {
-
-							clearedNeed, argmap := StringSplitArgs(targetNeed, "arg")
-							if merr := mergo.Merge(&scopeVars, argmap); merr != nil {
-								GetLogger().Error("Error while merging arguments")
-								os.Exit(10)
-							} else {
-								GetLogger().WithField("args", argmap).Debug("merge arguments to scopeVars")
-							}
-							executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, clearedNeed, scopeVars)
-							if executionCode != ExitOk {
-								output.Error("Need Task Error", "expected returncode ", ExitOk, " but got exit Code", executionCode)
-								os.Exit(1)
-							}
-						}
+					timeOut := script.Options.TimeoutNeeds
+					if timeOut < 1 {
+						timeOut = 300000 // 5 minutes in milliseconds as default
 					}
+					tickTime := script.Options.TickTimeNeeds
+					if tickTime < 1 {
+						tickTime = 1000 // 1 second as ticktime
+					}
+
+					tasks := CreateMultipleTask(script.Needs, func(tw *TaskWatched) {
+						tw.LoggerFnc = GetLogger().Debug
+						tw.Async = useWaitGroup
+						tw.Exec = func(tw *TaskWatched) TaskResult {
+							_, argmap := StringSplitArgs(tw.taskName, "arg")
+							executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, tw.taskName, argmap)
+							return CreateTaskResultContent(nil, executionCode)
+						}
+						tw.ResultFnc = func(tr TaskResult) {
+							executionCode := tr.Content
+							if executionCode != ExitOk {
+								output.Error("Need Task Error", " exit Code ", executionCode, " for target [", tw.taskName, "]")
+								os.Exit(1)
+							}
+						}
+					})
+					tasks.Exec().Wait(time.Duration(tickTime), time.Duration(timeOut))
 				}
 
 				// targets that should be started as well
