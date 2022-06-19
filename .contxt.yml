@@ -60,7 +60,7 @@ task:
       - "#@var main-version type docs/mainversion"
       - "#@var mid-version type docs/midversion"
       - "#@var minor-version type docs/minversion"
-      - "#@set build-hash windows"
+      - "#@var build-hash Get-Date -UFormat \"%m.%d.%Y.%R\""
       - "#@set bin-out contxt.exe"
 
   - id: set-version
