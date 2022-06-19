@@ -36,6 +36,8 @@ task:
     options:
       displaycmd: true
       invisible: true
+    variables:
+      bin-out: contxt
     require:
       system: linux
     script:
