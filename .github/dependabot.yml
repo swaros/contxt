@@ -11,4 +11,4 @@ updates:
       interval: "daily"
     assignees:
       - "swaros"
-    target-branch: "bot/develop"
+#    target-branch: "bot/develop"
