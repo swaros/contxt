@@ -1,3 +1,25 @@
+// Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// Licensed under the MIT License
+//
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 package cmdhandle
 
 import (
@@ -84,10 +106,13 @@ func RunShared(targets string) {
 }
 
 // RunTargets executes multiple targets
+// the targets string can have multiple targets
+// seperated by comma
 func RunTargets(targets string, sharedRun bool) {
 
 	SetPH("CTX_TARGETS", targets)
 
+	// this flag should only true on the first execution
 	if sharedRun {
 		// do it here makes sure we are not in the shared scope
 		currentDir, _ := dirhandle.Current()
@@ -112,24 +137,6 @@ func RunTargets(targets string, sharedRun bool) {
 	}
 
 	var wg sync.WaitGroup
-
-	// handle all shared usages
-	/*
-		if len(template.Config.Use) > 0 {
-			GetLogger().WithField("uses", template.Config.Use).Info("found external dependecy")
-			for _, shared := range template.Config.Use {
-				externalPath := HandleUsecase(shared)
-				GetLogger().WithField("path", externalPath).Info("shared contxt location")
-				currentDir, _ := dirhandle.Current()
-				os.Chdir(externalPath)
-				for _, runTarget := range allTargets {
-					fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED CONTXT ", output.BoldTag, shared, "] ", runTarget, " ", output.ForeWhite, templatePath))
-					RunTargets(runTarget)
-				}
-				os.Chdir(currentDir)
-			}
-		}
-	*/
 
 	// handle all imports
 	if len(template.Config.Imports) > 0 {
@@ -171,102 +178,6 @@ func setLogLevelByString(loglevel string) {
 
 }
 
-func checkRequirements(require configure.Require) (bool, string) {
-	// check operating system
-	if require.System != "" {
-		match := StringMatchTest(require.System, configure.GetOs())
-		if !match {
-			return false, "operating system '" + configure.GetOs() + "' is not matching with '" + require.System + "'"
-		}
-	}
-
-	// check file exists
-	for _, fileExists := range require.Exists {
-		fileExists = handlePlaceHolder(fileExists)
-		fexists, err := dirhandle.Exists(fileExists)
-		GetLogger().WithFields(logrus.Fields{
-			"path":   fileExists,
-			"result": fexists,
-		}).Debug("path exists? result=true means valid for require")
-		if err != nil || !fexists {
-
-			return false, "required file (" + fileExists + ") not found "
-		}
-	}
-
-	// check file not exists
-	for _, fileNotExists := range require.NotExists {
-		fileNotExists = handlePlaceHolder(fileNotExists)
-		fexists, err := dirhandle.Exists(fileNotExists)
-		GetLogger().WithFields(logrus.Fields{
-			"path":   fileNotExists,
-			"result": fexists,
-		}).Debug("path NOT exists? result=true means not valid for require")
-		if err != nil || fexists {
-			return false, "unexpected file (" + fileNotExists + ")  found "
-		}
-	}
-	// check environment variable is set
-
-	for name, pattern := range require.Environment {
-		envVar, envExists := os.LookupEnv(name)
-		if !envExists || !StringMatchTest(pattern, envVar) {
-			if envExists {
-				return false, "environment variable[" + name + "] not matching with " + pattern
-			}
-			return false, "environment variable[" + name + "] not exists"
-		}
-	}
-
-	// check variables
-	for name, pattern := range require.Variables {
-		defVar, defExists := GetPHExists(name)
-		if !defExists || !StringMatchTest(pattern, defVar) {
-			if defExists {
-				return false, "runtime variable[" + name + "] not matching with " + pattern
-			}
-			return false, "runtime variable[" + name + "] not exists "
-		}
-	}
-
-	return true, ""
-}
-
-// StringMatchTest test a pattern and a value.
-// in this example: myvar: "=hello"
-// the patter is "=hello" and the value should be "hello" for a match
-func StringMatchTest(pattern, value string) bool {
-	first := pattern
-	maybeMatch := value
-	if len(pattern) > 1 {
-		maybeMatch = pattern[1:]
-		first = pattern[0:1]
-	}
-	switch first {
-	case "?":
-		GetLogger().WithFields(logrus.Fields{"pattern": pattern, "value": value, "check": first, "result": (value != "")}).Debug("check anything then empty")
-		return (value != "")
-	case "=":
-		GetLogger().WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch == value)}).Debug("check equal")
-		return (maybeMatch == value)
-	case "!":
-		GetLogger().WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch != value)}).Debug("check not equal")
-		return (maybeMatch != value)
-	case ">":
-		GetLogger().WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch < value)}).Debug("check greather then")
-		return (value > maybeMatch)
-	case "<":
-		GetLogger().WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch > value)}).Debug("check lower then")
-		return (value < maybeMatch)
-	case "*":
-		GetLogger().WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (value != "")}).Debug("check empty *")
-		return (value != "")
-	default:
-		GetLogger().WithFields(logrus.Fields{"pattern": pattern, "value": value, "check": first, "result": (pattern == value)}).Debug("default: check equal against plain values")
-		return (pattern == value)
-	}
-}
-
 func listenerWatch(script configure.Task, target, logLine string, waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig) {
 	if script.Listener != nil {
 
@@ -292,11 +203,12 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 				// checking script
 				if len(actionDef.Script) > 0 {
 					someReactionTriggered = true
+					var dummyArgs map[string]string = make(map[string]string)
 					for _, triggerScript := range actionDef.Script {
 						GetLogger().WithFields(logrus.Fields{
 							"cmd": triggerScript,
 						}).Debug("TRIGGER SCRIPT ACTION")
-						lineExecuter(waitGroup, useWaitGroup, script.Stopreasons, runCfg, "93", "46", triggerScript, target, script)
+						lineExecuter(waitGroup, useWaitGroup, script.Stopreasons, runCfg, "93", "46", triggerScript, target, dummyArgs, script)
 					}
 
 				}
@@ -337,19 +249,19 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 						"waitgroup": useWaitGroup,
 						"RUN.LISTENER." + target + ".HIT.TARGETS": lastHitTargets,
 					}).Info("TRIGGER Called")
-
+					var scopeVars map[string]string = make(map[string]string)
 					if useWaitGroup {
 						GetLogger().WithFields(logrus.Fields{
 							"target": actionDef.Target,
 						}).Info("RUN ASYNC")
 
-						go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+						go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target, scopeVars)
 
 					} else {
 						GetLogger().WithFields(logrus.Fields{
 							"target": actionDef.Target,
 						}).Info("RUN SEQUENCE")
-						executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target)
+						executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target, scopeVars)
 					}
 				}
 				if !someReactionTriggered {
@@ -367,7 +279,16 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 	}
 }
 
-func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason configure.Trigger, runCfg configure.RunConfig, colorCode, bgCode, codeLine, target string, script configure.Task) (int, bool) {
+func lineExecuter(
+	waitGroup *sync.WaitGroup,
+	useWaitGroup bool,
+	stopReason configure.Trigger,
+	runCfg configure.RunConfig,
+	colorCode, bgCode,
+	codeLine,
+	target string,
+	arguments map[string]string,
+	script configure.Task) (int, bool) {
 	panelSize := 12
 	if script.Options.Panelsize > 0 {
 		panelSize = script.Options.Panelsize
@@ -376,7 +297,7 @@ func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason confi
 	if configure.GetOs() == "windows" {
 		mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBackWindows)
 	}
-	replacedLine := HandlePlaceHolder(codeLine)
+	replacedLine := HandlePlaceHolderWithScope(codeLine, arguments)
 	if script.Options.Displaycmd {
 		fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, replacedLine))
 	}
@@ -403,7 +324,7 @@ func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason confi
 			bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
 			labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
 			if script.Options.Format != "" {
-				format := handlePlaceHolder(script.Options.Format)
+				format := HandlePlaceHolderWithScope(script.Options.Format, script.Variables)
 				fomatedOutStr := output.Message(fmt.Sprintf(format, target))
 				labelStr = systools.LabelPrintWithArg(fomatedOutStr, foreColor, bgColor, 1)
 			}
@@ -476,6 +397,7 @@ func lineExecuter(waitGroup *sync.WaitGroup, useWaitGroup bool, stopReason confi
 	return ExitNoCode, true
 }
 
+// merge a list of task to an single task.
 func mergeTargets(target string, runCfg configure.RunConfig) configure.Task {
 	var checkTasks configure.Task
 	first := true
@@ -503,42 +425,55 @@ func mergeTargets(target string, runCfg configure.RunConfig) configure.Task {
 	return checkTasks
 }
 
-func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string) int {
+func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string, scopeVars map[string]string) int {
 	if useWaitGroup {
 		waitGroup.Add(1)
-		GetLogger().WithFields(logrus.Fields{
-			"waitgroup": waitGroup,
-		}).Debug("starting async")
 		defer waitGroup.Done()
 	}
 	// check if task is already running
-
-	if TaskRunning(target) {
+	// this check depends on the target name.
+	if !runCfg.Config.AllowMutliRun && TaskRunning(target) {
 		GetLogger().WithField("task", target).Warning("task would be triggered again while is already running. IGNORED")
 		return ExitAlreadyRunning
 	}
+	// increment task counter
 	incTaskCount(target)
 	defer incTaskDoneCount(target)
 
 	GetLogger().WithFields(logrus.Fields{
 		"target": target,
-	}).Info("executeTemplate LOOKING for target")
+	}).Debug("executeTemplate LOOKING for target")
 
+	// Checking if the Tasklist have something
+	// to handle
 	if len(runCfg.Task) > 0 {
 		returnCode := ExitOk
 
-		// main variables
+		// the main variables will be set at first
+		// but only if the they not already exists
+		// from other task or by start argument
 		for keyName, variable := range runCfg.Config.Variables {
 			SetIfNotExists(keyName, HandlePlaceHolder(variable))
 		}
-
+		// set the colorcodes for the labels on left side of screen
 		colorCode := systools.CreateColorCode()
 		bgCode := systools.CurrentBgColor
+
+		// updates global variables
 		SetPH("RUN.TARGET", target)
+
+		// this flag is only used
+		// for a "target not found" message later
 		targetFound := false
 
+		// oure tasklist that will use later
 		var taskList []configure.Task
-		// should we merge all task before?
+
+		// depending on the config
+		// we merge the tasks and handle them as one task,
+		// or we keep them as a list of tasks what would
+		// keep more flexibility.
+		// by merging task we can loose runtime definitions
 		if runCfg.Config.MergeTasks {
 			mergedScript := mergeTargets(target, runCfg)
 			taskList = append(taskList, mergedScript)
@@ -554,7 +489,8 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 		for _, script := range taskList {
 			if strings.EqualFold(target, script.ID) {
 				GetLogger().WithFields(logrus.Fields{
-					"target": target,
+					"target":    target,
+					"scopeVars": scopeVars,
 				}).Info("executeTemplate EXECUTE target")
 				targetFound = true
 
@@ -575,89 +511,63 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				// get the task related variables
 				for keyName, variable := range script.Variables {
 					SetPH(keyName, HandlePlaceHolder(variable))
+					scopeVars[keyName] = variable
 				}
 				backToDir := ""
 				// if working dir is set change to them
 				if script.Options.WorkingDir != "" {
 					backToDir, _ = dirhandle.Current()
-					chDirError := os.Chdir(HandlePlaceHolder(script.Options.WorkingDir))
+					chDirError := os.Chdir(HandlePlaceHolderWithScope(script.Options.WorkingDir, scopeVars))
 					if chDirError != nil {
 						output.Error("Workspace setting seems invalid ", chDirError)
 						os.Exit(10)
 					}
 				}
 
-				// parsing codelines
-
+				// just the abort flag.
 				abort := false
 
-				// checking needs
+				// -- NEEDS
+				// needs are task, the have to be startet once
+				// before we continue.
+				// any need can have his own needs they needs to
+				// be executed
 				if len(script.Needs) > 0 {
-					GetLogger().WithFields(logrus.Fields{
-						"needs": script.Needs,
-					}).Info("executeTemplate NEEDS found")
-					if useWaitGroup {
-						waitHits := 0
-						timeOut := script.Options.TimeoutNeeds
-						if timeOut < 1 {
-							GetLogger().Info("No timeoutNeeds value set. using default of 300000")
-							timeOut = 300000 // 5 minutes in milliseconds as default
-						} else {
-							GetLogger().WithField("timeout", timeOut).Info("timeout for task " + target)
-						}
-						tickTime := script.Options.TickTimeNeeds
-						if tickTime < 1 {
-							tickTime = 1000 // 1 second as ticktime
-						}
-						WaitForTasksDone(script.Needs, time.Duration(timeOut)*time.Millisecond, time.Duration(tickTime)*time.Millisecond, func() bool {
-							// still waiting
-							waitHits++
-							GetLogger().Debug("Waiting for Task be done")
-							return true
-						}, func() {
-							// done
-
-						}, func() {
-							// timeout not allowed. hard exit
-							GetLogger().Debug("timeout hit")
-							output.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
-							os.Exit(1)
-						}, func(needTarget string) bool {
-							if script.Options.NoAutoRunNeeds {
-								output.Error("Need Task not started", "expected task ", target, " not running. autostart disbabled")
-								os.Exit(1)
-								return false
-							}
-							GetLogger().WithFields(logrus.Fields{
-								"needs":   script.Needs,
-								"current": needTarget,
-							}).Info("executeTemplate found a need that is not stated already")
-							// stopping for a couple of time
-							// need to wait if these other task already started by
-							// other options
-							time.Sleep(500 * time.Millisecond)
-							go executeTemplate(waitGroup, useWaitGroup, runCfg, needTarget)
-							return true
-						})
-					} else {
-						// run needs in a sequence
-						for _, targetNeed := range script.Needs {
-							executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, targetNeed)
-							if executionCode != ExitOk {
-								output.Error("Need Task Error", "expected returncode ", ExitOk, " but got exit Code", executionCode)
-								os.Exit(1)
-							}
-						}
+					timeOut := script.Options.TimeoutNeeds
+					if timeOut < 1 {
+						timeOut = 300000 // 5 minutes in milliseconds as default
 					}
+					tickTime := script.Options.TickTimeNeeds
+					if tickTime < 1 {
+						tickTime = 1000 // 1 second as ticktime
+					}
+
+					tasks := CreateMultipleTask(script.Needs, func(tw *TaskWatched) {
+						tw.LoggerFnc = GetLogger().Debug
+						tw.Async = useWaitGroup
+						tw.Exec = func(tw *TaskWatched) TaskResult {
+							_, argmap := StringSplitArgs(tw.taskName, "arg")
+							executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, tw.taskName, argmap)
+							return CreateTaskResultContent(nil, executionCode)
+						}
+						tw.ResultFnc = func(tr TaskResult) {
+							executionCode := tr.Content
+							if executionCode != ExitOk {
+								output.Error("Need Task Error", " exit Code ", executionCode, " for target [", tw.taskName, "]")
+								os.Exit(1)
+							}
+						}
+					})
+					tasks.Exec().Wait(time.Duration(tickTime), time.Duration(timeOut))
 				}
 
 				// targets that should be started as well
 				if len(script.RunTargets) > 0 {
 					for _, runTrgt := range script.RunTargets {
 						if useWaitGroup {
-							go executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt)
+							go executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt, scopeVars)
 						} else {
-							executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt)
+							executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt, scopeVars)
 						}
 					}
 					// workaround til the async runnig is refactored
@@ -681,7 +591,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				// preparing codelines by execute second level commands
 				// that can affect the whole script
 				abort, returnCode, _ = TryParse(script.Script, func(codeLine string) (bool, int) {
-					lineAbort, lineExitCode := lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, script)
+					lineAbort, lineExitCode := lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, scopeVars, script)
 					return lineExitCode, lineAbort
 				})
 				if abort {
@@ -705,7 +615,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					}*/
 
 					// for now we execute without a waitgroup
-					executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget)
+					executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget, scopeVars)
 				}
 
 				//return returnCode
@@ -734,57 +644,6 @@ func defaultString(line string, defaultString string) string {
 		return defaultString
 	}
 	return line
-}
-
-/*
-func stringContains(findInHere string, matches []string) bool {
-	for _, check := range matches {
-		if check != "" && strings.Contains(findInHere, check) {
-			return true
-		}
-	}
-	return false
-}*/
-
-func checkReason(checkReason configure.Trigger, output string) (bool, string) {
-	GetLogger().WithFields(logrus.Fields{
-		"contains":   checkReason.OnoutContains,
-		"onError":    checkReason.Onerror,
-		"onLess":     checkReason.OnoutcountLess,
-		"onMore":     checkReason.OnoutcountMore,
-		"testing-at": output,
-	}).Debug("Checking Trigger")
-
-	var message = ""
-	if checkReason.Now {
-		message = "reason now match always"
-		return true, message
-	}
-	if checkReason.OnoutcountLess > 0 && checkReason.OnoutcountLess > len(output) {
-		message = fmt.Sprint("reason match output len (", len(output), ") is less then ", checkReason.OnoutcountLess)
-		return true, message
-	}
-	if checkReason.OnoutcountMore > 0 && checkReason.OnoutcountMore < len(output) {
-		message = fmt.Sprint("reason match output len (", len(output), ") is more then ", checkReason.OnoutcountMore)
-		return true, message
-	}
-
-	for _, checkText := range checkReason.OnoutContains {
-		checkText = HandlePlaceHolder(checkText)
-		if checkText != "" && strings.Contains(output, checkText) {
-			message = fmt.Sprint("reason match because output contains ", checkText)
-			return true, message
-		}
-		if checkText != "" {
-			GetLogger().WithFields(logrus.Fields{
-				"check": checkText,
-				"with":  output,
-				"from":  checkReason.OnoutContains,
-			}).Debug("OnoutContains NO MATCH")
-		}
-	}
-
-	return false, message
 }
 
 func handleFileImportsToVars(imports []string) {

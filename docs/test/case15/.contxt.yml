@@ -6,7 +6,7 @@ config:
 task:
     - id: start
       options:
-        timeoutNeeds: 100
+        timeoutNeeds: 12000
       needs:
         - need_one
         - need_two 
@@ -15,17 +15,19 @@ task:
         - echo "fake-start"
         - sleep 0.2
         - echo "the-main-task"
-    
+    # these task must be done faster then the defined timeout
     - id: need_one
-      script:
-        - echo "wait 4 seconds"
-        #- sleep 4 
-        - echo "done need_one" 
+      script: 
+        - |
+          echo "<<< 1 >>> wait 0.4 seconds"
+          sleep 0.4 
+          echo "<<< 1 >>> done need_one" 
     - id: need_two
-      script:
-        - echo "wait 2 seconds"
-        #- sleep 2 
-        - echo "done need_two" 
+      script: 
+        - |
+          echo "<<< 2 >>> wait 0.2 seconds"
+          sleep 0.2 
+          echo "<<< 2 >>> done need_two" 
         
       
       

@@ -1,13 +1,43 @@
-task: 
+task:
+  - id: go-check
+    require:
+      system: linux
+    script:
+      - echo ${GOROOT}
+      - go env | grep GOROOT
+      - go env | grep GOVERSION
+      - go version 
+ 
+  - id: go-check
+    require:
+      system: windows
+    script:
+      - echo ${GOROOT}
+      - go env | Select-String GOROOT
+      - go env | Select-String GOVERSION
+      - go version
+
   - id: test
     script:
       - go clean -testcache ./..
-      - go test ./...
+      - go test -cover -v -failfast ./...
+
+  - id: test-each
+    options:
+      displaycmd: true
+    script:
+      - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/systools
+      - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/output
+      - go test -failfast -timeout 60s -v github.com/swaros/contxt/context/cmdhandle
+      - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/configure
+      - go test -failfast -timeout 60s -v github.com/swaros/contxt/context/dirhandle
 
   - id: set-version
     options:
       displaycmd: true
       invisible: true
+    variables:
+      bin-out: contxt
     require:
       system: linux
     script:
@@ -30,7 +60,7 @@ task:
       - "#@var main-version type docs/mainversion"
       - "#@var mid-version type docs/midversion"
       - "#@var minor-version type docs/minversion"
-      - "#@set build-hash windows"
+      - "#@var build-hash Get-Date -UFormat \"%m.%d.%Y.%R\""
       - "#@set bin-out contxt.exe"
 
   - id: set-version

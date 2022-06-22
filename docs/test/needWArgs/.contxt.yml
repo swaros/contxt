@@ -1,0 +1,15 @@
+task:
+  - id: need-with-arg
+    options:
+      displaycmd: true
+    script:
+      - echo "i-am-the-need"
+      - echo "arguments-${arg0}-${arg1}-${arg2}"
+  
+  - id: test-need
+    options:
+      displaycmd: true
+    needs:
+      - need-with-arg hello
+      - need-with-arg lulu
+      - need-with-arg

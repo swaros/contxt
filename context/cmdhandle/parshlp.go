@@ -23,47 +23,33 @@
 package cmdhandle
 
 import (
-	"errors"
-	"io/ioutil"
-	"os"
-
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"fmt"
+	"strings"
 )
 
-// CreateImport creates import settings
-func CreateImport(path string, pathToAdd string) error {
-	importTemplate, pathToFile, fullPath, existing := getIncludeConfig(path)
+func SplitArgs(cmdList []string, prefix string, arghandler func(string, map[string]string)) []string {
+	var cleared []string
+	var args map[string]string = make(map[string]string)
 
-	_, ferr := os.Stat(pathToAdd)
-	if ferr != nil {
-		return ferr
-	}
-
-	GetLogger().WithFields(logrus.Fields{
-		"exists": existing,
-		"path":   pathToFile,
-		"folder": fullPath,
-		"add":    pathToAdd,
-	}).Debug("read imports")
-
-	for _, existingPath := range importTemplate.Include.Folders {
-		if existingPath == pathToAdd {
-			err1 := errors.New("path already exists")
-			return err1
+	for _, value := range cmdList {
+		argArr := strings.Split(value, " ")
+		cleared = append(cleared, argArr[0])
+		if len(argArr) > 1 {
+			for index, v := range argArr {
+				args[fmt.Sprintf("%s%v", prefix, index)] = v
+			}
+			arghandler(argArr[0], args)
 		}
 	}
+	return cleared
+}
 
-	importTemplate.Include.Folders = append(importTemplate.Include.Folders, pathToAdd)
-	res, err := yaml.Marshal(importTemplate)
-	if err != nil {
-		return err
+func StringSplitArgs(argLine string, prefix string) (string, map[string]string) {
+	GetLogger().WithField("args", argLine).Debug("parsing argumented string")
+	var args map[string]string = make(map[string]string)
+	argArr := strings.Split(argLine, " ")
+	for index, v := range argArr {
+		args[fmt.Sprintf("%s%v", prefix, index)] = v
 	}
-
-	err = ioutil.WriteFile(pathToFile, []byte(res), 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return argArr[0], args
 }

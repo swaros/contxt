@@ -11,34 +11,6 @@ import (
 	"github.com/swaros/contxt/context/cmdhandle"
 )
 
-// caseRunner helps to switch a testrunn in testcase directory to this
-// this folder. and go back after the test is done
-// it also resets all variables
-// the id is just the number of the test/case folder (postfix)
-func caseRunner(id string, t *testing.T, testFunc func(t *testing.T)) {
-	cmdhandle.ClearAll()
-	old, derr := dirhandle.Current()
-	if derr != nil {
-		t.Error(derr)
-	}
-	os.Chdir("./../../docs/test/case" + id)
-	testFunc(t)
-	os.Chdir(old)
-
-}
-
-func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) {
-	cmdhandle.ClearAll()
-	old, derr := dirhandle.Current()
-	if derr != nil {
-		t.Error(derr)
-	}
-	os.Chdir(folder)
-	testFunc(t)
-	os.Chdir(old)
-
-}
-
 func TestMultipleTargets(t *testing.T) {
 	folderRunner("./../../docs/test/01multi", t, func(t *testing.T) {
 		cmdhandle.RunTargets("task", true)
@@ -376,10 +348,10 @@ func TestCase15Needs(t *testing.T) {
 		usertest := cmdhandle.GetPH("RUN.start.LOG.LAST")
 		needOneRuns := cmdhandle.GetPH("RUN.need_one.LOG.LAST")
 		needTwoRuns := cmdhandle.GetPH("RUN.need_two.LOG.LAST")
-		if needOneRuns != "done need_one" {
+		if needOneRuns != "<<< 1 >>> done need_one" {
 			t.Error("NEEDS needOne should be executed [done need_one] we got : ", needOneRuns)
 		}
-		if needTwoRuns != "done need_two" {
+		if needTwoRuns != "<<< 2 >>> done need_two" {
 			t.Error("NEEDS needTwo should be executed [done need_two] we got : ", needTwoRuns)
 		}
 
@@ -476,4 +448,11 @@ func TestStringMatcher(t *testing.T) {
 	if !cmdhandle.StringMatchTest("*", "something") {
 		t.Error("expect TRUE, not-empty placeholder should match with something")
 	}
+}
+
+func TestNeedWithArgs(t *testing.T) {
+	folderRunner("./../../docs/test/needWArgs", t, func(t *testing.T) {
+		cmdhandle.RunTargets("test-need", false)
+
+	})
 }

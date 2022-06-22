@@ -1,9 +1,7 @@
 package cmdhandle_test
 
 import (
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/swaros/contxt/context/cmdhandle"
 )
@@ -58,6 +56,8 @@ func TestBasicReplace(t *testing.T) {
 
 }
 
+/* that seems an relic. but have to think about*/
+/*
 func TestAsync(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -86,3 +86,4 @@ func ReadFromMap(waitGroup *sync.WaitGroup, key string, loops int, wait time.Dur
 		time.Sleep(wait)
 	}
 }
+*/

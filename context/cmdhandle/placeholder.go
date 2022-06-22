@@ -1,3 +1,25 @@
+// Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// Licensed under the MIT License
+//
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 package cmdhandle
 
 import (
@@ -47,14 +69,32 @@ func GetPH(key string) string {
 
 // HandlePlaceHolder replaces all defined placeholders
 func HandlePlaceHolder(line string) string {
+	var scopeVars map[string]string = make(map[string]string)
 	for {
-		return handlePlaceHolder(line)
+		return handlePlaceHolder(line, scopeVars)
 	}
 }
 
-func handlePlaceHolder(line string) string {
+func HandlePlaceHolderWithScope(line string, scopeVars map[string]string) string {
+	for {
+		return handlePlaceHolder(line, scopeVars)
+	}
+}
 
+func handlePlaceHolder(line string, scopeVars map[string]string) string {
+
+	// this block is for logging at trace level only
 	if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
+
+		for key, value := range scopeVars {
+			keyName := "${" + key + "}"
+			if strings.Contains(line, keyName) {
+				GetLogger().WithField("line", line).Trace("scope replace: source")
+				GetLogger().WithField(keyName, value).Trace("scope replace: variables")
+			}
+			line = strings.ReplaceAll(line, keyName, value)
+		}
+
 		keyValue.Range(func(key, value interface{}) bool {
 			keyName := "${" + key.(string) + "}"
 			if strings.Contains(line, keyName) {
@@ -67,12 +107,21 @@ func handlePlaceHolder(line string) string {
 		})
 	}
 
+	for key, value := range scopeVars {
+		keyName := "${" + key + "}"
+		if strings.Contains(line, keyName) {
+			GetLogger().WithField("line", line).Trace("scope replace: source")
+			GetLogger().WithField(keyName, value).Trace("scope replace: variables")
+		}
+		line = strings.ReplaceAll(line, keyName, value)
+	}
+
 	keyValue.Range(func(key, value interface{}) bool {
 		keyName := "${" + key.(string) + "}"
 		line = strings.ReplaceAll(line, keyName, value.(string))
-		line = handleMapVars(line)
 		return true
 	})
+	line = handleMapVars(line)
 	return line
 }
 
@@ -109,6 +158,10 @@ func handleMapVars(line string) string {
 // ClearAll removes all entries
 func ClearAll() {
 	keyValue.Range(func(key, value interface{}) bool {
+		keyValue.Delete(key)
+		return true
+	})
+	taskList.Range(func(key, value interface{}) bool {
 		keyValue.Delete(key)
 		return true
 	})
