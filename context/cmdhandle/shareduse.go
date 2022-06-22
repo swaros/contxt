@@ -30,11 +30,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/swaros/contxt/context/output"
-
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
+	"github.com/swaros/manout"
 )
 
 func CheckUseConfig(externalUseCase string) (string, error) {
@@ -57,7 +56,7 @@ func CheckUseConfig(externalUseCase string) (string, error) {
 				path = sharedPath + "/source"
 				exists, _ := dirhandle.Exists(path)
 				if !exists {
-					output.Error("USE Error", "shared usecase not exist and can not be downloaded", " ", path)
+					manout.Error("USE Error", "shared usecase not exist and can not be downloaded", " ", path)
 					os.Exit(10)
 				}
 				GetLogger().WithField("shared-path", path).Debug("use existing shared path")
@@ -108,11 +107,11 @@ func UpdateUseCase(fullPath string) {
 	//usecase, version := getUseInfo("", fullPath)
 	exists, config, _ := getRepoConfig(fullPath)
 	if exists {
-		fmt.Println(output.MessageCln(" remote:", output.ForeLightBlue, " ", config.Repositiory))
+		fmt.Println(manout.MessageCln(" remote:", manout.ForeLightBlue, " ", config.Repositiory))
 		updateGitRepo(config, true, fullPath)
 
 	} else {
-		fmt.Println(output.MessageCln(" local shared:", output.ForeYellow, " ", fullPath, output.ForeDarkGrey, "(not updatable. ignored)"))
+		fmt.Println(manout.MessageCln(" local shared:", manout.ForeYellow, " ", fullPath, manout.ForeDarkGrey, "(not updatable. ignored)"))
 	}
 }
 
@@ -159,16 +158,16 @@ func getUseInfo(usecase, pathTouse string) (string, string) {
 
 func updateGitRepo(config configure.GitVersionInfo, doUpdate bool, workDir string) bool {
 	if config.Repositiory != "" {
-		fmt.Print(output.MessageCln(" Reference:", output.ForeLightBlue, " ", config.Reference))
-		fmt.Print(output.MessageCln(" Current:", output.ForeLightBlue, " ", config.HashUsed))
+		fmt.Print(manout.MessageCln(" Reference:", manout.ForeLightBlue, " ", config.Reference))
+		fmt.Print(manout.MessageCln(" Current:", manout.ForeLightBlue, " ", config.HashUsed))
 		returnBool := false
 		checkGitVersionInfo(config.Repositiory, func(hash, reference string) {
 			if reference == config.Reference {
-				fmt.Print(output.MessageCln(output.ForeLightGreen, "[EXISTS]"))
+				fmt.Print(manout.MessageCln(manout.ForeLightGreen, "[EXISTS]"))
 				if hash == config.HashUsed {
-					fmt.Print(output.MessageCln(output.ForeLightGreen, " [up to date]"))
+					fmt.Print(manout.MessageCln(manout.ForeLightGreen, " [up to date]"))
 				} else {
-					fmt.Print(output.MessageCln(output.ForeYellow, " [update found]"))
+					fmt.Print(manout.MessageCln(manout.ForeYellow, " [update found]"))
 					if doUpdate {
 						gCode := executeGitUpdate(workDir + "/source")
 						if gCode == ExitOk {
@@ -192,7 +191,7 @@ func executeGitUpdate(path string) int {
 	gitCmd := "git fetch"
 	exec, args := GetExecDefaults()
 	exitCode, _, _ := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
-		fmt.Println(output.MessageCln("\tgit: ", output.ForeLightYellow, feed))
+		fmt.Println(manout.MessageCln("\tgit: ", manout.ForeLightYellow, feed))
 		return true
 	}, func(process *os.Process) {
 		pidStr := fmt.Sprintf("%d", process.Pid)

@@ -33,7 +33,7 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/context/dirhandle"
-	"github.com/swaros/contxt/context/output"
+	"github.com/swaros/manout"
 
 	"github.com/swaros/contxt/context/systools"
 
@@ -86,21 +86,21 @@ func RunShared(targets string) {
 	// handle all shared usages
 	if len(template.Config.Use) > 0 {
 		GetLogger().WithField("uses", template.Config.Use).Info("found external dependecy")
-		fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED loop]"))
+		fmt.Println(manout.MessageCln(manout.ForeCyan, "[SHARED loop]"))
 		for _, shared := range template.Config.Use {
-			fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED CONTXT][", output.ForeBlue, shared, output.ForeCyan, "] "))
+			fmt.Println(manout.MessageCln(manout.ForeCyan, "[SHARED CONTXT][", manout.ForeBlue, shared, manout.ForeCyan, "] "))
 			externalPath := HandleUsecase(shared)
 			GetLogger().WithField("path", externalPath).Info("shared contxt location")
 			currentDir, _ := dirhandle.Current()
 			os.Chdir(externalPath)
 			for _, runTarget := range allTargets {
-				fmt.Println(output.MessageCln(output.ForeCyan, output.ForeGreen, runTarget, output.ForeYellow, " [ external:", output.ForeWhite, externalPath, output.ForeYellow, "] ", output.ForeDarkGrey, templatePath))
+				fmt.Println(manout.MessageCln(manout.ForeCyan, manout.ForeGreen, runTarget, manout.ForeYellow, " [ external:", manout.ForeWhite, externalPath, manout.ForeYellow, "] ", manout.ForeDarkGrey, templatePath))
 				RunTargets(runTarget, false)
-				fmt.Println(output.MessageCln(output.ForeCyan, "["+output.ForeBlue, shared+"] ", output.ForeGreen, runTarget, " DONE"))
+				fmt.Println(manout.MessageCln(manout.ForeCyan, "["+manout.ForeBlue, shared+"] ", manout.ForeGreen, runTarget, " DONE"))
 			}
 			os.Chdir(currentDir)
 		}
-		fmt.Println(output.MessageCln(output.ForeCyan, "[SHARED done]"))
+		fmt.Println(manout.MessageCln(manout.ForeCyan, "[SHARED done]"))
 	}
 	GetLogger().WithField("targets", allTargets).Info("  SHARED DONE run targets...")
 }
@@ -128,7 +128,7 @@ func RunTargets(targets string, sharedRun bool) {
 	if exists {
 		runSequencially = template.Config.Sequencially
 		if template.Config.Coloroff {
-			output.ColorEnabled = false
+			manout.ColorEnabled = false
 		}
 	}
 
@@ -151,7 +151,7 @@ func RunTargets(targets string, sharedRun bool) {
 		for _, runTarget := range allTargets {
 			SetPH("CTX_TARGET", runTarget)
 			wg.Add(1)
-			fmt.Println(output.MessageCln(output.ForeBlue, "[exec:async] ", output.BoldTag, runTarget, " ", output.ForeWhite, templatePath))
+			fmt.Println(manout.MessageCln(manout.ForeBlue, "[exec:async] ", manout.BoldTag, runTarget, " ", manout.ForeWhite, templatePath))
 			go ExecuteTemplateWorker(&wg, true, runTarget, template)
 		}
 		wg.Wait()
@@ -159,12 +159,12 @@ func RunTargets(targets string, sharedRun bool) {
 		// trun one by one
 		for _, runTarget := range allTargets {
 			SetPH("CTX_TARGET", runTarget)
-			fmt.Println(output.MessageCln(output.ForeBlue, "[exec:seq] ", output.BoldTag, runTarget, " ", output.ForeWhite, templatePath))
+			fmt.Println(manout.MessageCln(manout.ForeBlue, "[exec:seq] ", manout.BoldTag, runTarget, " ", manout.ForeWhite, templatePath))
 			exitCode := ExecPathFile(&wg, false, template, runTarget)
 			GetLogger().WithField("exitcode", exitCode).Info("RunTarget [Sequencially runmode] done with exitcode")
 		}
 	}
-	fmt.Println(output.MessageCln(output.ForeBlue, "[done] ", output.BoldTag, targets))
+	fmt.Println(manout.MessageCln(manout.ForeBlue, "[done] ", manout.BoldTag, targets))
 	GetLogger().Info("target task execution done")
 }
 
@@ -192,7 +192,7 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 			if triggerFound {
 				SetPH("RUN."+target+".LOG.HIT", logLine)
 				if script.Options.Displaycmd {
-					fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t", output.ForeYellow, triggerMessage, output.Dim, " ", logLine))
+					fmt.Println(manout.MessageCln(manout.ForeCyan, "[trigger]\t", manout.ForeYellow, triggerMessage, manout.Dim, " ", logLine))
 				}
 
 				// did this trigger something?
@@ -220,7 +220,7 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 					}).Debug("TRIGGER ACTION")
 
 					if script.Options.Displaycmd {
-						fmt.Println(output.MessageCln(output.ForeCyan, "[trigger]\t ", output.ForeGreen, "target:", output.ForeLightGreen, actionDef.Target))
+						fmt.Println(manout.MessageCln(manout.ForeCyan, "[trigger]\t ", manout.ForeGreen, "target:", manout.ForeLightGreen, actionDef.Target))
 					}
 
 					hitKeyTargets := "RUN.LISTENER." + target + ".HIT.TARGETS"
@@ -299,7 +299,7 @@ func lineExecuter(
 	}
 	replacedLine := HandlePlaceHolderWithScope(codeLine, arguments)
 	if script.Options.Displaycmd {
-		fmt.Println(output.MessageCln(output.Dim, output.ForeYellow, " [cmd] ", output.ResetDim, output.ForeCyan, target, output.ForeDarkGrey, " \t :> ", output.BoldTag, output.ForeBlue, replacedLine))
+		fmt.Println(manout.MessageCln(manout.Dim, manout.ForeYellow, " [cmd] ", manout.ResetDim, manout.ForeCyan, target, manout.ForeDarkGrey, " \t :> ", manout.BoldTag, manout.ForeBlue, replacedLine))
 	}
 
 	SetPH("RUN.SCRIPT_LINE", replacedLine)
@@ -325,7 +325,7 @@ func lineExecuter(
 			labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
 			if script.Options.Format != "" {
 				format := HandlePlaceHolderWithScope(script.Options.Format, script.Variables)
-				fomatedOutStr := output.Message(fmt.Sprintf(format, target))
+				fomatedOutStr := manout.Message(fmt.Sprintf(format, target))
 				labelStr = systools.LabelPrintWithArg(fomatedOutStr, foreColor, bgColor, 1)
 			}
 
@@ -344,7 +344,7 @@ func lineExecuter(
 		stopReasonFound, message := checkReason(stopReason, logLine)
 		if stopReasonFound {
 			if script.Options.Displaycmd {
-				fmt.Println(output.MessageCln(output.ForeLightCyan, " STOP-HIT ", output.ForeWhite, output.BackBlue, message))
+				fmt.Println(manout.MessageCln(manout.ForeLightCyan, " STOP-HIT ", manout.ForeWhite, manout.BackBlue, message))
 			}
 			return false
 		}
@@ -354,12 +354,12 @@ func lineExecuter(
 		SetPH("RUN.PID", pidStr)
 		SetPH("RUN."+target+".PID", pidStr)
 		if script.Options.Displaycmd {
-			fmt.Println(output.MessageCln(output.ForeYellow, " [pid] ", output.ForeBlue, process.Pid))
+			fmt.Println(manout.MessageCln(manout.ForeYellow, " [pid] ", manout.ForeBlue, process.Pid))
 		}
 	})
 	if execErr != nil {
 		if script.Options.Displaycmd {
-			fmt.Println(output.MessageCln(output.ForeRed, "execution error: ", output.BackRed, output.ForeWhite, execErr))
+			fmt.Println(manout.MessageCln(manout.ForeRed, "execution error: ", manout.BackRed, manout.ForeWhite, execErr))
 		}
 	}
 	// check execution codes
@@ -371,15 +371,15 @@ func lineExecuter(
 			if script.Stopreasons.Onerror {
 				return ExitByStopReason, true
 			}
-			fmt.Println(output.MessageCln(output.ForeYellow, "NOTE!\t", output.BackLightYellow, output.ForeDarkGrey, " a script execution was failing. no stopreason is set so execution will continued "))
-			fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " if this is expected you can ignore this message.                                 "))
-			fmt.Println(output.MessageCln("\t", output.BackLightYellow, output.ForeDarkGrey, " but you should handle error cases                                                "))
-			fmt.Println("\ttarget :\t", output.MessageCln(output.ForeYellow, target))
-			fmt.Println("\tcommand:\t", output.MessageCln(output.ForeYellow, codeLine))
+			fmt.Println(manout.MessageCln(manout.ForeYellow, "NOTE!\t", manout.BackLightYellow, manout.ForeDarkGrey, " a script execution was failing. no stopreason is set so execution will continued "))
+			fmt.Println(manout.MessageCln("\t", manout.BackLightYellow, manout.ForeDarkGrey, " if this is expected you can ignore this message.                                 "))
+			fmt.Println(manout.MessageCln("\t", manout.BackLightYellow, manout.ForeDarkGrey, " but you should handle error cases                                                "))
+			fmt.Println("\ttarget :\t", manout.MessageCln(manout.ForeYellow, target))
+			fmt.Println("\tcommand:\t", manout.MessageCln(manout.ForeYellow, codeLine))
 
 		} else {
 			errMsg := " = exit code from command: "
-			lastMessage := output.MessageCln(output.BackRed, output.ForeYellow, realExitCode, output.CleanTag, output.ForeLightRed, errMsg, output.ForeWhite, codeLine)
+			lastMessage := manout.MessageCln(manout.BackRed, manout.ForeYellow, realExitCode, manout.CleanTag, manout.ForeLightRed, errMsg, manout.ForeWhite, codeLine)
 			fmt.Println("\t Exit ", lastMessage)
 			fmt.Println()
 			fmt.Println("\t check the command. if this command can fail you may fit the execution rules. see options:")
@@ -503,7 +503,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						"reason": message,
 					}).Info("executeTemplate IGNORE because requirements not matching")
 					if script.Options.Displaycmd {
-						fmt.Println(output.MessageCln(output.ForeYellow, " [require] ", output.ForeBlue, message))
+						fmt.Println(manout.MessageCln(manout.ForeYellow, " [require] ", manout.ForeBlue, message))
 					}
 					// ---- return ExitByRequirement
 					continue
@@ -519,7 +519,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					backToDir, _ = dirhandle.Current()
 					chDirError := os.Chdir(HandlePlaceHolderWithScope(script.Options.WorkingDir, scopeVars))
 					if chDirError != nil {
-						output.Error("Workspace setting seems invalid ", chDirError)
+						manout.Error("Workspace setting seems invalid ", chDirError)
 						os.Exit(10)
 					}
 				}
@@ -553,7 +553,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						tw.ResultFnc = func(tr TaskResult) {
 							executionCode := tr.Content
 							if executionCode != ExitOk {
-								output.Error("Need Task Error", " exit Code ", executionCode, " for target [", tw.taskName, "]")
+								manout.Error("Need Task Error", " exit Code ", executionCode, " for target [", tw.taskName, "]")
 								os.Exit(1)
 							}
 						}
@@ -604,7 +604,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				}).Debug("executeTemplate next definition")
 				for _, nextTarget := range script.Next {
 					if script.Options.Displaycmd {
-						fmt.Println(output.MessageCln(output.ForeYellow, " [next] ", output.ForeBlue, nextTarget))
+						fmt.Println(manout.MessageCln(manout.ForeYellow, " [next] ", manout.ForeBlue, nextTarget))
 					}
 					/* ---- something is wrong with my logic dependig execution not in a sequence (useWaitGroup == true)
 					if useWaitGroup {
@@ -627,7 +627,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 
 		}
 		if !targetFound {
-			fmt.Println(output.MessageCln(output.ForeYellow, "target not defined: ", output.ForeWhite, target))
+			fmt.Println(manout.MessageCln(manout.ForeYellow, "target not defined: ", manout.ForeWhite, target))
 			GetLogger().Error("Target can not be found: ", target)
 		}
 
@@ -671,7 +671,7 @@ func handleFileImportsToVars(imports []string) {
 
 		}, func(path string, err error) {
 			GetLogger().Errorln("file not exists:", err)
-			output.Error("varibales file not exists:", err)
+			manout.Error("varibales file not exists:", err)
 			os.Exit(1)
 		})
 	}

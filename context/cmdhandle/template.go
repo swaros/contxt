@@ -31,10 +31,10 @@ import (
 	"path/filepath"
 
 	"github.com/imdario/mergo"
-	"github.com/swaros/contxt/context/output"
 
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
+	"github.com/swaros/manout"
 	"gopkg.in/yaml.v2"
 )
 
@@ -142,7 +142,7 @@ func getIncludeConfig(path string) (configure.IncludePaths, string, string, bool
 	}
 	err := yaml.Unmarshal(file, &importTemplate)
 	if err != nil {
-		fmt.Println(output.MessageCln(output.ForeRed, "error reading include config file: ", output.ForeWhite, checkIncPath), err)
+		fmt.Println(manout.MessageCln(manout.ForeRed, "error reading include config file: ", manout.ForeWhite, checkIncPath), err)
 		os.Exit(incFileParseError)
 	}
 	return importTemplate, checkIncPath, fullPath, true
@@ -168,7 +168,7 @@ func LoadIncTempalte(path string) (string, bool) {
 		parsedTemplate, perr := ImportFolders(path, dirs...)
 		if perr != nil {
 			fmt.Println(perr)
-			fmt.Println(output.MessageCln(output.ForeRed, "error parsing files from path: ", output.ForeWhite, path), perr)
+			fmt.Println(manout.MessageCln(manout.ForeRed, "error parsing files from path: ", manout.ForeWhite, path), perr)
 			os.Exit(incFileParseError)
 		}
 		return parsedTemplate, true

@@ -29,9 +29,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/swaros/contxt/context/output"
-
 	"github.com/kylelemons/godebug/pretty"
+	"github.com/swaros/manout"
 	"gopkg.in/yaml.v3"
 )
 
@@ -42,9 +41,9 @@ func compareContent(a, b interface{}, showBooth bool, size int, right int, noOut
 	noDiff := true
 	i := 0
 	for _, line := range diffParts {
-		backColor := output.BackWhite
+		backColor := manout.BackWhite
 		if i%2 == 0 {
-			backColor = output.BackLightGrey
+			backColor = manout.BackLightGrey
 		}
 		leftDiff := strings.HasPrefix(line, "+")
 		rightDiff := strings.HasPrefix(line, "-")
@@ -53,7 +52,7 @@ func compareContent(a, b interface{}, showBooth bool, size int, right int, noOut
 			lft := getMaxLineString("", size)
 			line = getMaxLineString(line, right)
 			if !noOut {
-				fmt.Println(output.MessageCln(backColor, output.ForeYellow, output.Dim, lft, line))
+				fmt.Println(manout.MessageCln(backColor, manout.ForeYellow, manout.Dim, lft, line))
 			}
 			i++
 		}
@@ -61,20 +60,20 @@ func compareContent(a, b interface{}, showBooth bool, size int, right int, noOut
 			errors = append(errors, "unsupported: "+line)
 			rgt := getMaxLineString("  unsupported element ", right)
 			line = getMaxLineString(line, size)
-			backColor := output.BackYellow
+			backColor := manout.BackYellow
 			if i%2 == 0 {
-				backColor = output.BackLightYellow
+				backColor = manout.BackLightYellow
 			}
 			i++
 			if !noOut {
-				fmt.Println(output.MessageCln(backColor, output.BoldTag, output.ForeDarkGrey, line, output.ForeRed, output.BoldTag, rgt))
+				fmt.Println(manout.MessageCln(backColor, manout.BoldTag, manout.ForeDarkGrey, line, manout.ForeRed, manout.BoldTag, rgt))
 			}
 		}
 		if !leftDiff && !rightDiff {
 			line = getMaxLineString(line, size+right)
 			i++
 			if !noOut {
-				fmt.Println(output.MessageCln(backColor, output.ForeBlue, line))
+				fmt.Println(manout.MessageCln(backColor, manout.ForeBlue, line))
 			}
 		}
 
@@ -82,11 +81,11 @@ func compareContent(a, b interface{}, showBooth bool, size int, right int, noOut
 
 	if len(errors) > 0 {
 		noDiff = false
-		output.Error("found unsupported elements.", "count of errors:", len(errors))
+		manout.Error("found unsupported elements.", "count of errors:", len(errors))
 	}
 
 	for _, errMsg := range errors {
-		fmt.Println(output.MessageCln(output.ForeYellow, errMsg))
+		fmt.Println(manout.MessageCln(manout.ForeYellow, errMsg))
 	}
 	return noDiff
 }
@@ -149,14 +148,14 @@ func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
 				}
 
 			} else {
-				output.Error("error parsing template", conerr)
+				manout.Error("error parsing template", conerr)
 				os.Exit(1)
 			}
 
 		} else {
 			data, err := GetParsedTemplateSource(path)
 			if err != nil {
-				output.Error("template loading", err)
+				manout.Error("template loading", err)
 				os.Exit(1)
 			}
 			fmt.Println(data)
@@ -172,7 +171,7 @@ func LintOut(leftcnt, rightcnt int, all bool, noOut bool) bool {
 	if exists && rightcnt >= 0 && leftcnt >= 0 {
 		data, err := GetParsedTemplateSource(path)
 		if err != nil {
-			output.Error("template loading", err)
+			manout.Error("template loading", err)
 			return false
 		}
 		origMap, yerr := YAMLToMap(data)
@@ -191,11 +190,11 @@ func LintOut(leftcnt, rightcnt int, all bool, noOut bool) bool {
 
 		} else {
 			prinfFile(path, leftcnt+rightcnt)
-			output.Error("parsing error", yerr)
+			manout.Error("parsing error", yerr)
 		}
 
 	} else {
-		output.Error("template not found ", path)
+		manout.Error("template not found ", path)
 	}
 	return false
 }
@@ -218,14 +217,14 @@ func prinfFile(filename string, size int) error {
 		return err
 	}
 
-	backColor := output.BackWhite
+	backColor := manout.BackWhite
 	lines := strings.Split(data, "\n")
 	i := 0
 	for _, line := range lines {
 		i++
 		prefix := getMaxLineString(strconv.Itoa(i), 5)
 		line = getMaxLineString(line, size)
-		fmt.Println(output.MessageCln(output.BackCyan, output.ForeWhite, prefix, backColor, output.ForeBlue, line))
+		fmt.Println(manout.MessageCln(manout.BackCyan, manout.ForeWhite, prefix, backColor, manout.ForeBlue, line))
 	}
 	return nil
 }

@@ -33,7 +33,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/swaros/contxt/context/output"
+	"github.com/swaros/manout"
 )
 
 const (
@@ -172,9 +172,9 @@ func ChangeWorkspace(workspace string, oldspace func(string) bool, newspace func
 		}
 		SaveDefaultConfiguration(true)
 		newspace(workspace)
-		fmt.Println(output.MessageCln("current workspace is now:", output.BackBlue, output.ForeWhite, workspace))
+		fmt.Println(manout.MessageCln("current workspace is now:", manout.BackBlue, manout.ForeWhite, workspace))
 	} else {
-		fmt.Println(output.MessageCln(output.ForeLightYellow, "changing workspace failed."))
+		fmt.Println(manout.MessageCln(manout.ForeLightYellow, "changing workspace failed."))
 	}
 }
 
@@ -190,7 +190,7 @@ func RemoveWorkspace(name string) {
 		if err == nil && cfgExists {
 			os.Remove(path)
 		} else {
-			fmt.Println("no workspace exists with name: ", output.MessageCln(output.ForeLightYellow, name))
+			fmt.Println("no workspace exists with name: ", manout.MessageCln(manout.ForeLightYellow, name))
 			os.Exit(5)
 		}
 	} else {
@@ -311,9 +311,9 @@ func ShowPaths(current string) int {
 	PathWorker(func(index int, path string) {
 		if path == current {
 
-			fmt.Println(output.MessageCln("\t[", output.ForeLightYellow, index, output.CleanTag, "]\t", output.BoldTag, path))
+			fmt.Println(manout.MessageCln("\t[", manout.ForeLightYellow, index, manout.CleanTag, "]\t", manout.BoldTag, path))
 		} else {
-			fmt.Println(output.MessageCln("\t ", output.ForeLightBlue, index, output.CleanTag, " \t", path))
+			fmt.Println(manout.MessageCln("\t ", manout.ForeLightBlue, index, manout.CleanTag, " \t", path))
 		}
 
 	})
@@ -324,7 +324,7 @@ func ShowPaths(current string) int {
 func PathWorker(callback func(int, string)) {
 	cnt := len(UsedConfig.Paths)
 	if cnt < 1 {
-		fmt.Println(output.MessageCln("\t", output.ForeYellow, "no paths actually stored ", output.ForeDarkGrey, UsedConfig.CurrentSet))
+		fmt.Println(manout.MessageCln("\t", manout.ForeYellow, "no paths actually stored ", manout.ForeDarkGrey, UsedConfig.CurrentSet))
 		return
 	}
 	for index, path := range UsedConfig.Paths {
@@ -365,7 +365,7 @@ func getConfigPath(fileName string) (string, error) {
 // AddPath adding a path if they not already exists
 func AddPath(path string) {
 	if PathExists(path) {
-		fmt.Println(output.MessageCln(output.ForeYellow, "\tthe path is already in set ", output.BoldTag, UsedConfig.CurrentSet))
+		fmt.Println(manout.MessageCln(manout.ForeYellow, "\tthe path is already in set ", manout.BoldTag, UsedConfig.CurrentSet))
 		return
 	}
 

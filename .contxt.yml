@@ -27,7 +27,6 @@ task:
       displaycmd: true
     script:
       - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/systools
-      - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/output
       - go test -failfast -timeout 60s -v github.com/swaros/contxt/context/cmdhandle
       - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/configure
       - go test -failfast -timeout 60s -v github.com/swaros/contxt/context/dirhandle
