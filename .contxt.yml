@@ -101,3 +101,55 @@ task:
     script:
        - bin/${bin-out} version
 
+
+  - id: check-system
+    script:      
+      - "#@var INSTALL_TARGET uname -r"
+      - uname -r
+    listener:
+      - trigger:
+          onoutContains:
+            - MANJARO
+            - ARCHLINUX
+        action:
+          target: install-local-arch
+    
+
+
+  - id: install-local
+    variables:
+      local-install: "yes"
+    needs:
+      - build
+    next:
+      - check-system    
+
+  - id: install-local-arch
+    require:
+      notExists:
+        - ${HOME}/.local/bin/
+      system: linux
+      variables:
+        local-install: "=yes"
+        bin-out: "*"        
+    script:
+      - echo "archlinux based system detected"
+      - echo "ERROR missing target dir .local/bin/"
+      - echo "      you should create them first."      
+      - echo "   mkdir $HOME/.local/bin/"
+      
+
+  - id: install-local-arch
+    require:
+      exists:
+        - ${HOME}/.local/bin/
+      system: linux
+      variables:
+        local-install: "=yes"
+        bin-out: "*"        
+    script:
+      - echo "archlinux based system detected"
+      - echo "using ~/.local/bin/ to copy ${bin-out}"
+      - cp bin/${bin-out} $HOME/.local/bin/${bin-out}
+
+    
