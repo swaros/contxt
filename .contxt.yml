@@ -17,6 +17,11 @@ task:
       - go env | Select-String GOVERSION
       - go version
 
+  - id: cleanup-dependencies
+    script:
+      - go mod tidy
+      - git status
+      
   - id: test
     script:
       - go clean -testcache ./..
