@@ -249,3 +249,36 @@ func TestRuntimeCancelation(t *testing.T) {
 		t.Error("second task is not executed")
 	}
 }
+
+func TestSecondCallIsFine(t *testing.T) {
+	counter := 0
+	second := 0
+	var taskGrp cmdhandle.TaskGroup = cmdhandle.TaskGroup{
+		LoggerFnc: t.Log,
+	}
+	taskGrp.AddTask("BBBB-1", cmdhandle.TaskWatched{
+		Exec: func(tw *cmdhandle.TaskWatched) cmdhandle.TaskResult {
+			counter++
+			return cmdhandle.CreateTaskResult(nil)
+		},
+	}).Exec().Wait(1*time.Microsecond, 500*time.Millisecond)
+
+	var taskGrp2 cmdhandle.TaskGroup = cmdhandle.TaskGroup{
+		LoggerFnc: t.Log,
+	}
+	taskGrp2.AddTask("BBBB-1", cmdhandle.TaskWatched{
+		Exec: func(tw *cmdhandle.TaskWatched) cmdhandle.TaskResult {
+			counter++
+			second++
+			return cmdhandle.CreateTaskResult(nil)
+		},
+	}).Exec().Wait(1*time.Microsecond, 500*time.Millisecond)
+
+	if counter != 1 {
+		t.Error("more (or less?) then one run:", counter)
+	}
+
+	if second != 0 {
+		t.Error("second should not be > 0 because this method should never be executed:", second)
+	}
+}

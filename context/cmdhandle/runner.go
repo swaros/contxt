@@ -31,10 +31,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/swaros/contxt/context/output"
 
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
+	"github.com/swaros/manout"
 )
 
 //var log = logrus.New()
@@ -161,7 +161,7 @@ you need to set the name for the workspace`,
 			checkDefaultFlags(cmd, args)
 			workspace, _ := cmd.Flags().GetString("name")
 			if workspace == "" {
-				output.Error("paramater missing", "name is required")
+				manout.Error("paramater missing", "name is required")
 			} else {
 				configure.ChangeWorkspace(workspace, callBackOldWs, callBackNewWs)
 			}
@@ -216,14 +216,14 @@ you need to set the name for the workspace`,
 		Short: "show assigned paths",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			fmt.Println(output.MessageCln("\t", "paths stored in ", output.ForeCyan, configure.UsedConfig.CurrentSet))
+			fmt.Println(manout.MessageCln("\t", "paths stored in ", manout.ForeCyan, configure.UsedConfig.CurrentSet))
 			dir, err := dirhandle.Current()
 			if err == nil {
 				count := configure.ShowPaths(dir)
 				if count > 0 && !showHints {
 					fmt.Println()
-					fmt.Println(output.MessageCln("\t", "if you have installed the shell functions ", output.ForeDarkGrey, "(contxt install bash|zsh|fish)", output.CleanTag, " change the directory by ", output.BoldTag, "cn ", count-1))
-					fmt.Println(output.MessageCln("\t", "this will be the same as ", output.BoldTag, "cd ", dirhandle.GetDir(count-1)))
+					fmt.Println(manout.MessageCln("\t", "if you have installed the shell functions ", manout.ForeDarkGrey, "(contxt install bash|zsh|fish)", manout.CleanTag, " change the directory by ", manout.BoldTag, "cn ", count-1))
+					fmt.Println(manout.MessageCln("\t", "this will be the same as ", manout.BoldTag, "cd ", dirhandle.GetDir(count-1)))
 				}
 			}
 		},
@@ -285,7 +285,7 @@ you need to set the name for the workspace`,
 			checkDefaultFlags(cmd, args)
 			dir, err := dirhandle.Current()
 			if err == nil {
-				fmt.Println(output.MessageCln("add ", output.ForeBlue, dir))
+				fmt.Println(manout.MessageCln("add ", manout.ForeBlue, dir))
 				configure.AddPath(dir)
 				configure.SaveDefaultConfiguration(true)
 			}
@@ -299,13 +299,13 @@ you need to set the name for the workspace`,
 			checkDefaultFlags(cmd, args)
 			dir, err := dirhandle.Current()
 			if err == nil {
-				fmt.Println(output.MessageCln("try to remove ", output.ForeBlue, dir, output.CleanTag, " from workspace"))
+				fmt.Println(manout.MessageCln("try to remove ", manout.ForeBlue, dir, manout.CleanTag, " from workspace"))
 				removed := configure.RemovePath(dir)
 				if !removed {
-					fmt.Println(output.MessageCln(output.ForeRed, "error", output.CleanTag, " path is not part of the current workspace"))
+					fmt.Println(manout.MessageCln(manout.ForeRed, "error", manout.CleanTag, " path is not part of the current workspace"))
 					os.Exit(1)
 				} else {
-					fmt.Println(output.MessageCln(output.ForeGreen, "success"))
+					fmt.Println(manout.MessageCln(manout.ForeGreen, "success"))
 					configure.SaveDefaultConfiguration(true)
 				}
 			}
@@ -540,7 +540,7 @@ you will also see if a unexpected propertie found `,
 			useCases, err := ListUseCases(true)
 			if err == nil {
 				for _, path := range useCases {
-					fmt.Println(output.MessageCln("check usage ", output.ForeCyan, path))
+					fmt.Println(manout.MessageCln("check usage ", manout.ForeCyan, path))
 					UpdateUseCase(path)
 				}
 			}
@@ -573,7 +573,7 @@ func checkDirFlags(cmd *cobra.Command, args []string) {
 func checkDefaultFlags(cmd *cobra.Command, args []string) {
 	color, err := cmd.Flags().GetBool("coloroff")
 	if err == nil && color {
-		output.ColorEnabled = false
+		manout.ColorEnabled = false
 	}
 
 	loglevel, _ = cmd.Flags().GetString("loglevel")
@@ -678,9 +678,9 @@ func shortcuts() bool {
 func InitDefaultVars() {
 	SetPH("CTX_OS", configure.GetOs())
 	if configure.GetOs() == "windows" {
-		output.ColorEnabled = false
+		manout.ColorEnabled = false
 		if os.Getenv("CTX_COLOR") == "ON" {
-			output.ColorEnabled = true
+			manout.ColorEnabled = true
 		} else {
 			cmd := "$PSVersionTable.PSVersion.Major"
 			cmdArg := []string{"-nologo", "-noprofile"}
@@ -693,7 +693,7 @@ func InitDefaultVars() {
 			})
 			SetPH("CTX_PS_VERSION", version)
 			if version >= "7" {
-				output.ColorEnabled = true
+				manout.ColorEnabled = true
 			}
 		}
 	}
@@ -718,7 +718,7 @@ func MainExecute() {
 		initCobra()
 		err := executeCobra()
 		if err != nil {
-			output.Error("error", err)
+			manout.Error("error", err)
 			os.Exit(1)
 		}
 
@@ -852,16 +852,16 @@ func printTargets() {
 
 	template, path, exists := GetTemplate()
 	if exists {
-		fmt.Println(output.MessageCln(output.ForeDarkGrey, "used taskfile:\t", output.CleanTag, path))
-		fmt.Println(output.MessageCln(output.ForeDarkGrey, "tasks count:  \t", output.CleanTag, len(template.Task)))
+		fmt.Println(manout.MessageCln(manout.ForeDarkGrey, "used taskfile:\t", manout.CleanTag, path))
+		fmt.Println(manout.MessageCln(manout.ForeDarkGrey, "tasks count:  \t", manout.CleanTag, len(template.Task)))
 		if len(template.Task) > 0 {
-			fmt.Println(output.MessageCln(output.BoldTag, "existing targets:"))
+			fmt.Println(manout.MessageCln(manout.BoldTag, "existing targets:"))
 			taskList, _ := templateTargetsAsMap(template)
 			for _, tasks := range taskList {
 				fmt.Println("\t", tasks)
 			}
 		} else {
-			fmt.Println(output.MessageCln("that is what we gor so far:"))
+			fmt.Println(manout.MessageCln("that is what we gor so far:"))
 			fmt.Println()
 		}
 
@@ -869,12 +869,12 @@ func printTargets() {
 		if len(sharedTargets) > 0 {
 
 			for _, stasks := range sharedTargets {
-				fmt.Println("\t", stasks, output.MessageCln(output.ForeDarkGrey, " shared", output.CleanTag))
+				fmt.Println("\t", stasks, manout.MessageCln(manout.ForeDarkGrey, " shared", manout.CleanTag))
 			}
 
 		}
 	} else {
-		fmt.Println(output.MessageCln(output.ForeCyan, "no task-file exists. you can create one by ", output.CleanTag, " contxt create"))
+		fmt.Println(manout.MessageCln(manout.ForeCyan, "no task-file exists. you can create one by ", manout.CleanTag, " contxt create"))
 	}
 }
 
@@ -883,10 +883,10 @@ func runTargets(path string, targets string) {
 }
 
 func printOutHeader() {
-	fmt.Println(output.MessageCln(output.BoldTag, output.ForeWhite, "cont(e)xt ", output.CleanTag, configure.GetVersion()))
-	fmt.Println(output.MessageCln(output.Dim, " build-no [", output.ResetDim, configure.GetBuild(), output.Dim, "]"))
+	fmt.Println(manout.MessageCln(manout.BoldTag, manout.ForeWhite, "cont(e)xt ", manout.CleanTag, configure.GetVersion()))
+	fmt.Println(manout.MessageCln(manout.Dim, " build-no [", manout.ResetDim, configure.GetBuild(), manout.Dim, "]"))
 	if configure.GetOs() == "windows" {
-		fmt.Println(output.MessageCln(output.BoldTag, output.ForeWhite, " powershell version ", output.CleanTag, GetPH("CTX_PS_VERSION")))
+		fmt.Println(manout.MessageCln(manout.BoldTag, manout.ForeWhite, " powershell version ", manout.CleanTag, GetPH("CTX_PS_VERSION")))
 	}
 }
 
@@ -898,12 +898,12 @@ func printInfo() {
 func printPaths() {
 	dir, err := dirhandle.Current()
 	if err == nil {
-		fmt.Println(output.MessageCln(output.ForeWhite, " current directory: ", output.BoldTag, dir))
-		fmt.Println(output.MessageCln(output.ForeWhite, " current workspace: ", output.BoldTag, configure.UsedConfig.CurrentSet))
+		fmt.Println(manout.MessageCln(manout.ForeWhite, " current directory: ", manout.BoldTag, dir))
+		fmt.Println(manout.MessageCln(manout.ForeWhite, " current workspace: ", manout.BoldTag, configure.UsedConfig.CurrentSet))
 		notWorkspace := true
-		pathColor := output.ForeLightBlue
+		pathColor := manout.ForeLightBlue
 		if !configure.PathMeightPartOfWs(dir) {
-			pathColor = output.ForeLightMagenta
+			pathColor = manout.ForeLightMagenta
 		} else {
 			notWorkspace = false
 		}
@@ -912,10 +912,10 @@ func printPaths() {
 			template, _, exists := GetTemplate()
 			add := ""
 			if strings.Contains(dir, path) {
-				add = output.ResetDim + output.ForeCyan
+				add = manout.ResetDim + manout.ForeCyan
 			}
 			if dir == path {
-				add = output.ResetDim + output.ForeGreen
+				add = manout.ResetDim + manout.ForeGreen
 			}
 			if exists {
 				outTasks := ""
@@ -924,33 +924,33 @@ func printPaths() {
 					outTasks = outTasks + " " + tasks
 				}
 
-				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, add, path, output.CleanTag, " targets", "[", output.ForeYellow, outTasks, output.CleanTag, "]"))
+				fmt.Println(manout.MessageCln("       path: ", manout.Dim, " no ", manout.ForeYellow, index, " ", pathColor, add, path, manout.CleanTag, " targets", "[", manout.ForeYellow, outTasks, manout.CleanTag, "]"))
 			} else {
-				fmt.Println(output.MessageCln("       path: ", output.Dim, " no ", output.ForeYellow, index, " ", pathColor, add, path))
+				fmt.Println(manout.MessageCln("       path: ", manout.Dim, " no ", manout.ForeYellow, index, " ", pathColor, add, path))
 			}
 		})
 		if notWorkspace {
 			fmt.Println()
-			fmt.Println(output.MessageCln(output.BackYellow, output.ForeBlue, " WARNING ! ", output.CleanTag, "\tyou are currently in none of the assigned locations."))
+			fmt.Println(manout.MessageCln(manout.BackYellow, manout.ForeBlue, " WARNING ! ", manout.CleanTag, "\tyou are currently in none of the assigned locations."))
 			fmt.Println("\t\tso maybe you are using the wrong workspace")
 		}
 		if !showHints {
 			fmt.Println()
-			fmt.Println(output.MessageCln(" targets can be executes by ", output.BoldTag, "contxt run <targetname>", output.CleanTag, "(for the current directory)"))
-			fmt.Println(output.MessageCln(" a target can also be executed in all stored paths by ", output.BoldTag, "contxt run -a <targetname>", output.CleanTag, " independend from current path"))
+			fmt.Println(manout.MessageCln(" targets can be executes by ", manout.BoldTag, "contxt run <targetname>", manout.CleanTag, "(for the current directory)"))
+			fmt.Println(manout.MessageCln(" a target can also be executed in all stored paths by ", manout.BoldTag, "contxt run -a <targetname>", manout.CleanTag, " independend from current path"))
 		}
 
 		fmt.Println()
 		if !showHints {
-			fmt.Println(output.MessageCln(" all workspaces:", " ... change by ", output.BoldTag, "contxt <workspace>", ""))
+			fmt.Println(manout.MessageCln(" all workspaces:", " ... change by ", manout.BoldTag, "contxt <workspace>", ""))
 		} else {
-			fmt.Println(output.MessageCln(" all workspaces:"))
+			fmt.Println(manout.MessageCln(" all workspaces:"))
 		}
 		configure.WorkSpaces(func(name string) {
 			if name == configure.UsedConfig.CurrentSet {
-				fmt.Println(output.MessageCln("\t[ ", output.BoldTag, name, output.CleanTag, " ]"))
+				fmt.Println(manout.MessageCln("\t[ ", manout.BoldTag, name, manout.CleanTag, " ]"))
 			} else {
-				fmt.Println(output.MessageCln("\t  ", name, "   "))
+				fmt.Println(manout.MessageCln("\t  ", name, "   "))
 			}
 		})
 	}

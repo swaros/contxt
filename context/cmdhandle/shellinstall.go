@@ -31,9 +31,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/swaros/contxt/context/output"
 
 	"github.com/swaros/contxt/context/dirhandle"
+	"github.com/swaros/manout"
 )
 
 func UserDirectory() (string, error) {
@@ -156,12 +156,12 @@ source <(ctxcompletion)
 			fmt.Println(usrDir + "/.bashrc")
 			fine, errmsg := updateExistingFile(usrDir+"/.bashrc", bashrcAdd, "### begin contxt bashrc")
 			if !fine {
-				output.Error("bashrc update failed", errmsg)
+				manout.Error("bashrc update failed", errmsg)
 			} else {
-				fmt.Println(output.MessageCln(output.ForeGreen, "success", output.CleanTag, " to update bash run ", output.ForeCyan, " source ~/.bashrc"))
+				fmt.Println(manout.MessageCln(manout.ForeGreen, "success", manout.CleanTag, " to update bash run ", manout.ForeCyan, " source ~/.bashrc"))
 			}
 		} else {
-			output.Error("missing .bashrc", "could not find expected "+usrDir+"/.bashrc")
+			manout.Error("missing .bashrc", "could not find expected "+usrDir+"/.bashrc")
 		}
 	}
 
@@ -222,12 +222,12 @@ function ctx() {
 			fmt.Println(usrDir + "/.zshrc")
 			fine, errmsg := updateExistingFile(usrDir+"/.zshrc", zshrcAdd, "### begin contxt zshrc")
 			if !fine {
-				output.Error("zshrc update failed", errmsg)
+				manout.Error("zshrc update failed", errmsg)
 			} else {
-				fmt.Println(output.MessageCln(output.ForeGreen, "success", output.CleanTag, "  ", output.ForeCyan, " "))
+				fmt.Println(manout.MessageCln(manout.ForeGreen, "success", manout.CleanTag, "  ", manout.ForeCyan, " "))
 			}
 		} else {
-			output.Error("missing .zshrc", "could not find expected "+usrDir+"/.zshrc")
+			manout.Error("missing .zshrc", "could not find expected "+usrDir+"/.zshrc")
 		}
 	}
 

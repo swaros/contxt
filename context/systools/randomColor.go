@@ -26,7 +26,7 @@ package systools
 import (
 	"fmt"
 
-	"github.com/swaros/contxt/context/output"
+	"github.com/swaros/manout"
 )
 
 var lastUsedColor = 2
@@ -213,14 +213,14 @@ func colorCombinationisFine() bool {
 }
 
 func colorFormatNumber(code string) string {
-	if !output.ColorEnabled {
+	if !manout.ColorEnabled {
 		return "%s"
 	}
 	return "\033[1;" + code + "m%s"
 }
 
 func colorFormatWithBg(code string, bg string) string {
-	if !output.ColorEnabled {
+	if !manout.ColorEnabled {
 		return "%s"
 	}
 	return "\033[1;" + code + "m\033[" + bg + "m%s"
@@ -228,7 +228,7 @@ func colorFormatWithBg(code string, bg string) string {
 
 // PrintColored formats string colored by the color id
 func PrintColored(code string, outputs string) string {
-	if !output.ColorEnabled {
+	if !manout.ColorEnabled {
 		return outputs
 	}
 	return fmt.Sprintf(colorFormatNumber(code), outputs)
@@ -236,7 +236,7 @@ func PrintColored(code string, outputs string) string {
 
 // PrintColoredBg formats string colored by the color id including background
 func PrintColoredBg(code string, bgCode string, outputs string) string {
-	if !output.ColorEnabled {
+	if !manout.ColorEnabled {
 		return outputs
 	}
 	return fmt.Sprintf(colorFormatWithBg(code, bgCode), outputs)
@@ -293,7 +293,7 @@ func LabelPrint(message string, attribute int) string {
 
 // LabelPrintWithArg prints message by using current fore and background
 func LabelPrintWithArg(message string, fg string, bg string, attribute int) string {
-	if !output.ColorEnabled {
+	if !manout.ColorEnabled {
 		return message
 	}
 	//outstr := fmt.Sprintf("\033[%s;%sm%s\033[0m", currentColor, currentBgColor, message)

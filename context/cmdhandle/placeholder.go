@@ -23,6 +23,7 @@
 package cmdhandle
 
 import (
+	"os"
 	"strings"
 	"sync"
 
@@ -109,10 +110,6 @@ func handlePlaceHolder(line string, scopeVars map[string]string) string {
 
 	for key, value := range scopeVars {
 		keyName := "${" + key + "}"
-		if strings.Contains(line, keyName) {
-			GetLogger().WithField("line", line).Trace("scope replace: source")
-			GetLogger().WithField(keyName, value).Trace("scope replace: variables")
-		}
 		line = strings.ReplaceAll(line, keyName, value)
 	}
 
@@ -121,7 +118,17 @@ func handlePlaceHolder(line string, scopeVars map[string]string) string {
 		line = strings.ReplaceAll(line, keyName, value.(string))
 		return true
 	})
+
 	line = handleMapVars(line)
+	for _, value := range os.Environ() {
+		pair := strings.SplitN(value, "=", 2)
+		if len(pair) == 2 {
+			key := pair[0]
+			val := pair[1]
+			keyName := "${" + key + "}"
+			line = strings.ReplaceAll(line, keyName, val)
+		}
+	}
 	return line
 }
 

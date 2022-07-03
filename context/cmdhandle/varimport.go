@@ -39,7 +39,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/swaros/contxt/context/configure"
-	"github.com/swaros/contxt/context/output"
+	"github.com/swaros/manout"
 
 	"github.com/sirupsen/logrus"
 
@@ -92,10 +92,10 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						inIfState = true
 						ifState = leftEq == rightEq
 					} else {
-						output.Error("invalid usage ", equalsMark, " need: str1 str2 ")
+						manout.Error("invalid usage ", equalsMark, " need: str1 str2 ")
 					}
 				} else {
-					output.Error("invalid usage ", equalsMark, " can not be used in another if")
+					manout.Error("invalid usage ", equalsMark, " can not be used in another if")
 				}
 
 			case equalsMark:
@@ -107,10 +107,10 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						ifState = leftEq == rightEq
 						GetLogger().WithFields(logrus.Fields{"condition": ifState, "left": leftEq, "right": rightEq}).Debug(equalsMark)
 					} else {
-						output.Error("invalid usage ", equalsMark, " need: str1 str2 (got:", len(parts), ")")
+						manout.Error("invalid usage ", equalsMark, " need: str1 str2 (got:", len(parts), ")")
 					}
 				} else {
-					output.Error("invalid usage ", equalsMark, " can not be used in another if")
+					manout.Error("invalid usage ", equalsMark, " can not be used in another if")
 				}
 
 			case notEqualsMark:
@@ -122,10 +122,10 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						ifState = leftEq != rightEq
 						GetLogger().WithFields(logrus.Fields{"condition": ifState, "left": leftEq, "right": rightEq}).Debug(notEqualsMark)
 					} else {
-						output.Error("invalid usage ", notEqualsMark, " need: str1 str2 (got:", len(parts), ")")
+						manout.Error("invalid usage ", notEqualsMark, " need: str1 str2 (got:", len(parts), ")")
 					}
 				} else {
-					output.Error("invalid usage ", equalsMark, " can not be used in another if")
+					manout.Error("invalid usage ", equalsMark, " can not be used in another if")
 				}
 
 			case inlineMark:
@@ -133,17 +133,17 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					iterationLines = append(iterationLines, strings.Replace(line, inlineMark+" ", "", 4))
 					GetLogger().WithField("code", iterationLines).Debug("append to subscript")
 				} else {
-					output.Error("invalid usage", inlineMark, " only valid while in iteration")
+					manout.Error("invalid usage", inlineMark, " only valid while in iteration")
 				}
 
 			case fromJSONMark:
 				if len(parts) == 3 {
 					err := AddJSON(parts[1], parts[2])
 					if err != nil {
-						output.Error("import from json string failed", parts[2], err)
+						manout.Error("import from json string failed", parts[2], err)
 					}
 				} else {
-					output.Error("invalid usage", fromJSONMark, " needs 2 arguments. <keyname> <json-source>")
+					manout.Error("invalid usage", fromJSONMark, " needs 2 arguments. <keyname> <json-source>")
 				}
 
 			case fromJSONCmdMark:
@@ -174,11 +174,11 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						err := AddJSON(keyname, returnValue)
 						if err != nil {
 							GetLogger().WithField("error-on-parsing-string", returnValue).Debug("result of command")
-							output.Error("import from json string failed", err, ' ', returnValue)
+							manout.Error("import from json string failed", err, ' ', returnValue)
 						}
 					}
 				} else {
-					output.Error("invalid usage", fromJSONCmdMark, " needs 2 arguments at least. <keyname> <bash-command>")
+					manout.Error("invalid usage", fromJSONCmdMark, " needs 2 arguments at least. <keyname> <bash-command>")
 				}
 			case setvarMark:
 				if len(parts) >= 2 {
@@ -186,7 +186,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					setValue := strings.Join(parts[2:], " ")
 					SetPH(setKeyname, HandlePlaceHolder(setValue))
 				} else {
-					output.Error("invalid usage", setvarMark, " needs 2 arguments at least. <keyname> <value>")
+					manout.Error("invalid usage", setvarMark, " needs 2 arguments at least. <keyname> <value>")
 				}
 			case parseVarsMark:
 				if len(parts) >= 2 {
@@ -209,12 +209,12 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 							"returnCode": cmdCode,
 							"error":      errorFromCm.Error,
 						}).Error("subcommand failed.")
-						output.Error("Subcommand failed", cmd, " ... was used to get json context. ", errorFromCm.Error())
-						output.Error("cmd:", exec, "  ", args, " ", cmd)
+						manout.Error("Subcommand failed", cmd, " ... was used to get json context. ", errorFromCm.Error())
+						manout.Error("cmd:", exec, "  ", args, " ", cmd)
 					}
 
 				} else {
-					output.Error("invalid usage", parseVarsMark, " needs 2 arguments at least. <varibale-name> <bash-command>")
+					manout.Error("invalid usage", parseVarsMark, " needs 2 arguments at least. <varibale-name> <bash-command>")
 				}
 
 			case endMark:
@@ -262,14 +262,14 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				if len(parts) == 3 {
 					impMap, found := GetJSONPathResult(parts[1], parts[2])
 					if !found {
-						output.Error("undefined data from path", parts[1], parts[2])
+						manout.Error("undefined data from path", parts[1], parts[2])
 					} else {
 						inIteration = true
 						iterationCollect = impMap
 						GetLogger().WithField("data", impMap).Debug("ITERATION: START")
 					}
 				} else {
-					output.Error("invalid arguments", "#@iterate needs <name-of-import> <path-to-data>")
+					manout.Error("invalid arguments", "#@iterate needs <name-of-import> <path-to-data>")
 				}
 			default:
 				GetLogger().WithField("unknown", parts[0]).Error("there is no command exists")
@@ -405,7 +405,7 @@ func traceMap(mapShow map[string]interface{}, add string) {
 // MergeVariableMap merges two maps
 func MergeVariableMap(mapin map[string]interface{}, maporigin map[string]interface{}) map[string]interface{} {
 	if err := mergo.Merge(&maporigin, mapin, mergo.WithOverride); err != nil {
-		output.Error("FATAL", "error while trying merge map")
+		manout.Error("FATAL", "error while trying merge map")
 		os.Exit(10)
 	}
 	return maporigin
