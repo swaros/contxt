@@ -172,17 +172,30 @@ func ZshUpdate(cmd *cobra.Command) {
 	updateZshFunctions(cmd)
 }
 
-func zshFuncDir() string {
+// try to get the best path by reading the permission
+// because zsh seems not be used in windows, we stick to linux related
+// permission check
+func ZshFuncDir() string {
 	fpath := os.Getenv("FPATH")
 	if fpath != "" {
 		paths := strings.Split(fpath, ":")
-		return paths[0]
+		for _, path := range paths {
+			fileStats, err := os.Stat(path)
+			if err != nil {
+				continue
+			}
+			permissions := fileStats.Mode().Perm()
+			if permissions&0b110000000 == 0b110000000 {
+				return path
+			}
+		}
+		return ""
 	}
 	return fpath
 }
 
 func updateZshFunctions(cmd *cobra.Command) {
-	funcDir := zshFuncDir()
+	funcDir := ZshFuncDir()
 	if funcDir != "" {
 		contxtPath := funcDir + "/_contxt"
 		ctxPath := funcDir + "/_ctx"
@@ -196,6 +209,8 @@ func updateZshFunctions(cmd *cobra.Command) {
 
 		WriteFileIfNotExists(contxtPath, origin)
 		WriteFileIfNotExists(ctxPath, ctxCmpltn)
+	} else {
+		manout.Error("could not find a writable path for zsh functions in fpath")
 	}
 }
 
