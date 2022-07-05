@@ -92,7 +92,7 @@ func GetTemplate() (configure.RunConfig, string, bool) {
 		if len(ctemplate.Config.Require) > 0 {
 			for _, reqSource := range ctemplate.Config.Require {
 				GetLogger().WithField("path", reqSource).Debug("handle required ")
-				fullPath, pathError := CheckUseConfig(reqSource)
+				fullPath, pathError := CheckOrCreateUseConfig(reqSource)
 				if pathError == nil {
 					GetLogger().WithField("path", fullPath).Info("require path resolved")
 					subTemplate, tError := GetPwdTemplate(fullPath + string(os.PathSeparator) + DefaultExecYaml)
