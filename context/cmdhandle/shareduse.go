@@ -36,24 +36,28 @@ import (
 	"github.com/swaros/manout"
 )
 
-func CheckUseConfig(externalUseCase string) (string, error) {
+// CheckOrCreateUseConfig get a usecase like swaros/ctx-git and checks
+// if a local copy of them exists.
+// if they not exists it creates the local directoy and uses git to
+// clone the content.
+// afterwards it writes a version.conf in the forlder above of content
+// and stores the current hashes
+func CheckOrCreateUseConfig(externalUseCase string) (string, error) {
 	GetLogger().WithField("usage", externalUseCase).Info("trying to solve usecase")
-	sharedPath, err := configure.GetSharedPath(externalUseCase)
-	path := ""
-	if err == nil && sharedPath != "" {
-		isThere, dirError := dirhandle.Exists(sharedPath)
+	path := ""                                                  // just as default
+	sharedPath, err := configure.GetSharedPath(externalUseCase) // get the main path for shared content
+	if err == nil && sharedPath != "" {                         // no error and not an empty path
+		isThere, dirError := dirhandle.Exists(sharedPath) // do we have the main shared directory?
 		GetLogger().WithFields(logrus.Fields{"path": sharedPath, "exists": isThere, "err": dirError}).Info("using shared contxt tasks")
-		if dirError != nil {
-			fmt.Println(dirError)
+		if dirError != nil { // this is NOT related to not exists. it is an error while checking if the path exists
+			log.Fatal(dirError)
 		} else {
-			if !isThere {
-				// create dir first
+			if !isThere { // directory not exists
 				GetLogger().WithField("path", sharedPath).Info("shared directory not exists. try to checkout by git (github)")
-				path = createUseByGit(externalUseCase, sharedPath)
-				GetLogger().WithField("shared-path", path).Debug("shared usage")
+				path = createUseByGit(externalUseCase, sharedPath) // create dirs and checkout content if possible. fit the path also
 
-			} else {
-				path = sharedPath + "/source"
+			} else { // directory exists
+				path = getSourcePath(sharedPath)
 				exists, _ := dirhandle.Exists(path)
 				if !exists {
 					manout.Error("USE Error", "shared usecase not exist and can not be downloaded", " ", path)
@@ -77,11 +81,12 @@ func createSharedUsageDir(sharedPath string) error {
 			return err
 		}
 	}
+	GetLogger().WithField("path", sharedPath).Info("shared directory exists already")
 	return nil
 }
 
 func HandleUsecase(externalUseCase string) string {
-	path, _ := CheckUseConfig(externalUseCase)
+	path, _ := CheckOrCreateUseConfig(externalUseCase)
 	return path
 }
 
@@ -117,7 +122,6 @@ func UpdateUseCase(fullPath string) {
 
 func ListUseCases(fullPath bool) ([]string, error) {
 	var sharedDirs []string
-	//sep := fmt.Sprintf("%c", os.PathSeparator)
 	sharedPath, perr := configure.GetSharedPath("")
 	if perr == nil {
 		errWalk := filepath.Walk(sharedPath, func(path string, info os.FileInfo, err error) error {
@@ -126,7 +130,6 @@ func ListUseCases(fullPath bool) ([]string, error) {
 			}
 
 			if !info.IsDir() {
-				//var extension = filepath.Ext(path)
 				var basename = filepath.Base(path)
 				var directory = filepath.Dir(path)
 
@@ -146,7 +149,7 @@ func ListUseCases(fullPath bool) ([]string, error) {
 	return sharedDirs, perr
 }
 
-func getUseInfo(usecase, pathTouse string) (string, string) {
+func GetUseInfo(usecase, pathTouse string) (string, string) {
 	parts := strings.Split(usecase, "@")
 	version := "refs/heads/main"
 	if len(parts) > 1 {
@@ -169,11 +172,15 @@ func updateGitRepo(config configure.GitVersionInfo, doUpdate bool, workDir strin
 				} else {
 					fmt.Print(manout.MessageCln(manout.ForeYellow, " [update found]"))
 					if doUpdate {
-						gCode := executeGitUpdate(workDir + "/source")
+						gCode := executeGitUpdate(getSourcePath(workDir))
 						if gCode == ExitOk {
 							config.HashUsed = hash
-							writeGitConfig(workDir+"/version.json", config)
-							returnBool = true
+							if werr := writeGitConfig(workDir+"/version.json", config); werr != nil {
+								manout.Error("unable to create version info", werr)
+								returnBool = false
+							} else {
+								returnBool = true
+							}
 						}
 					}
 				}
@@ -219,20 +226,14 @@ func checkGitVersionInfo(usecase string, callback func(string, string)) (int, in
 }
 
 func createUseByGit(usecase, pathTouse string) string {
-	/*
-		parts := strings.Split(usecase, "@")
-		version := "refs/heads/main"
-		if len(parts) > 1 {
-			usecase = parts[0]
-			version = "refs/tags/" + parts[1]
-		}*/
-	usecase, version := getUseInfo(usecase, pathTouse)
+	usecase, version := GetUseInfo(usecase, pathTouse) // get needed git ref and usecase by the requested usage (like from swaros/ctx-gt@v0.0.1)
 	GetLogger().WithFields(logrus.Fields{"use": usecase, "path": pathTouse, "version": version}).Debug("Import Usecase")
 	path := ""
 	gitCmd := "git ls-remote --refs https://github.com/" + usecase
 	exec, args := GetExecDefaults()
+	var gitInfo []string
 	internalExitCode, cmdError, _ := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
-		gitInfo := strings.Split(feed, "\t")
+		gitInfo = strings.Split(feed, "\t")
 		if len(gitInfo) >= 2 && gitInfo[1] == version {
 			GetLogger().WithFields(logrus.Fields{"git-info": gitInfo, "cnt": len(gitInfo)}).Debug("found matching version")
 			cfg, versionErr := getOrCreateRepoConfig(gitInfo[1], gitInfo[0], usecase, pathTouse)
@@ -255,9 +256,9 @@ func createUseByGit(usecase, pathTouse string) string {
 		}).Warning("failed get version info from git")
 		exists, _ := dirhandle.Exists(pathTouse)
 		if exists {
-			existsSource, _ := dirhandle.Exists(pathTouse + "/.source")
+			existsSource, _ := dirhandle.Exists(getSourcePath(pathTouse))
 			if existsSource {
-				return pathTouse + "/.source"
+				return getSourcePath(pathTouse)
 			}
 		}
 		GetLogger().WithField("path", pathTouse).Fatal("Local Usage folder not exists (+ ./source)")
@@ -267,49 +268,69 @@ func createUseByGit(usecase, pathTouse string) string {
 }
 
 func getRepoConfig(pathTouse string) (bool, configure.GitVersionInfo, error) {
-	hashChk, hashError := dirhandle.Exists(pathTouse + "/version.json")
+	hashChk, hashError := dirhandle.Exists(getVersionOsPath(pathTouse))
 	var versionConf configure.GitVersionInfo
 	if hashError != nil {
 		return false, versionConf, hashError
 	} else if hashChk {
-		versionConf = loadGitConfig(pathTouse+"/version.json", versionConf)
-		return true, versionConf, nil
+		versionConf, err := loadGitConfig(getVersionOsPath(pathTouse), versionConf)
+		return err == nil, versionConf, err
 	}
 	GetLogger().WithField("path", pathTouse).Warning("no version info. seems to be a local shared.")
 	return false, versionConf, nil
 }
 
+func getSourcePath(pathTouse string) string {
+	return fmt.Sprintf("%s%s%s", pathTouse, string(os.PathSeparator), "source")
+}
+
+func getVersionOsPath(pathTouse string) string {
+	return fmt.Sprintf("%s%s%s", pathTouse, string(os.PathSeparator), "version.conf")
+}
+
 func getOrCreateRepoConfig(ref, hash, usecase, pathTouse string) (configure.GitVersionInfo, error) {
-	hashChk, hashError := dirhandle.Exists(pathTouse + "/version.json")
 	var versionConf configure.GitVersionInfo
+	versionFilename := getVersionOsPath(pathTouse)
+
+	// check if the useage folder exists and create them if not
+	if pathWErr := createSharedUsageDir(pathTouse); pathWErr != nil {
+		manout.Error("error while create directory:", pathWErr)
+		return versionConf, pathWErr
+	}
+
+	hashChk, hashError := dirhandle.Exists(versionFilename)
 	if hashError != nil {
-		log.Fatal(hashError)
+		manout.Error("error while checking directory:", hashError)
 		return versionConf, hashError
 	} else if !hashChk {
+
 		versionConf.Repositiory = usecase
 		versionConf.HashUsed = hash
 		versionConf.Reference = ref
-		writeGitConfig(pathTouse+"/version.json", versionConf)
+
+		GetLogger().WithField("file", versionFilename).Info("Try to create version info")
+		if werr := writeGitConfig(versionFilename, versionConf); werr != nil {
+			GetLogger().WithField("file", versionFilename).Error("error by create version info: ", werr)
+			manout.Error("unable to create version info ", versionFilename, werr)
+			return versionConf, werr
+		}
+
 		GetLogger().WithField("config", versionConf).Debug("Create new Config")
 	} else {
-		versionConf = loadGitConfig(pathTouse+"/version.json", versionConf)
+		versionConf, vErr := loadGitConfig(versionFilename, versionConf)
 		GetLogger().WithField("config", versionConf).Debug("Using existing Config")
+		return versionConf, vErr
 	}
 	return versionConf, nil
 }
 
 func takeCareAboutRepo(pathTouse string, config configure.GitVersionInfo) configure.GitVersionInfo {
-	exists, _ := dirhandle.Exists(pathTouse + "/source")
-	// source folder not exists
-	if !exists {
-		// no repository info exists
-		if config.Repositiory != "" {
-
-			// check if the useage folder exists and create them if not
-			createSharedUsageDir(pathTouse)
-
-			gitCmd := "git clone https://github.com/" + config.Repositiory + ".git " + pathTouse + "/source"
-			GetLogger().WithField("cmd", gitCmd).Info("using git to create ne checkout from repo")
+	exists, _ := dirhandle.Exists(getSourcePath(pathTouse))
+	if !exists { // source folder not exists
+		if config.Repositiory != "" { // no repository info exists
+			createSharedUsageDir(pathTouse) // check if the usage folder exists and create them if not
+			gitCmd := "git clone https://github.com/" + config.Repositiory + ".git " + getSourcePath(pathTouse)
+			GetLogger().WithField("cmd", gitCmd).Info("using git to create new checkout from repo")
 			exec, args := GetExecDefaults()
 			codeInt, codeCmd, err := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
 				fmt.Println(feed)
@@ -320,30 +341,30 @@ func takeCareAboutRepo(pathTouse string, config configure.GitVersionInfo) config
 			})
 
 			GetLogger().WithFields(logrus.Fields{"codeInternal": codeInt, "code": codeCmd, "err": err}).Debug("git execution result")
+		} else {
+			GetLogger().WithFields(logrus.Fields{"folder": pathTouse}).Debug("source folder exists, but no version info")
 		}
 	}
-	config.Path = pathTouse + "/source"
+	config.Path = getSourcePath(pathTouse)
 	return config
 }
 
-func writeGitConfig(path string, config configure.GitVersionInfo) {
+func writeGitConfig(path string, config configure.GitVersionInfo) error {
 	b, _ := json.MarshalIndent(config, "", " ")
-	err := ioutil.WriteFile(path, b, 0644)
-	if err != nil {
-		fmt.Println(err)
+	if err := ioutil.WriteFile(path, b, 0644); err != nil {
+		GetLogger().Error("can not create file ", path, " ", err)
+		return err
 	}
+	return nil
 }
 
-func loadGitConfig(path string, config configure.GitVersionInfo) configure.GitVersionInfo {
+func loadGitConfig(path string, config configure.GitVersionInfo) (configure.GitVersionInfo, error) {
 
 	file, _ := os.Open(path)
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 
 	err := decoder.Decode(&config)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-	return config
+	return config, err
 
 }

@@ -45,7 +45,7 @@ const (
 	DefaultWorkspace = "default_contxt_ws"
 	// MirrorPath path for local mirror
 	MirrorPath = "mirror/"
-
+	// path where shared repositories are stored
 	Sharedpath = "shared/"
 )
 
@@ -130,11 +130,12 @@ func getUserDir() (string, error) {
 	return usr.HomeDir, err
 }
 
+// GetSharedPath returns the full path to the shared repository
 func GetSharedPath(sharedName string) (string, error) {
-	fileName := SanitizeFilename(sharedName, true)
-	sharedDir, err := getConfigPath(Sharedpath)
+	fileName := SanitizeFilename(sharedName, true) // make sure we have an valid filename
+	sharedDir, err := getConfigPath(Sharedpath)    // get the path where we store shared repos
 	if err == nil {
-		var configPath = sharedDir + fileName
+		var configPath = sharedDir + fileName // add the filename. sharedDir have the pathSeperator
 		return configPath, err
 	}
 	return "", err
@@ -353,6 +354,8 @@ func SaveConfiguration(config Configuration, path string) {
 	}
 }
 
+// getConfigPath returns the user related  path
+// it do not checks if this exists
 func getConfigPath(fileName string) (string, error) {
 	homeDir, err := getUserDir()
 	if err == nil {

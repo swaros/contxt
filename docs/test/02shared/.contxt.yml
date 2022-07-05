@@ -1,0 +1,7 @@
+config:
+  require:
+    - swaros/ctx-git
+task:
+  - id: test
+    script:
+      - echo "testcase"
