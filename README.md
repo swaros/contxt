@@ -31,18 +31,20 @@ for **zsh** use `contxt install zsh`. the functions **ctx** and **cn** will be c
 for **fish** use `contxt install fish`.  the functions **ctx** and **cn** will be created in the default function directory `~/.config/fish/functions`
 
 #### windows
-currently the windows version have to be builded. there are no prebuild files exists right now.
+currently the windows version is *work in progess* depending the shell integration. so there is currently no *package deployment* and also no
+function mapping. the windows version can be downloaded as a binary, but any integration have to be done manually.
 
-so checkout this repo and run `winbuild.bat`. the binary (.exe) can be found afterwards in the bin folder.
 
 ##### powershell 7 support
-the default shell on windows is `powershell`. 
+the default supported shell on windows is `powershell`. 
 if you have **powershell 7** installed, you can set these as default shell as environment variable. `$env:CTX_DEFAULT_CMD = "pwsh"`
 
 > **pwsh** is one of the possible commands for powershell. they exists also others for previews etc. fit them if needed.
 
 ansii support is disabled as long the default powershell version is lower then 7. you can force the usage of ansii codes with 
 `$env:CTX_COLOR = "ON"`
+
+
 
 ### workspaces
 
@@ -131,7 +133,17 @@ you can switch the workspace also just by typing `ctx <existing-workspace>`.
 [more about tasks](docs/documentation/tasks.md)
 
 
-##### used libraries 
+##### used libraries
+
+there are of course more dependencies, but these are important depending working with placeholders and variables.
+so it is usefull to know how they are working.
+
 
 go/template extension https://github.com/Masterminds/sprig [template docu](http://masterminds.github.io/sprig/)
+
+> The Go language comes with a built-in template language, but not very many template functions. Sprig is a library that provides more than 100 commonly used template functions.
+
+
 for parsing json by paths https://github.com/tidwall/gjson 
+
+> GJSON is a Go package that provides a fast and simple way to get values from a json document. It has features such as one line retrieval, dot notation paths, iteration, and parsing json lines.
