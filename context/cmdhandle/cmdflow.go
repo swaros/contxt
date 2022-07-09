@@ -55,7 +55,9 @@ const (
 	ExitAlreadyRunning = 105
 )
 
-var experimental = false
+// this flag is for the runner logic replacement that have still issues.
+// this 'solution' is not nice but a different branch would be more difficult to handle
+var Experimental = false
 
 func SharedFolderExecuter(template configure.RunConfig, locationHandle func(string, string)) {
 	if len(template.Config.Use) > 0 {
@@ -149,7 +151,7 @@ func RunTargets(targets string, sharedRun bool) {
 	}
 
 	// experimental usage of taskrunner
-	if experimental {
+	if Experimental {
 		tasks := CreateMultipleTask(allTargets, func(tw *TaskWatched) {
 			tw.LoggerFnc = func(i ...interface{}) {
 				var log []interface{}
@@ -560,7 +562,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				abort := false
 
 				// experimental usage of needs
-				if experimental {
+				if Experimental {
 					// -- NEEDS
 					// needs are task, the have to be startet once
 					// before we continue.

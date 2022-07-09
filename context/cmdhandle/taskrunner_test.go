@@ -11,6 +11,10 @@ import (
 )
 
 func TestBasicRun(t *testing.T) {
+	// do not test experimental features
+	if !cmdhandle.Experimental {
+		return
+	}
 	var runner cmdhandle.TaskWatched
 	runner.Init("testcase")
 	counter := 10
@@ -56,6 +60,10 @@ func TestBasicRun(t *testing.T) {
 }
 
 func TestDelayedTargets(t *testing.T) {
+	// do not test experimental features
+	if !cmdhandle.Experimental {
+		return
+	}
 	tmoutHdnlTriggered := false
 
 	var task cmdhandle.TaskWatched = cmdhandle.TaskWatched{
@@ -97,6 +105,10 @@ func TestDelayedTargets(t *testing.T) {
 
 // helper function to verify result of executions
 func verifyTaskSlices(t *testing.T, messages []string, taskList []string) {
+	// do not test experimental features
+	if !cmdhandle.Experimental {
+		return
+	}
 	if len(messages) != len(taskList) {
 		t.Error("unexpected amount of messages ", len(messages), " expected ", len(taskList))
 		t.Log(messages)
@@ -120,6 +132,10 @@ func verifyTaskSlices(t *testing.T, messages []string, taskList []string) {
 }
 
 func TestTaskCreation(t *testing.T) {
+	// do not test experimental features
+	if !cmdhandle.Experimental {
+		return
+	}
 	var messages []string
 	var taskList []string = []string{"first", "second", "last"}
 	taskHndl := cmdhandle.CreateMultipleTask(taskList, func(tw *cmdhandle.TaskWatched) {
@@ -143,6 +159,10 @@ func TestTaskCreation(t *testing.T) {
 }
 
 func TestTaskCreationMixed(t *testing.T) {
+	// do not test experimental features
+	if !cmdhandle.Experimental {
+		return
+	}
 	var messages []string
 	var taskList []string = []string{"async-first-1", "async-second-2", "regular-one-3", "async-third-4", "regular-next-5", "regular-last-6"}
 	taskHndl := cmdhandle.CreateMultipleTask(taskList, func(tw *cmdhandle.TaskWatched) {
@@ -165,6 +185,10 @@ func TestTaskCreationMixed(t *testing.T) {
 }
 
 func TestTaskCreationAndTimeout(t *testing.T) {
+	// do not test experimental features
+	if !cmdhandle.Experimental {
+		return
+	}
 	var taskGrp cmdhandle.TaskGroup = cmdhandle.TaskGroup{}
 	hitTimout := false
 	task2executed := false
@@ -214,7 +238,10 @@ func TestTaskCreationAndTimeout(t *testing.T) {
 }
 
 func TestRuntimeCancelation(t *testing.T) {
-
+	// do not test experimental features
+	if !cmdhandle.Experimental {
+		return
+	}
 	runA := false
 	runB := false
 
@@ -251,6 +278,10 @@ func TestRuntimeCancelation(t *testing.T) {
 }
 
 func TestSecondCallIsFine(t *testing.T) {
+	// do not test experimental features
+	if !cmdhandle.Experimental {
+		return
+	}
 	counter := 0
 	second := 0
 	var taskGrp cmdhandle.TaskGroup = cmdhandle.TaskGroup{
@@ -284,6 +315,9 @@ func TestSecondCallIsFine(t *testing.T) {
 }
 
 func TestLayeredNeeds(t *testing.T) {
+	// yes ... do not test experimental features....but this one is valid for booth cases
+	// it is also the test that do not works in experimental state
+
 	folderRunner("./../../docs/test/02needlayer", t, func(t *testing.T) {
 		cmdhandle.RunTargets("main", true)
 		test1Result := cmdhandle.GetPH("RUN.main.LOG.LAST")

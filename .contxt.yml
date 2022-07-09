@@ -111,7 +111,7 @@ task:
     script:      
       - "#@var INSTALL_TARGET uname -r"
       - uname -r
-      - echo hopefully we have the right installer for you
+      - echo "hopefully we have the right installer for you"
       - sleep 2
     listener:
       - trigger:
