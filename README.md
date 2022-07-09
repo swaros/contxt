@@ -1,19 +1,35 @@
 
 # cont(e)xt
 
-
-**contxt** helps you to organize projects and the assigned tasks and techniques. 
+i created **contxt** as a tool for my self to keep track where i had stored releated content for different Projects, and also 
+what specific techniques and configurations are required.
 
 ### installation
 #### Linux
 check out the [releases](https://github.com/swaros/contxt/releases) to get a pre-build package.
 
 ##### shell integration
-contxt itself have no control about the current working directory in the current shell. this is the regular behavior for all executables.
-to *fix* this issue, contxt will be mapped by a shell function called **ctx**.
+it is not the main feature of contxt, but fast switching to the related directories is at the end the most used feature in may daily workflow. 
+Contxt itself have no control about the current directory of the current shell in there contxt is running. After the shell exists, it is still in the same path as before. this is the regular behavior for all executables in a shell.
+to *fix* this issue, contxt will be mapped by a shell function called **ctx** for contxt itsel, and cn for changing directories depending the current project. 
 
-for bash you just need to run `contxt install bash`. this will update user related shell init scripts. 
-for **zsh** use `contxt install zsh` and for **fish** use `contxt install fish` instead.
+![cn command](https://github.com/swaros/docu-asset-store/blob/main/cn.png)
+
+this works because shell functions are in same context.
+so for any supported shell a shell function is needed.
+
+###### bash
+
+for bash you just need to run `contxt install bashrc`. the functions **ctx** and **cn** will be created in the .bashrc file
+
+###### zsh
+
+for **zsh** use `contxt install zsh`. the functions **ctx** and **cn** will be created in the first directory in the **FPATH** that is write and readable for the current user.
+
+###### fish 
+
+for **fish** use `contxt install fish`.  the functions **ctx** and **cn** will be created in the default function directory `~/.config/fish/functions`
+
 #### windows
 currently the windows version have to be builded. there are no prebuild files exists right now.
 
@@ -35,31 +51,18 @@ Workspaces are a set of directories they can be on different places. Any path ca
 
 ### usage
 
-contxt is a command line tool and focused to work on any environment that have a shell. there is no other dependency (yet).
 after executing the **shell integration** steps, you should use `ctx` instead of `contxt`
 
 different to *contxt*. *ctx* is a shell function and is able to change the directory.
-so contxt can change the workspace, but after runtime, the shell will stay on the current directory
-````shell
-user@localhost:~/project/alpha$ contxt switch omega
-current workspace is now:omega
-	paths stored in omega
-	 0  /home/project/omega/frontend
-	[1] /home/project/omega/backend
-user@localhost:~/project/alpha$ pwd
-/home/project/alpha
-````
+so contxt can still change the workspace, but after runtime, the shell will stay on the directory as before.
+
+![image](https://user-images.githubusercontent.com/5437750/178095430-10da7bf9-8266-45cb-aa3c-23fa0604b3e6.png)
 
 but **ctx**, as a shell function, is able to change the current directory.
-````shell
-user@localhost:~/project/alpha$ ctx switch omega
-current workspace is now:omega
-	paths stored in omega
-	 0  /home/project/omega/frontend
-	[1] /home/project/omega/backend
-user@localhost:~/project/omega/backend$ pwd
-/home/project/omega/backend
-````
+
+![image](https://user-images.githubusercontent.com/5437750/178095493-ee07317c-c74d-407b-9cd9-7a793ccfb458.png)
+
+
 #### context navigate (cn)
 
 for navigation use the `cn` command to change paths depending on the current workspace.
