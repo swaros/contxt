@@ -282,3 +282,14 @@ func TestSecondCallIsFine(t *testing.T) {
 		t.Error("second should not be > 0 because this method should never be executed:", second)
 	}
 }
+
+func TestLayeredNeeds(t *testing.T) {
+	folderRunner("./../../docs/test/02needlayer", t, func(t *testing.T) {
+		cmdhandle.RunTargets("main", true)
+		test1Result := cmdhandle.GetPH("RUN.main.LOG.LAST")
+		expectd := "main X123"
+		if test1Result != expectd {
+			t.Error("result should be [", expectd, "] but is [", test1Result, "]")
+		}
+	})
+}
