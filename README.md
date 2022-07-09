@@ -10,8 +10,8 @@ check out the [releases](https://github.com/swaros/contxt/releases) to get a pre
 
 ##### shell integration
 it is not the main feature of contxt, but fast switching to the related directories is at the end the most used feature in may daily workflow. 
-Contxt itself have no control about the current directory of the current shell in there contxt is running. After the shell exists, it is still in the same path as before. this is the regular behavior for all executables in a shell.
-to *fix* this issue, contxt will be mapped by a shell function called **ctx** for contxt itsel, and cn for changing directories depending the current project. 
+Contxt itself have no control about the current directory of the current shell in there contxt is running. After any binary exists, it is still in the same path as before. this is the regular behavior for all executables in a shell.
+to *fix* this issue, contxt will be mapped by a shell function called **ctx** (for contxt itself), and **cn** for changing directories depending the current project. 
 
 ![cn command](https://github.com/swaros/docu-asset-store/blob/main/cn.png)
 
