@@ -8,12 +8,12 @@ task:
   - id: subtask_1
     script:
        - sleep 0.4
-       - echo "subtask_1"
+       - echo " --------- subtask_1"
        - "#@set teststr ${teststr}1"
 
   - id: subtask_2
     script:
-       - echo "subtask_2"
+       - echo " --------- subtask_2"
        - "#@set teststr ${teststr}2"
 
   - id: subtask_3
@@ -21,7 +21,7 @@ task:
       - subtask_1
       - subtask_2
     script:
-      - echo "subtask_3"
+      - echo " --------- subtask_3"
       - "#@set teststr ${teststr}3" 
 
   - id: main

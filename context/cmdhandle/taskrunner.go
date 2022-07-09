@@ -129,12 +129,12 @@ func (t *TaskWatched) trackStart() bool {
 		if t.CanRunAgain != nil {
 			return t.CanRunAgain(t)
 		}
-		t.Log("allready runs ", t.task.RunId)
+		t.Log(">> allready runs ", t.task.RunId)
 		return false
 	}
 	t.task.Started = true
 	t.task.Done = false
-	t.Log("save runtime tracking for task ", t.task.RunId)
+	t.Log(">> save runtime tracking for task ", t.task.RunId)
 	procTracker.Store(t.task.RunId, t.task)
 	return true
 
@@ -159,20 +159,20 @@ func (t *TaskWatched) ReportDone() {
 	if task, exists := procTracker.Load(t.task.RunId); exists {
 		var taskSet TaskRuntimeState = task.(TaskRuntimeState)
 		if taskSet.Done {
-			t.Log("Task ", t.taskName, " was already set to DONE")
+			t.Log("<> Task ", t.taskName, " was already set to DONE")
 			return
 		}
 		taskSet.Done = true
-		t.Log("Update Task. Set ", t.taskName, " DONE")
+		t.Log("<< Update Task. Set ", t.taskName, " DONE")
 		procTracker.Store(taskSet.RunId, taskSet)
 	} else {
 		t.task.Done = true
-		t.Log("Update Task ", t.taskName, " NOT EXISTS ")
+		t.Log("<< Update Task ", t.taskName, " NOT EXISTS ")
 	}
 }
 
 func (t *TaskWatched) Run() TaskResult {
-	t.Log(" --> run func \t", t.taskName, " id ", t.task.RunId)
+	t.Log(">> run func \t", t.taskName, " id ", t.task.RunId)
 	var taskRes TaskResult
 	if t.Exec == nil {
 		t.ReportDone()
@@ -191,7 +191,7 @@ func (t *TaskWatched) Run() TaskResult {
 
 	time.AfterFunc(t.TimeOutTiming, func() {
 
-		t.Log("timeout reached on task ", t.taskName, " was set to ", t.TimeOutTiming)
+		t.Log(">> timeout reached on task ", t.taskName, " was set to ", t.TimeOutTiming)
 		// there is no decsion alowed. timed out task
 		// would not be executed.
 		// a defined timeOut callback is just
@@ -263,7 +263,7 @@ func (Tg *TaskGroup) Exec() *TaskGroup {
 	taskReturns := make(chan TaskResult, Tg.getAsyncCount())
 	for _, tsk := range Tg.tasks {
 		if tsk.Async {
-			tsk.Log(" -> exec async \t", tsk.taskName, " id ", tsk.task.RunId)
+			tsk.Log(">> ----> exec async \t", tsk.taskName, " id ", tsk.task.RunId)
 			waitGroup.Add(1)
 			go func(tsk TaskWatched) {
 				defer waitGroup.Done()
@@ -271,16 +271,16 @@ func (Tg *TaskGroup) Exec() *TaskGroup {
 			}(tsk)
 
 		} else {
-			tsk.Log(" => exec regular \t", tsk.taskName, " id ", tsk.task.RunId)
+			tsk.Log(">> => exec regular \t", tsk.taskName, " id ", tsk.task.RunId)
 			tsk.Run()
 		}
 	}
-	Tg.Log("waiting all tasks beeing done")
+	Tg.Log(">> waiting all tasks beeing done")
 	go func() {
 		waitGroup.Wait()
 		close(taskReturns)
 	}()
-	Tg.Log("all tasks are done")
+	Tg.Log(">> all tasks are done")
 	return Tg
 }
 
@@ -299,22 +299,30 @@ func (Tg *TaskGroup) Wait(wait time.Duration, timeOut time.Duration) {
 	for {
 		canExists := true
 		all := len(Tg.tasks)
+		if all > 0 {
+			Tg.tasks[0].Log(">> new round with tasks: ", all)
+		} else {
+			GetLogger().Info("<--- x EXIT[TASKRUNNER] no task exists thar could be handled")
+			return
+		}
+
 		for indx, tsk := range Tg.tasks {
 			indOut := indx + 1
 			time.Sleep(wait)
+
 			if tsk.IsRunning() {
 				canExists = false
-				tsk.Log(" x task ", tsk.taskName, " still running ", indOut, "/", all)
+				tsk.Log(">> x task ", tsk.taskName, " still running ", indOut, "/", all)
 			} else {
-				tsk.Log(" ✓ task ", tsk.taskName, " DONE ", indOut, "/", all)
+				tsk.Log(">> ✓ task ", tsk.taskName, " DONE ", indOut, "/", all)
 			}
 		}
 		if timeOutHit {
-			Tg.Log("Timeout reached. Exit wait")
+			Tg.Log("<--- x EXIT Timeout reached. Exit wait")
 			return
 		}
 		if canExists {
-			Tg.Log("regular wait exit. all task done")
+			Tg.Log("<--- ✓ EXIT regular wait exit. All task done")
 			return
 		}
 	}
