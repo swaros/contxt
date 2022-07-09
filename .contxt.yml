@@ -156,5 +156,7 @@ task:
       - echo "archlinux based system detected"
       - echo "using ~/.local/bin/ to copy ${bin-out}"
       - cp bin/${bin-out} $HOME/.local/bin/${bin-out}
+      - echo "check versions"
+      - contxt version
 
     

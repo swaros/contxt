@@ -148,6 +148,7 @@ func RunTargets(targets string, sharedRun bool) {
 		GetLogger().Info("No second level Variables defined")
 	}
 
+	// experimental usage of taskrunner
 	if experimental {
 		tasks := CreateMultipleTask(allTargets, func(tw *TaskWatched) {
 			tw.LoggerFnc = func(i ...interface{}) {
@@ -175,7 +176,7 @@ func RunTargets(targets string, sharedRun bool) {
 		tasks.Exec()
 		tasks.Wait(time.Duration(time.Second*1), time.Duration(time.Minute*30))
 	} else {
-
+		// NONE experimental usage of taskrunner
 		if !runSequencially {
 			// run in thread
 			for _, runTarget := range allTargets {
@@ -557,6 +558,8 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 
 				// just the abort flag.
 				abort := false
+
+				// experimental usage of needs
 				if experimental {
 					// -- NEEDS
 					// needs are task, the have to be startet once
@@ -602,6 +605,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						GetLogger().Info("[" + target + "]  needs are done for ... " + target)
 					}
 				} else {
+					// NONE experimental usage of needs
 					// checking needs
 					if len(script.Needs) > 0 {
 						GetLogger().WithFields(logrus.Fields{
@@ -633,9 +637,9 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 								GetLogger().Debug("timeout hit")
 								manout.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
 								os.Exit(1)
-							}, func(needTarget string, what string, args map[string]string) bool {
+							}, func(needTarget string, fullTargetName string, args map[string]string) bool {
 								if script.Options.NoAutoRunNeeds {
-									manout.Error("Need Task not started", "expected task ", target, " not running. autostart disbabled")
+									manout.Error("Need Task not started", "expected task ", target, " not running. autostart disabled")
 									os.Exit(1)
 									return false
 								}
@@ -653,7 +657,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						} else {
 							// run needs in a sequence
 							for _, targetNeed := range script.Needs {
-								var args map[string]string = make(map[string]string)
+								var args map[string]string = make(map[string]string) // no supported usage right now
 								executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, targetNeed, args)
 								if executionCode != ExitOk {
 									manout.Error("Need Task Error", "expected returncode ", ExitOk, " but got exit Code", executionCode)
