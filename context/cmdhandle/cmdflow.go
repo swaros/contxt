@@ -55,6 +55,10 @@ const (
 	ExitAlreadyRunning = 105
 )
 
+// this flag is for the runner logic replacement that have still issues.
+// this 'solution' is not nice but a different branch would be more difficult to handle
+var Experimental = false
+
 func SharedFolderExecuter(template configure.RunConfig, locationHandle func(string, string)) {
 	if len(template.Config.Use) > 0 {
 		GetLogger().WithField("uses", template.Config.Use).Info("shared executer")
@@ -146,22 +150,52 @@ func RunTargets(targets string, sharedRun bool) {
 		GetLogger().Info("No second level Variables defined")
 	}
 
-	if !runSequencially {
-		// run in thread
-		for _, runTarget := range allTargets {
-			SetPH("CTX_TARGET", runTarget)
-			wg.Add(1)
-			fmt.Println(manout.MessageCln(manout.ForeBlue, "[exec:async] ", manout.BoldTag, runTarget, " ", manout.ForeWhite, templatePath))
-			go ExecuteTemplateWorker(&wg, true, runTarget, template)
-		}
-		wg.Wait()
+	// experimental usage of taskrunner
+	if Experimental {
+		tasks := CreateMultipleTask(allTargets, func(tw *TaskWatched) {
+			tw.LoggerFnc = func(i ...interface{}) {
+				var log []interface{}
+				log = append(log, "TASK ["+tw.taskName+"]")
+				log = append(log, i...)
+				GetLogger().Debug(log...)
+			}
+			tw.Async = !runSequencially
+			tw.Exec = func(tw *TaskWatched) TaskResult {
+				fmt.Println(manout.MessageCln(manout.ForeBlue, "[exec] ", manout.BoldTag, tw.taskName, " ", manout.ForeWhite, templatePath))
+				GetLogger().WithField("task", tw.taskName).Info("starting task")
+				executionCode := ExecPathFile(&wg, !runSequencially, template, tw.taskName)
+				GetLogger().WithFields(logrus.Fields{"task": tw.taskName, "execode": executionCode}).Info(" task result ")
+				return CreateTaskResultContent(nil, executionCode)
+			}
+			tw.ResultFnc = func(tr TaskResult) {
+				executionCode := tr.Content
+				if executionCode != ExitOk {
+					manout.Error("Task Error", " exit Code ", executionCode, " for target [", tw.taskName, "]")
+					os.Exit(1)
+				}
+			}
+		})
+		tasks.Exec()
+		tasks.Wait(time.Duration(time.Second*1), time.Duration(time.Minute*30))
 	} else {
-		// trun one by one
-		for _, runTarget := range allTargets {
-			SetPH("CTX_TARGET", runTarget)
-			fmt.Println(manout.MessageCln(manout.ForeBlue, "[exec:seq] ", manout.BoldTag, runTarget, " ", manout.ForeWhite, templatePath))
-			exitCode := ExecPathFile(&wg, false, template, runTarget)
-			GetLogger().WithField("exitcode", exitCode).Info("RunTarget [Sequencially runmode] done with exitcode")
+		// NONE experimental usage of taskrunner
+		if !runSequencially {
+			// run in thread
+			for _, runTarget := range allTargets {
+				SetPH("CTX_TARGET", runTarget)
+				wg.Add(1)
+				fmt.Println(manout.MessageCln(manout.ForeBlue, "[exec:async] ", manout.BoldTag, runTarget, " ", manout.ForeWhite, templatePath))
+				go ExecuteTemplateWorker(&wg, true, runTarget, template)
+			}
+			wg.Wait()
+		} else {
+			// trun one by one
+			for _, runTarget := range allTargets {
+				SetPH("CTX_TARGET", runTarget)
+				fmt.Println(manout.MessageCln(manout.ForeBlue, "[exec:seq] ", manout.BoldTag, runTarget, " ", manout.ForeWhite, templatePath))
+				exitCode := ExecPathFile(&wg, false, template, runTarget)
+				GetLogger().WithField("exitcode", exitCode).Info("RunTarget [Sequencially runmode] done with exitcode")
+			}
 		}
 	}
 	fmt.Println(manout.MessageCln(manout.ForeBlue, "[done] ", manout.BoldTag, targets))
@@ -442,7 +476,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 
 	GetLogger().WithFields(logrus.Fields{
 		"target": target,
-	}).Debug("executeTemplate LOOKING for target")
+	}).Info("executeTemplate LOOKING for target")
 
 	// Checking if the Tasklist have something
 	// to handle
@@ -527,39 +561,114 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				// just the abort flag.
 				abort := false
 
-				// -- NEEDS
-				// needs are task, the have to be startet once
-				// before we continue.
-				// any need can have his own needs they needs to
-				// be executed
-				if len(script.Needs) > 0 {
-					timeOut := script.Options.TimeoutNeeds
-					if timeOut < 1 {
-						timeOut = 300000 // 5 minutes in milliseconds as default
-					}
-					tickTime := script.Options.TickTimeNeeds
-					if tickTime < 1 {
-						tickTime = 1000 // 1 second as ticktime
-					}
-
-					tasks := CreateMultipleTask(script.Needs, func(tw *TaskWatched) {
-						tw.LoggerFnc = GetLogger().Debug
-						tw.Async = useWaitGroup
-						tw.Exec = func(tw *TaskWatched) TaskResult {
-							_, argmap := StringSplitArgs(tw.taskName, "arg")
-							executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, tw.taskName, argmap)
-							return CreateTaskResultContent(nil, executionCode)
+				// experimental usage of needs
+				if Experimental {
+					// -- NEEDS
+					// needs are task, the have to be startet once
+					// before we continue.
+					// any need can have his own needs they needs to
+					// be executed
+					if len(script.Needs) > 0 {
+						GetLogger().WithField("needs", script.Needs).Info("[" + target + "]Handle needs")
+						timeOut := script.Options.TimeoutNeeds
+						if timeOut < 1 {
+							timeOut = 300000 // 5 minutes in milliseconds as default
 						}
-						tw.ResultFnc = func(tr TaskResult) {
-							executionCode := tr.Content
-							if executionCode != ExitOk {
-								manout.Error("Need Task Error", " exit Code ", executionCode, " for target [", tw.taskName, "]")
+						tickTime := script.Options.TickTimeNeeds
+						if tickTime < 1 {
+							tickTime = 1000 // 1 second as ticktime
+						}
+
+						tasks := CreateMultipleTask(script.Needs, func(tw *TaskWatched) {
+							tw.LoggerFnc = func(i ...interface{}) {
+								var log []interface{}
+								log = append(log, "needs ["+target+"."+tw.taskName+"]")
+								log = append(log, i...)
+								GetLogger().Debug(log...)
+							}
+							tw.Async = useWaitGroup
+							tw.Exec = func(tw *TaskWatched) TaskResult {
+								_, argmap := StringSplitArgs(tw.taskName, "arg")
+								GetLogger().WithField("task", tw.taskName).Info(">> run task as callback")
+								executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, tw.taskName, argmap)
+								GetLogger().WithFields(logrus.Fields{"task": tw.taskName, "execode": executionCode}).Info(">> task result ")
+								return CreateTaskResultContent(nil, executionCode)
+							}
+							tw.ResultFnc = func(tr TaskResult) {
+								executionCode := tr.Content
+								if executionCode != ExitOk {
+									manout.Error("Need Task Error", " exit Code ", executionCode, " for target [", tw.taskName, "]")
+									os.Exit(1)
+								}
+							}
+						})
+						GetLogger().Info("[" + target + "]  execute needs and wait ... ")
+						tasks.Exec().Wait(time.Duration(tickTime), time.Duration(timeOut))
+						GetLogger().Info("[" + target + "]  needs are done for ... " + target)
+					}
+				} else {
+					// NONE experimental usage of needs
+					// checking needs
+					if len(script.Needs) > 0 {
+						GetLogger().WithFields(logrus.Fields{
+							"needs": script.Needs,
+						}).Info("executeTemplate NEEDS found")
+						if useWaitGroup {
+							waitHits := 0
+							timeOut := script.Options.TimeoutNeeds
+							if timeOut < 1 {
+								GetLogger().Info("No timeoutNeeds value set. using default of 300000")
+								timeOut = 300000 // 5 minutes in milliseconds as default
+							} else {
+								GetLogger().WithField("timeout", timeOut).Info("timeout for task " + target)
+							}
+							tickTime := script.Options.TickTimeNeeds
+							if tickTime < 1 {
+								tickTime = 1000 // 1 second as ticktime
+							}
+							WaitForTasksDone(script.Needs, time.Duration(timeOut)*time.Millisecond, time.Duration(tickTime)*time.Millisecond, func() bool {
+								// still waiting
+								waitHits++
+								GetLogger().Debug("Waiting for Task be done")
+								return true
+							}, func() {
+								// done
+
+							}, func() {
+								// timeout not allowed. hard exit
+								GetLogger().Debug("timeout hit")
+								manout.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
 								os.Exit(1)
+							}, func(needTarget string, fullTargetName string, args map[string]string) bool {
+								if script.Options.NoAutoRunNeeds {
+									manout.Error("Need Task not started", "expected task ", target, " not running. autostart disabled")
+									os.Exit(1)
+									return false
+								}
+								GetLogger().WithFields(logrus.Fields{
+									"needs":   script.Needs,
+									"current": needTarget,
+								}).Info("executeTemplate found a need that is not stated already")
+								// stopping for a couple of time
+								// need to wait if these other task already started by
+								// other options
+								time.Sleep(500 * time.Millisecond)
+								go executeTemplate(waitGroup, useWaitGroup, runCfg, needTarget, args)
+								return true
+							})
+						} else {
+							// run needs in a sequence
+							for _, targetNeed := range script.Needs {
+								var args map[string]string = make(map[string]string) // no supported usage right now
+								executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, targetNeed, args)
+								if executionCode != ExitOk {
+									manout.Error("Need Task Error", "expected returncode ", ExitOk, " but got exit Code", executionCode)
+									os.Exit(1)
+								}
 							}
 						}
-					})
-					tasks.Exec().Wait(time.Duration(tickTime), time.Duration(timeOut))
-				}
+					}
+				} // end of experimental switch
 
 				// targets that should be started as well
 				if len(script.RunTargets) > 0 {

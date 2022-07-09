@@ -135,7 +135,7 @@ func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callb
 		"dir":        cmd.Dir,
 		"extrafiles": cmd.ExtraFiles,
 		"pid":        cmd.Process.Pid,
-	}).Info("command")
+	}).Info(":::EXEC")
 
 	startInfo(cmd.Process)
 	scanner := bufio.NewScanner(stdoutPipe)
