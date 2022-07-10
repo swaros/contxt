@@ -13,6 +13,7 @@ task:
 
   - id: subtask_2
     script:
+       - sleep 0.2
        - echo " --------- subtask_2"
        - "#@set teststr ${teststr}2"
 
@@ -21,6 +22,7 @@ task:
       - subtask_1
       - subtask_2
     script:
+      - sleep 0.3
       - echo " --------- subtask_3"
       - "#@set teststr ${teststr}3" 
 
