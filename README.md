@@ -4,11 +4,11 @@
 i created **contxt** as a tool for my self to keep track where i had stored releated content for different Projects, and also 
 what specific techniques and configurations are required.
 
-### installation
-#### Linux
+## installation
+### Linux
 check out the [releases](https://github.com/swaros/contxt/releases) to get a pre-build package.
 
-##### shell integration
+#### shell integration
 it is not the main feature of contxt, but fast switching to the related directories is at the end the most used feature in may daily workflow. 
 Contxt itself have no control about the current directory of the current shell in there contxt is running. After any binary exists, it is still in the same path as before. this is the regular behavior for all executables in a shell.
 to *fix* this issue, contxt will be mapped by a shell function called **ctx** (for contxt itself), and **cn** for changing directories depending the current project. 
@@ -18,24 +18,24 @@ to *fix* this issue, contxt will be mapped by a shell function called **ctx** (f
 this works because shell functions are in same context.
 so for any supported shell a shell function is needed.
 
-###### bash
+##### bash
 
 for bash you just need to run `contxt install bashrc`. the functions **ctx** and **cn** will be created in the .bashrc file
 
-###### zsh
+##### zsh
 
 for **zsh** use `contxt install zsh`. the functions **ctx** and **cn** will be created in the first directory in the **FPATH** that is write and readable for the current user.
 
-###### fish 
+##### fish 
 
 for **fish** use `contxt install fish`.  the functions **ctx** and **cn** will be created in the default function directory `~/.config/fish/functions`
 
-#### windows
+### windows
 currently the windows version is *work in progess* depending the shell integration. so there is currently no *package deployment* and also no
 function mapping. the windows version can be downloaded as a binary, but any integration have to be done manually.
 
 
-##### powershell 7 support
+#### powershell 7 support
 the default supported shell on windows is `powershell`. 
 if you have **powershell 7** installed, you can set these as default shell as environment variable. `$env:CTX_DEFAULT_CMD = "pwsh"`
 
@@ -46,7 +46,7 @@ ansii support is disabled as long the default powershell version is lower then 7
 
 
 
-### workspaces
+## workspaces
 
 Workspaces are a set of directories they can be on different places. Any path can have different task they can be executed automatically if you enter or leava a workspace. this allows you to setup different needs depending on the workspace.
 
@@ -65,7 +65,7 @@ but **ctx**, as a shell function, is able to change the current directory.
 ![image](https://user-images.githubusercontent.com/5437750/178095493-ee07317c-c74d-407b-9cd9-7a793ccfb458.png)
 
 
-#### context navigate (cn)
+### context navigate (cn)
 
 for navigation use the `cn` command to change paths depending on the current workspace.
 
@@ -77,7 +77,7 @@ for navigation use the `cn` command to change paths depending on the current wor
 
 `cn website php frontend` similar to `cn website` but if no *website* can be found on any of the assigned paths, *pah* and afterwards *frontend* will be used to find a matching path
 
-##### create a new workspace
+#### create a new workspace
 `ctx dir -w mywork` will create a new workspace named *mywork*. if mywork already exists the workspace will be entered only.
 
 ##### add path to current workspace
@@ -130,10 +130,13 @@ in this case it will just set the context to the local **minikube** to make sure
 
 you can switch the workspace also just by typing `ctx <existing-workspace>`.
 
+### Tasks
+
+
 [more about tasks](docs/documentation/tasks.md)
 
 
-##### used libraries
+### used libraries
 
 there are of course more dependencies, but these are important depending working with placeholders and variables.
 so it is usefull to know how they are working.
