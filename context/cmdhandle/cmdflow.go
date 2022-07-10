@@ -23,6 +23,7 @@
 package cmdhandle
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -57,7 +58,7 @@ const (
 
 // this flag is for the runner logic replacement that have still issues.
 // this 'solution' is not nice but a different branch would be more difficult to handle
-var Experimental = false
+var Experimental = true
 
 func SharedFolderExecuter(template configure.RunConfig, locationHandle func(string, string)) {
 	if len(template.Config.Use) > 0 {
@@ -152,31 +153,19 @@ func RunTargets(targets string, sharedRun bool) {
 
 	// experimental usage of taskrunner
 	if Experimental {
-		tasks := CreateMultipleTask(allTargets, func(tw *TaskWatched) {
-			tw.LoggerFnc = func(i ...interface{}) {
-				var log []interface{}
-				log = append(log, "TASK ["+tw.taskName+"]")
-				log = append(log, i...)
-				GetLogger().Debug(log...)
-			}
-			tw.Async = !runSequencially
-			tw.Exec = func(tw *TaskWatched) TaskResult {
-				fmt.Println(manout.MessageCln(manout.ForeBlue, "[exec] ", manout.BoldTag, tw.taskName, " ", manout.ForeWhite, templatePath))
-				GetLogger().WithField("task", tw.taskName).Info("starting task")
-				executionCode := ExecPathFile(&wg, !runSequencially, template, tw.taskName)
-				GetLogger().WithFields(logrus.Fields{"task": tw.taskName, "execode": executionCode}).Info(" task result ")
-				return CreateTaskResultContent(nil, executionCode)
-			}
-			tw.ResultFnc = func(tr TaskResult) {
-				executionCode := tr.Content
-				if executionCode != ExitOk {
-					manout.Error("Task Error", " exit Code ", executionCode, " for target [", tw.taskName, "]")
-					os.Exit(1)
-				}
-			}
-		})
-		tasks.Exec()
-		tasks.Wait(time.Duration(time.Second*1), time.Duration(time.Minute*30))
+		var futuresExecs []FutureStack
+		for _, trgt := range allTargets {
+			futuresExecs = append(futuresExecs, FutureStack{
+				AwaitFunc: func(ctx context.Context) interface{} {
+					ctxTarget := ctx.Value(CtxKey{}).(string)
+					return ExecPathFile(&wg, !runSequencially, template, ctxTarget)
+				},
+				Argument: trgt,
+			})
+		}
+		futures := ExecFutureGroup(futuresExecs)
+		WaitAtGroup(futures)
+
 	} else {
 		// NONE experimental usage of taskrunner
 		if !runSequencially {
@@ -569,42 +558,25 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					// any need can have his own needs they needs to
 					// be executed
 					if len(script.Needs) > 0 {
-						GetLogger().WithField("needs", script.Needs).Info("[" + target + "]Handle needs")
-						timeOut := script.Options.TimeoutNeeds
-						if timeOut < 1 {
-							timeOut = 300000 // 5 minutes in milliseconds as default
-						}
-						tickTime := script.Options.TickTimeNeeds
-						if tickTime < 1 {
-							tickTime = 1000 // 1 second as ticktime
-						}
 
-						tasks := CreateMultipleTask(script.Needs, func(tw *TaskWatched) {
-							tw.LoggerFnc = func(i ...interface{}) {
-								var log []interface{}
-								log = append(log, "needs ["+target+"."+tw.taskName+"]")
-								log = append(log, i...)
-								GetLogger().Debug(log...)
-							}
-							tw.Async = useWaitGroup
-							tw.Exec = func(tw *TaskWatched) TaskResult {
-								_, argmap := StringSplitArgs(tw.taskName, "arg")
-								GetLogger().WithField("task", tw.taskName).Info(">> run task as callback")
-								executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, tw.taskName, argmap)
-								GetLogger().WithFields(logrus.Fields{"task": tw.taskName, "execode": executionCode}).Info(">> task result ")
-								return CreateTaskResultContent(nil, executionCode)
-							}
-							tw.ResultFnc = func(tr TaskResult) {
-								executionCode := tr.Content
-								if executionCode != ExitOk {
-									manout.Error("Need Task Error", " exit Code ", executionCode, " for target [", tw.taskName, "]")
-									os.Exit(1)
-								}
-							}
-						})
-						GetLogger().Info("[" + target + "]  execute needs and wait ... ")
-						tasks.Exec().Wait(time.Duration(tickTime), time.Duration(timeOut))
-						GetLogger().Info("[" + target + "]  needs are done for ... " + target)
+						GetLogger().WithField("needs", script.Needs).Debug("Needs for the script")
+						var needExecs []FutureStack
+						for _, needTarget := range script.Needs {
+							GetLogger().Debug("need name should be added " + needTarget)
+							needExecs = append(needExecs, FutureStack{
+								AwaitFunc: func(ctx context.Context) interface{} {
+									argNeed := ctx.Value(CtxKey{}).(string)
+									_, argmap := StringSplitArgs(argNeed, "arg")
+									GetLogger().Debug("add need task " + argNeed)
+									return executeTemplate(waitGroup, false, runCfg, argNeed, argmap)
+								},
+								Argument: needTarget})
+
+						}
+						futures := ExecFutureGroup(needExecs)
+						results := WaitAtGroup(futures)
+						GetLogger().WithField("result", results).Debug("needs result")
+
 					}
 				} else {
 					// NONE experimental usage of needs
