@@ -29,6 +29,9 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
 
 	"github.com/imdario/mergo"
 
@@ -213,9 +216,76 @@ func GetPwdTemplate(path string) (configure.RunConfig, error) {
 	err2 := yaml.Unmarshal([]byte(source), &template)
 
 	if err2 != nil {
+		printErrSource(err2, source)
 		fmt.Println("error parsing ", path, "after resolving imports. check result", err2)
-		fmt.Println(source)
 		return template, err2
 	}
 	return template, nil
+}
+
+func getLineNr(str string) (int, error) {
+	re := regexp.MustCompile("[0-9]+")
+	found := re.FindAllString(str, -1)
+	if len(found) > 0 {
+		return strconv.Atoi(found[0])
+	}
+	return -1, errors.New("no line number found in message " + str)
+}
+
+func printErrSource(err error, source string) {
+	errPlain := err.Error()
+	errParts := strings.Split(errPlain, ":")
+
+	if len(errParts) == 3 { // this is depending an regular error message from yaml. like: yaml: line 3: mapping values are not allowed in this context
+		if lineNr, lErr := getLineNr(errParts[1]); lErr == nil {
+			sourceParts := strings.Split(source, "\n")
+			if len(sourceParts) >= lineNr && lineNr >= 0 {
+				min := lineNr - 3
+				max := lineNr + 3
+				if min < 0 {
+					min = 0
+				}
+				if max > len(sourceParts) {
+					max = len(sourceParts)
+				}
+				for i := min; i < max; i++ {
+					nrback := manout.BackWhite
+					nrFore := manout.ForeBlue
+					msgFore := manout.ForeCyan
+					msgBack := ""
+					msg := ""
+					if i == lineNr {
+						nrback = manout.BackLightRed
+						nrFore = manout.ForeRed
+						msgFore = manout.ForeWhite
+						msgBack = manout.BackRed
+						msg = errParts[2]
+					}
+
+					padLineNr := fmt.Sprintf("%4d |", i)
+					outstr := manout.MessageCln(
+						nrback,
+						nrFore,
+						" ",
+						padLineNr,
+						manout.CleanTag,
+						msgFore,
+						msgBack,
+						sourceParts[i],
+						manout.CleanTag,
+						manout.ForeLightYellow,
+						" ",
+						msg)
+
+					fmt.Println(outstr)
+				}
+			} else {
+				fmt.Println("source parsing faliure", sourceParts)
+			}
+		} else {
+			fmt.Println(lErr)
+		}
+	} else {
+		fmt.Println("unexpected message format ", len(errParts), " ", errParts)
+	}
 }
