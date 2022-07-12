@@ -23,6 +23,7 @@
 package cmdhandle
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"sync"
@@ -79,7 +80,8 @@ type TaskWatched struct {
 }
 
 type TaskGroup struct {
-	tasks []TaskWatched
+	tasks  []TaskWatched
+	Awaits []Future // Future channels
 	// simple callback that can be used for regular output or loggings
 	LoggerFnc func(...interface{})
 }
@@ -207,6 +209,7 @@ func (t *TaskWatched) Run() TaskResult {
 		}
 
 	})
+
 	defer t.ReportDone()
 	res := t.Exec(t)
 	if t.ResultFnc != nil {
@@ -219,7 +222,7 @@ func (t *TaskWatched) GetName() string {
 	return t.taskName
 }
 
-func CreateMultipleTask(tasks []string, modifyTask func(*TaskWatched)) TaskGroup {
+func CreateMultipleTask(tasks []string, modifyTask func(*TaskWatched)) *TaskGroup {
 	var taskGrp TaskGroup
 	for _, task := range tasks {
 		newTask := TaskWatched{
@@ -229,7 +232,7 @@ func CreateMultipleTask(tasks []string, modifyTask func(*TaskWatched)) TaskGroup
 		modifyTask(&newTask)
 		taskGrp.tasks = append(taskGrp.tasks, newTask)
 	}
-	return taskGrp
+	return &taskGrp
 }
 
 func (Tg *TaskGroup) GetTask(name string) (bool, TaskWatched) {
@@ -247,40 +250,18 @@ func (Tg *TaskGroup) AddTask(name string, wg TaskWatched) *TaskGroup {
 	return Tg
 }
 
-// counts the amount of task they are async tasks
-func (Tg *TaskGroup) getAsyncCount() int {
-	cnt := 0
-	for _, tsk := range Tg.tasks {
-		if tsk.Async && tsk.Exec != nil {
-			cnt++
-		}
-	}
-	return cnt
-}
-
 func (Tg *TaskGroup) Exec() *TaskGroup {
-	var waitGroup sync.WaitGroup
-	taskReturns := make(chan TaskResult, Tg.getAsyncCount())
-	for _, tsk := range Tg.tasks {
-		if tsk.Async {
-			tsk.Log(">> ----> exec async \t", tsk.taskName, " id ", tsk.task.RunId)
-			waitGroup.Add(1)
-			go func(tsk TaskWatched) {
-				defer waitGroup.Done()
-				taskReturns <- tsk.Run()
-			}(tsk)
 
-		} else {
-			tsk.Log(">> => exec regular \t", tsk.taskName, " id ", tsk.task.RunId)
-			tsk.Run()
-		}
+	var tasks []FutureStack
+	for _, tsk := range Tg.tasks {
+		tsk.Log("add task function ", tsk.taskName)
+		tasks = append(tasks, FutureStack{
+			AwaitFunc: func(ctx context.Context) interface{} {
+				res := tsk.Run()
+				return res.Content
+			}, Argument: tsk.taskName})
 	}
-	Tg.Log(">> waiting all tasks beeing done")
-	go func() {
-		waitGroup.Wait()
-		close(taskReturns)
-	}()
-	Tg.Log(">> all tasks are done")
+	Tg.Awaits = ExecFutureGroup(tasks)
 	return Tg
 }
 
@@ -292,38 +273,7 @@ func (Tg *TaskGroup) Log(msg ...interface{}) {
 
 // Wait until all task are done, indepenet from any channel and waitgroup blocks
 func (Tg *TaskGroup) Wait(wait time.Duration, timeOut time.Duration) {
-	var timeOutHit bool = false
-	time.AfterFunc(timeOut, func() {
-		timeOutHit = true
-	})
-	for {
-		canExists := true
-		all := len(Tg.tasks)
-		if all > 0 {
-			Tg.tasks[0].Log(">> new round with tasks: ", all)
-		} else {
-			GetLogger().Info("<--- x EXIT[TASKRUNNER] no task exists thar could be handled")
-			return
-		}
-
-		for indx, tsk := range Tg.tasks {
-			indOut := indx + 1
-			time.Sleep(wait)
-
-			if tsk.IsRunning() {
-				canExists = false
-				tsk.Log(">> x task ", tsk.taskName, " still running ", indOut, "/", all)
-			} else {
-				tsk.Log(">> ✓ task ", tsk.taskName, " DONE ", indOut, "/", all)
-			}
-		}
-		if timeOutHit {
-			Tg.Log("<--- x EXIT Timeout reached. Exit wait")
-			return
-		}
-		if canExists {
-			Tg.Log("<--- ✓ EXIT regular wait exit. All task done")
-			return
-		}
-	}
+	GetLogger().Debug("wait ... start")
+	WaitAtGroup(Tg.Awaits)
+	GetLogger().Debug("wait ... start")
 }

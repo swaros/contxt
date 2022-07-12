@@ -322,7 +322,8 @@ func TestLayeredNeeds(t *testing.T) {
 		cmdhandle.RunTargets("main", true)
 		test1Result := cmdhandle.GetPH("RUN.main.LOG.LAST")
 		expectd := "main X123"
-		if test1Result != expectd {
+		orexpectd := "main X213"
+		if test1Result != expectd && test1Result != orexpectd {
 			t.Error("result should be [", expectd, "] but is [", test1Result, "]")
 		}
 	})
