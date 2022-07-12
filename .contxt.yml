@@ -1,3 +1,4 @@
+version: "0.2"
 task:
   - id: go-check
     require:

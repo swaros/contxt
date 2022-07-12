@@ -220,6 +220,13 @@ func GetPwdTemplate(path string) (configure.RunConfig, error) {
 		fmt.Println("error parsing ", path, "after resolving imports. check result", err2)
 		return template, err2
 	}
+	// check version
+	// if they is not matching, we die with an error
+	if !configure.CheckCurrentVersion(template.Version) {
+		fmt.Println("this version seems outdated depending the required version of the contxt file")
+		fmt.Println("we are: ", configure.GetVersion(), " expected is: ", template.Version)
+		return template, errors.New("unsupported version " + template.Version)
+	}
 	return template, nil
 }
 

@@ -57,8 +57,9 @@ type IncludePaths struct {
 
 // RunConfig defines the structure of the local stored execution files
 type RunConfig struct {
-	Config Config `yaml:"config"`
-	Task   []Task `yaml:"task"`
+	Version string `yaml:"version"`
+	Config  Config `yaml:"config"`
+	Task    []Task `yaml:"task"`
 }
 
 // Autorun defines the targets they have to be executed
