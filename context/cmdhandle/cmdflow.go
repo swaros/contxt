@@ -58,7 +58,7 @@ const (
 
 // this flag is for the runner logic replacement that have still issues.
 // this 'solution' is not nice but a different branch would be more difficult to handle
-var Experimental = true
+var Experimental = false
 
 func SharedFolderExecuter(template configure.RunConfig, locationHandle func(string, string)) {
 	if len(template.Config.Use) > 0 {
