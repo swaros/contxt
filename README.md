@@ -1,26 +1,42 @@
 
 # cont(e)xt
 
+i created **contxt** as a tool for my self to keep track where i had stored releated content for different Projects, and also 
+what specific techniques and configurations are required.
 
-**contxt** helps you to organize projects and the assigned tasks and techniques. 
-
-### installation
-#### Linux
+## installation
+### Linux
 check out the [releases](https://github.com/swaros/contxt/releases) to get a pre-build package.
 
-##### shell integration
-contxt itself have no control about the current working directory in the current shell. this is the regular behavior for all executables.
-to *fix* this issue, contxt will be mapped by a shell function called **ctx**.
+#### shell integration
+it is not the main feature of contxt, but fast switching to the related directories is at the end the most used feature in may daily workflow. 
+Contxt itself have no control about the current directory of the current shell in there contxt is running. After any binary exists, it is still in the same path as before. this is the regular behavior for all executables in a shell.
+to *fix* this issue, contxt will be mapped by a shell function called **ctx** (for contxt itself), and **cn** for changing directories depending the current project. 
 
-for bash you just need to run `contxt install bash`. this will update user related shell init scripts. 
-for **zsh** use `contxt install zsh` and for **fish** use `contxt install fish` instead.
-#### windows
-currently the windows version have to be builded. there are no prebuild files exists right now.
+![cn command](https://github.com/swaros/docu-asset-store/blob/main/cn.png)
 
-so checkout this repo and run `winbuild.bat`. the binary (.exe) can be found afterwards in the bin folder.
+this works because shell functions are in same context.
+so for any supported shell a shell function is needed.
 
-##### powershell 7 support
-the default shell on windows is `powershell`. 
+##### bash
+
+for bash you just need to run `contxt install bashrc`. the functions **ctx** and **cn** will be created in the .bashrc file
+
+##### zsh
+
+for **zsh** use `contxt install zsh`. the functions **ctx** and **cn** will be created in the first directory in the **FPATH** that is write and readable for the current user.
+
+##### fish 
+
+for **fish** use `contxt install fish`.  the functions **ctx** and **cn** will be created in the default function directory `~/.config/fish/functions`
+
+### windows
+currently the windows version is *work in progess* depending the shell integration. so there is currently no *package deployment* and also no
+function mapping. the windows version can be downloaded as a binary, but any integration have to be done manually.
+
+
+#### powershell 7 support
+the default supported shell on windows is `powershell`. 
 if you have **powershell 7** installed, you can set these as default shell as environment variable. `$env:CTX_DEFAULT_CMD = "pwsh"`
 
 > **pwsh** is one of the possible commands for powershell. they exists also others for previews etc. fit them if needed.
@@ -28,39 +44,28 @@ if you have **powershell 7** installed, you can set these as default shell as en
 ansii support is disabled as long the default powershell version is lower then 7. you can force the usage of ansii codes with 
 `$env:CTX_COLOR = "ON"`
 
-### workspaces
+
+
+## workspaces
 
 Workspaces are a set of directories they can be on different places. Any path can have different task they can be executed automatically if you enter or leava a workspace. this allows you to setup different needs depending on the workspace.
 
 
 ### usage
 
-contxt is a command line tool and focused to work on any environment that have a shell. there is no other dependency (yet).
 after executing the **shell integration** steps, you should use `ctx` instead of `contxt`
 
 different to *contxt*. *ctx* is a shell function and is able to change the directory.
-so contxt can change the workspace, but after runtime, the shell will stay on the current directory
-````shell
-user@localhost:~/project/alpha$ contxt switch omega
-current workspace is now:omega
-	paths stored in omega
-	 0  /home/project/omega/frontend
-	[1] /home/project/omega/backend
-user@localhost:~/project/alpha$ pwd
-/home/project/alpha
-````
+so contxt can still change the workspace, but after runtime, the shell will stay on the directory as before.
+
+![image](https://user-images.githubusercontent.com/5437750/178095430-10da7bf9-8266-45cb-aa3c-23fa0604b3e6.png)
 
 but **ctx**, as a shell function, is able to change the current directory.
-````shell
-user@localhost:~/project/alpha$ ctx switch omega
-current workspace is now:omega
-	paths stored in omega
-	 0  /home/project/omega/frontend
-	[1] /home/project/omega/backend
-user@localhost:~/project/omega/backend$ pwd
-/home/project/omega/backend
-````
-#### context navigate (cn)
+
+![image](https://user-images.githubusercontent.com/5437750/178095493-ee07317c-c74d-407b-9cd9-7a793ccfb458.png)
+
+
+### context navigate (cn)
 
 for navigation use the `cn` command to change paths depending on the current workspace.
 
@@ -72,7 +77,7 @@ for navigation use the `cn` command to change paths depending on the current wor
 
 `cn website php frontend` similar to `cn website` but if no *website* can be found on any of the assigned paths, *pah* and afterwards *frontend* will be used to find a matching path
 
-##### create a new workspace
+#### create a new workspace
 `ctx dir -w mywork` will create a new workspace named *mywork*. if mywork already exists the workspace will be entered only.
 
 ##### add path to current workspace
@@ -125,10 +130,23 @@ in this case it will just set the context to the local **minikube** to make sure
 
 you can switch the workspace also just by typing `ctx <existing-workspace>`.
 
+### Tasks
+
+
 [more about tasks](docs/documentation/tasks.md)
 
 
-##### used libraries 
+### used libraries
+
+there are of course more dependencies, but these are important depending working with placeholders and variables.
+so it is usefull to know how they are working.
+
 
 go/template extension https://github.com/Masterminds/sprig [template docu](http://masterminds.github.io/sprig/)
+
+> The Go language comes with a built-in template language, but not very many template functions. Sprig is a library that provides more than 100 commonly used template functions.
+
+
 for parsing json by paths https://github.com/tidwall/gjson 
+
+> GJSON is a Go package that provides a fast and simple way to get values from a json document. It has features such as one line retrieval, dot notation paths, iteration, and parsing json lines.
