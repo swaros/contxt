@@ -103,12 +103,10 @@ func GetTemplate() (configure.RunConfig, string, bool, error) {
 						mergo.Merge(&ctemplate, subTemplate, mergo.WithOverride, mergo.WithAppendSlice)
 						GetLogger().WithField("template", ctemplate).Debug("merged")
 					} else {
-						GetLogger().Error(tError)
-						os.Exit(31)
+						return template, "", false, tError
 					}
 				} else {
-					GetLogger().Error(pathError)
-					os.Exit(31)
+					return template, "", false, pathError
 				}
 			}
 		} else {
@@ -218,11 +216,6 @@ func GetPwdTemplate(path string) (configure.RunConfig, error) {
 	if err2 != nil {
 		printErrSource(err2, source)
 		return template, err2
-	}
-	// check version
-	// if they is not matching, we die with an error
-	if !configure.CheckCurrentVersion(template.Version) {
-		return template, errors.New("unsupported version " + template.Version)
 	}
 	return template, nil
 }

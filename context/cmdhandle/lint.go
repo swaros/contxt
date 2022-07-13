@@ -24,12 +24,14 @@ package cmdhandle
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/kylelemons/godebug/pretty"
+	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/manout"
 	"gopkg.in/yaml.v3"
 )
@@ -166,6 +168,23 @@ func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
 			fmt.Println(data)
 		}
 	}
+}
+
+func TestTemplate() error {
+	if template, _, exists, terr := GetTemplate(); terr != nil {
+		return terr
+	} else {
+		if !exists {
+			GetLogger().Debug("no template exists to check")
+		} else {
+			// check version
+			// if they is not matching, we die with an error
+			if !configure.CheckCurrentVersion(template.Version) {
+				return errors.New("unsupported version " + template.Version)
+			}
+		}
+	}
+	return nil
 }
 
 // LintOut prints the source code and the parsed content

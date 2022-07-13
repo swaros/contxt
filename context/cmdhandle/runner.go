@@ -718,8 +718,10 @@ func MainExecute() {
 	currentDir, _ := dirhandle.Current()
 	SetPH("CTX_PWD", currentDir)
 
-	// always lint check
-	LintOut(0, 0, false, true)
+	// validate first
+	if err := TestTemplate(); err != nil {
+		fmt.Println("found issues in the current template ", err)
+	}
 
 	// first handle shortcuts
 	// before we get cobra controll
@@ -837,7 +839,11 @@ func ExistInStrMap(testStr string, check []string) bool {
 
 func targetsAsMap() ([]string, bool) {
 	var targets []string
-	template, _, exists, _ := GetTemplate()
+	template, _, exists, terr := GetTemplate()
+	if terr != nil {
+		targets = append(targets, terr.Error())
+		return targets, false
+	}
 	if exists {
 		return templateTargetsAsMap(template)
 	}
