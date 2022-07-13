@@ -119,6 +119,13 @@ func RunShared(targets string) {
 // seperated by comma
 func RunTargets(targets string, sharedRun bool) {
 
+	// validate first
+	if err := TestTemplate(); err != nil {
+		fmt.Println("found issues in the current template ", err)
+		os.Exit(32)
+		return
+	}
+
 	SetPH("CTX_TARGETS", targets)
 
 	// this flag should only true on the first execution

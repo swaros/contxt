@@ -718,11 +718,6 @@ func MainExecute() {
 	currentDir, _ := dirhandle.Current()
 	SetPH("CTX_PWD", currentDir)
 
-	// validate first
-	if err := TestTemplate(); err != nil {
-		fmt.Println("found issues in the current template ", err)
-	}
-
 	// first handle shortcuts
 	// before we get cobra controll
 	if !shortcuts() {
