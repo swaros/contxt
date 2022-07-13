@@ -86,7 +86,7 @@ func GetTemplate() (configure.RunConfig, string, bool, error) {
 	foundPath, success := FindTemplate()
 	var template configure.RunConfig
 	if !success {
-		return template, "", false, errors.New("template not found")
+		return template, "", false, errors.New("template not found or have failures")
 	}
 	ctemplate, err := GetPwdTemplate(foundPath)
 	if err == nil {

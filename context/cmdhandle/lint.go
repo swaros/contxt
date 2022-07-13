@@ -172,7 +172,11 @@ func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
 // in a table view, and marks configured and not configured entries
 // with dfferent colors
 func LintOut(leftcnt, rightcnt int, all bool, noOut bool) bool {
-	template, path, exists, _ := GetTemplate()
+	template, path, exists, terr := GetTemplate()
+	if terr != nil {
+		manout.Error("ERROR", terr.Error())
+		return false
+	}
 	if exists && rightcnt >= 0 && leftcnt >= 0 {
 		data, err := GetParsedTemplateSource(path)
 		if err != nil {

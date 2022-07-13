@@ -718,6 +718,9 @@ func MainExecute() {
 	currentDir, _ := dirhandle.Current()
 	SetPH("CTX_PWD", currentDir)
 
+	// always lint check
+	LintOut(0, 0, false, true)
+
 	// first handle shortcuts
 	// before we get cobra controll
 	if !shortcuts() {
