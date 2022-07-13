@@ -113,30 +113,12 @@ task:
     needs:
       - build
     next:
-      - check-system  
-
-  - id: check-system
-    script:      
-      - "#@var INSTALL_TARGET uname -r"
-      - uname -r
-      - echo "hopefully we have the right installer for you"
-      - sleep 2
-    listener:
-      - trigger:
-          onoutContains:
-            - MANJARO
-            - ARCHLINUX
-        action:
-          target: install-local-dot-bin
-      - trigger:
-          onoutContains:
-             - generic
-        action:
-           target: install-local-bin
+      - install-local-bin
+      - install-local-dot-bin
 
   - id: install-local-bin
     script:
-      - echo "${HOME}/bin usage"
+      - echo "try the ${HOME}/bin usage"
 
   - id: install-local-bin
     options:
@@ -149,10 +131,28 @@ task:
         local-install: "=yes"
         bin-out: "*"
     script:
-      - echo "local bin will be used" 
       - cp bin/${bin-out} $HOME/bin/${bin-out}
 
+## fail for local bin/
+  - id: install-local-bin
+    options:
+      displaycmd: true
+    variables:
+      local-install: "NO" # if we take care... no one else should too
+    require:
+      notExists:
+        - ${HOME}/bin
+      system: linux
+      variables:
+        local-install: "=yes"
+        bin-out: "*"
+    script:
+      - echo "${HOME}/bin not exists. will not be used"
 
+  - id: install-local-dot-bin
+    
+
+  ## fail test .local/bin
   - id: install-local-dot-bin
     require:
       notExists:
@@ -162,12 +162,9 @@ task:
         local-install: "=yes"
         bin-out: "*"        
     script:
-      - echo "archlinux based system detected"
-      - echo "ERROR missing target dir .local/bin/"
-      - echo "      you should create them first."      
-      - echo "   mkdir $HOME/.local/bin/"
+      - echo "no .local/bin dir"      
       
-
+## if exists ...copy file
   - id: install-local-dot-bin
     require:
       exists:
@@ -177,7 +174,6 @@ task:
         local-install: "=yes"
         bin-out: "*"        
     script:
-      - echo "archlinux based system detected"
       - echo "using ~/.local/bin/ to copy ${bin-out}"
       - cp bin/${bin-out} $HOME/.local/bin/${bin-out}
       - echo "check versions"
