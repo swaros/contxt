@@ -107,6 +107,13 @@ task:
     script:
        - bin/${bin-out} version
 
+  - id: install-local
+    variables:
+      local-install: "yes"
+    needs:
+      - build
+    next:
+      - check-system  
 
   - id: check-system
     script:      
@@ -120,17 +127,33 @@ task:
             - MANJARO
             - ARCHLINUX
         action:
-          target: install-local-arch
-    
-  - id: install-local
-    variables:
-      local-install: "yes"
-    needs:
-      - build
-    next:
-      - check-system    
+          target: install-local-dot-bin
+      - trigger:
+          onoutContains:
+             - generic
+        action:
+           target: install-local-bin
 
-  - id: install-local-arch
+  - id: install-local-bin
+    script:
+      - echo "${HOME}/bin usage"
+
+  - id: install-local-bin
+    options:
+      displaycmd: true
+    require:
+      exists:
+        - ${HOME}/bin
+      system: linux
+      variables:
+        local-install: "=yes"
+        bin-out: "*"
+    script:
+      - echo "local bin will be used" 
+      - cp bin/${bin-out} $HOME/bin/${bin-out}
+
+
+  - id: install-local-dot-bin
     require:
       notExists:
         - ${HOME}/.local/bin/
@@ -145,7 +168,7 @@ task:
       - echo "   mkdir $HOME/.local/bin/"
       
 
-  - id: install-local-arch
+  - id: install-local-dot-bin
     require:
       exists:
         - ${HOME}/.local/bin/
