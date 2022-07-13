@@ -81,12 +81,12 @@ func FindTemplate() (string, bool) {
 }
 
 // GetTemplate return current template
-func GetTemplate() (configure.RunConfig, string, bool) {
+func GetTemplate() (configure.RunConfig, string, bool, error) {
 
 	foundPath, success := FindTemplate()
 	var template configure.RunConfig
 	if !success {
-		return template, "", false
+		return template, "", false, errors.New("template not found")
 	}
 	ctemplate, err := GetPwdTemplate(foundPath)
 	if err == nil {
@@ -115,10 +115,10 @@ func GetTemplate() (configure.RunConfig, string, bool) {
 			GetLogger().Debug("no required files configured")
 		}
 
-		return ctemplate, foundPath, true
+		return ctemplate, foundPath, true, nil
 	}
 
-	return template, "", false
+	return template, "", false, err
 }
 
 func getIncludeConfigPath(path string) (string, string, bool) {
@@ -217,14 +217,11 @@ func GetPwdTemplate(path string) (configure.RunConfig, error) {
 
 	if err2 != nil {
 		printErrSource(err2, source)
-		fmt.Println("error parsing ", path, "after resolving imports. check result", err2)
 		return template, err2
 	}
 	// check version
 	// if they is not matching, we die with an error
 	if !configure.CheckCurrentVersion(template.Version) {
-		fmt.Println("this version seems outdated depending the required version of the contxt file")
-		fmt.Println("we are: ", configure.GetVersion(), " expected is: ", template.Version)
 		return template, errors.New("unsupported version " + template.Version)
 	}
 	return template, nil

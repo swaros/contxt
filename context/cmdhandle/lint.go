@@ -133,7 +133,12 @@ func trySupressDefaults(yamlString string) string {
 
 // ShowAsYaml prints the generated source of the task file
 func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
-	template, path, exists := GetTemplate()
+	template, path, exists, terr := GetTemplate()
+	if terr != nil {
+		fmt.Println(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
+		os.Exit(33)
+		return
+	}
 	var b bytes.Buffer
 	if exists {
 		if fullparsed {
@@ -167,7 +172,7 @@ func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
 // in a table view, and marks configured and not configured entries
 // with dfferent colors
 func LintOut(leftcnt, rightcnt int, all bool, noOut bool) bool {
-	template, path, exists := GetTemplate()
+	template, path, exists, _ := GetTemplate()
 	if exists && rightcnt >= 0 && leftcnt >= 0 {
 		data, err := GetParsedTemplateSource(path)
 		if err != nil {

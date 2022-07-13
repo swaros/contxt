@@ -77,7 +77,11 @@ func SharedFolderExecuter(template configure.RunConfig, locationHandle func(stri
 func RunShared(targets string) {
 
 	allTargets := strings.Split(targets, ",")
-	template, templatePath, exists := GetTemplate()
+	template, templatePath, exists, terr := GetTemplate()
+	if terr != nil {
+		fmt.Println(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
+		return
+	}
 	if !exists {
 		return
 	}
@@ -127,7 +131,12 @@ func RunTargets(targets string, sharedRun bool) {
 	}
 
 	allTargets := strings.Split(targets, ",")
-	template, templatePath, exists := GetTemplate()
+	template, templatePath, exists, terr := GetTemplate()
+	if terr != nil {
+		fmt.Println(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
+		os.Exit(33)
+		return
+	}
 	GetLogger().WithField("targets", allTargets).Info("run targets...")
 	var runSequencially = false
 	if exists {
