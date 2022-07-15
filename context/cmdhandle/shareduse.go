@@ -195,7 +195,7 @@ func updateGitRepo(config configure.GitVersionInfo, doUpdate bool, workDir strin
 func executeGitUpdate(path string) int {
 	currentDir, _ := dirhandle.Current()
 	os.Chdir(path)
-	gitCmd := "git fetch"
+	gitCmd := "git pull"
 	exec, args := GetExecDefaults()
 	exitCode, _, _ := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
 		fmt.Println(manout.MessageCln("\tgit: ", manout.ForeLightYellow, feed))
