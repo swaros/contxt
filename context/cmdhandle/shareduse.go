@@ -36,6 +36,8 @@ import (
 	"github.com/swaros/manout"
 )
 
+var config_file string = "version.conf"
+
 // CheckOrCreateUseConfig get a usecase like swaros/ctx-git and checks
 // if a local copy of them exists.
 // if they not exists it creates the local directoy and uses git to
@@ -112,6 +114,7 @@ func UpdateUseCase(fullPath string) {
 	//usecase, version := getUseInfo("", fullPath)
 	exists, config, _ := getRepoConfig(fullPath)
 	if exists {
+		GetLogger().WithFields(logrus.Fields{"config": config}).Debug("version info")
 		fmt.Println(manout.MessageCln(" remote:", manout.ForeLightBlue, " ", config.Repositiory))
 		updateGitRepo(config, true, fullPath)
 
@@ -175,7 +178,7 @@ func updateGitRepo(config configure.GitVersionInfo, doUpdate bool, workDir strin
 						gCode := executeGitUpdate(getSourcePath(workDir))
 						if gCode == ExitOk {
 							config.HashUsed = hash
-							if werr := writeGitConfig(workDir+"/version.json", config); werr != nil {
+							if werr := writeGitConfig(workDir+"/"+config_file, config); werr != nil {
 								manout.Error("unable to create version info", werr)
 								returnBool = false
 							} else {
@@ -285,7 +288,7 @@ func getSourcePath(pathTouse string) string {
 }
 
 func getVersionOsPath(pathTouse string) string {
-	return fmt.Sprintf("%s%s%s", pathTouse, string(os.PathSeparator), "version.conf")
+	return fmt.Sprintf("%s%s%s", pathTouse, string(os.PathSeparator), config_file)
 }
 
 func getOrCreateRepoConfig(ref, hash, usecase, pathTouse string) (configure.GitVersionInfo, error) {
