@@ -58,7 +58,7 @@ const (
 
 // this flag is for the runner logic replacement that have still issues.
 // this 'solution' is not nice but a different branch would be more difficult to handle
-var Experimental = false
+var Experimental = true
 
 func SharedFolderExecuter(template configure.RunConfig, locationHandle func(string, string)) {
 	if len(template.Config.Use) > 0 {
@@ -153,18 +153,24 @@ func RunTargets(targets string, sharedRun bool) {
 
 	// experimental usage of taskrunner
 	if Experimental {
-		var futuresExecs []FutureStack
-		for _, trgt := range allTargets {
-			futuresExecs = append(futuresExecs, FutureStack{
-				AwaitFunc: func(ctx context.Context) interface{} {
-					ctxTarget := ctx.Value(CtxKey{}).(string)
-					return ExecPathFile(&wg, !runSequencially, template, ctxTarget)
-				},
-				Argument: trgt,
-			})
+		if runSequencially {
+			for _, trgt := range allTargets {
+				ExecPathFile(&wg, !runSequencially, template, trgt)
+			}
+		} else {
+			var futuresExecs []FutureStack
+			for _, trgt := range allTargets {
+				futuresExecs = append(futuresExecs, FutureStack{
+					AwaitFunc: func(ctx context.Context) interface{} {
+						ctxTarget := ctx.Value(CtxKey{}).(string)
+						return ExecPathFile(&wg, !runSequencially, template, ctxTarget)
+					},
+					Argument: trgt,
+				})
+			}
+			futures := ExecFutureGroup(futuresExecs)
+			WaitAtGroup(futures)
 		}
-		futures := ExecFutureGroup(futuresExecs)
-		WaitAtGroup(futures)
 
 	} else {
 		// NONE experimental usage of taskrunner
@@ -448,8 +454,8 @@ func mergeTargets(target string, runCfg configure.RunConfig) configure.Task {
 	return checkTasks
 }
 
-func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig, target string, scopeVars map[string]string) int {
-	if useWaitGroup {
+func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.RunConfig, target string, scopeVars map[string]string) int {
+	if runAsync {
 		waitGroup.Add(1)
 		defer waitGroup.Done()
 	}
@@ -560,22 +566,29 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					if len(script.Needs) > 0 {
 
 						GetLogger().WithField("needs", script.Needs).Debug("Needs for the script")
-						var needExecs []FutureStack
-						for _, needTarget := range script.Needs {
-							GetLogger().Debug("need name should be added " + needTarget)
-							needExecs = append(needExecs, FutureStack{
-								AwaitFunc: func(ctx context.Context) interface{} {
-									argNeed := ctx.Value(CtxKey{}).(string)
-									_, argmap := StringSplitArgs(argNeed, "arg")
-									GetLogger().Debug("add need task " + argNeed)
-									return executeTemplate(waitGroup, false, runCfg, argNeed, argmap)
-								},
-								Argument: needTarget})
+						if runAsync {
+							var needExecs []FutureStack
+							for _, needTarget := range script.Needs {
+								GetLogger().Debug("need name should be added " + needTarget)
+								needExecs = append(needExecs, FutureStack{
+									AwaitFunc: func(ctx context.Context) interface{} {
+										argNeed := ctx.Value(CtxKey{}).(string)
+										_, argmap := StringSplitArgs(argNeed, "arg")
+										GetLogger().Debug("add need task " + argNeed)
+										return executeTemplate(waitGroup, true, runCfg, argNeed, argmap)
+									},
+									Argument: needTarget})
 
+							}
+							futures := ExecFutureGroup(needExecs)
+							results := WaitAtGroup(futures)
+							GetLogger().WithField("result", results).Debug("needs result")
+						} else {
+							for _, needTarget := range script.Needs {
+								_, argmap := StringSplitArgs(needTarget, "arg")
+								executeTemplate(waitGroup, false, runCfg, needTarget, argmap)
+							}
 						}
-						futures := ExecFutureGroup(needExecs)
-						results := WaitAtGroup(futures)
-						GetLogger().WithField("result", results).Debug("needs result")
 
 					}
 				} else {
@@ -585,7 +598,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 						GetLogger().WithFields(logrus.Fields{
 							"needs": script.Needs,
 						}).Info("executeTemplate NEEDS found")
-						if useWaitGroup {
+						if runAsync {
 							waitHits := 0
 							timeOut := script.Options.TimeoutNeeds
 							if timeOut < 1 {
@@ -625,14 +638,14 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 								// need to wait if these other task already started by
 								// other options
 								time.Sleep(500 * time.Millisecond)
-								go executeTemplate(waitGroup, useWaitGroup, runCfg, needTarget, args)
+								go executeTemplate(waitGroup, runAsync, runCfg, needTarget, args)
 								return true
 							})
 						} else {
 							// run needs in a sequence
 							for _, targetNeed := range script.Needs {
 								var args map[string]string = make(map[string]string) // no supported usage right now
-								executionCode := executeTemplate(waitGroup, useWaitGroup, runCfg, targetNeed, args)
+								executionCode := executeTemplate(waitGroup, runAsync, runCfg, targetNeed, args)
 								if executionCode != ExitOk {
 									manout.Error("Need Task Error", "expected returncode ", ExitOk, " but got exit Code", executionCode)
 									os.Exit(1)
@@ -645,10 +658,10 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				// targets that should be started as well
 				if len(script.RunTargets) > 0 {
 					for _, runTrgt := range script.RunTargets {
-						if useWaitGroup {
-							go executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt, scopeVars)
+						if runAsync {
+							go executeTemplate(waitGroup, runAsync, runCfg, runTrgt, scopeVars)
 						} else {
-							executeTemplate(waitGroup, useWaitGroup, runCfg, runTrgt, scopeVars)
+							executeTemplate(waitGroup, runAsync, runCfg, runTrgt, scopeVars)
 						}
 					}
 					// workaround til the async runnig is refactored
@@ -662,7 +675,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				// 'now' listener
 				if len(script.Script) < 1 {
 					GetLogger().Debug("no script lines defined. run listener anyway")
-					listenerWatch(script, target, "", waitGroup, useWaitGroup, runCfg)
+					listenerWatch(script, target, "", waitGroup, runAsync, runCfg)
 					// workaround til the async runnig is refactored
 					// now we need to give the subtask time to run and update the waitgroup
 					duration := time.Second
@@ -672,7 +685,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 				// preparing codelines by execute second level commands
 				// that can affect the whole script
 				abort, returnCode, _ = TryParse(script.Script, func(codeLine string) (bool, int) {
-					lineAbort, lineExitCode := lineExecuter(waitGroup, useWaitGroup, stopReason, runCfg, colorCode, bgCode, codeLine, target, scopeVars, script)
+					lineAbort, lineExitCode := lineExecuter(waitGroup, runAsync, stopReason, runCfg, colorCode, bgCode, codeLine, target, scopeVars, script)
 					return lineExitCode, lineAbort
 				})
 				if abort {
@@ -696,7 +709,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 					}*/
 
 					// for now we execute without a waitgroup
-					executeTemplate(waitGroup, useWaitGroup, runCfg, nextTarget, scopeVars)
+					executeTemplate(waitGroup, runAsync, runCfg, nextTarget, scopeVars)
 				}
 
 				//return returnCode

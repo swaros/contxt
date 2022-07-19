@@ -1,0 +1,79 @@
+config:  
+  sequencially: false
+  coloroff: true
+  variables:
+     teststr: "BASE:"
+
+task:
+  - id: need_a
+    script:
+      - sleep 0.4
+      - echo " --------- need_a"
+      - "#@set teststr ${teststr}NA:"
+
+  - id: need_b
+    script:
+      - sleep 0.2
+      - echo " --------- need_b"
+      - "#@set teststr ${teststr}NB:"
+      
+  - id: need_c
+    script:
+      - sleep 0.7
+      - echo " --------- need_c"
+      - "#@set teststr ${teststr}NC:"
+
+  - id: task_a
+    script:
+      - sleep 0.3
+      - echo " --------- subtask_a"
+      - "#@set teststr ${teststr}TA:"
+
+  - id: task_b
+    script:
+      - sleep 0.35
+      - echo " --------- subtask_b"
+      - "#@set teststr ${teststr}TB:"
+
+  - id: task_c
+    script:
+      - sleep 0.1
+      - echo " --------- subtask_c"
+      - "#@set teststr ${teststr}TC:"
+
+
+  - id: main_a
+    script:
+      - "#@set teststr ${teststr}MA:"
+      - echo ${teststr}
+
+  - id: main_b
+    needs:
+      - need_a
+      - need_b
+      - need_c
+    script:
+      - "#@set teststr ${teststr}MB:"
+      - echo ${teststr}      
+
+  - id: main_c
+    needs:
+      - need_a
+      - need_b
+      - need_c
+    runTargets:
+      - task_a
+      - task_b
+      - task_c  
+    script:
+      - "#@set teststr ${teststr}MC:"
+      - echo ${teststr}     
+
+  - id: main_d
+    needs:
+      - need_a
+      - main_c
+      - need_c  
+    script:
+      - "#@set teststr ${teststr}MD:"
+      - echo ${teststr} 
