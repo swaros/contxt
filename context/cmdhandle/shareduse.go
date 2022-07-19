@@ -152,7 +152,7 @@ func ListUseCases(fullPath bool) ([]string, error) {
 	return sharedDirs, perr
 }
 
-func GetUseInfo(usecase, pathTouse string) (string, string) {
+func GetUseInfo(usecase, _ string) (string, string) {
 	parts := strings.Split(usecase, "@")
 	version := "refs/heads/main"
 	if len(parts) > 1 {

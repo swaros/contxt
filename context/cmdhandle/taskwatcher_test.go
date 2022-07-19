@@ -93,7 +93,7 @@ func TestNeverStarts(t *testing.T) {
 	}, func() {
 		// timeout
 		timeOutHit = true
-	}, func(targetFull string, target string, args map[string]string) bool {
+	}, func(_ string, _ string, _ map[string]string) bool {
 		notStartedCalled = true
 		return false
 	})

@@ -456,7 +456,7 @@ func UpdateOriginMap(mapData map[string]interface{}) {
 }
 
 // ImportFolder reads folder recursiv and reads all .json, .yml and .yaml files
-func ImportFolder(path string, templatePath string) (map[string]interface{}, error) {
+func ImportFolder(path string, _ string) (map[string]interface{}, error) {
 
 	//var mapOrigin map[string]interface{}
 	//mapOrigin = make(map[string]interface{})

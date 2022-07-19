@@ -611,7 +611,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg config
 								GetLogger().Debug("timeout hit")
 								manout.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
 								os.Exit(1)
-							}, func(needTarget string, fullTargetName string, args map[string]string) bool {
+							}, func(needTarget string, _ string, args map[string]string) bool {
 								if script.Options.NoAutoRunNeeds {
 									manout.Error("Need Task not started", "expected task ", target, " not running. autostart disabled")
 									os.Exit(1)
@@ -752,7 +752,7 @@ func handleFileImportsToVars(imports []string) {
 
 		}, func(path string, err error) {
 			GetLogger().Errorln("file not exists:", err)
-			manout.Error("varibales file not exists:", err)
+			manout.Error("varibales file not exists:", path, err)
 			os.Exit(1)
 		})
 	}

@@ -61,7 +61,7 @@ func incTaskDoneCount(target string) bool {
 
 // ResetAllTaskInfos resets all task infos
 func ResetAllTaskInfos() {
-	taskList.Range(func(key, value interface{}) bool {
+	taskList.Range(func(key, _ interface{}) bool {
 		taskList.Delete(key)
 		return true
 	})
