@@ -456,3 +456,30 @@ func TestNeedWithArgs(t *testing.T) {
 
 	})
 }
+
+func TestConcurrent(t *testing.T) {
+	expected := ""
+	folderRunner("./../../docs/test/01concurrent", t, func(t *testing.T) {
+		cmdhandle.RunTargets("main_a", false)
+		main_a := cmdhandle.GetPH("teststr")
+		expected = "BASE:MA:"
+		if main_a != expected {
+			t.Error("expected:", expected, " instead:", main_a)
+		}
+	})
+}
+
+func assertConcurrentCheck(t *testing.T, expected, target string) {
+	cmdhandle.Experimental = true
+	folderRunner("./../../docs/test/01concurrent", t, func(t *testing.T) {
+		cmdhandle.RunTargets(target, true)
+		result := cmdhandle.GetPH("teststr")
+		if result != expected {
+			t.Error("target:", target, "expected:", expected, " instead:", result)
+		}
+	})
+}
+
+func TestConcurrentB(t *testing.T) {
+	//assertConcurrentCheck(t, "BASE:NA:NB:NC:MB:", "main_b")
+}
