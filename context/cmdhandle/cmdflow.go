@@ -60,6 +60,8 @@ const (
 // this 'solution' is not nice but a different branch would be more difficult to handle
 var Experimental = true
 
+// SharedFolderExecuter runs shared .contxt.yml files directly without merging them into
+// the current contxt file
 func SharedFolderExecuter(template configure.RunConfig, locationHandle func(string, string)) {
 	if len(template.Config.Use) > 0 {
 		GetLogger().WithField("uses", template.Config.Use).Info("shared executer")
@@ -76,13 +78,13 @@ func SharedFolderExecuter(template configure.RunConfig, locationHandle func(stri
 
 func RunShared(targets string) {
 
-	allTargets := strings.Split(targets, ",")
-	template, templatePath, exists := GetTemplate()
-	if !exists {
+	allTargets := strings.Split(targets, ",")       // targets seperated with comma, should run async
+	template, templatePath, exists := GetTemplate() // get the template
+	if !exists {                                    // it is expected that most of the time the shared taskfile do not have the target. so just get out
 		return
 	}
 
-	if template.Config.Loglevel != "" {
+	if template.Config.Loglevel != "" { // set logger level by template definition
 		setLogLevelByString(template.Config.Loglevel)
 	}
 
@@ -126,24 +128,25 @@ func RunTargets(targets string, sharedRun bool) {
 		RunShared(targets)
 	}
 
-	allTargets := strings.Split(targets, ",")
-	template, templatePath, exists := GetTemplate()
+	allTargets := strings.Split(targets, ",")       // get all targets that have to be started togehter
+	template, templatePath, exists := GetTemplate() // get the current template
 	GetLogger().WithField("targets", allTargets).Info("run targets...")
-	var runSequencially = false
-	if exists {
+	var runSequencially = false // default is async mode
+	if exists {                 // TODO: the exists check just for this config reading seems wrong
 		runSequencially = template.Config.Sequencially
 		if template.Config.Coloroff {
 			manout.ColorEnabled = false
 		}
 	}
 
-	if template.Config.Loglevel != "" {
+	if template.Config.Loglevel != "" { // loglevel by config
 		setLogLevelByString(template.Config.Loglevel)
 	}
 
-	var wg sync.WaitGroup
+	var wg sync.WaitGroup // the main waitgroup
 
-	// handle all imports
+	// handle all imports.
+	// these are yaml or json files, they can be accessed for reading by the gson doted format
 	if len(template.Config.Imports) > 0 {
 		GetLogger().WithField("Import", template.Config.Imports).Info("import second level vars")
 		handleFileImportsToVars(template.Config.Imports)
@@ -153,23 +156,25 @@ func RunTargets(targets string, sharedRun bool) {
 
 	// experimental usage of taskrunner
 	if Experimental {
-		if runSequencially {
+		if runSequencially { // non async run
 			for _, trgt := range allTargets {
+				SetPH("CTX_TARGET", trgt)
 				ExecPathFile(&wg, !runSequencially, template, trgt)
 			}
 		} else {
 			var futuresExecs []FutureStack
-			for _, trgt := range allTargets {
+			for _, trgt := range allTargets { // iterate all targets
 				futuresExecs = append(futuresExecs, FutureStack{
 					AwaitFunc: func(ctx context.Context) interface{} {
-						ctxTarget := ctx.Value(CtxKey{}).(string)
-						return ExecPathFile(&wg, !runSequencially, template, ctxTarget)
+						ctxTarget := ctx.Value(CtxKey{}).(string)                       // get the target from context
+						SetPH("CTX_TARGET", ctxTarget)                                  // update global target. TODO: makes this any sense in async?
+						return ExecPathFile(&wg, !runSequencially, template, ctxTarget) // execute target
 					},
 					Argument: trgt,
 				})
 			}
-			futures := ExecFutureGroup(futuresExecs)
-			WaitAtGroup(futures)
+			futures := ExecFutureGroup(futuresExecs) // execute all async task
+			WaitAtGroup(futures)                     // wait until all task are done
 		}
 
 	} else {
@@ -193,6 +198,7 @@ func RunTargets(targets string, sharedRun bool) {
 			}
 		}
 	}
+
 	fmt.Println(manout.MessageCln(manout.ForeBlue, "[done] ", manout.BoldTag, targets))
 	GetLogger().Info("target task execution done")
 }
@@ -216,24 +222,20 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 		}).Debug("testing Listener")
 
 		for _, listener := range script.Listener {
-			listenReason := listener.Trigger
-			triggerFound, triggerMessage := checkReason(listenReason, logLine)
+			triggerFound, triggerMessage := checkReason(listener.Trigger, logLine) // check if a trigger have a match
 			if triggerFound {
 				SetPH("RUN."+target+".LOG.HIT", logLine)
 				if script.Options.Displaycmd {
 					fmt.Println(manout.MessageCln(manout.ForeCyan, "[trigger]\t", manout.ForeYellow, triggerMessage, manout.Dim, " ", logLine))
 				}
 
-				// did this trigger something?
-				someReactionTriggered := false
-				// extract action
-				actionDef := configure.Action(listener.Action)
+				someReactionTriggered := false                 // did this trigger something? used as flag
+				actionDef := configure.Action(listener.Action) // extract action
 
-				// checking script
-				if len(actionDef.Script) > 0 {
+				if len(actionDef.Script) > 0 { // script are directs executes without any async or other executes out of scope
 					someReactionTriggered = true
-					var dummyArgs map[string]string = make(map[string]string)
-					for _, triggerScript := range actionDef.Script {
+					var dummyArgs map[string]string = make(map[string]string) // create empty arguments as scoped values
+					for _, triggerScript := range actionDef.Script {          // run any line of script
 						GetLogger().WithFields(logrus.Fields{
 							"cmd": triggerScript,
 						}).Debug("TRIGGER SCRIPT ACTION")
@@ -242,7 +244,7 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 
 				}
 
-				if actionDef.Target != "" {
+				if actionDef.Target != "" { // here we have a target defined thats needs to be started
 					someReactionTriggered = true
 					GetLogger().WithFields(logrus.Fields{
 						"target": actionDef.Target,
@@ -252,8 +254,9 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 						fmt.Println(manout.MessageCln(manout.ForeCyan, "[trigger]\t ", manout.ForeGreen, "target:", manout.ForeLightGreen, actionDef.Target))
 					}
 
-					hitKeyTargets := "RUN.LISTENER." + target + ".HIT.TARGETS"
-					lastHitTargets := GetPH(hitKeyTargets)
+					// TODO: i can't remember why i am doing this placeholder thing
+					hitKeyTargets := "RUN.LISTENER." + target + ".HIT.TARGETS" // compose the placeholder key
+					lastHitTargets := GetPH(hitKeyTargets)                     // get the last stored value if exists
 					if !strings.Contains(lastHitTargets, "("+actionDef.Target+")") {
 						lastHitTargets = lastHitTargets + "(" + actionDef.Target + ")"
 						SetPH(hitKeyTargets, lastHitTargets)
@@ -279,18 +282,32 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 						"RUN.LISTENER." + target + ".HIT.TARGETS": lastHitTargets,
 					}).Info("TRIGGER Called")
 					var scopeVars map[string]string = make(map[string]string)
-					if useWaitGroup {
+
+					if Experimental {
 						GetLogger().WithFields(logrus.Fields{
 							"target": actionDef.Target,
-						}).Info("RUN ASYNC")
+						}).Info("RUN Triggered target (not async)")
 
-						go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target, scopeVars)
-
-					} else {
-						GetLogger().WithFields(logrus.Fields{
-							"target": actionDef.Target,
-						}).Info("RUN SEQUENCE")
+						// because we are anyway in a async scope, we should no longer
+						// try to run this target too async.
+						// also the target is triggered by an specific log entriy, it makes
+						// sence to stop the execution of the parent, til this target is executed
 						executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target, scopeVars)
+					} else {
+
+						if useWaitGroup {
+							GetLogger().WithFields(logrus.Fields{
+								"target": actionDef.Target,
+							}).Info("RUN ASYNC")
+
+							go executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target, scopeVars)
+
+						} else {
+							GetLogger().WithFields(logrus.Fields{
+								"target": actionDef.Target,
+							}).Info("RUN SEQUENCE")
+							executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target, scopeVars)
+						}
 					}
 				}
 				if !someReactionTriggered {
@@ -308,84 +325,84 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 	}
 }
 
+// the main script handler
 func lineExecuter(
-	waitGroup *sync.WaitGroup,
-	useWaitGroup bool,
-	stopReason configure.Trigger,
-	runCfg configure.RunConfig,
-	colorCode, bgCode,
-	codeLine,
-	target string,
-	arguments map[string]string,
+	waitGroup *sync.WaitGroup, // the main waitgoup
+	useWaitGroup bool, // flag if we have to use the waitgroup. also means we run in async mode
+	stopReason configure.Trigger, // configuration for the stop reasons
+	runCfg configure.RunConfig, // the runtime configuration
+	colorCode, bgCode, // colorcodes for the left panel
+	codeLine, // the script that have to be processed
+	target string, // the actual target
+	arguments map[string]string, // the arguments for the current scope
 	script configure.Task) (int, bool) {
-	panelSize := 12
-	if script.Options.Panelsize > 0 {
+	panelSize := 12                   // default panelsize
+	if script.Options.Panelsize > 0 { // overwrite panel size if set
 		panelSize = script.Options.Panelsize
 	}
-	var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack)
-	if configure.GetOs() == "windows" {
+	var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack) // get the maincommand by default first
+	if configure.GetOs() == "windows" {                                             // handle windows behavior depending default commands
 		mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBackWindows)
 	}
-	replacedLine := HandlePlaceHolderWithScope(codeLine, arguments)
-	if script.Options.Displaycmd {
+	replacedLine := HandlePlaceHolderWithScope(codeLine, arguments) // placeholders
+	if script.Options.Displaycmd {                                  // do we show the argument?
 		fmt.Println(manout.MessageCln(manout.Dim, manout.ForeYellow, " [cmd] ", manout.ResetDim, manout.ForeCyan, target, manout.ForeDarkGrey, " \t :> ", manout.BoldTag, manout.ForeBlue, replacedLine))
 	}
 
-	SetPH("RUN.SCRIPT_LINE", replacedLine)
+	SetPH("RUN.SCRIPT_LINE", replacedLine) // overwrite the current scriptline. this is only reliable if we not in async mode
 
 	// here we execute the current script line
-	execCode, realExitCode, execErr := ExecuteScriptLine(mainCommand, script.Options.Mainparams, replacedLine, func(logLine string) bool {
+	execCode, realExitCode, execErr := ExecuteScriptLine(mainCommand, script.Options.Mainparams, replacedLine,
+		func(logLine string) bool { // callback for any logline
 
-		SetPH("RUN."+target+".LOG.LAST", logLine)
-		// the watcher
-		if script.Listener != nil {
+			SetPH("RUN."+target+".LOG.LAST", logLine) // set or overwrite the last script output for the target
 
-			GetLogger().WithFields(logrus.Fields{
-				"cnt":      len(script.Listener),
-				"listener": script.Listener,
-			}).Debug("CHECK Listener")
-			listenerWatch(script, target, logLine, waitGroup, useWaitGroup, runCfg)
-		}
-
-		// print the output by configuration
-		if !script.Options.Hideout {
-			foreColor := defaultString(script.Options.Colorcode, colorCode)
-			bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
-			labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
-			if script.Options.Format != "" {
-				format := HandlePlaceHolderWithScope(script.Options.Format, script.Variables)
-				fomatedOutStr := manout.Message(fmt.Sprintf(format, target))
-				labelStr = systools.LabelPrintWithArg(fomatedOutStr, foreColor, bgColor, 1)
+			if script.Listener != nil { // do we have listener?
+				GetLogger().WithFields(logrus.Fields{
+					"cnt":      len(script.Listener),
+					"listener": script.Listener,
+				}).Debug("CHECK Listener")
+				listenerWatch(script, target, logLine, waitGroup, useWaitGroup, runCfg) // listener handler
 			}
 
-			outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
-			if script.Options.Stickcursor {
-				fmt.Print("\033[G\033[K")
-			}
-			// prints the codeline
-			fmt.Println(labelStr, outStr)
-			if script.Options.Stickcursor {
-				fmt.Print("\033[A")
+			// print the output by configuration
+			if !script.Options.Hideout {
+				foreColor := defaultString(script.Options.Colorcode, colorCode)
+				bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
+				labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
+				if script.Options.Format != "" {
+					format := HandlePlaceHolderWithScope(script.Options.Format, script.Variables)
+					fomatedOutStr := manout.Message(fmt.Sprintf(format, target))
+					labelStr = systools.LabelPrintWithArg(fomatedOutStr, foreColor, bgColor, 1)
+				}
 
+				outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
+				if script.Options.Stickcursor {
+					fmt.Print("\033[G\033[K")
+				}
+
+				fmt.Println(labelStr, outStr)   // prints the codeline
+				if script.Options.Stickcursor { // cursor stick handling
+					fmt.Print("\033[A")
+				}
 			}
-		}
-		// do we found a defined reason to stop execution
-		stopReasonFound, message := checkReason(stopReason, logLine)
-		if stopReasonFound {
+			// do we found a defined reason to stop execution
+			stopReasonFound, message := checkReason(stopReason, logLine)
+			if stopReasonFound {
+				if script.Options.Displaycmd {
+					fmt.Println(manout.MessageCln(manout.ForeLightCyan, " STOP-HIT ", manout.ForeWhite, manout.BackBlue, message))
+				}
+				return false
+			}
+			return true
+		}, func(process *os.Process) { // callback if the process started and we got the process id
+			pidStr := fmt.Sprintf("%d", process.Pid) // we use them as info for the user only
+			SetPH("RUN.PID", pidStr)
+			SetPH("RUN."+target+".PID", pidStr)
 			if script.Options.Displaycmd {
-				fmt.Println(manout.MessageCln(manout.ForeLightCyan, " STOP-HIT ", manout.ForeWhite, manout.BackBlue, message))
+				fmt.Println(manout.MessageCln(manout.ForeYellow, " [pid] ", manout.ForeBlue, process.Pid))
 			}
-			return false
-		}
-		return true
-	}, func(process *os.Process) {
-		pidStr := fmt.Sprintf("%d", process.Pid)
-		SetPH("RUN.PID", pidStr)
-		SetPH("RUN."+target+".PID", pidStr)
-		if script.Options.Displaycmd {
-			fmt.Println(manout.MessageCln(manout.ForeYellow, " [pid] ", manout.ForeBlue, process.Pid))
-		}
-	})
+		})
 	if execErr != nil {
 		if script.Options.Displaycmd {
 			fmt.Println(manout.MessageCln(manout.ForeRed, "execution error: ", manout.BackRed, manout.ForeWhite, execErr))

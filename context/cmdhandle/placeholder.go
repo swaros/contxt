@@ -164,11 +164,11 @@ func handleMapVars(line string) string {
 
 // ClearAll removes all entries
 func ClearAll() {
-	keyValue.Range(func(key, value interface{}) bool {
+	keyValue.Range(func(key, _ interface{}) bool {
 		keyValue.Delete(key)
 		return true
 	})
-	taskList.Range(func(key, value interface{}) bool {
+	taskList.Range(func(key, _ interface{}) bool {
 		keyValue.Delete(key)
 		return true
 	})

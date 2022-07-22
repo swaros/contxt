@@ -115,5 +115,6 @@ func WaitAtGroup(futures []Future) []interface{} {
 		GetLogger().WithFields(logrus.Fields{"cur": i, "val": val, "of": len(futures)}).Debug("await result ...")
 		results = append(results, val)
 	}
+	GetLogger().Debug("Waitgroup Done")
 	return results
 }
