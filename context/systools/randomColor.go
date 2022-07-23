@@ -36,7 +36,7 @@ var lastUsedBgColor = 4
 var CurrentColor = "36"
 
 // CurrentBgColor current used background color
-var CurrentBgColor = "40"
+var CurrentBgColor = "103"
 
 var colorCodes = map[int]string{
 	0:  "31",
@@ -133,7 +133,7 @@ func colorCombinationisFine() bool {
 	case "100":
 		{
 			switch CurrentColor {
-			case "32", "36", "95", "96":
+			case "32", "36", "95", "96", "37", "93", "97":
 				return false
 			}
 		}
@@ -175,7 +175,7 @@ func colorCombinationisFine() bool {
 	case "41":
 		{
 			switch CurrentColor {
-			case "31", "32", "34", "36", "91", "95":
+			case "31", "32", "34", "36", "91", "95", "93", "37":
 				return false
 			}
 		}
@@ -196,7 +196,7 @@ func colorCombinationisFine() bool {
 	case "44", "45":
 		{
 			switch CurrentColor {
-			case "32", "33", "36", "94", "95":
+			case "32", "33", "36", "37", "94", "95", "93", "96", "97":
 				return false
 			}
 		}
@@ -327,4 +327,14 @@ func PadStringToR(line string, max int) string {
 		line = " " + line
 	}
 	return line
+}
+
+func TestColorCombinations() {
+	for i := 0; i < 500; i++ {
+		CreateColorCode()
+		labelOut := LabelPrint("\t label print ", 2)
+		fmt.Println(labelOut, "\tbg:", CurrentBgColor, "\t fg:", CurrentColor)
+
+	}
+	ResetColors(true)
 }

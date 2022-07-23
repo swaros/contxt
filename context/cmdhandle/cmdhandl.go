@@ -119,7 +119,6 @@ func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callb
 	cmdArg = GetDefaultCmdOpts(ShellToUse, cmdArg)
 	cmdArg = append(cmdArg, command)
 	cmd := exec.Command(ShellToUse, cmdArg...)
-
 	stdoutPipe, _ := cmd.StdoutPipe()
 	cmd.Stderr = cmd.Stdout
 

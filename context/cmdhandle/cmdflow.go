@@ -164,13 +164,13 @@ func RunTargets(targets string, sharedRun bool) {
 		if runSequencially { // non async run
 			for _, trgt := range allTargets {
 				SetPH("CTX_TARGET", trgt)
-				LabelPrint("execute target in sequence ", manout.ForeCyan, trgt, manout.ForeLightCyan, " ", templatePath)
+				CtxOut(LabelFY("target"), InfoMinor("execute target in sequence"), ValF(trgt), manout.ForeLightCyan, " ", templatePath)
 				ExecPathFile(&wg, !runSequencially, template, trgt)
 			}
 		} else {
 			var futuresExecs []FutureStack
 			for _, trgt := range allTargets { // iterate all targets
-				LabelPrint("execute target async ", manout.ForeCyan, trgt, manout.ForeLightCyan, " ", templatePath)
+				CtxOut(LabelFY("target"), InfoMinor("execute target in Async"), ValF(trgt), manout.ForeLightCyan, " ", templatePath)
 				futuresExecs = append(futuresExecs, FutureStack{
 					AwaitFunc: func(ctx context.Context) interface{} {
 						ctxTarget := ctx.Value(CtxKey{}).(string)                       // get the target from context
@@ -180,10 +180,10 @@ func RunTargets(targets string, sharedRun bool) {
 					Argument: trgt,
 				})
 			}
-			futures := ExecFutureGroup(futuresExecs) // execute all async task
-			LabelPrint("all targets started ")       // just info
-			WaitAtGroup(futures)                     // wait until all task are done
-			LabelPrint("all targets done")           // also just info for the user
+			futures := ExecFutureGroup(futuresExecs)          // execute all async task
+			CtxOut(LabelFY("target"), "all targets started ") // just info
+			WaitAtGroup(futures)                              // wait until all task are done
+			CtxOut(LabelFY("target"), "all targets done")     // also just info for the user
 		}
 
 	} else {
@@ -301,7 +301,7 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 						// try to run this target too async.
 						// also the target is triggered by an specific log entriy, it makes
 						// sence to stop the execution of the parent, til this target is executed
-						LabelPrint("running target ", manout.ForeCyan, actionDef.Target, manout.ForeLightCyan, " trigger action")
+						CtxOut("running target ", manout.ForeCyan, actionDef.Target, manout.ForeLightCyan, " trigger action")
 						executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target, scopeVars)
 					} else {
 
@@ -356,7 +356,7 @@ func lineExecuter(
 	}
 	replacedLine := HandlePlaceHolderWithScope(codeLine, arguments) // placeholders
 	if script.Options.Displaycmd {                                  // do we show the argument?
-		fmt.Println(manout.MessageCln(manout.Dim, manout.ForeYellow, " [cmd] ", manout.ResetDim, manout.ForeCyan, target, manout.ForeDarkGrey, " \t :> ", manout.BoldTag, manout.ForeBlue, replacedLine))
+		CtxOut(LabelFY("cmd"), ValF(target), InfoF(replacedLine))
 	}
 
 	SetPH("RUN.SCRIPT_LINE", replacedLine) // overwrite the current scriptline. this is only reliable if we not in async mode
@@ -411,7 +411,7 @@ func lineExecuter(
 			SetPH("RUN.PID", pidStr)
 			SetPH("RUN."+target+".PID", pidStr)
 			if script.Options.Displaycmd {
-				fmt.Println(manout.MessageCln(manout.ForeYellow, " [pid] ", manout.ForeBlue, process.Pid))
+				CtxOut(LabelFY("pid"), ValF(process.Pid))
 			}
 		})
 	if execErr != nil {
@@ -543,7 +543,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 		}
 
 		// check if we have found the target
-		for _, script := range taskList {
+		for curTIndex, script := range taskList {
 			if strings.EqualFold(target, script.ID) {
 				GetLogger().WithFields(logrus.Fields{
 					"target":    target,
@@ -560,11 +560,12 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 						"reason": message,
 					}).Info("executeTemplate IGNORE because requirements not matching")
 					if script.Options.Displaycmd {
-						fmt.Println(manout.MessageCln(manout.ForeYellow, " [require] ", manout.ForeBlue, message))
+						CtxOut(LabelFY("require"), ValF(message), InfoF("Task-Block "), curTIndex+1, " of ", len(taskList), " skipped")
 					}
 					// ---- return ExitByRequirement
 					continue
 				}
+
 				// get the task related variables
 				for keyName, variable := range script.Variables {
 					SetPH(keyName, HandlePlaceHolder(variable))
@@ -592,7 +593,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 					// any need can have his own needs they needs to
 					// be executed
 					if len(script.Needs) > 0 {
-						LabelPrint("Task ", target, " require  ", manout.ForeCyan, len(script.Needs), manout.CleanTag, " needs. async?  ", manout.ForeCyan, runAsync)
+						CtxOut(LabelFY("target"), ValF(target), InfoF("require"), ValF(len(script.Needs)), InfoF("needs. async?"), ValF(runAsync))
 						GetLogger().WithField("needs", script.Needs).Debug("Needs for the script")
 						if runAsync {
 							var needExecs []FutureStack
@@ -618,7 +619,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 								executeTemplate(waitGroup, false, runCfg, needTarget, argmap)
 							}
 						}
-						LabelPrint("all needs for ", target, " done ")
+						CtxOut(LabelFY("target"), ValF(target), InfoF("needs done"))
 					}
 				} else {
 					// NONE experimental usage of needs
@@ -727,7 +728,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 				}).Debug("executeTemplate next definition")
 				for _, nextTarget := range script.Next {
 					if script.Options.Displaycmd {
-						fmt.Println(manout.MessageCln(manout.ForeYellow, " [next] ", manout.ForeBlue, nextTarget))
+						CtxOut(LabelFY("next"), InfoF(nextTarget))
 					}
 					/* ---- something is wrong with my logic dependig execution not in a sequence (useWaitGroup == true)
 					if useWaitGroup {
