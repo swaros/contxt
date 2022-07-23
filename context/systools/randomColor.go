@@ -25,18 +25,20 @@ package systools
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/swaros/manout"
+	"golang.org/x/term"
 )
 
-var lastUsedColor = 2
-var lastUsedBgColor = 4
+var lastUsedForeColorIndex = 2
+var lastUsedBgColorIndex = 1
 
 // CurrentColor current used foreground color
-var CurrentColor = "36"
+var CurrentColor = "33"
 
 // CurrentBgColor current used background color
-var CurrentBgColor = "103"
+var CurrentBgColor = "41"
 
 var colorCodes = map[int]string{
 	0:  "31",
@@ -80,43 +82,37 @@ type LabelColor struct {
 	BgColor string
 }
 
-// CreateColor defines a random color and returns a id
-func CreateColor() string {
-	CreateColorCode()
-	return colorFormatNumber(colorCodes[lastUsedColor])
-}
-
 // CreateBgColor defines a random color and returns a id
 func CreateBgColor() string {
 	CreateBgColorCode()
-	return colorBgCodes[lastUsedBgColor]
+	return colorBgCodes[lastUsedBgColorIndex]
 }
 
 // CreateColorCode returns the colorcode by a random number
-func CreateColorCode() string {
-	lastUsedColor++
-	if lastUsedColor >= len(colorCodes) {
-		lastUsedColor = 0
+func CreateColorCode() (string, string) {
+	lastUsedForeColorIndex++
+	if lastUsedForeColorIndex >= len(colorCodes) {
+		lastUsedForeColorIndex = 0
 		CreateBgColor()
 	}
-	CurrentColor = colorCodes[lastUsedColor]
+	CurrentColor = colorCodes[lastUsedForeColorIndex]
 	// hardcoded way to check if a backgroundcolor
 	// is usable with forground color
 	// might be replaced in future with something else
 	for !colorCombinationisFine() {
 		CreateColorCode()
 	}
-	return CurrentColor
+	return CurrentColor, CurrentBgColor
 }
 
 // CreateBgColorCode returns the colorcode by a random number
 func CreateBgColorCode() string {
-	lastUsedBgColor++
-	if lastUsedBgColor >= len(colorBgCodes) {
-		lastUsedBgColor = 0
+	lastUsedBgColorIndex++
+	if lastUsedBgColorIndex >= len(colorBgCodes) {
+		lastUsedBgColorIndex = 0
 	}
 
-	CurrentBgColor = colorBgCodes[lastUsedBgColor]
+	CurrentBgColor = colorBgCodes[lastUsedBgColorIndex]
 	return CurrentBgColor
 }
 
@@ -126,42 +122,56 @@ func colorCombinationisFine() bool {
 	case "47":
 		{
 			switch CurrentColor {
-			case "97", "37":
+			case "97", "37", "36", "96", "93":
 				return false
 			}
 		}
 	case "100":
 		{
 			switch CurrentColor {
-			case "32", "36", "95", "96", "37", "93", "97":
+			case "32", "36", "95", "96", "37", "93", "97", "90", "94":
 				return false
 			}
 		}
 	case "101":
 		{
 			switch CurrentColor {
-			case "32", "33", "37", "94", "95", "96":
+			case "32", "33", "37", "94", "95", "96", "31", "34", "90", "91":
 				return false
 			}
 		}
 	case "102":
 		{
 			switch CurrentColor {
-			case "97":
+			case "97", "32", "92":
 				return false
 			}
 		}
-	case "104", "105":
+	case "103":
 		{
 			switch CurrentColor {
-			case "37", "92", "93", "96", "97":
+			case "35", "93", "37", "97", "33":
+				return false
+			}
+		}
+	case "104":
+		{
+			switch CurrentColor {
+			case "37", "92", "93", "96", "97", "31", "90", "91", "34", "35", "94", "95":
+				return false
+			}
+		}
+	case "105":
+		{
+			switch CurrentColor {
+			case "37", "92", "93", "96", "97", "31", "90", "91", "34", "35", "95", "94":
 				return false
 			}
 		}
 	case "106":
 		{
 			switch CurrentColor {
-			case "97":
+			case "97", "36", "96":
 				return false
 			}
 		}
@@ -175,35 +185,42 @@ func colorCombinationisFine() bool {
 	case "41":
 		{
 			switch CurrentColor {
-			case "31", "32", "34", "36", "91", "95", "93", "37":
+			case "31", "32", "34", "36", "91", "95", "93", "35", "37":
 				return false
 			}
 		}
 	case "42":
 		{
 			switch CurrentColor {
-			case "37", "92", "93", "96", "97":
+			case "31", "34", "37", "90", "92", "93", "96", "97", "94":
 				return false
 			}
 		}
 	case "43":
 		{
 			switch CurrentColor {
-			case "93", "97", "37":
+			case "92", "93", "97", "37", "32", "90":
 				return false
 			}
 		}
-	case "44", "45":
+	case "44":
 		{
 			switch CurrentColor {
-			case "32", "33", "36", "37", "94", "95", "93", "96", "97":
+			case "32", "33", "36", "37", "94", "95", "93", "96", "97", "35", "31":
+				return false
+			}
+		}
+	case "45":
+		{
+			switch CurrentColor {
+			case "35", "95":
 				return false
 			}
 		}
 	case "46":
 		{
 			switch CurrentColor {
-			case "37", "92", "96":
+			case "37", "92", "96", "90", "31":
 				return false
 			}
 		}
@@ -219,13 +236,6 @@ func colorFormatNumber(code string) string {
 	return "\033[1;" + code + "m%s"
 }
 
-func colorFormatWithBg(code string, bg string) string {
-	if !manout.ColorEnabled {
-		return "%s"
-	}
-	return "\033[1;" + code + "m\033[" + bg + "m%s"
-}
-
 // PrintColored formats string colored by the color id
 func PrintColored(code string, outputs string) string {
 	if !manout.ColorEnabled {
@@ -233,36 +243,6 @@ func PrintColored(code string, outputs string) string {
 	}
 	return fmt.Sprintf(colorFormatNumber(code), outputs)
 }
-
-// PrintColoredBg formats string colored by the color id including background
-func PrintColoredBg(code string, bgCode string, outputs string) string {
-	if !manout.ColorEnabled {
-		return outputs
-	}
-	return fmt.Sprintf(colorFormatWithBg(code, bgCode), outputs)
-}
-
-// GetWhiteBg Get the White Background
-func GetWhiteBg() string {
-	return "\033[107m"
-}
-
-// GetGreyBg Get the DarkGrey Background
-func GetGreyBg() string {
-	return "\033[100m"
-}
-
-// GetCodeBg Get the Background from color Code
-func GetCodeBg(code string) string {
-	return "\033[" + code + "m"
-}
-
-/*
-func getCodeFg(code string) string {
-
-	return "\033[1;" + code + "m"
-
-}*/
 
 // GetDefaultBg Get the Default Background
 func GetDefaultBg() string {
@@ -285,8 +265,6 @@ func ResetColors(print bool) string {
 
 // LabelPrint prints message by using current fore and background
 func LabelPrint(message string, attribute int) string {
-
-	//outstr := fmt.Sprintf("\033[%s;%sm%s\033[0m", currentColor, currentBgColor, message)
 	outstr := fmt.Sprintf("\033[%d;%s;%sm %s \033[0m", attribute, CurrentBgColor, CurrentColor, message)
 	return outstr
 }
@@ -296,7 +274,6 @@ func LabelPrintWithArg(message string, fg string, bg string, attribute int) stri
 	if !manout.ColorEnabled {
 		return message
 	}
-	//outstr := fmt.Sprintf("\033[%s;%sm%s\033[0m", currentColor, currentBgColor, message)
 	outstr := fmt.Sprintf("\033[%d;%s;%sm %s \033[0m", attribute, fg, bg, message)
 	return outstr
 }
@@ -330,10 +307,35 @@ func PadStringToR(line string, max int) string {
 }
 
 func TestColorCombinations() {
-	for i := 0; i < 500; i++ {
+	width := 0
+
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil {
+		width = w
+
+	}
+	outLen := 0
+	startColComb := ""
+	for i := 0; i < 5000; i++ {
 		CreateColorCode()
-		labelOut := LabelPrint("\t label print ", 2)
-		fmt.Println(labelOut, "\tbg:", CurrentBgColor, "\t fg:", CurrentColor)
+		origStr := "b" + CurrentBgColor + "f" + CurrentColor + ""
+		if i == 0 {
+			startColComb = origStr
+		} else {
+			if startColComb == origStr {
+				return
+			}
+		}
+		str := LabelPrintWithArg("TEST", CurrentColor, CurrentBgColor, 1)
+		if width == 0 {
+			fmt.Println(origStr, str)
+		} else {
+			outLen += (len(origStr) + 6)
+			if outLen >= width {
+				fmt.Println()
+				outLen = (len(origStr) + 6)
+			}
+			fmt.Print(origStr, str)
+		}
 
 	}
 	ResetColors(true)

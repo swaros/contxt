@@ -34,6 +34,7 @@ import (
 
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
+	"github.com/swaros/contxt/context/systools"
 	"github.com/swaros/manout"
 )
 
@@ -781,6 +782,10 @@ func callBackNewWs(newWs string) {
 
 func doMagicParamOne(param string) bool {
 	result := false
+	if param == "show-the-rainbow" {
+		systools.TestColorCombinations()
+		return true
+	}
 	// param is a workspace ?
 	configure.WorkSpaces(func(ws string) {
 		if param == ws {

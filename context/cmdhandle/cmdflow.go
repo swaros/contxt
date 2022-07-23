@@ -401,7 +401,7 @@ func lineExecuter(
 			stopReasonFound, message := checkReason(stopReason, logLine) // do we found a defined reason to stop execution
 			if stopReasonFound {
 				if script.Options.Displaycmd {
-					fmt.Println(manout.MessageCln(manout.ForeLightCyan, " STOP-HIT ", manout.ForeWhite, manout.BackBlue, message))
+					CtxOut(LabelFY("stop-reason"), ValF(message))
 				}
 				return false
 			}
@@ -416,7 +416,7 @@ func lineExecuter(
 		})
 	if execErr != nil {
 		if script.Options.Displaycmd {
-			fmt.Println(manout.MessageCln(manout.ForeRed, "execution error: ", manout.BackRed, manout.ForeWhite, execErr))
+			CtxOut(LabelErrF("exec error"), ValF(execErr))
 		}
 	}
 	// check execution codes
@@ -513,8 +513,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 			SetIfNotExists(keyName, HandlePlaceHolder(variable))
 		}
 		// set the colorcodes for the labels on left side of screen
-		colorCode := systools.CreateColorCode()
-		bgCode := systools.CurrentBgColor
+		colorCode, bgCode := systools.CreateColorCode()
 
 		// updates global variables
 		SetPH("RUN.TARGET", target)
