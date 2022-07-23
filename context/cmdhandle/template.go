@@ -81,12 +81,12 @@ func FindTemplate() (string, bool) {
 }
 
 // GetTemplate return current template
-func GetTemplate() (configure.RunConfig, string, bool) {
+func GetTemplate() (configure.RunConfig, string, bool, error) {
 
 	foundPath, success := FindTemplate()
 	var template configure.RunConfig
 	if !success {
-		return template, "", false
+		return template, "", false, errors.New("template not found or have failures")
 	}
 	ctemplate, err := GetPwdTemplate(foundPath)
 	if err == nil {
@@ -103,22 +103,20 @@ func GetTemplate() (configure.RunConfig, string, bool) {
 						mergo.Merge(&ctemplate, subTemplate, mergo.WithOverride, mergo.WithAppendSlice)
 						GetLogger().WithField("template", ctemplate).Debug("merged")
 					} else {
-						GetLogger().Error(tError)
-						os.Exit(31)
+						return template, "", false, tError
 					}
 				} else {
-					GetLogger().Error(pathError)
-					os.Exit(31)
+					return template, "", false, pathError
 				}
 			}
 		} else {
 			GetLogger().Debug("no required files configured")
 		}
 
-		return ctemplate, foundPath, true
+		return ctemplate, foundPath, true, nil
 	}
 
-	return template, "", false
+	return template, "", false, err
 }
 
 func getIncludeConfigPath(path string) (string, string, bool) {
@@ -217,7 +215,6 @@ func GetPwdTemplate(path string) (configure.RunConfig, error) {
 
 	if err2 != nil {
 		printErrSource(err2, source)
-		fmt.Println("error parsing ", path, "after resolving imports. check result", err2)
 		return template, err2
 	}
 	return template, nil

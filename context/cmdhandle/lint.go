@@ -24,12 +24,14 @@ package cmdhandle
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/kylelemons/godebug/pretty"
+	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/manout"
 	"gopkg.in/yaml.v3"
 )
@@ -133,7 +135,12 @@ func trySupressDefaults(yamlString string) string {
 
 // ShowAsYaml prints the generated source of the task file
 func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
-	template, path, exists := GetTemplate()
+	template, path, exists, terr := GetTemplate()
+	if terr != nil {
+		fmt.Println(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
+		os.Exit(33)
+		return
+	}
 	var b bytes.Buffer
 	if exists {
 		if fullparsed {
@@ -163,11 +170,32 @@ func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
 	}
 }
 
+func TestTemplate() error {
+	if template, _, exists, terr := GetTemplate(); terr != nil {
+		return terr
+	} else {
+		if !exists {
+			GetLogger().Debug("no template exists to check")
+		} else {
+			// check version
+			// if they is not matching, we die with an error
+			if !configure.CheckCurrentVersion(template.Version) {
+				return errors.New("unsupported version " + template.Version)
+			}
+		}
+	}
+	return nil
+}
+
 // LintOut prints the source code and the parsed content
 // in a table view, and marks configured and not configured entries
 // with dfferent colors
 func LintOut(leftcnt, rightcnt int, all bool, noOut bool) bool {
-	template, path, exists := GetTemplate()
+	template, path, exists, terr := GetTemplate()
+	if terr != nil {
+		manout.Error("ERROR", terr.Error())
+		return false
+	}
 	if exists && rightcnt >= 0 && leftcnt >= 0 {
 		data, err := GetParsedTemplateSource(path)
 		if err != nil {

@@ -66,6 +66,19 @@ func GetVersion() string {
 	return outVersion
 }
 
+func CheckCurrentVersion(askWithVersion string) bool {
+	curentVersion := GetVersion()
+
+	if curentVersion == "" || askWithVersion == "" {
+		return true
+	}
+	return CheckVersion(askWithVersion, curentVersion)
+}
+
+func CheckVersion(askWithVersion string, versionStr string) bool {
+	return askWithVersion <= versionStr // til now this seems simple enough
+}
+
 func GetOs() string {
 	if operatingSystem == "" {
 		return strings.ToLower(runtime.GOOS)

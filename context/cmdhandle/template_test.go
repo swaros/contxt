@@ -33,7 +33,7 @@ func TestGetTemplate(t *testing.T) {
 		t.Error(derr)
 	}
 	os.Chdir("./../../docs/test/case0")
-	template, _, exists := cmdhandle.GetTemplate()
+	template, _, exists, _ := cmdhandle.GetTemplate()
 	if !exists {
 		t.Error("could not found the test template file")
 	} else {
@@ -46,7 +46,7 @@ func TestGetTemplate(t *testing.T) {
 
 func TestGetVarImport(t *testing.T) {
 	caseRunner("10", t, func(t *testing.T) {
-		template, path, exists := cmdhandle.GetTemplate()
+		template, path, exists, _ := cmdhandle.GetTemplate()
 		if !exists {
 			t.Error("could not found the test template file", path)
 		} else {
@@ -70,7 +70,7 @@ func TestGetVarImport(t *testing.T) {
 // test to verfiy content that might be build in step 10
 func TestGetVarImport11(t *testing.T) {
 	caseRunner("11", t, func(t *testing.T) {
-		template, path, exists := cmdhandle.GetTemplate()
+		template, path, exists, _ := cmdhandle.GetTemplate()
 		if !exists {
 			t.Error("could not found the test template file", path)
 		} else {
