@@ -29,13 +29,36 @@ task:
       - go test -cover -v -failfast ./...
 
   - id: test-each
+    needs:
+      - test-sys
+      - test-conf
+      - test-cmd
+      - test-dir
+
+  - id: test-sys
     options:
       displaycmd: true
     script:
       - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/systools
-      - go test -failfast -timeout 60s -v github.com/swaros/contxt/context/cmdhandle
+
+  - id: test-conf
+    options:
+      displaycmd: true
+    script:
       - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/configure
-      - go test -failfast -timeout 60s -v github.com/swaros/contxt/context/dirhandle
+  
+  - id: test-cmd
+    options:
+      displaycmd: true
+      stickcursor: true
+    script:
+      - go test -failfast -timeout 60s -v github.com/swaros/contxt/context/cmdhandle
+
+  - id: test-dir
+    options:
+      displaycmd: true
+    script:
+      - go test -failfast -timeout 20s -v github.com/swaros/contxt/context/dirhandle
 
   - id: set-version
     options:
