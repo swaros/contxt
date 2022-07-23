@@ -38,6 +38,15 @@ func SetPH(key, value string) {
 	keyValue.Store(key, value)
 }
 
+func AppendToPH(key, value string) bool {
+	if val, ok := keyValue.Load(key); ok {
+		value = val.(string) + value
+		keyValue.Store(key, value)
+		return true
+	}
+	return false
+}
+
 func SetIfNotExists(key, value string) {
 	_, ok := keyValue.Load(key)
 	if !ok {

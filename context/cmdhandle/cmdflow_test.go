@@ -469,17 +469,40 @@ func TestConcurrent(t *testing.T) {
 	})
 }
 
-func assertConcurrentCheck(t *testing.T, expected, target string) {
+func assertConcurrentCheck(t *testing.T, expected []string, target string) {
 	cmdhandle.Experimental = true
 	folderRunner("./../../docs/test/01concurrent", t, func(t *testing.T) {
 		cmdhandle.RunTargets(target, true)
 		result := cmdhandle.GetPH("teststr")
-		if result != expected {
-			t.Error("target:", target, "expected:", expected, " instead:", result)
+		allOkay := false
+		for _, expct := range expected {
+			allOkay = allOkay || expct == result
+		}
+		if !allOkay {
+			t.Error("target:", target, "one is expected:", expected, " instead:", result)
 		}
 	})
 }
 
 func TestConcurrentB(t *testing.T) {
-	assertConcurrentCheck(t, "BASE:NA:NB:NC:MB:", "main_b")
+
+	var testTargets map[string][]string = make(map[string][]string)
+	testTargets["main_a"] = []string{"BASE:MA:"}
+	testTargets["main_b"] = []string{"BASE:NB:NA:NC:MB:", "BASE:NB:NC:NA:MB:", "BASE:NC:NA:NB:MB:", "BASE:NA:NB:NC:MB:"}
+	testTargets["main_c"] = []string{
+		"BASE:NA:NB:NC:TA:TB:TC:MC:",
+		"BASE:NB:NA:NC:TA:TB:TC:MC:",
+		"BASE:NA:NB:NC:TA:TC:TB:MC:",
+		"BASE:NB:NA:NC:TA:TC:TB:MC:",
+		"BASE:NB:NA:NC:TB:TA:TC:MC:",
+		"BASE:NA:NB:NC:TB:TA:TC:MC:",
+		"BASE:NA:NB:NC:TB:TC:TA:MC:",
+		"BASE:NB:NA:NC:TB:TC:TA:MC:",
+		"BASE:NA:NB:NC:TC:TA:TB:MC:",
+		"BASE:NA:NB:NC:TC:TB:TA:MC:",
+		"BASE:NB:NA:NC:TC:TB:TA:MC:"}
+
+	for target, expected := range testTargets {
+		assertConcurrentCheck(t, expected, target)
+	}
 }

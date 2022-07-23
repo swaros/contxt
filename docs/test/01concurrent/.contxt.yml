@@ -8,43 +8,43 @@ task:
   - id: need_a
     script:
       - sleep 0.4
-      - echo " --------- need_a"
-      - "#@set teststr ${teststr}NA:"
+      - "#@add teststr NA:"
+      - echo " --------- need_a ${teststr}"
 
   - id: need_b
     script:
-      - sleep 0.2
-      - echo " --------- need_b"
-      - "#@set teststr ${teststr}NB:"
+      - sleep 0.2      
+      - "#@add teststr NB:"
+      - echo " --------- need_b ${teststr}"
       
   - id: need_c
     script:
       - sleep 0.7
-      - echo " --------- need_c"
-      - "#@set teststr ${teststr}NC:"
+      - "#@add teststr NC:"
+      - echo " --------- need_c ${teststr}"
 
   - id: task_a
     script:
       - sleep 0.3
-      - echo " --------- subtask_a"
-      - "#@set teststr ${teststr}TA:"
+      - "#@add teststr TA:"
+      - echo " --------- subtask_a ${teststr}"
 
   - id: task_b
     script:
       - sleep 0.35
-      - echo " --------- subtask_b"
-      - "#@set teststr ${teststr}TB:"
+      - "#@add teststr TB:"
+      - echo " --------- subtask_b ${teststr}"
 
   - id: task_c
     script:
       - sleep 0.1
-      - echo " --------- subtask_c"
-      - "#@set teststr ${teststr}TC:"
+      - "#@add teststr TC:"
+      - echo " --------- subtask_c ${teststr}"
 
 
   - id: main_a
     script:
-      - "#@set teststr ${teststr}MA:"
+      - "#@add teststr MA:"
       - echo ${teststr}
 
   - id: main_b
@@ -53,7 +53,7 @@ task:
       - need_b
       - need_c
     script:
-      - "#@set teststr ${teststr}MB:"
+      - "#@add teststr MB:"
       - echo ${teststr}      
 
   - id: main_c
@@ -66,7 +66,7 @@ task:
       - task_b
       - task_c  
     script:
-      - "#@set teststr ${teststr}MC:"
+      - "#@add teststr MC:"
       - echo ${teststr}     
 
   - id: main_d
@@ -75,5 +75,5 @@ task:
       - main_c
       - need_c  
     script:
-      - "#@set teststr ${teststr}MD:"
+      - "#@add teststr MD:"
       - echo ${teststr} 

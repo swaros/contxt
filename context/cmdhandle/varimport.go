@@ -57,6 +57,7 @@ const (
 	fromJSONCmdMark = "#@import-json-exec"
 	parseVarsMark   = "#@var"
 	setvarMark      = "#@set"
+	addvarMark      = "#@add"
 	equalsMark      = "#@if-equals"
 	notEqualsMark   = "#@if-not-equals"
 	osCheck         = "#@if-os"
@@ -179,6 +180,16 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					}
 				} else {
 					manout.Error("invalid usage", fromJSONCmdMark, " needs 2 arguments at least. <keyname> <bash-command>")
+				}
+			case addvarMark:
+				if len(parts) >= 2 {
+					setKeyname := parts[1]
+					setValue := strings.Join(parts[2:], " ")
+					if ok := AppendToPH(setKeyname, HandlePlaceHolder(setValue)); !ok {
+						manout.Error("variable must exists for add ", addvarMark, " ", setKeyname)
+					}
+				} else {
+					manout.Error("invalid usage", setvarMark, " needs 2 arguments at least. <keyname> <value>")
 				}
 			case setvarMark:
 				if len(parts) >= 2 {
