@@ -331,7 +331,12 @@ you need to set the name for the workspace`,
 				fmt.Println("No paths submitted")
 				os.Exit(1)
 			}
-			_, path, exists := GetTemplate()
+			_, path, exists, terr := GetTemplate()
+			if terr != nil {
+				fmt.Println(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
+				os.Exit(33)
+				return
+			}
 			if exists {
 				for _, addPath := range args {
 					err := CreateImport(path, addPath)
@@ -733,7 +738,7 @@ func callBackOldWs(oldws string) bool {
 	configure.PathWorker(func(_ int, path string) {
 
 		os.Chdir(path)
-		template, templateFile, exists := GetTemplate()
+		template, templateFile, exists, _ := GetTemplate()
 
 		GetLogger().WithFields(logrus.Fields{
 			"templateFile": templateFile,
@@ -760,7 +765,7 @@ func callBackNewWs(newWs string) {
 	configure.PathWorker(func(_ int, path string) {
 
 		os.Chdir(path)
-		template, templateFile, exists := GetTemplate()
+		template, templateFile, exists, _ := GetTemplate()
 
 		GetLogger().WithFields(logrus.Fields{
 			"templateFile": templateFile,
@@ -799,7 +804,10 @@ func doMagicParamOne(param string) bool {
 
 func getAllTargets() ([]string, bool) {
 	plainTargets, found := targetsAsMap()
-	template, _, exists := GetTemplate()
+	template, _, exists, terr := GetTemplate()
+	if terr != nil {
+		return plainTargets, found
+	}
 	if exists {
 		shareds := detectSharedTargetsAsMap(template)
 		plainTargets = append(plainTargets, shareds...)
@@ -830,7 +838,11 @@ func ExistInStrMap(testStr string, check []string) bool {
 
 func targetsAsMap() ([]string, bool) {
 	var targets []string
-	template, _, exists := GetTemplate()
+	template, _, exists, terr := GetTemplate()
+	if terr != nil {
+		targets = append(targets, terr.Error())
+		return targets, false
+	}
 	if exists {
 		return templateTargetsAsMap(template)
 	}
@@ -855,7 +867,10 @@ func templateTargetsAsMap(template configure.RunConfig) ([]string, bool) {
 
 func printTargets() {
 
-	template, path, exists := GetTemplate()
+	template, path, exists, terr := GetTemplate()
+	if terr != nil {
+		return
+	}
 	if exists {
 		fmt.Println(manout.MessageCln(manout.ForeDarkGrey, "used taskfile:\t", manout.CleanTag, path))
 		fmt.Println(manout.MessageCln(manout.ForeDarkGrey, "tasks count:  \t", manout.CleanTag, len(template.Task)))
@@ -914,7 +929,7 @@ func printPaths() {
 		}
 		fmt.Println(" contains paths:")
 		configure.PathWorker(func(index int, path string) {
-			template, _, exists := GetTemplate()
+			template, _, exists, _ := GetTemplate()
 			add := ""
 			if strings.Contains(dir, path) {
 				add = manout.ResetDim + manout.ForeCyan

@@ -28,7 +28,10 @@ import (
 )
 
 func ExportTask(target string) (string, error) {
-	template, _, exists := GetTemplate()
+	template, _, exists, terr := GetTemplate()
+	if terr != nil {
+		return "", terr
+	}
 	if !exists {
 		return "", errors.New("template not exists")
 	}

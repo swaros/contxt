@@ -78,9 +78,13 @@ func SharedFolderExecuter(template configure.RunConfig, locationHandle func(stri
 
 func RunShared(targets string) {
 
-	allTargets := strings.Split(targets, ",")       // targets seperated with comma, should run async
-	template, templatePath, exists := GetTemplate() // get the template
-	if !exists {                                    // it is expected that most of the time the shared taskfile do not have the target. so just get out
+	allTargets := strings.Split(targets, ",")
+	template, templatePath, exists, terr := GetTemplate()
+	if terr != nil {
+		fmt.Println(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
+		return
+	}
+	if !exists {
 		return
 	}
 
@@ -122,6 +126,13 @@ func RunShared(targets string) {
 // seperated by comma
 func RunTargets(targets string, sharedRun bool) {
 
+	// validate first
+	if err := TestTemplate(); err != nil {
+		fmt.Println("found issues in the current template ", err)
+		os.Exit(32)
+		return
+	}
+
 	SetPH("CTX_TARGETS", targets)
 
 	// this flag should only true on the first execution
@@ -133,8 +144,13 @@ func RunTargets(targets string, sharedRun bool) {
 		RunShared(targets)
 	}
 
-	allTargets := strings.Split(targets, ",")       // get all targets that have to be started togehter
-	template, templatePath, exists := GetTemplate() // get the current template
+	allTargets := strings.Split(targets, ",")
+	template, templatePath, exists, terr := GetTemplate()
+	if terr != nil {
+		fmt.Println(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
+		os.Exit(33)
+		return
+	}
 	GetLogger().WithField("targets", allTargets).Info("run targets...")
 	var runSequencially = false // default is async mode
 	if exists {                 // TODO: the exists check just for this config reading seems wrong
