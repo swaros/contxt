@@ -39,10 +39,10 @@ import (
 
 const (
 	// DefaultExecFile is the filename of the script defaut file
-	DefaultExecFile = "/.context.json"
+	DefaultExecFile = string(os.PathSeparator) + ".context.json"
 
 	// DefaultExecYaml is the default yaml configuration file
-	DefaultExecYaml     = "/.contxt.yml"
+	DefaultExecYaml     = string(os.PathSeparator) + ".contxt.yml"
 	defaultExecYamlName = ".contxt.yml"
 
 	// TargetScript is script default target

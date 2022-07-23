@@ -7,6 +7,11 @@ import (
 )
 
 func LabelPrint(msg ...interface{}) {
-	fmt.Print(manout.MessageCln(manout.BackWhite, manout.ForeCyan, "con", manout.ForeDarkGrey, ".", manout.ForeLightGrey, "txt", manout.CleanTag, " "))
+	fmt.Print(manout.MessageCln(
+		manout.BackDarkGrey, " ",
+		manout.BackWhite, manout.ForeLightCyan,
+		"   con", manout.ForeDarkGrey, ".", manout.ForeLightGrey, "txt   ",
+		manout.BackDarkGrey, " ",
+		manout.CleanTag, " "))
 	fmt.Println(manout.MessageCln(msg...))
 }

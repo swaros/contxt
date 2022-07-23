@@ -63,7 +63,7 @@ func FindTemplate() (string, bool) {
 	// 2. looking in current path with user name as prefix
 	dir, curerr := dirhandle.Current()
 	if curerr == nil {
-		userYml := dir + "/" + usr.Username + defaultExecYamlName
+		userYml := dir + string(os.PathSeparator) + usr.Username + defaultExecYamlName
 		exists, exerr = dirhandle.Exists(userYml)
 		if exerr == nil && exists {
 			return userYml, true
@@ -123,7 +123,7 @@ func GetTemplate() (configure.RunConfig, string, bool) {
 
 func getIncludeConfigPath(path string) (string, string, bool) {
 	fullPath := filepath.Dir(path)
-	checkIncPath := fullPath + "/.inc.contxt.yml"
+	checkIncPath := fullPath + string(os.PathSeparator) + ".inc.contxt.yml"
 	existing, fileerror := dirhandle.Exists(checkIncPath)
 	if fileerror != nil || !existing {
 		return checkIncPath, fullPath, false

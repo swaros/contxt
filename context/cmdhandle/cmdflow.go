@@ -90,7 +90,12 @@ func RunShared(targets string) {
 
 	GetLogger().WithField("targets", allTargets).Info("SHARED START run targets...")
 
-	// handle all shared usages
+	// handle all shared usages. these usages are set
+	// in the template by the string map named Use in the config section
+	// Config:
+	//    Use:
+	//      - shared_task_1
+	//      - shared_task_2
 	if len(template.Config.Use) > 0 {
 		GetLogger().WithField("uses", template.Config.Use).Info("found external dependecy")
 		fmt.Println(manout.MessageCln(manout.ForeCyan, "[SHARED loop]"))
@@ -159,11 +164,13 @@ func RunTargets(targets string, sharedRun bool) {
 		if runSequencially { // non async run
 			for _, trgt := range allTargets {
 				SetPH("CTX_TARGET", trgt)
+				LabelPrint("execute target in sequence ", manout.ForeCyan, trgt, manout.ForeLightCyan, " ", templatePath)
 				ExecPathFile(&wg, !runSequencially, template, trgt)
 			}
 		} else {
 			var futuresExecs []FutureStack
 			for _, trgt := range allTargets { // iterate all targets
+				LabelPrint("execute target async ", manout.ForeCyan, trgt, manout.ForeLightCyan, " ", templatePath)
 				futuresExecs = append(futuresExecs, FutureStack{
 					AwaitFunc: func(ctx context.Context) interface{} {
 						ctxTarget := ctx.Value(CtxKey{}).(string)                       // get the target from context
@@ -174,7 +181,9 @@ func RunTargets(targets string, sharedRun bool) {
 				})
 			}
 			futures := ExecFutureGroup(futuresExecs) // execute all async task
+			LabelPrint("all targets started ")       // just info
 			WaitAtGroup(futures)                     // wait until all task are done
+			LabelPrint("all targets done")           // also just info for the user
 		}
 
 	} else {
@@ -292,6 +301,7 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 						// try to run this target too async.
 						// also the target is triggered by an specific log entriy, it makes
 						// sence to stop the execution of the parent, til this target is executed
+						LabelPrint("running target ", manout.ForeCyan, actionDef.Target, manout.ForeLightCyan, " trigger action")
 						executeTemplate(waitGroup, useWaitGroup, runCfg, actionDef.Target, scopeVars)
 					} else {
 
@@ -365,20 +375,21 @@ func lineExecuter(
 				listenerWatch(script, target, logLine, waitGroup, useWaitGroup, runCfg) // listener handler
 			}
 
-			// print the output by configuration
+			// The whole output can be ignored by configuration
+			// if this is not enabled then we handle all these here
 			if !script.Options.Hideout {
-				foreColor := defaultString(script.Options.Colorcode, colorCode)
-				bgColor := defaultString(script.Options.Bgcolorcode, bgCode)
-				labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1)
-				if script.Options.Format != "" {
-					format := HandlePlaceHolderWithScope(script.Options.Format, script.Variables)
-					fomatedOutStr := manout.Message(fmt.Sprintf(format, target))
-					labelStr = systools.LabelPrintWithArg(fomatedOutStr, foreColor, bgColor, 1)
+				foreColor := defaultString(script.Options.Colorcode, colorCode)                                              // get the labe foreground color
+				bgColor := defaultString(script.Options.Bgcolorcode, bgCode)                                                 // the background color
+				labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1) // fromat the label
+				if script.Options.Format != "" {                                                                             // do we have a specific format for the label, then we use them instead
+					format := HandlePlaceHolderWithScope(script.Options.Format, script.Variables) // handle placeholder in the label
+					fomatedOutStr := manout.Message(fmt.Sprintf(format, target))                  // also format the message depending format codes
+					labelStr = systools.LabelPrintWithArg(fomatedOutStr, foreColor, bgColor, 1)   // reformat the label
 				}
 
-				outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2)
-				if script.Options.Stickcursor {
-					fmt.Print("\033[G\033[K")
+				outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2) // hardcoded format for the logoutput iteself
+				if script.Options.Stickcursor {                                   // optional set back the cursor to the beginning
+					fmt.Print("\033[G\033[K") // done by escape codes
 				}
 
 				fmt.Println(labelStr, outStr)   // prints the codeline
@@ -386,8 +397,8 @@ func lineExecuter(
 					fmt.Print("\033[A")
 				}
 			}
-			// do we found a defined reason to stop execution
-			stopReasonFound, message := checkReason(stopReason, logLine)
+
+			stopReasonFound, message := checkReason(stopReason, logLine) // do we found a defined reason to stop execution
 			if stopReasonFound {
 				if script.Options.Displaycmd {
 					fmt.Println(manout.MessageCln(manout.ForeLightCyan, " STOP-HIT ", manout.ForeWhite, manout.BackBlue, message))
@@ -581,7 +592,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 					// any need can have his own needs they needs to
 					// be executed
 					if len(script.Needs) > 0 {
-
+						LabelPrint("Task ", target, " require  ", manout.ForeCyan, len(script.Needs), manout.CleanTag, " needs. async?  ", manout.ForeCyan, runAsync)
 						GetLogger().WithField("needs", script.Needs).Debug("Needs for the script")
 						if runAsync {
 							var needExecs []FutureStack
@@ -599,6 +610,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 							}
 							futures := ExecFutureGroup(needExecs)
 							results := WaitAtGroup(futures)
+
 							GetLogger().WithField("result", results).Debug("needs result")
 						} else {
 							for _, needTarget := range script.Needs {
@@ -606,7 +618,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 								executeTemplate(waitGroup, false, runCfg, needTarget, argmap)
 							}
 						}
-
+						LabelPrint("all needs for ", target, " done ")
 					}
 				} else {
 					// NONE experimental usage of needs

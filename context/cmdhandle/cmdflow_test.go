@@ -481,5 +481,5 @@ func assertConcurrentCheck(t *testing.T, expected, target string) {
 }
 
 func TestConcurrentB(t *testing.T) {
-	//assertConcurrentCheck(t, "BASE:NA:NB:NC:MB:", "main_b")
+	assertConcurrentCheck(t, "BASE:NA:NB:NC:MB:", "main_b")
 }
