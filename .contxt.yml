@@ -50,7 +50,7 @@ task:
   - id: test-cmd
     options:
       displaycmd: true
-      stickcursor: true
+      stickcursor: false
     script:
       - go test -failfast -timeout 60s -v github.com/swaros/contxt/context/cmdhandle
 

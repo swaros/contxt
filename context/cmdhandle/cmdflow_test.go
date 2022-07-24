@@ -484,6 +484,48 @@ func assertConcurrentCheck(t *testing.T, expected []string, target string) {
 	})
 }
 
+func assertConcurrentCheckUnsorted(t *testing.T, path string, expected []string, counts []int, target string) {
+	cmdhandle.Experimental = true
+	folderRunner(path, t, func(t *testing.T) {
+		cmdhandle.RunTargets(target, true)
+		result := cmdhandle.GetPH("teststr")
+		resultArr := strings.Split(result, ":")
+		checkOff := 0
+		step := 0
+
+		for k, expct := range expected {
+			if len(counts) < k {
+				t.Error("not enough counts submitted. requestd", k, " size of counts", len(counts))
+				return
+			}
+			expctCnt := counts[k] + step // we use the compiler for check if this is set
+			for i := checkOff; i < expctCnt; i++ {
+				checkSource := resultArr[i]
+				if !strings.Contains(checkSource, expct) {
+					t.Log("full result: ", result)
+					t.Error("missing:", expct, " in segment:", checkSource, " range:", expctCnt, " offset:", checkOff)
+				}
+				step++
+			}
+			checkOff = step
+
+		}
+
+	})
+}
+
+// testing the exact values of the testrun
+// because the result differs for any run
+// by the ressources of the pc, we need
+// to test any possible pattern.
+// at least the test for main_c
+// contains already too many possible
+// results.
+// so stopped here an went to more pattern like
+// testing in TestConcurrentUnsorted
+// but will keep them because til now
+// TestConcurrentUnsorted do not test
+// multiple used keys
 func TestConcurrentB(t *testing.T) {
 
 	var testTargets map[string][]string = make(map[string][]string)
@@ -500,9 +542,44 @@ func TestConcurrentB(t *testing.T) {
 		"BASE:NB:NA:NC:TB:TC:TA:MC:",
 		"BASE:NA:NB:NC:TC:TA:TB:MC:",
 		"BASE:NA:NB:NC:TC:TB:TA:MC:",
+		"BASE:NB:NA:NC:TC:TA:TB:MC:",
 		"BASE:NB:NA:NC:TC:TB:TA:MC:"}
 
 	for target, expected := range testTargets {
 		assertConcurrentCheck(t, expected, target)
+	}
+}
+
+func TestConcurrentUnsorted(t *testing.T) {
+	var testTargets map[string][]string = make(map[string][]string)
+	var testCounts map[string][]int = make(map[string][]int)
+
+	testTargets["main_b"] = []string{
+		"BASE",
+		"N",
+		"MB",
+	}
+	testCounts["main_b"] = []int{1, 3, 1}
+
+	testTargets["main_c"] = []string{
+		"BASE",
+		"N",
+		"T",
+		"MC",
+	}
+	testCounts["main_c"] = []int{1, 3, 3, 1}
+
+	testTargets["main_d"] = []string{
+		"BASE",
+		"N",
+		"T",
+		"NC",
+		"MC",
+		"MD",
+	}
+	testCounts["main_d"] = []int{1, 2, 3, 1, 1, 1}
+
+	for target, expected := range testTargets {
+		assertConcurrentCheckUnsorted(t, "./../../docs/test/01concurrent", expected, testCounts[target], target)
 	}
 }
