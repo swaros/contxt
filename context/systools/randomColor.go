@@ -117,116 +117,118 @@ func CreateBgColorCode() string {
 }
 
 func colorCombinationisFine() bool {
-	switch CurrentBgColor {
-
-	case "47":
-		{
-			switch CurrentColor {
-			case "97", "37", "36", "96", "93":
-				return false
-			}
-		}
-	case "100":
-		{
-			switch CurrentColor {
-			case "32", "36", "95", "96", "37", "93", "97", "90", "94":
-				return false
-			}
-		}
-	case "101":
-		{
-			switch CurrentColor {
-			case "32", "33", "37", "94", "95", "96", "31", "34", "90", "91":
-				return false
-			}
-		}
-	case "102":
-		{
-			switch CurrentColor {
-			case "97", "32", "92":
-				return false
-			}
-		}
-	case "103":
-		{
-			switch CurrentColor {
-			case "35", "93", "37", "97", "33":
-				return false
-			}
-		}
-	case "104":
-		{
-			switch CurrentColor {
-			case "37", "92", "93", "96", "97", "31", "90", "91", "34", "35", "94", "95":
-				return false
-			}
-		}
-	case "105":
-		{
-			switch CurrentColor {
-			case "37", "92", "93", "96", "97", "31", "90", "91", "34", "35", "95", "94":
-				return false
-			}
-		}
-	case "106":
-		{
-			switch CurrentColor {
-			case "97", "36", "96":
-				return false
-			}
-		}
-	case "40":
-		{
-			switch CurrentColor {
-			case "31", "34", "90", "91", "35":
-				return false
-			}
-		}
-	case "41":
-		{
-			switch CurrentColor {
-			case "31", "32", "34", "36", "91", "95", "93", "35", "37", "90":
-				return false
-			}
-		}
-	case "42":
-		{
-			switch CurrentColor {
-			case "31", "34", "37", "90", "92", "93", "96", "97", "94":
-				return false
-			}
-		}
-	case "43":
-		{
-			switch CurrentColor {
-			case "92", "93", "97", "37", "32", "90":
-				return false
-			}
-		}
-	case "44":
-		{
-			switch CurrentColor {
-			case "32", "33", "36", "37", "94", "95", "93", "96", "97", "35", "31":
-				return false
-			}
-		}
-	case "45":
-		{
-			switch CurrentColor {
-			case "35", "95":
-				return false
-			}
-		}
-	case "46":
-		{
-			switch CurrentColor {
-			case "37", "92", "96", "90", "31":
-				return false
-			}
-		}
-
-	}
 	return true
+	/*
+		switch CurrentBgColor {
+
+		case "47":
+			{
+				switch CurrentColor {
+				case "97", "37", "36", "96", "93":
+					return false
+				}
+			}
+		case "100":
+			{
+				switch CurrentColor {
+				case "32", "36", "95", "96", "37", "93", "97", "90", "94":
+					return false
+				}
+			}
+		case "101":
+			{
+				switch CurrentColor {
+				case "32", "33", "37", "94", "95", "96", "31", "34", "90", "91":
+					return false
+				}
+			}
+		case "102":
+			{
+				switch CurrentColor {
+				case "97", "32", "92":
+					return false
+				}
+			}
+		case "103":
+			{
+				switch CurrentColor {
+				case "35", "93", "37", "97", "33":
+					return false
+				}
+			}
+		case "104":
+			{
+				switch CurrentColor {
+				case "37", "92", "93", "96", "97", "31", "90", "91", "34", "35", "94", "95":
+					return false
+				}
+			}
+		case "105":
+			{
+				switch CurrentColor {
+				case "37", "92", "93", "96", "97", "31", "90", "91", "34", "35", "95", "94":
+					return false
+				}
+			}
+		case "106":
+			{
+				switch CurrentColor {
+				case "97", "36", "96":
+					return false
+				}
+			}
+		case "40":
+			{
+				switch CurrentColor {
+				case "31", "34", "90", "91", "35":
+					return false
+				}
+			}
+		case "41":
+			{
+				switch CurrentColor {
+				case "31", "32", "34", "36", "91", "95", "93", "35", "37", "90":
+					return false
+				}
+			}
+		case "42":
+			{
+				switch CurrentColor {
+				case "31", "34", "37", "90", "92", "93", "96", "97", "94":
+					return false
+				}
+			}
+		case "43":
+			{
+				switch CurrentColor {
+				case "92", "93", "97", "37", "32", "90":
+					return false
+				}
+			}
+		case "44":
+			{
+				switch CurrentColor {
+				case "32", "33", "36", "37", "94", "95", "93", "96", "97", "35", "31":
+					return false
+				}
+			}
+		case "45":
+			{
+				switch CurrentColor {
+				case "35", "95":
+					return false
+				}
+			}
+		case "46":
+			{
+				switch CurrentColor {
+				case "37", "92", "96", "90", "31":
+					return false
+				}
+			}
+
+		}
+		return true*/
 }
 
 func colorFormatNumber(code string) string {
@@ -274,9 +276,12 @@ func LabelPrintWithArg(message string, fg string, bg string, attribute int) stri
 	if !manout.ColorEnabled {
 		return message
 	}
-	colorblock := fmt.Sprintf("\033[%d;%s;%sm \033[0m ", attribute, fg, bg)
+	//sign := "\u2807"
+	//sign := "█▇▆▅▄▃▂▁"
+	sign := "▓▒░"
+	colorblock := fmt.Sprintf("\033[%d;%s;%sm%s\033[0m ", attribute, fg, bg, sign)
 	coloredMsg := fmt.Sprintf("\033[%d;%sm%s", attribute, fg, message)
-	return colorblock + coloredMsg + colorblock
+	return coloredMsg + colorblock // + "⇨"
 }
 
 // PadString Returns max len string filled with spaces

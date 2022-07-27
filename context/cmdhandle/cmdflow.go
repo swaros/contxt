@@ -394,10 +394,10 @@ func lineExecuter(
 			// The whole output can be ignored by configuration
 			// if this is not enabled then we handle all these here
 			if !script.Options.Hideout {
-				foreColor := defaultString(script.Options.Colorcode, colorCode)                                              // get the labe foreground color
-				bgColor := defaultString(script.Options.Bgcolorcode, bgCode)                                                 // the background color
-				labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target+" :", panelSize), foreColor, bgColor, 1) // format the label
-				if script.Options.Format != "" {                                                                             // do we have a specific format for the label, then we use them instead
+				foreColor := defaultString(script.Options.Colorcode, colorCode)                                         // get the labe foreground color
+				bgColor := defaultString(script.Options.Bgcolorcode, bgCode)                                            // the background color
+				labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target, panelSize), foreColor, bgColor, 1) // format the label
+				if script.Options.Format != "" {                                                                        // do we have a specific format for the label, then we use them instead
 					format := HandlePlaceHolderWithScope(script.Options.Format, script.Variables) // handle placeholder in the label
 					fomatedOutStr := manout.Message(fmt.Sprintf(format, target))                  // also format the message depending format codes
 					labelStr = systools.LabelPrintWithArg(fomatedOutStr, foreColor, bgColor, 1)   // reformat the label
