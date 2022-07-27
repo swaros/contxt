@@ -6,7 +6,24 @@ import (
 	"github.com/swaros/manout"
 )
 
+type CtxOutCtrl struct {
+	IgnoreCase bool
+}
+
 func CtxOut(msg ...interface{}) {
+	var newMsh []interface{}
+	for _, chk := range msg {
+		switch chk.(type) {
+		case CtxOutCtrl:
+			if chk.(CtxOutCtrl).IgnoreCase { // if we have found this flag set to true, it means ignore the message
+				return
+			}
+		default:
+			newMsh = append(newMsh, chk)
+		}
+
+	}
+	msg = newMsh
 	fmt.Print(manout.MessageCln(
 		manout.BackDarkGrey, " ",
 		manout.BackWhite, manout.ForeLightCyan,
@@ -22,6 +39,10 @@ func ValF(val interface{}) string {
 
 func InfoF(val interface{}) string {
 	return manout.Message(manout.ForeLightCyan, val, " ")
+}
+
+func InfoRed(val interface{}) string {
+	return manout.Message(manout.ForeLightRed, val, " ")
 }
 
 func InfoMinor(val interface{}) string {

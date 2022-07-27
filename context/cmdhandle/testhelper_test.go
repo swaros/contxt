@@ -31,6 +31,7 @@ func caseRunner(id string, t *testing.T, testFunc func(t *testing.T)) {
 
 func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) {
 	cmdhandle.ClearAll()
+	cmdhandle.ResetAllTaskInfos()
 	cmdhandle.InitDefaultVars()
 	old, derr := dirhandle.Current()
 	if derr != nil {

@@ -582,3 +582,34 @@ func TestConcurrentMainC(t *testing.T) {
 	}
 	assertRuntimeGroup(t, "./../../docs/test/01concurrent", "main_c", test)
 }
+
+func TestConcurrentMainD(t *testing.T) {
+	// BASE:NB:MC:TC:NA:TA:TB:NC:MD:
+	/*
+			 - id: main_d
+		    needs:
+		      - need_a
+		      - main_c
+		      - need_c
+		    script:
+		      - "#@add teststr MD:"
+		      - echo ${teststr}
+	*/
+	var test TestRuntimeGroup = TestRuntimeGroup{
+		[]RuntimeGroupExpected{
+			{
+				Contains: []string{"BASE"}, // base first at all
+			},
+			{
+				Contains: []string{"NB"}, // need b first as it is a need of main_c
+			},
+			{
+				Contains: []string{"MC", "NC", "NA", "TC", "TA", "TB"}, //anything else at the end unordered
+			},
+			{
+				Contains: []string{"MD"}, // the last is main_d
+			},
+		},
+	}
+	assertRuntimeGroup(t, "./../../docs/test/01concurrent", "main_d", test)
+}

@@ -274,8 +274,9 @@ func LabelPrintWithArg(message string, fg string, bg string, attribute int) stri
 	if !manout.ColorEnabled {
 		return message
 	}
-	colorblock := fmt.Sprintf("\033[%d;%s;%sm|\033[0m ", attribute, fg, bg)
-	return colorblock + message + colorblock
+	colorblock := fmt.Sprintf("\033[%d;%s;%sm \033[0m ", attribute, fg, bg)
+	coloredMsg := fmt.Sprintf("\033[%d;%sm%s", attribute, fg, message)
+	return colorblock + coloredMsg + colorblock
 }
 
 // PadString Returns max len string filled with spaces
