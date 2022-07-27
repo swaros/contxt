@@ -11,6 +11,71 @@ import (
 	"github.com/swaros/contxt/context/cmdhandle"
 )
 
+type RuntimeGroupExpected struct {
+	Contains []string
+}
+
+type TestRuntimeGroup struct {
+	tests []RuntimeGroupExpected
+}
+
+func listHaveString(lookFor string, list []string) bool {
+	for _, s := range list {
+		if s == lookFor {
+			return true
+		}
+	}
+	return false
+}
+
+func listContainsEach(lista, listb []string) (string, bool) {
+	for _, chk := range lista {
+		if !listHaveString(chk, listb) {
+			return chk, false
+		}
+	}
+	return "", true
+}
+
+func sliceList(offset int, list []string) ([]string, []string) {
+	var newList []string
+	var restList []string
+	for i, cont := range list {
+		if i < offset {
+			newList = append(newList, cont)
+		} else {
+			restList = append(restList, cont)
+		}
+	}
+	return newList, restList
+}
+
+func assertRuntimeGroup(t *testing.T, path string, target string, testGroup TestRuntimeGroup) bool {
+	tresult := true
+	cmdhandle.Experimental = true
+	folderRunner(path, t, func(t *testing.T) {
+		cmdhandle.RunTargets(target, true)
+		result := cmdhandle.GetPH("teststr")
+		resultArr := strings.Split(result, ":")
+
+		//offset := 0
+		for tbIndex, runtimeCheck := range testGroup.tests {
+			var checkList []string
+			testLen := len(runtimeCheck.Contains) // how many entries we have to check
+			if testLen <= len(resultArr) {        // do we have enough entries in the result array?
+				checkList, resultArr = sliceList(len(runtimeCheck.Contains), resultArr)
+				if missingStr, ok := listContainsEach(checkList, runtimeCheck.Contains); ok == false {
+					t.Error("missing ", missingStr, " in test block ", tbIndex)
+					tresult = false
+				}
+			}
+		}
+
+	})
+
+	return tresult
+}
+
 func TestMultipleTargets(t *testing.T) {
 	folderRunner("./../../docs/test/01multi", t, func(t *testing.T) {
 		cmdhandle.RunTargets("task", true)
@@ -484,102 +549,36 @@ func assertConcurrentCheck(t *testing.T, expected []string, target string) {
 	})
 }
 
-func assertConcurrentCheckUnsorted(t *testing.T, path string, expected []string, counts []int, target string) {
-	cmdhandle.Experimental = true
-	folderRunner(path, t, func(t *testing.T) {
-		cmdhandle.RunTargets(target, true)
-		result := cmdhandle.GetPH("teststr")
-		resultArr := strings.Split(result, ":")
-		checkOff := 0
-		step := 0
-
-		for k, expct := range expected {
-			if len(counts) < k {
-				t.Error("not enough counts submitted. requestd", k, " size of counts", len(counts))
-				return
-			}
-			expctCnt := counts[k] + step // we use the compiler for check if this is set
-			for i := checkOff; i < expctCnt; i++ {
-				checkSource := resultArr[i]
-				if !strings.Contains(checkSource, expct) {
-					t.Log("full result: ", result)
-					t.Error("missing:", expct, " in segment:", checkSource, " range:", expctCnt, " offset:", checkOff)
-				}
-				step++
-			}
-			checkOff = step
-
-		}
-
-	})
+func TestConcurrentMainB(t *testing.T) {
+	var test TestRuntimeGroup = TestRuntimeGroup{
+		[]RuntimeGroupExpected{
+			{
+				Contains: []string{"BASE"},
+			},
+			{
+				Contains: []string{"NB", "NA", "NC"},
+			},
+			{
+				Contains: []string{"MB"},
+			},
+		},
+	}
+	assertRuntimeGroup(t, "./../../docs/test/01concurrent", "main_b", test)
 }
 
-// testing the exact values of the testrun
-// because the result differs for any run
-// by the ressources of the pc, we need
-// to test any possible pattern.
-// at least the test for main_c
-// contains already too many possible
-// results.
-// so stopped here an went to more pattern like
-// testing in TestConcurrentUnsorted
-// but will keep them because til now
-// TestConcurrentUnsorted do not test
-// multiple used keys
-func TestConcurrentB(t *testing.T) {
-
-	var testTargets map[string][]string = make(map[string][]string)
-	testTargets["main_a"] = []string{"BASE:MA:"}
-	testTargets["main_b"] = []string{"BASE:NB:NA:NC:MB:", "BASE:NB:NC:NA:MB:", "BASE:NC:NA:NB:MB:", "BASE:NA:NB:NC:MB:"}
-	testTargets["main_c"] = []string{
-		"BASE:NA:NB:NC:TA:TB:TC:MC:",
-		"BASE:NB:NA:NC:TA:TB:TC:MC:",
-		"BASE:NA:NB:NC:TA:TC:TB:MC:",
-		"BASE:NB:NA:NC:TA:TC:TB:MC:",
-		"BASE:NB:NA:NC:TB:TA:TC:MC:",
-		"BASE:NA:NB:NC:TB:TA:TC:MC:",
-		"BASE:NA:NB:NC:TB:TC:TA:MC:",
-		"BASE:NB:NA:NC:TB:TC:TA:MC:",
-		"BASE:NA:NB:NC:TC:TA:TB:MC:",
-		"BASE:NA:NB:NC:TC:TB:TA:MC:",
-		"BASE:NB:NA:NC:TC:TA:TB:MC:",
-		"BASE:NB:NA:NC:TC:TB:TA:MC:"}
-
-	for target, expected := range testTargets {
-		assertConcurrentCheck(t, expected, target)
+func TestConcurrentMainC(t *testing.T) {
+	var test TestRuntimeGroup = TestRuntimeGroup{
+		[]RuntimeGroupExpected{
+			{
+				Contains: []string{"BASE"}, // base fiirst at all
+			},
+			{
+				Contains: []string{"NB", "NA", "NC"}, // needs as second
+			},
+			{
+				Contains: []string{"MC", "TC", "TA", "TB"}, //anything else at the end unordered MC:TC:TA:TB:
+			},
+		},
 	}
-}
-
-func TestConcurrentUnsorted(t *testing.T) {
-	var testTargets map[string][]string = make(map[string][]string)
-	var testCounts map[string][]int = make(map[string][]int)
-
-	testTargets["main_b"] = []string{
-		"BASE",
-		"N",
-		"MB",
-	}
-	testCounts["main_b"] = []int{1, 3, 1}
-
-	testTargets["main_c"] = []string{
-		"BASE",
-		"N",
-		"T",
-		"MC",
-	}
-	testCounts["main_c"] = []int{1, 3, 3, 1}
-
-	testTargets["main_d"] = []string{
-		"BASE",
-		"N",
-		"T",
-		"NC",
-		"MC",
-		"MD",
-	}
-	testCounts["main_d"] = []int{1, 2, 3, 1, 1, 1}
-
-	for target, expected := range testTargets {
-		assertConcurrentCheckUnsorted(t, "./../../docs/test/01concurrent", expected, testCounts[target], target)
-	}
+	assertRuntimeGroup(t, "./../../docs/test/01concurrent", "main_c", test)
 }

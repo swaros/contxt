@@ -31,14 +31,14 @@ import (
 	"golang.org/x/term"
 )
 
-var lastUsedForeColorIndex = 2
-var lastUsedBgColorIndex = 1
+var lastUsedForeColorIndex = 1
+var lastUsedBgColorIndex = 2
 
 // CurrentColor current used foreground color
-var CurrentColor = "33"
+var CurrentColor = "32"
 
 // CurrentBgColor current used background color
-var CurrentBgColor = "41"
+var CurrentBgColor = "42"
 
 var colorCodes = map[int]string{
 	0:  "31",
@@ -185,7 +185,7 @@ func colorCombinationisFine() bool {
 	case "41":
 		{
 			switch CurrentColor {
-			case "31", "32", "34", "36", "91", "95", "93", "35", "37":
+			case "31", "32", "34", "36", "91", "95", "93", "35", "37", "90":
 				return false
 			}
 		}
@@ -274,8 +274,8 @@ func LabelPrintWithArg(message string, fg string, bg string, attribute int) stri
 	if !manout.ColorEnabled {
 		return message
 	}
-	outstr := fmt.Sprintf("\033[%d;%s;%sm %s \033[0m", attribute, fg, bg, message)
-	return outstr
+	colorblock := fmt.Sprintf("\033[%d;%s;%sm|\033[0m ", attribute, fg, bg)
+	return colorblock + message + colorblock
 }
 
 // PadString Returns max len string filled with spaces

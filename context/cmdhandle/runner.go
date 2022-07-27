@@ -31,6 +31,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
@@ -702,6 +703,10 @@ func InitDefaultVars() {
 				manout.ColorEnabled = true
 			}
 		}
+	}
+	// we checking the console support
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		manout.ColorEnabled = false
 	}
 }
 

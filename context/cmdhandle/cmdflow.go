@@ -180,13 +180,13 @@ func RunTargets(targets string, sharedRun bool) {
 		if runSequencially { // non async run
 			for _, trgt := range allTargets {
 				SetPH("CTX_TARGET", trgt)
-				CtxOut(LabelFY("target"), InfoMinor("execute target in sequence"), ValF(trgt), manout.ForeLightCyan, " ", templatePath)
+				CtxOut(LabelFY("exec"), InfoMinor("execute target in sequence"), ValF(trgt), manout.ForeLightCyan, " ", templatePath)
 				ExecPathFile(&wg, !runSequencially, template, trgt)
 			}
 		} else {
 			var futuresExecs []FutureStack
 			for _, trgt := range allTargets { // iterate all targets
-				CtxOut(LabelFY("target"), InfoMinor("execute target in Async"), ValF(trgt), manout.ForeLightCyan, " ", templatePath)
+				CtxOut(LabelFY("exec"), InfoMinor("execute target in Async"), ValF(trgt), manout.ForeLightCyan, " ", templatePath)
 				futuresExecs = append(futuresExecs, FutureStack{
 					AwaitFunc: func(ctx context.Context) interface{} {
 						ctxTarget := ctx.Value(CtxKey{}).(string)                       // get the target from context
@@ -196,10 +196,10 @@ func RunTargets(targets string, sharedRun bool) {
 					Argument: trgt,
 				})
 			}
-			futures := ExecFutureGroup(futuresExecs)          // execute all async task
-			CtxOut(LabelFY("target"), "all targets started ") // just info
-			WaitAtGroup(futures)                              // wait until all task are done
-			CtxOut(LabelFY("target"), "all targets done")     // also just info for the user
+			futures := ExecFutureGroup(futuresExecs)                      // execute all async task
+			CtxOut(LabelFY("exec"), "all targets started ", len(targets)) // just info
+			WaitAtGroup(futures)                                          // wait until all task are done
+			CtxOut(LabelFY("exec"), "all targets done ", len(targets))    // also just info for the user
 		}
 
 	} else {
@@ -701,18 +701,40 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 				} // end of experimental switch
 
 				// targets that should be started as well
-				if len(script.RunTargets) > 0 {
-					for _, runTrgt := range script.RunTargets {
-						if runAsync {
-							go executeTemplate(waitGroup, runAsync, runCfg, runTrgt, scopeVars)
-						} else {
-							executeTemplate(waitGroup, runAsync, runCfg, runTrgt, scopeVars)
-						}
+				// these targets running at the same time
+				// so different to scope, we dont need to wait
+				// right now until they ends
+				var runTargetfutures []Future
+				if Experimental {
+					var runTargetExecs []FutureStack
+					for _, needTarget := range script.RunTargets {
+						GetLogger().Debug("runTarget name should be added " + needTarget)
+						runTargetExecs = append(runTargetExecs, FutureStack{
+							AwaitFunc: func(ctx context.Context) interface{} {
+								argTask := ctx.Value(CtxKey{}).(string)
+								_, argmap := StringSplitArgs(argTask, "arg")
+								GetLogger().Debug("add runTarget task " + argTask)
+								return executeTemplate(waitGroup, true, runCfg, argTask, argmap)
+							},
+							Argument: needTarget})
+
 					}
-					// workaround til the async runnig is refactored
-					// now we need to give the subtask time to run and update the waitgroup
-					duration := time.Second
-					time.Sleep(duration)
+					CtxOut(LabelFY("async targets"), "start ", len(runTargetExecs), " targets")
+					runTargetfutures = ExecFutureGroup(runTargetExecs)
+				} else {
+					if len(script.RunTargets) > 0 {
+						for _, runTrgt := range script.RunTargets {
+							if runAsync {
+								go executeTemplate(waitGroup, runAsync, runCfg, runTrgt, scopeVars)
+							} else {
+								executeTemplate(waitGroup, runAsync, runCfg, runTrgt, scopeVars)
+							}
+						}
+						// workaround til the async runnig is refactored
+						// now we need to give the subtask time to run and update the waitgroup
+						duration := time.Second
+						time.Sleep(duration)
+					}
 				}
 
 				// check if we have script lines.
@@ -736,11 +758,20 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 				if abort {
 					GetLogger().Debug("abort reason found ")
 				}
-				// executes next targets if there some defined
+
+				// waitin until the any target that runns also is done
+				if Experimental && len(runTargetfutures) > 0 {
+					CtxOut(LabelFY("wait targets"), "waiting until beside running targets are done")
+					trgtRes := WaitAtGroup(runTargetfutures)
+					CtxOut(LabelFY("wait targets"), "waiting done", trgtRes)
+				}
+				// next are tarets they runs afterwards the regular
+				// script os done
 				GetLogger().WithFields(logrus.Fields{
 					"current-target": target,
 					"nexts":          script.Next,
 				}).Debug("executeTemplate next definition")
+
 				for _, nextTarget := range script.Next {
 					if script.Options.Displaycmd {
 						CtxOut(LabelFY("next"), InfoF(nextTarget))
