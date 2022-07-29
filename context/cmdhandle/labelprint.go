@@ -6,11 +6,18 @@ import (
 	"github.com/swaros/manout"
 )
 
+var PreHook func(msg ...interface{}) bool = nil
+
 type CtxOutCtrl struct {
 	IgnoreCase bool
 }
 
 func CtxOut(msg ...interface{}) {
+	if PreHook != nil { // if the prehook is defined AND it returns true, we just stop doing anything
+		if abort := PreHook(msg...); abort {
+			return
+		}
+	}
 	var newMsh []interface{}
 	for _, chk := range msg {
 		switch chk.(type) {
