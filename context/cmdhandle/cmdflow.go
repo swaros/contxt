@@ -376,7 +376,11 @@ func lineExecuter(
 	}
 
 	SetPH("RUN.SCRIPT_LINE", replacedLine) // overwrite the current scriptline. this is only reliable if we not in async mode
-
+	var targetLabel CtxTargetOut = CtxTargetOut{
+		ForeCol:   defaultString(script.Options.Colorcode, colorCode),
+		BackCol:   defaultString(script.Options.Bgcolorcode, bgCode),
+		PanelSize: panelSize,
+	}
 	// here we execute the current script line
 	execCode, realExitCode, execErr := ExecuteScriptLine(mainCommand, script.Options.Mainparams, replacedLine,
 		func(logLine string) bool { // callback for any logline
@@ -390,17 +394,15 @@ func lineExecuter(
 				}).Debug("CHECK Listener")
 				listenerWatch(script, target, logLine, waitGroup, useWaitGroup, runCfg) // listener handler
 			}
-
+			targetLabel.Target = target
 			// The whole output can be ignored by configuration
 			// if this is not enabled then we handle all these here
 			if !script.Options.Hideout {
-				foreColor := defaultString(script.Options.Colorcode, colorCode)                                         // get the labe foreground color
-				bgColor := defaultString(script.Options.Bgcolorcode, bgCode)                                            // the background color
-				labelStr := systools.LabelPrintWithArg(systools.PadStringToR(target, panelSize), foreColor, bgColor, 1) // format the label
-				if script.Options.Format != "" {                                                                        // do we have a specific format for the label, then we use them instead
+				// the background color
+				if script.Options.Format != "" { // do we have a specific format for the label, then we use them instead
 					format := HandlePlaceHolderWithScope(script.Options.Format, script.Variables) // handle placeholder in the label
 					fomatedOutStr := manout.Message(fmt.Sprintf(format, target))                  // also format the message depending format codes
-					labelStr = systools.LabelPrintWithArg(fomatedOutStr, foreColor, bgColor, 1)   // reformat the label
+					targetLabel.Alternative = fomatedOutStr
 				}
 
 				//outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2) // hardcoded format for the logoutput iteself
@@ -409,7 +411,7 @@ func lineExecuter(
 					fmt.Print("\033[G\033[K") // done by escape codes
 				}
 
-				CtxOut(labelStr, outStr)        // prints the codeline
+				CtxOut(targetLabel, outStr)     // prints the codeline
 				if script.Options.Stickcursor { // cursor stick handling
 					fmt.Print("\033[A")
 				}

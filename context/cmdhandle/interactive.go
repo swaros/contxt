@@ -71,6 +71,26 @@ func (ui *CtxUi) createMenu() *tview.List {
 	return menu
 }
 
+func (ui *CtxUi) FilterOutPut(msg ...interface{}) []interface{} {
+	var newMsh []interface{}
+	for _, chk := range msg {
+		switch chk.(type) {
+		case CtxOutCtrl:
+			if chk.(CtxOutCtrl).IgnoreCase { // if we have found this flag set to true, it means ignore the message
+				return newMsh
+			}
+			continue
+		case CtxTargetOut:
+			ctrl := chk.(CtxTargetOut)
+			newMsh = append(newMsh, ctrl.Target)
+		default:
+			newMsh = append(newMsh, chk)
+		}
+
+	}
+	return newMsh
+}
+
 func (ui *CtxUi) CreateTargetList() *tview.Flex {
 	// this list contains ans target and we use them as a menu
 	list := tview.NewList()
@@ -101,8 +121,10 @@ func (ui *CtxUi) CreateTargetList() *tview.Flex {
 			ui.app.Draw()
 		})
 	output.SetBorder(true).SetTitle("log")
-
+	// we set the PreHook so any Message that is send to
+	// CtxOut will be handled from now on by this function
 	PreHook = func(msg ...interface{}) bool {
+		msg = ui.FilterOutPut(msg...) // filter output depending types of the content
 		byteData := []byte(tview.TranslateANSI(fmt.Sprintln(msg...)))
 		output.Write(byteData)
 		return true
