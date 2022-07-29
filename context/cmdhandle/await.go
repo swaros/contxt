@@ -108,13 +108,13 @@ func ExecFutureGroup(fg []FutureStack) []Future {
 // WaitAtGroup wait until all Futures are executes
 func WaitAtGroup(futures []Future) []interface{} {
 	var results []interface{}
-	GetLogger().WithField("futureCount", len(futures)).Debug("waiting of futures being executed")
+	GetLogger().WithField("futureCount", len(futures)).Info("waiting of futures being executed")
 	for i, f := range futures {
 		GetLogger().WithFields(logrus.Fields{"cur": i, "of": len(futures)}).Debug("wating of...")
 		val := f.Await()
-		GetLogger().WithFields(logrus.Fields{"cur": i, "val": val, "of": len(futures)}).Debug("await result ...")
+		GetLogger().WithFields(logrus.Fields{"cur": i, "val": val, "of": len(futures)}).Info("await result ...")
 		results = append(results, val)
 	}
-	GetLogger().Debug("Waitgroup Done")
+	GetLogger().WithField("futureCount", len(futures)).Info("Waitgroup Done")
 	return results
 }

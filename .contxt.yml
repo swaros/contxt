@@ -52,7 +52,7 @@ task:
       displaycmd: true
       stickcursor: false
     script:
-      - go test -failfast -timeout 60s -v github.com/swaros/contxt/context/cmdhandle
+      - go test -failfast -timeout 300s -v github.com/swaros/contxt/context/cmdhandle
 
   - id: test-dir
     options:
