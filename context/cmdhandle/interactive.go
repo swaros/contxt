@@ -10,16 +10,19 @@ import (
 )
 
 type CtxUi struct {
-	title         string
-	app           *tview.Application
-	pages         *tview.Pages
-	menu          *tview.List
-	cmd           *cobra.Command
-	outscr        *tview.TextView
-	args          []string
-	LogOutMessage string
-	mainScr       *tview.TextView
-	statusScr     *tview.TextView
+	title          string
+	app            *tview.Application
+	pages          *tview.Pages
+	menu           *tview.List
+	cmd            *cobra.Command
+	outscr         *tview.TextView
+	args           []string
+	LogOutMessage  string
+	mainScr        *tview.TextView
+	statusScr      *tview.TextView
+	taskScr        *tview.TextView
+	selectedtarget string
+	targetCtrl     *tview.Form
 }
 
 func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
@@ -139,34 +142,60 @@ func (ui *CtxUi) startCapture() {
 	CtxOut("running target")
 }
 
+func (ui *CtxUi) updateTaskView() {
+	if ui.selectedtarget != "" && ui.taskScr != nil {
+		ui.taskScr.SetText(ui.selectedtarget)
+
+	}
+
+	if ui.targetCtrl != nil {
+		ui.targetCtrl.Clear(true)
+		if ui.selectedtarget != "" {
+			ui.targetCtrl.AddButton("Start "+ui.selectedtarget, func() {
+				go RunTargets(ui.selectedtarget, true)
+			})
+		}
+	}
+}
+
+// CreateRunPage builds the page that contains different elements
+// to inspect and run the targets
 func (ui *CtxUi) CreateRunPage() *tview.Flex {
-	// this list contains ans target and we use them as a menu
-	list := tview.NewList()
-	var keyList string = "abcdefghijklmnopqrstuvwyz1234567890"
-	if targets, ok := getAllTargets(); ok {
+	// this uiTaskList contains any target and we use them as a menu
+	uiTaskList := tview.NewList()
+	var keyList string = "abcdefghijklmnopqrstuvwyz1234567890" // shortcuts definition
+	if targets, ok := getAllTargets(); ok {                    // get all targets
 		for index, target := range targets {
-			if index <= len(keyList) {
-				list.AddItem(target, "", rune(keyList[index]), nil)
+			if index <= len(keyList) { // we just print targets until we have chars to map
+				uiTaskList.AddItem(target, "", rune(keyList[index]), nil) // add the target as listitem
 			}
 		}
 	}
-	list.SetHighlightFullLine(true)
-	list.SetSelectedFunc(func(i int, target, s2 string, r rune) {
-		if r != 'x' {
+	uiTaskList.SetHighlightFullLine(true)
+	uiTaskList.SetSelectedFunc(func(i int, target, s2 string, r rune) {
+		if r != 'x' { // we ignore the get-back button
 			if ui.outscr != nil {
 				ui.outscr.Clear()
 			}
+			ui.selectedtarget = target
 			go RunTargets(target, true)
 		}
 	})
 
-	list.AddItem("close", "", 'x', func() {
+	uiTaskList.AddItem("close", "", 'x', func() {
 		ui.pages.SendToBack("target")
 	})
-	list.SetBorder(true)
-	list.SetTitle("select target")
-	list.ShowSecondaryText(false)
+	uiTaskList.SetBorder(true)
+	uiTaskList.SetTitle("select target")
+	uiTaskList.ShowSecondaryText(false)
+	uiTaskList.SetChangedFunc(func(index int, target, emptyAnyway string, shortcut rune) {
+		if shortcut != 'x' { // ignore get back option
+			ui.selectedtarget = target
+			ui.updateTaskView()
+		}
+	})
 
+	// create the log output
 	output := tview.NewTextView().
 		SetDynamicColors(true).
 		SetChangedFunc(func() {
@@ -174,8 +203,33 @@ func (ui *CtxUi) CreateRunPage() *tview.Flex {
 		})
 	output.SetBorder(true).SetTitle("log")
 	ui.outscr = output
+
+	// create a target overview
+	targetControl := tview.NewForm()
+	targetControl.SetBorder(true)
+	ui.targetCtrl = targetControl
+
+	// left side we have the list of task
+	// and the form that we use to start a task
+	leftCtrl := tview.NewFlex().SetDirection(tview.FlexRow)
+	leftCtrl.AddItem(uiTaskList, 0, 6, true).
+		AddItem(targetControl, 0, 1, false)
+	// this is the task overview where
+	// we display the current status of the task
+	targetView := tview.NewTextView()
+	targetView.SetDynamicColors(true).SetBorder(true)
+	ui.taskScr = targetView
+
+	// the right site of the page contains
+	// the target overview and the log output
+	rightCtrl := tview.NewFlex().SetDirection(tview.FlexRow)
+	rightCtrl.AddItem(targetView, 0, 1, false).
+		AddItem(output, 0, 1, false)
+
+	// compose the page content
 	targetflex := tview.NewFlex().
-		AddItem(list, 0, 1, true).AddItem(output, 0, 4, false)
+		AddItem(leftCtrl, 0, 1, true).
+		AddItem(rightCtrl, 0, 4, false)
 	return targetflex
 
 }
