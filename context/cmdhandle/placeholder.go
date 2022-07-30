@@ -177,7 +177,7 @@ func ClearAll() {
 		keyValue.Delete(key)
 		return true
 	})
-	taskList.Range(func(key, _ interface{}) bool {
+	watchTaskList.Range(func(key, _ interface{}) bool {
 		keyValue.Delete(key)
 		return true
 	})

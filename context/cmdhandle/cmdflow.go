@@ -147,7 +147,7 @@ func RunTargets(targets string, sharedRun bool) {
 	allTargets := strings.Split(targets, ",")
 	template, templatePath, exists, terr := GetTemplate()
 	if terr != nil {
-		CtxOut(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error())
+		CtxOut(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
 		os.Exit(33)
 		return
 	}

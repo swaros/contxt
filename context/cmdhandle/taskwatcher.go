@@ -29,7 +29,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var taskList sync.Map
+var watchTaskList sync.Map
 
 // TaskDef holds information about running
 // and finished tasks
@@ -43,7 +43,7 @@ type TaskDef struct {
 func incTaskCount(target string) {
 	taskInfo, _ := getTask(target)
 	taskInfo.count++
-	taskList.Store(target, taskInfo)
+	watchTaskList.Store(target, taskInfo)
 }
 
 func incTaskDoneCount(target string) bool {
@@ -54,34 +54,34 @@ func incTaskDoneCount(target string) bool {
 	}
 	taskInfo.doneCount++
 	taskInfo.done = taskInfo.doneCount == taskInfo.count
-	taskList.Store(target, taskInfo)
+	watchTaskList.Store(target, taskInfo)
 	return taskInfo.done
 
 }
 
 // ResetAllTaskInfos resets all task infos
 func ResetAllTaskInfos() {
-	taskList.Range(func(key, _ interface{}) bool {
-		taskList.Delete(key)
+	watchTaskList.Range(func(key, _ interface{}) bool {
+		watchTaskList.Delete(key)
 		return true
 	})
 }
 
 // TaskExists checks if a task is already created
 func TaskExists(target string) bool {
-	_, found := taskList.Load(target)
+	_, found := watchTaskList.Load(target)
 	return found
 }
 
 // TaskRunning checks if a task is already running
 func TaskRunning(target string) bool {
-	info, found := taskList.Load(target)
+	info, found := watchTaskList.Load(target)
 	return found && info != nil && info.(TaskDef).count > 0 && info.(TaskDef).count != info.(TaskDef).doneCount
 }
 
 // checks if a task was at least started X times
 func TaskRunsAtLeast(target string, atLeast int) bool {
-	if info, found := taskList.Load(target); found {
+	if info, found := watchTaskList.Load(target); found {
 		return info.(TaskDef).count >= atLeast
 	}
 	return false
@@ -102,7 +102,7 @@ func WaitForTasksDone(tasks []string, timeOut, tickTime time.Duration, stillWait
 		doneCount := 0
 		for _, targetFullName := range tasks {
 			targetName, args := StringSplitArgs(targetFullName, "arg")
-			taskInfo, found := taskList.Load(targetName)
+			taskInfo, found := watchTaskList.Load(targetName)
 			GetLogger().WithField("task", targetFullName).Trace("checking taskWait for needs")
 			if !found && !notStartet(targetFullName, targetName, args) {
 				GetLogger().WithField("task", targetFullName).Error("could not check against task that was never started")
@@ -149,7 +149,7 @@ func WaitForTasksDone(tasks []string, timeOut, tickTime time.Duration, stillWait
 }
 
 func getTask(target string) (TaskDef, bool) {
-	taskInfo, found := taskList.Load(target)
+	taskInfo, found := watchTaskList.Load(target)
 	if found && taskInfo != nil {
 		return taskInfo.(TaskDef), true
 	}
@@ -159,7 +159,7 @@ func getTask(target string) (TaskDef, bool) {
 		doneCount: 0,
 		started:   false,
 	}
-	taskList.Store(target, nwTask)
+	watchTaskList.Store(target, nwTask)
 	return nwTask, false
 
 }
