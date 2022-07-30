@@ -1,0 +1,79 @@
+config:  
+  sequencially: false
+  coloroff: false
+  variables:
+     teststr: "BASE:"
+
+task:
+  - id: need_a
+    script:
+      - sleep 0.4
+      - "#@add teststr NA:"
+      - echo " --------- need_a ${teststr}"
+
+  - id: need_b
+    script:
+      - sleep 0.2      
+      - "#@add teststr NB:"
+      - echo " --------- need_b ${teststr}"
+      
+  - id: need_c
+    script:
+      - sleep 0.7
+      - "#@add teststr NC:"
+      - echo " --------- need_c ${teststr}"
+
+  - id: task_a
+    script:
+      - sleep 0.3
+      - "#@add teststr TA:"
+      - echo " --------- subtask_a ${teststr}"
+
+  - id: task_b
+    script:
+      - sleep 0.35
+      - "#@add teststr TB:"
+      - echo " --------- subtask_b ${teststr}"
+
+  - id: task_c
+    script:
+      - sleep 0.1
+      - "#@add teststr TC:"
+      - echo " --------- subtask_c ${teststr}"
+
+
+  - id: main_a
+    script:
+      - "#@add teststr MA:"
+      - echo ${teststr}
+
+  - id: main_b
+    needs:
+      - need_a
+      - need_b
+      - need_c
+    script:
+      - "#@add teststr MB:"
+      - echo ${teststr}      
+
+  - id: main_c
+    needs:
+      - need_a
+      - need_b
+      - need_c
+    runTargets:
+      - task_a
+      - task_b
+      - task_c  
+    script:
+      - "#@add teststr MC:"
+      - echo ${teststr}     
+
+  - id: main_d
+    needs:
+      - need_a
+      - main_c
+      - need_c  
+    script:
+      - "#@add teststr MD:"
+      - echo ${teststr} 

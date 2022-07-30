@@ -124,7 +124,7 @@ func GetData(key string) (bool, map[string]interface{}) {
 
 // ClearAllData removes all entries
 func ClearAllData() {
-	dataStorage.Range(func(key, value interface{}) bool {
+	dataStorage.Range(func(key, _ interface{}) bool {
 		dataStorage.Delete(key)
 		return true
 	})
@@ -133,7 +133,7 @@ func ClearAllData() {
 // GetDataKeys returns all current keys
 func GetDataKeys() []string {
 	var keys []string
-	dataStorage.Range(func(key, value interface{}) bool {
+	dataStorage.Range(func(key, _ interface{}) bool {
 		keys = append(keys, key.(string))
 		return true
 	})

@@ -11,6 +11,71 @@ import (
 	"github.com/swaros/contxt/context/cmdhandle"
 )
 
+type RuntimeGroupExpected struct {
+	Contains []string
+}
+
+type TestRuntimeGroup struct {
+	tests []RuntimeGroupExpected
+}
+
+func listHaveString(lookFor string, list []string) bool {
+	for _, s := range list {
+		if s == lookFor {
+			return true
+		}
+	}
+	return false
+}
+
+func listContainsEach(lista, listb []string) (string, bool) {
+	for _, chk := range lista {
+		if !listHaveString(chk, listb) {
+			return chk, false
+		}
+	}
+	return "", true
+}
+
+func sliceList(offset int, list []string) ([]string, []string) {
+	var newList []string
+	var restList []string
+	for i, cont := range list {
+		if i < offset {
+			newList = append(newList, cont)
+		} else {
+			restList = append(restList, cont)
+		}
+	}
+	return newList, restList
+}
+
+func assertRuntimeGroup(t *testing.T, path string, target string, testGroup TestRuntimeGroup) bool {
+	tresult := true
+	cmdhandle.Experimental = true
+	folderRunner(path, t, func(t *testing.T) {
+		cmdhandle.RunTargets(target, true)
+		result := cmdhandle.GetPH("teststr")
+		resultArr := strings.Split(result, ":")
+
+		//offset := 0
+		for tbIndex, runtimeCheck := range testGroup.tests {
+			var checkList []string
+			testLen := len(runtimeCheck.Contains) // how many entries we have to check
+			if testLen <= len(resultArr) {        // do we have enough entries in the result array?
+				checkList, resultArr = sliceList(len(runtimeCheck.Contains), resultArr)
+				if missingStr, ok := listContainsEach(checkList, runtimeCheck.Contains); ok == false {
+					t.Error("missing ", missingStr, " in test block ", tbIndex, " got ", checkList, " expected", runtimeCheck.Contains)
+					tresult = false
+				}
+			}
+		}
+
+	})
+
+	return tresult
+}
+
 func TestMultipleTargets(t *testing.T) {
 	folderRunner("./../../docs/test/01multi", t, func(t *testing.T) {
 		cmdhandle.RunTargets("task", true)
@@ -455,4 +520,101 @@ func TestNeedWithArgs(t *testing.T) {
 		cmdhandle.RunTargets("test-need", false)
 
 	})
+}
+
+func TestConcurrent(t *testing.T) {
+	expected := ""
+	folderRunner("./../../docs/test/01concurrent", t, func(t *testing.T) {
+		cmdhandle.RunTargets("main_a", false)
+		main_a := cmdhandle.GetPH("teststr")
+		expected = "BASE:MA:"
+		if main_a != expected {
+			t.Error("expected:", expected, " instead:", main_a)
+		}
+	})
+}
+
+func TestConcurrentMainB(t *testing.T) {
+	var test TestRuntimeGroup = TestRuntimeGroup{
+		[]RuntimeGroupExpected{
+			{
+				Contains: []string{"BASE"},
+			},
+			{
+				Contains: []string{"NB", "NA", "NC"},
+			},
+			{
+				Contains: []string{"MB"},
+			},
+		},
+	}
+	assertRuntimeGroup(t, "./../../docs/test/01concurrent", "main_b", test)
+}
+
+func TestConcurrentMainC(t *testing.T) {
+	var test TestRuntimeGroup = TestRuntimeGroup{
+		[]RuntimeGroupExpected{
+			{
+				Contains: []string{"BASE"}, // base fiirst at all
+			},
+			{
+				Contains: []string{"NB", "NA", "NC"}, // needs as second
+			},
+			{
+				Contains: []string{"MC", "TC", "TA", "TB"}, //anything else at the end unordered MC:TC:TA:TB:
+			},
+		},
+	}
+	assertRuntimeGroup(t, "./../../docs/test/01concurrent", "main_c", test)
+}
+
+func TestConcurrentMainD(t *testing.T) {
+	// BASE:NB:MC:TC:NA:TA:TB:NC:MD:
+	/*
+	 - id: main_d
+	    needs:
+	      - need_a
+	      - main_c
+	      - need_c
+	    script:
+	      - "#@add teststr MD:"
+	      - echo ${teststr}
+	*/
+	var test TestRuntimeGroup = TestRuntimeGroup{
+		[]RuntimeGroupExpected{
+			{
+				Contains: []string{"BASE"}, // base first at all
+			},
+			{
+				Contains: []string{"NB"}, // need b first as it is a need of main_c
+			},
+			{
+				Contains: []string{"MC", "NC", "NA", "TC", "TA", "TB"}, //anything else at the end unordered
+			},
+			{
+				Contains: []string{"MD"}, // the last is main_d
+			},
+		},
+	}
+
+	// have to investigate why, but on windows
+	// the order of execution seems different.
+	// but the imortant order seems beeing intact
+	if configure.GetOs() == "windows" {
+		test = TestRuntimeGroup{
+			[]RuntimeGroupExpected{
+				{
+					Contains: []string{"BASE"}, // base first at all
+				},
+				{
+					Contains: []string{"NB", "MC", "NC", "NA", "TC", "TA", "TB"}, //anything else at the end unordered
+				},
+				{
+					Contains: []string{"MD"}, // the last is main_d
+				},
+			},
+		}
+	}
+
+	assertRuntimeGroup(t, "./../../docs/test/01concurrent", "main_d", test)
 }

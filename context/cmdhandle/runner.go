@@ -31,9 +31,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
+	"github.com/swaros/contxt/context/systools"
 	"github.com/swaros/manout"
 )
 
@@ -132,14 +134,14 @@ fish:
 all defined onEnter and onLeave task will be executed 
 if these task are defined
 `,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			if len(args) > 0 {
 				for _, arg := range args {
 					doMagicParamOne(arg)
 				}
 			}
 		},
-		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 			if len(args) != 0 {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
@@ -148,6 +150,18 @@ if these task are defined
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
 			return targets, cobra.ShellCompDirectiveNoFileComp
+		},
+	}
+
+	interactiveCmd = &cobra.Command{
+		Use:   "interactive",
+		Short: "starts the interactive modus",
+		Long:  `start contxt in interactive modus`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			if _, err := InitWindow(cmd, args); err != nil {
+				CtxOut(LabelErrF("error start the interactive mode"), err)
+			}
 		},
 	}
 
@@ -384,7 +398,7 @@ also go-template imports will be handled.
 
 			}
 		},
-		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 			if len(args) != 0 {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
@@ -443,7 +457,7 @@ you will also see if a unexpected propertie found `,
 		Long: `writes needed functions into the users private .bashrc file.
 		This includes code completion and the ctx alias.
 		`,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			BashUser()
 		},
 	}
@@ -453,7 +467,7 @@ you will also see if a unexpected propertie found `,
 		Short: "create fish shell env for ctx",
 		Long: `create needed fish functions, auto completion for ctx
 		`,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, _ []string) {
 			FishUpdate(cmd)
 		},
 	}
@@ -463,7 +477,7 @@ you will also see if a unexpected propertie found `,
 		Short: "create zsh shell env for ctx",
 		Long: `create needed zsh functions and auto completion for zsh
 		`,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, _ []string) {
 			ZshUpdate(cmd)
 		},
 	}
@@ -493,7 +507,7 @@ you will also see if a unexpected propertie found `,
 				path, err := dirhandle.Current()
 				if err == nil {
 					if runAtAll {
-						configure.PathWorker(func(index int, path string) {
+						configure.PathWorker(func(_ int, path string) {
 							GetLogger().WithField("path", path).Info("change dir")
 							os.Chdir(path)
 							runTargets(path, arg)
@@ -505,11 +519,10 @@ you will also see if a unexpected propertie found `,
 			}
 
 		},
-		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 			if len(args) != 0 {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
-			//targets, found := targetsAsMap()
 			targets, found := getAllTargets()
 			if !found {
 				return nil, cobra.ShellCompDirectiveNoFileComp
@@ -553,12 +566,12 @@ you will also see if a unexpected propertie found `,
 	}
 )
 
-func checkRunFlags(cmd *cobra.Command, args []string) {
+func checkRunFlags(cmd *cobra.Command, _ []string) {
 	runAtAll, _ = cmd.Flags().GetBool("all-paths")
 	showInvTarget, _ = cmd.Flags().GetBool("all-targets")
 }
 
-func checkDirFlags(cmd *cobra.Command, args []string) {
+func checkDirFlags(cmd *cobra.Command, _ []string) {
 	pindex, err := cmd.Flags().GetInt("index")
 	if err == nil && pindex >= 0 {
 		pathIndex = pindex
@@ -575,7 +588,7 @@ func checkDirFlags(cmd *cobra.Command, args []string) {
 	uselastIndex, _ = cmd.Flags().GetBool("last")
 }
 
-func checkDefaultFlags(cmd *cobra.Command, args []string) {
+func checkDefaultFlags(cmd *cobra.Command, _ []string) {
 	color, err := cmd.Flags().GetBool("coloroff")
 	if err == nil && color {
 		manout.ColorEnabled = false
@@ -614,6 +627,7 @@ func initCobra() {
 	rootCmd.AddCommand(createCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(exportCmd)
+	rootCmd.AddCommand(interactiveCmd)
 
 	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the width for the source code")
 	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the witdh for the current state view")
@@ -703,6 +717,10 @@ func InitDefaultVars() {
 			}
 		}
 	}
+	// we checking the console support
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		manout.ColorEnabled = false
+	}
 }
 
 // MainExecute runs main. parsing flags
@@ -735,7 +753,7 @@ func MainExecute() {
 func callBackOldWs(oldws string) bool {
 	GetLogger().Info("OLD workspace: ", oldws)
 	// get all paths first
-	configure.PathWorker(func(index int, path string) {
+	configure.PathWorker(func(_ int, path string) {
 
 		os.Chdir(path)
 		template, templateFile, exists, _ := GetTemplate()
@@ -762,7 +780,7 @@ func callBackOldWs(oldws string) bool {
 
 func callBackNewWs(newWs string) {
 	GetLogger().Info("NEW workspace: ", newWs)
-	configure.PathWorker(func(index int, path string) {
+	configure.PathWorker(func(_ int, path string) {
 
 		os.Chdir(path)
 		template, templateFile, exists, _ := GetTemplate()
@@ -787,6 +805,10 @@ func callBackNewWs(newWs string) {
 
 func doMagicParamOne(param string) bool {
 	result := false
+	if param == "show-the-rainbow" {
+		systools.TestColorCombinations()
+		return true
+	}
 	// param is a workspace ?
 	configure.WorkSpaces(func(ws string) {
 		if param == ws {
@@ -813,7 +835,7 @@ func getAllTargets() ([]string, bool) {
 
 func detectSharedTargetsAsMap(current configure.RunConfig) []string {
 	var targets []string
-	SharedFolderExecuter(current, func(sharedDir, currentDir string) {
+	SharedFolderExecuter(current, func(_, _ string) {
 		sharedTargets, have := targetsAsMap()
 		if have {
 			targets = append(targets, sharedTargets...)
@@ -894,7 +916,7 @@ func printTargets() {
 	}
 }
 
-func runTargets(path string, targets string) {
+func runTargets(_ string, targets string) {
 	RunTargets(targets, true)
 }
 

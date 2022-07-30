@@ -39,10 +39,10 @@ import (
 
 const (
 	// DefaultExecFile is the filename of the script defaut file
-	DefaultExecFile = "/.context.json"
+	DefaultExecFile = string(os.PathSeparator) + ".context.json"
 
 	// DefaultExecYaml is the default yaml configuration file
-	DefaultExecYaml     = "/.contxt.yml"
+	DefaultExecYaml     = string(os.PathSeparator) + ".contxt.yml"
 	defaultExecYamlName = ".contxt.yml"
 
 	// TargetScript is script default target
@@ -119,7 +119,6 @@ func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callb
 	cmdArg = GetDefaultCmdOpts(ShellToUse, cmdArg)
 	cmdArg = append(cmdArg, command)
 	cmd := exec.Command(ShellToUse, cmdArg...)
-
 	stdoutPipe, _ := cmd.StdoutPipe()
 	cmd.Stderr = cmd.Stdout
 

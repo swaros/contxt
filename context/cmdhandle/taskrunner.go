@@ -256,7 +256,7 @@ func (Tg *TaskGroup) Exec() *TaskGroup {
 	for _, tsk := range Tg.tasks {
 		tsk.Log("add task function ", tsk.taskName)
 		tasks = append(tasks, FutureStack{
-			AwaitFunc: func(ctx context.Context) interface{} {
+			AwaitFunc: func(_ context.Context) interface{} {
 				res := tsk.Run()
 				return res.Content
 			}, Argument: tsk.taskName})

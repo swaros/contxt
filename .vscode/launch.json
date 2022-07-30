@@ -15,6 +15,15 @@
             "args": ["shared","list"]
         },
         {
+            "name": "Interactive",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
+            "env": {},
+            "args": ["interactive"]
+        },
+        {
             "name": "Launch shared update",
             "type": "go",
             "request": "launch",

@@ -61,13 +61,13 @@ func incTaskDoneCount(target string) bool {
 
 // ResetAllTaskInfos resets all task infos
 func ResetAllTaskInfos() {
-	taskList.Range(func(key, value interface{}) bool {
+	taskList.Range(func(key, _ interface{}) bool {
 		taskList.Delete(key)
 		return true
 	})
 }
 
-// TaskExists checks if a tak is already created
+// TaskExists checks if a task is already created
 func TaskExists(target string) bool {
 	_, found := taskList.Load(target)
 	return found
@@ -77,6 +77,14 @@ func TaskExists(target string) bool {
 func TaskRunning(target string) bool {
 	info, found := taskList.Load(target)
 	return found && info != nil && info.(TaskDef).count > 0 && info.(TaskDef).count != info.(TaskDef).doneCount
+}
+
+// checks if a task was at least started X times
+func TaskRunsAtLeast(target string, atLeast int) bool {
+	if info, found := taskList.Load(target); found {
+		return info.(TaskDef).count >= atLeast
+	}
+	return false
 }
 
 // WaitForTasksDone waits until all the task are done
