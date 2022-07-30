@@ -35,18 +35,16 @@ func CtxOut(msg ...interface{}) {
 	}
 	var newMsh []interface{}
 	for _, chk := range msg {
-		switch chk.(type) {
+		switch ctrl := chk.(type) {
 		case CtxOutCtrl:
 			if chk.(CtxOutCtrl).IgnoreCase { // if we have found this flag set to true, it means ignore the message
 				return
 			}
 		case CtxTargetOut:
-			ctrl := chk.(CtxTargetOut)
 			labelStr := systools.LabelPrintWithArg(systools.PadStringToR(ctrl.Target, ctrl.PanelSize), ctrl.ForeCol, ctrl.BackCol, 1)
 			newMsh = append(newMsh, labelStr)
 		case CtxOutLabel:
-			outc := chk.(CtxOutLabel)
-			colmsg := manout.Message(outc.FColor, outc.Message)
+			colmsg := manout.Message(ctrl.FColor, ctrl.Message) + " "
 			newMsh = append(newMsh, colmsg)
 		default:
 			newMsh = append(newMsh, chk)
@@ -55,10 +53,10 @@ func CtxOut(msg ...interface{}) {
 	}
 	msg = newMsh
 	fmt.Print(manout.MessageCln(
-		manout.BackDarkGrey, " ",
-		manout.BackWhite, manout.ForeLightCyan,
-		"   con", manout.ForeDarkGrey, ".", manout.ForeLightGrey, "txt   ",
-		manout.BackDarkGrey, " ",
+		manout.BackDarkGrey, "c",
+		manout.BackWhite, manout.ForeBlue,
+		"on", manout.ForeDarkGrey, ".", manout.ForeMagenta, "tx",
+		manout.BackDarkGrey, "t",
 		manout.CleanTag, " "))
 	fmt.Println(manout.MessageCln(msg...))
 }

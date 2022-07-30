@@ -2,9 +2,7 @@ package cmdhandle
 
 import (
 	"fmt"
-	"strconv"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 	"github.com/swaros/contxt/context/configure"
@@ -36,8 +34,6 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 	}
 	menu := ui.createMenu()
 	menu.SetBorder(true)
-	menu.SetBackgroundColor(tcell.ColorDarkBlue)
-	menu.SetMainTextColor(tcell.ColorLightBlue)
 
 	status := tview.NewTextView()
 	status.SetText("[blue]version [yellow]" + configure.GetVersion() + "\n [blue]build[yellow] " + configure.GetBuild())
@@ -46,8 +42,7 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 	ui.statusScr = status
 
 	mainWindow := tview.NewTextView()
-	mainWindow.SetBorder(true).
-		SetBackgroundColor(tcell.ColorDarkGoldenrod)
+	mainWindow.SetBorder(true)
 	mainWindow.SetDynamicColors(true)
 
 	ui.mainScr = mainWindow
@@ -59,7 +54,7 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 			AddItem(mainWindow, 0, 5, false), 0, 3, false)
 
 	pages.AddPage("main", flex, true, true)
-	app.SetRoot(pages, true).EnableMouse(false)
+	app.SetRoot(pages, true).EnableMouse(true)
 
 	ui.startCapture()
 	if err := app.Run(); err != nil {
@@ -69,14 +64,16 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 	return ui, nil
 }
 
+// createMenu creates the main menu as a default tview.List
 func (ui *CtxUi) createMenu() *tview.List {
 
-	menu := tview.NewList().AddItem("tasks", "start Task", 'r', func() {
+	menu := tview.NewList().AddItem("Task", "tasks overview", 't', func() {
 		ui.pages.SendToFront("target")
-	}).AddItem("quit", "exit interactive mode", 'q', func() {
+	}).AddItem("quit", "EXIT", 'q', func() {
 		ui.app.Stop()
 	})
 	ui.pages.AddPage("target", ui.CreateRunPage(), true, true)
+	menu.SetHighlightFullLine(true)
 	ui.menu = menu
 	return menu
 }
@@ -87,20 +84,18 @@ func (ui *CtxUi) FilterOutPut(caseHandle func(target string, msg []interface{}),
 	var newMsh []interface{} // new hash for the output
 	haveTarget := ""
 	for _, chk := range msg {
-		switch chk.(type) {
+		switch v := chk.(type) {
 		case CtxOutCtrl:
 			if chk.(CtxOutCtrl).IgnoreCase { // if we have found this flag set to true, it means ignore the message
 				return newMsh
 			}
 			continue
 		case CtxOutLabel:
-			ctrl := chk.(CtxOutLabel)
-			newMsh = append(newMsh, manout.Message(ctrl.Message))
+			newMsh = append(newMsh, manout.Message(v.Message))
 			continue
 		case CtxTargetOut:
-			ctrl := chk.(CtxTargetOut)
-			haveTarget = ctrl.Target
-			newMsh = append(newMsh, ctrl.Target)
+			haveTarget = v.Target
+			newMsh = append(newMsh, v.Target)
 		default:
 			newMsh = append(newMsh, chk)
 		}
@@ -147,14 +142,17 @@ func (ui *CtxUi) startCapture() {
 func (ui *CtxUi) CreateRunPage() *tview.Flex {
 	// this list contains ans target and we use them as a menu
 	list := tview.NewList()
+	var keyList string = "abcdefghijklmnopqrstuvwyz1234567890"
 	if targets, ok := getAllTargets(); ok {
 		for index, target := range targets {
-			list.AddItem(target, "run target "+target, rune(strconv.Itoa(index)[0]), nil)
+			if index <= len(keyList) {
+				list.AddItem(target, "", rune(keyList[index]), nil)
+			}
 		}
 	}
 	list.SetHighlightFullLine(true)
 	list.SetSelectedFunc(func(i int, target, s2 string, r rune) {
-		if r != 'q' {
+		if r != 'x' {
 			if ui.outscr != nil {
 				ui.outscr.Clear()
 			}
@@ -162,11 +160,12 @@ func (ui *CtxUi) CreateRunPage() *tview.Flex {
 		}
 	})
 
-	list.AddItem("Quit", "Press to exit", 'q', func() {
+	list.AddItem("close", "", 'x', func() {
 		ui.pages.SendToBack("target")
 	})
 	list.SetBorder(true)
 	list.SetTitle("select target")
+	list.ShowSecondaryText(false)
 
 	output := tview.NewTextView().
 		SetDynamicColors(true).

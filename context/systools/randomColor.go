@@ -279,9 +279,11 @@ func LabelPrintWithArg(message string, fg string, bg string, attribute int) stri
 	//sign := "\u2807"
 	//sign := "█▇▆▅▄▃▂▁"
 	sign := "▓▒░"
+	preSign := "░▒▓"
 	colorblock := fmt.Sprintf("\033[%d;%s;%sm%s\033[0m ", attribute, fg, bg, sign)
+	colorblockPre := fmt.Sprintf("\033[%d;%s;%sm%s\033[0m", attribute, fg, bg, preSign)
 	coloredMsg := fmt.Sprintf("\033[%d;%sm%s", attribute, fg, message)
-	return coloredMsg + colorblock // + "⇨"
+	return colorblockPre + coloredMsg + colorblock // + "⇨"
 }
 
 // PadString Returns max len string filled with spaces
