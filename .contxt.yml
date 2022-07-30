@@ -130,6 +130,11 @@ task:
     script:
        - bin/${bin-out} version
 
+## install local. this is used by the Makefile
+## because contxt can not update himself while it is running,
+## or is just not installed yet
+## so make runs the new builded contxt binary
+
   - id: install-local
     variables:
       local-install: "yes"
@@ -137,13 +142,14 @@ task:
       - build
     next:
       - install-local-bin
-      - install-local-dot-bin
 
+## check for ~/bin 
   - id: install-local-bin
     script:
       - echo "try the ${HOME}/bin usage"
 
-  - id: install-local-bin
+## success for local bin/ 
+  - id: install-local-bin 
     options:
       displaycmd: true
     require:
@@ -154,15 +160,17 @@ task:
         local-install: "=yes"
         bin-out: "*"
     script:
-      - cp bin/${bin-out} $HOME/bin/${bin-out}
+      - echo "we will use /bin/${bin-out}"
+      - yes | cp -i bin/${bin-out} $HOME/bin/${bin-out} # # to solve the cp -i alias issue
+      - echo "check versions"
+      - contxt version
+      
 
 
 ## fail for local bin/
   - id: install-local-bin
     options:
       displaycmd: true
-    variables:
-      local-install: "NO" # if we take care... no one else should too
     require:
       notExists:
         - ${HOME}/bin
@@ -172,9 +180,13 @@ task:
         bin-out: "*"
     script:
       - echo "${HOME}/bin not exists. will not be used"
+    next:
+      - install-local-dot-bin
+    
 
   - id: install-local-dot-bin
-    
+    script:
+      - echo "try $HOME/.local/bin/"
 
   ## fail test .local/bin
   - id: install-local-dot-bin
@@ -199,7 +211,7 @@ task:
         bin-out: "*"        
     script:
       - echo "using ~/.local/bin/ to copy ${bin-out}"
-      - cp bin/${bin-out} $HOME/.local/bin/${bin-out}
+      - yes | cp -i bin/${bin-out} $HOME/.local/bin/${bin-out}  # to solve the cp -i alias issue
       - echo "check versions"
       - contxt version
 
