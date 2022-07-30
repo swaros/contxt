@@ -1,4 +1,4 @@
-version: "0.2.2"
+version: "0.2.3"
 task:
   - id: go-check
     require:
@@ -62,7 +62,7 @@ task:
 
   - id: set-version
     options:
-      displaycmd: true
+      displaycmd: false
       invisible: true
     variables:
       bin-out: contxt
@@ -77,7 +77,7 @@ task:
 
   - id: set-version
     options:
-      displaycmd: true
+      displaycmd: false
       invisible: true
       maincmd: pwsh
       mainparams:
@@ -93,7 +93,7 @@ task:
 
   - id: set-version
     options:
-      displaycmd: true
+      displaycmd: false
       invisible: true
     script:
      - echo "version ${main-version}.${mid-version}.${minor-version} ${build-hash} out ${bin-out}"
@@ -106,7 +106,7 @@ task:
 
   - id: build-exec
     options:
-      displaycmd: true
+      displaycmd: false
       invisible: true
     require:
       variables:
@@ -117,17 +117,20 @@ task:
     next:
       - verify-build
     script:
-      - echo "build start"
+      - echo "build start----"
+      - echo "   target -- ${bin-out}"
       - go build -ldflags "-X github.com/swaros/contxt/context/configure.minversion=${minor-version} -X github.com/swaros/contxt/context/configure.midversion=${mid-version} -X github.com/swaros/contxt/context/configure.mainversion=${main-version} -X github.com/swaros/contxt/context/configure.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
+      - echo "   done   -- build "
 
   - id: verify-build
     options:
-      displaycmd: true
+      displaycmd: false
       invisible: true
     require:
       exists:
         - bin/${bin-out}
     script:
+       - echo "verifiy build version"
        - bin/${bin-out} version
 
 ## install local. this is used by the Makefile
