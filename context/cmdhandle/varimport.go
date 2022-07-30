@@ -39,6 +39,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/swaros/contxt/context/configure"
+	"github.com/swaros/contxt/context/systools"
 	"github.com/swaros/manout"
 
 	"github.com/sirupsen/logrus"
@@ -417,7 +418,7 @@ func traceMap(mapShow map[string]interface{}, add string) {
 func MergeVariableMap(mapin map[string]interface{}, maporigin map[string]interface{}) map[string]interface{} {
 	if err := mergo.Merge(&maporigin, mapin, mergo.WithOverride); err != nil {
 		manout.Error("FATAL", "error while trying merge map")
-		os.Exit(10)
+		systools.Exit(10)
 	}
 	return maporigin
 }

@@ -317,7 +317,7 @@ you need to set the name for the workspace`,
 				removed := configure.RemovePath(dir)
 				if !removed {
 					fmt.Println(manout.MessageCln(manout.ForeRed, "error", manout.CleanTag, " path is not part of the current workspace"))
-					os.Exit(1)
+					systools.Exit(1)
 				} else {
 					fmt.Println(manout.MessageCln(manout.ForeGreen, "success"))
 					configure.SaveDefaultConfiguration(true)
@@ -342,12 +342,12 @@ you need to set the name for the workspace`,
 			checkDefaultFlags(cmd, args)
 			if len(args) == 0 {
 				fmt.Println("No paths submitted")
-				os.Exit(1)
+				systools.Exit(1)
 			}
 			_, path, exists, terr := GetTemplate()
 			if terr != nil {
 				fmt.Println(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
-				os.Exit(33)
+				systools.Exit(33)
 				return
 			}
 			if exists {
@@ -355,12 +355,12 @@ you need to set the name for the workspace`,
 					err := CreateImport(path, addPath)
 					if err != nil {
 						fmt.Println("Error adding imports:", err)
-						os.Exit(1)
+						systools.Exit(1)
 					}
 				}
 			} else {
 				fmt.Println("no taskfile exists. create these first by contxt create")
-				os.Exit(1)
+				systools.Exit(1)
 			}
 
 		},
@@ -433,7 +433,7 @@ you will also see if a unexpected propertie found `,
 			}
 
 			if !okay {
-				os.Exit(1)
+				systools.Exit(1)
 			}
 
 		},
@@ -743,7 +743,7 @@ func MainExecute() {
 		err := executeCobra()
 		if err != nil {
 			manout.Error("error", err)
-			os.Exit(1)
+			systools.Exit(1)
 		}
 
 	}

@@ -33,6 +33,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
+	"github.com/swaros/contxt/context/systools"
 	"github.com/swaros/manout"
 )
 
@@ -63,7 +64,7 @@ func CheckOrCreateUseConfig(externalUseCase string) (string, error) {
 				exists, _ := dirhandle.Exists(path)
 				if !exists {
 					manout.Error("USE Error", "shared usecase not exist and can not be downloaded", " ", path)
-					os.Exit(10)
+					systools.Exit(10)
 				}
 				GetLogger().WithField("shared-path", path).Debug("use existing shared path")
 			}
@@ -265,7 +266,7 @@ func createUseByGit(usecase, pathTouse string) string {
 			}
 		}
 		GetLogger().WithField("path", pathTouse).Fatal("Local Usage folder not exists (+ ./source)")
-		os.Exit(internalExitCode)
+		systools.Exit(internalExitCode)
 	}
 	return path
 }

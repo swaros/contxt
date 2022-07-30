@@ -37,6 +37,7 @@ import (
 
 	"github.com/swaros/contxt/context/configure"
 	"github.com/swaros/contxt/context/dirhandle"
+	"github.com/swaros/contxt/context/systools"
 	"github.com/swaros/manout"
 	"gopkg.in/yaml.v2"
 )
@@ -144,7 +145,7 @@ func getIncludeConfig(path string) (configure.IncludePaths, string, string, bool
 	err := yaml.Unmarshal(file, &importTemplate)
 	if err != nil {
 		fmt.Println(manout.MessageCln(manout.ForeRed, "error reading include config file: ", manout.ForeWhite, checkIncPath), err)
-		os.Exit(incFileParseError)
+		systools.Exit(incFileParseError)
 	}
 	return importTemplate, checkIncPath, fullPath, true
 }
@@ -170,7 +171,7 @@ func LoadIncTempalte(path string) (string, bool) {
 		if perr != nil {
 			fmt.Println(perr)
 			fmt.Println(manout.MessageCln(manout.ForeRed, "error parsing files from path: ", manout.ForeWhite, path), perr)
-			os.Exit(incFileParseError)
+			systools.Exit(incFileParseError)
 		}
 		return parsedTemplate, true
 	}

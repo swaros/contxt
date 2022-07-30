@@ -6,6 +6,7 @@ import (
 	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 	"github.com/swaros/contxt/context/configure"
+	"github.com/swaros/contxt/context/systools"
 	"github.com/swaros/manout"
 )
 
@@ -60,6 +61,10 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 	app.SetRoot(pages, true).EnableMouse(true)
 
 	ui.startCapture()
+	// register exist trigger to get the app closed before
+	systools.AddExitListener("interactive", func(exitCode int) {
+		app.Stop()
+	})
 	if err := app.Run(); err != nil {
 		return ui, err
 	}
@@ -179,6 +184,8 @@ func (ui *CtxUi) CreateRunPage() *tview.Flex {
 			}
 			ui.selectedtarget = target
 			go RunTargets(target, true)
+		} else {
+			ui.selectedtarget = ""
 		}
 	})
 

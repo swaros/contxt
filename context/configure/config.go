@@ -33,6 +33,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/swaros/contxt/context/systools"
 	"github.com/swaros/manout"
 )
 
@@ -192,7 +193,7 @@ func RemoveWorkspace(name string) {
 			os.Remove(path)
 		} else {
 			fmt.Println("no workspace exists with name: ", manout.MessageCln(manout.ForeLightYellow, name))
-			os.Exit(5)
+			systools.Exit(5)
 		}
 	} else {
 		fmt.Println(err)

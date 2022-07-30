@@ -26,12 +26,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/kylelemons/godebug/pretty"
 	"github.com/swaros/contxt/context/configure"
+	"github.com/swaros/contxt/context/systools"
 	"github.com/swaros/manout"
 	"gopkg.in/yaml.v3"
 )
@@ -138,7 +138,7 @@ func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
 	template, path, exists, terr := GetTemplate()
 	if terr != nil {
 		fmt.Println(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
-		os.Exit(33)
+		systools.Exit(33)
 		return
 	}
 	var b bytes.Buffer
@@ -156,14 +156,14 @@ func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
 
 			} else {
 				manout.Error("error parsing template", conerr)
-				os.Exit(1)
+				systools.Exit(1)
 			}
 
 		} else {
 			data, err := GetParsedTemplateSource(path)
 			if err != nil {
 				manout.Error("template loading", err)
-				os.Exit(1)
+				systools.Exit(1)
 			}
 			fmt.Println(data)
 		}
@@ -210,7 +210,7 @@ func LintOut(leftcnt, rightcnt int, all bool, noOut bool) bool {
 				amlerr := yaml.Unmarshal(conversionres, &m)
 				if amlerr != nil {
 					fmt.Println(amlerr)
-					os.Exit(1)
+					systools.Exit(1)
 				}
 
 				return compareContent(origMap, m, all, leftcnt, rightcnt, noOut)

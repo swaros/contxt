@@ -129,7 +129,7 @@ func RunTargets(targets string, sharedRun bool) {
 	// validate first
 	if err := TestTemplate(); err != nil {
 		CtxOut("found issues in the current template ", err)
-		os.Exit(32)
+		systools.Exit(32)
 		return
 	}
 
@@ -148,7 +148,7 @@ func RunTargets(targets string, sharedRun bool) {
 	template, templatePath, exists, terr := GetTemplate()
 	if terr != nil {
 		CtxOut(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
-		os.Exit(33)
+		systools.Exit(33)
 		return
 	}
 	GetLogger().WithField("targets", allTargets).Info("run targets...")
@@ -463,7 +463,7 @@ func lineExecuter(
 			CtxOut("\t if you do so, a Note will remind you, that a error is happend in this case.")
 			CtxOut()
 			GetLogger().Error("runtime error:", execErr, "exit", realExitCode)
-			os.Exit(realExitCode)
+			systools.Exit(realExitCode)
 			// returns the error code
 			return ExitCmdError, true
 		}
@@ -622,7 +622,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 					chDirError := os.Chdir(HandlePlaceHolderWithScope(script.Options.WorkingDir, scopeVars))
 					if chDirError != nil {
 						manout.Error("Workspace setting seems invalid ", chDirError)
-						os.Exit(10)
+						systools.Exit(10)
 					}
 				}
 
@@ -707,11 +707,11 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 								// timeout not allowed. hard exit
 								GetLogger().Debug("timeout hit")
 								manout.Error("Need Timeout", "waiting for a need timed out after ", timeOut, " milliseconds. you may increase timeoutNeeds in Options")
-								os.Exit(1)
+								systools.Exit(1)
 							}, func(needTarget string, _ string, args map[string]string) bool {
 								if script.Options.NoAutoRunNeeds {
 									manout.Error("Need Task not started", "expected task ", target, " not running. autostart disabled")
-									os.Exit(1)
+									systools.Exit(1)
 									return false
 								}
 								GetLogger().WithFields(logrus.Fields{
@@ -732,7 +732,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 								executionCode := executeTemplate(waitGroup, runAsync, runCfg, targetNeed, args)
 								if executionCode != ExitOk {
 									manout.Error("Need Task Error", "expected returncode ", ExitOk, " but got exit Code", executionCode)
-									os.Exit(1)
+									systools.Exit(1)
 								}
 							}
 						}
@@ -873,7 +873,7 @@ func handleFileImportsToVars(imports []string) {
 		}, func(path string, err error) {
 			GetLogger().Errorln("file not exists:", err)
 			manout.Error("varibales file not exists:", path, err)
-			os.Exit(1)
+			systools.Exit(1)
 		})
 	}
 }
