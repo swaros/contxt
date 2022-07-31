@@ -5,5 +5,5 @@ use (
 	./module/dirhandle
 	./module/systools
 	./module/taskrun
-	.\module\trigger\
+	./module/trigger
 )
