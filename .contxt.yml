@@ -39,26 +39,26 @@ task:
     options:
       displaycmd: true
     script:
-      - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/systools
+      - go test -failfast -timeout 30s -v github.com/swaros/contxt/systools
 
   - id: test-conf
     options:
       displaycmd: true
     script:
-      - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/configure
+      - go test -failfast -timeout 30s -v github.com/swaros/contxt/configure
   
   - id: test-cmd
     options:
       displaycmd: true
       stickcursor: false
     script:
-      - go test -failfast -timeout 300s -v github.com/swaros/contxt/context/cmdhandle
+      - go test -failfast -timeout 300s -v github.com/swaros/contxt/cmdhandle
 
   - id: test-dir
     options:
       displaycmd: true
     script:
-      - go test -failfast -timeout 20s -v github.com/swaros/contxt/context/dirhandle
+      - go test -failfast -timeout 20s -v github.com/swaros/contxt/dirhandle
 
   - id: set-version
     options:
@@ -119,7 +119,7 @@ task:
     script:
       - echo "build start----"
       - echo "   target -- ${bin-out}"
-      - go build -ldflags "-X github.com/swaros/contxt/context/configure.minversion=${minor-version} -X github.com/swaros/contxt/context/configure.midversion=${mid-version} -X github.com/swaros/contxt/context/configure.mainversion=${main-version} -X github.com/swaros/contxt/context/configure.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
+      - go build -ldflags "-X github.com/swaros/contxt/configure.minversion=${minor-version} -X github.com/swaros/contxt/configure.midversion=${mid-version} -X github.com/swaros/contxt/configure.mainversion=${main-version} -X github.com/swaros/contxt/configure.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
       - echo "   done   -- build "
 
   - id: verify-build
