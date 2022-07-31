@@ -19,17 +19,22 @@ task:
       - go version
 
   - id: cleanup-dependencies
-    script:
-      - go mod tidy
+    script:      
+    {{- range $k, $test := $.module }}    
+      - | 
+       cd {{ $test.modul }}
+       go mod tidy
+       
+    {{- end }}
       - git status
       
   - id: test
     script:
     {{- range $k, $test := $.module }}
-      #- go clean -testcache ./..
+      #- go clean -testcache ./{{ $test.modul }}/./...
       - go test -cover -v -failfast ./{{ $test.modul }}/./...
     {{- end }}
-    
+
   - id: test-each
     needs:
       - test-sys
