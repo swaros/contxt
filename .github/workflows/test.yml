@@ -25,7 +25,7 @@ jobs:
 
     - name: Test
       run: |
-          ./bin/contxt run test-each
+          ./bin/contxt run test-each -E
 
         
     
