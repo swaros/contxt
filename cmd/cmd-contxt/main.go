@@ -1,9 +1,7 @@
 package main
 
-import (
-	"github.com/swaros/contxt/context/cmdhandle"
-)
+import "github.com/swaros/contxt/taskrun"
 
 func main() {
-	cmdhandle.MainExecute()
+	taskrun.MainExecute()
 }

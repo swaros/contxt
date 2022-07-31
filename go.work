@@ -1,0 +1,9 @@
+go 1.18
+
+use (
+	./module/configure
+	./module/dirhandle
+	./module/systools
+	./module/taskrun
+	.\module\trigger\
+)
