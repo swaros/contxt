@@ -25,9 +25,11 @@ task:
       
   - id: test
     script:
-      - go clean -testcache ./..
-      - go test -cover -v -failfast ./...
-
+    {{- range $k, $test := $.module }}
+      #- go clean -testcache ./..
+      - go test -cover -v -failfast ./{{ $test.modul }}/./...
+    {{- end }}
+    
   - id: test-each
     needs:
       - test-sys
@@ -39,26 +41,26 @@ task:
     options:
       displaycmd: true
     script:
-      - go test -failfast -timeout 30s -v github.com/swaros/contxt/systools
+      - go test -failfast -timeout 300s -v ./module/systools/./...      
 
   - id: test-conf
     options:
       displaycmd: true
-    script:
-      - go test -failfast -timeout 30s -v github.com/swaros/contxt/configure
+    script:      
+      - go test -failfast -timeout 300s -v ./module/configure/./...
   
   - id: test-cmd
     options:
       displaycmd: true
       stickcursor: false
-    script:
-      - go test -failfast -timeout 300s -v github.com/swaros/contxt/cmdhandle
+    script:      
+      - go test -failfast -timeout 300s -v ./module/taskrun/./...
 
   - id: test-dir
     options:
       displaycmd: true
-    script:
-      - go test -failfast -timeout 20s -v github.com/swaros/contxt/dirhandle
+    script:      
+      - go test -failfast -timeout 300s -v ./module/dirhandle/./...
 
   - id: set-version
     options:
