@@ -233,9 +233,19 @@ task:
 
 ## tview test app #####
   - id: tview-build
+    require:
+      system: linux
     script:
+      - echo "build tview for linux"
       - go build -o ./bin/tview-example cmd/cmd-tview/main.go
   
+  - id: tview-build
+    require:
+      system: windows
+    script:
+      - echo "build tview for windows"
+      - go build -o ./bin/tview-example.exe cmd/cmd-tview/main.go
+
   - id: tview-build
     require:
       system: linux
@@ -245,6 +255,25 @@ task:
       - chmod 755 bin/tview-example
       - echo "if not executed try to start the application with"
       - echo "./bin/tview-example"
-      - ./bin/tview-example
+      
 
-          
+  - id: tview-run
+    needs:
+      - tview-build
+
+  - id: tview-run
+    require:
+      system: linux
+      exists:
+        - bin/tview-example
+    script:
+      - ./bin/tview-example        
+  
+  - id: tview-run
+    require:
+      system: windows
+      exists:
+        - bin/tview-example.exe
+    script:
+      - ./bin/tview-example.exe        
+  
