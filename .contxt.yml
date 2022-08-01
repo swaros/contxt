@@ -18,6 +18,12 @@ task:
       - go env | Select-String GOVERSION
       - go version
 
+  - id: dos2unix
+    require:
+      system: linux
+    script:
+      - find . -type f -print0 | xargs -0 dos2unix
+
   - id: cleanup-dependencies
     script:      
     {{- range $k, $test := $.module }}    
@@ -225,4 +231,20 @@ task:
       - echo "check versions"
       - contxt version
 
-    
+## tview test app #####
+  - id: tview-build
+    script:
+      - go build -o ./bin/tview-example cmd/cmd-tview/main.go
+  
+  - id: tview-build
+    require:
+      system: linux
+      exists:
+        - bin/tview-example
+    script:
+      - chmod 755 bin/tview-example
+      - echo "if not executed try to start the application with"
+      - echo "./bin/tview-example"
+      - ./bin/tview-example
+
+          

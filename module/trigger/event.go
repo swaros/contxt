@@ -20,6 +20,25 @@ func NewEvent(name string) (*Event, error) {
 	return evt, errors.New("event with the same name is already registered")
 }
 
+// NewEvents just wraps the NewEvent for multipe events
+// and executes an callback for each of the events.
+// this way we can stick to a more generic solution for a couple of events
+func NewEvents(names []string, cb func(*Event)) error {
+	for _, name := range names {
+		if evnt, err := NewEvent(name); err == nil {
+			cb(evnt)
+		} else {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetName just returns the name of the event
+func (event *Event) GetName() string {
+	return event.name
+}
+
 // AddListener adds listener to the event
 func (event *Event) AddListener(lst ...Listener) error {
 	if _, found := eventMap.Load(event.name); found {
@@ -49,6 +68,7 @@ func (event *Event) SetArguments(args ...interface{}) error {
 	return errors.New("this event is not registered")
 }
 
+// Send calls any assigned callback
 func (event *Event) Send() {
 	for _, listen := range event.listener {
 		listen.Trigger(event.args)
