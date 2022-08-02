@@ -6,14 +6,73 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+const (
+	BubbleOff  = 0
+	BubbleDown = 1
+	BubbleUp   = 2
+)
+
+var (
+	lastHits []CElement
+)
+
+type CElement interface {
+	draw(*CellApp)
+	hitTest(x, y int) bool
+	setStyle(style tcell.Style)
+	onMouseOverHndl(x, y int)
+	onMouseLeaveHndl()
+	SetDim(left, top, width, height int)
+}
+
 type CellApp struct {
-	screen  tcell.Screen
-	exitKey tcell.Key
+	screen       tcell.Screen
+	exitKey      tcell.Key
+	baseElements []CElement
 }
 
 func New() *CellApp {
 	return &CellApp{
 		exitKey: tcell.KeyEscape,
+	}
+}
+
+func defaultHitTest(hx, hy, x, y, w, h int) bool {
+	if hx >= x && hy >= y && hx <= x+w && hy <= y+h {
+		return true
+	}
+	return false
+}
+
+func (c *CellApp) AddElement(el ...CElement) {
+	c.baseElements = append(c.baseElements, el...)
+}
+
+func (c *CellApp) drawElements() {
+	for _, el := range c.baseElements {
+		el.draw(c)
+	}
+}
+
+func (c *CellApp) leaveElementCheck(x, y int) {
+	var cleanUp []CElement
+	for _, el := range lastHits {
+		if !el.hitTest(x, y) {
+			el.onMouseLeaveHndl()
+		} else {
+			cleanUp = append(cleanUp, el)
+		}
+	}
+	lastHits = cleanUp
+}
+
+func (c *CellApp) hoverElementCheck(x, y int) {
+	c.leaveElementCheck(x, y)           // check first if some elements lost focus
+	for _, el := range c.baseElements { // then lets test all
+		if el.hitTest(x, y) {
+			lastHits = append(lastHits, el) // keep track of elements that we had in focus
+			el.onMouseOverHndl(x, y)        // trigger the handler
+		}
 	}
 }
 
@@ -27,6 +86,9 @@ func (c *CellApp) RunLoop(exitCallBack func()) {
 		for {
 			// Update screen
 			c.screen.Show()
+
+			// draw all elements
+			c.drawElements()
 
 			// Poll event
 			ev := c.screen.PollEvent()
@@ -42,6 +104,10 @@ func (c *CellApp) RunLoop(exitCallBack func()) {
 				}
 			case *tcell.EventMouse:
 				x, y := ev.Position()
+
+				// checking hovering over elements
+				c.hoverElementCheck(x, y)
+
 				button := ev.Buttons()
 				// Only process button events, not wheel events
 				button &= tcell.ButtonMask(0xff)
@@ -92,7 +158,7 @@ func (c *CellApp) setupStyle() {
 func (c *CellApp) drawText(x1, y1, x2, y2 int, style tcell.Style, text string) {
 	row := y1
 	col := x1
-	for _, r := range []rune(text) {
+	for _, r := range string(text) {
 		c.screen.SetContent(col, row, r, nil, style)
 		col++
 		if col >= x2 {

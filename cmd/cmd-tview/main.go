@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/swaros/contxt/tviewapp"
 )
@@ -12,6 +13,21 @@ func main() {
 
 	app := tviewapp.New()
 	app.NewScreen()
+
+	demo := tviewapp.NewText("hello world")
+
+	demo2 := tviewapp.NewBox()
+	demo2.SetDim(2, 10, 40, 3)
+	demo2.OnMouseOver = func(x, y int) {
+		demo.SetText(".... HOVER " + strconv.Itoa(x) + " x " + strconv.Itoa(y) + " .......")
+
+	}
+
+	demo2.OnMouseLeave = func() {
+		demo.SetText("the blue box is untouched right now.....")
+	}
+
+	app.AddElement(demo, demo2)
 	app.RunLoop(func() { os.Exit(0) })
 
 	/*
