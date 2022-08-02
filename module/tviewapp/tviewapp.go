@@ -18,11 +18,6 @@ const (
 	TplPageButtonMenu = 1
 )
 
-type tvHandle struct {
-	tvPrimitive *tview.Primitive
-	listener    *trigger.Listener
-}
-
 type TViewApplication struct {
 	app       *tview.Application
 	pages     *tview.Pages
@@ -70,7 +65,8 @@ func (t *TViewApplication) SetHeader(header string) {
 	}
 }
 
-func (t *TViewApplication) NewPage(name string, style tvPageStyle) error {
+func (t *TViewApplication) NewPage(name string, style tvPageStyle, args ...interface{}) error {
+	style.values = args
 	if page := CreatePageByStyle(style); page != nil {
 		t.pages.AddPage(name, page, true, true)
 		return nil
