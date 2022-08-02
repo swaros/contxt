@@ -4,6 +4,7 @@ import "github.com/gdamore/tcell/v2"
 
 type CeBox struct {
 	left, top, width, height int
+	isChanged                bool
 	drawStyle                tcell.Style
 	OnMouseOver              func(x, y int)
 	OnMouseLeave             func()
@@ -18,8 +19,12 @@ func NewBox() *CeBox {
 		drawStyle: tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue),
 	}
 }
-func (box *CeBox) draw(ca *CellApp) {
-	ca.drawBox(box.left, box.top, box.left+box.width, box.top+box.height, box.drawStyle, "BOX")
+func (box *CeBox) draw(ca *CellApp, cleanUp bool) {
+	if cleanUp {
+		ca.cleanArea(box.left, box.top, box.left+box.width, box.top+box.height)
+		return
+	}
+	ca.drawBox(box.left, box.top, box.left+box.width, box.top+box.height, box.drawStyle, "")
 }
 
 func (box *CeBox) setStyle(style tcell.Style) {
@@ -36,6 +41,10 @@ func (box *CeBox) onMouseOverHndl(x, y int) {
 	}
 }
 
+func (box *CeBox) haveChanged() bool {
+	return box.isChanged
+}
+
 func (box *CeBox) onMouseLeaveHndl() {
 	if box.OnMouseLeave != nil {
 		box.OnMouseLeave()
@@ -46,9 +55,11 @@ func (box *CeBox) SetDim(left, top, width, height int) {
 	box.top = top
 	box.width = width
 	box.height = height
+	box.isChanged = true
 }
 
 func (box *CeBox) SetOffset(left, top int) {
+	box.isChanged = true
 	box.left = left
 	box.top = top
 }

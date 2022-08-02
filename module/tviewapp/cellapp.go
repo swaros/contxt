@@ -1,8 +1,6 @@
 package tviewapp
 
 import (
-	"fmt"
-
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -16,18 +14,24 @@ var (
 	lastHits []CElement
 )
 
+type CeSize struct {
+	width, height, left, top int
+}
+
 type CElement interface {
-	draw(*CellApp)
+	draw(*CellApp, bool)
 	hitTest(x, y int) bool
 	setStyle(style tcell.Style)
 	onMouseOverHndl(x, y int)
 	onMouseLeaveHndl()
+	haveChanged() bool
 	SetDim(left, top, width, height int)
 }
 
 type CellApp struct {
 	screen       tcell.Screen
 	exitKey      tcell.Key
+	style        tcell.Style
 	baseElements []CElement
 }
 
@@ -49,8 +53,17 @@ func (c *CellApp) AddElement(el ...CElement) {
 }
 
 func (c *CellApp) drawElements() {
+	c.cleanElements()
 	for _, el := range c.baseElements {
-		el.draw(c)
+		el.draw(c, false)
+	}
+}
+
+func (c *CellApp) cleanElements() {
+	for _, el := range c.baseElements {
+		if el.haveChanged() {
+			el.draw(c, true)
+		}
 	}
 }
 
@@ -79,9 +92,6 @@ func (c *CellApp) hoverElementCheck(x, y int) {
 func (c *CellApp) RunLoop(exitCallBack func()) {
 	if c.screen != nil {
 		c.screen.EnableMouse()
-		boxStyle := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorPurple)
-		c.drawBox(1, 1, 42, 7, boxStyle, "Click and drag to draw a box")
-		c.drawBox(5, 9, 32, 14, boxStyle, "Press C to reset")
 		ox, oy := -1, -1
 		for {
 			// Update screen
@@ -118,8 +128,18 @@ func (c *CellApp) RunLoop(exitCallBack func()) {
 				switch ev.Buttons() {
 				case tcell.ButtonNone:
 					if ox >= 0 {
-						label := fmt.Sprintf("%d,%d to %d,%d", ox, oy, x, y)
-						c.drawBox(ox, oy, x, y, boxStyle, label)
+						//label := fmt.Sprintf("%d,%d to %d,%d", ox, oy, x, y)
+						//c.drawBox(ox, oy, x, y, boxStyle, label)
+						newBox := NewBox()
+						newBox.SetDim(ox, oy, x-ox, y-oy)
+						c.AddElement(newBox)
+						newBox.OnMouseOver = func(x, y int) {
+							newBox.setStyle(tcell.StyleDefault.Foreground(tcell.ColorYellow).Background(tcell.ColorDarkGreen))
+						}
+
+						newBox.OnMouseLeave = func() {
+							newBox.setStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue))
+						}
 						ox, oy = -1, -1
 					}
 				}
@@ -151,6 +171,7 @@ func (c *CellApp) setupStyle() {
 	if c.screen != nil {
 		defStyle := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
 		c.screen.SetStyle(defStyle)
+		c.style = defStyle
 		c.screen.Clear()
 	}
 }
@@ -167,6 +188,22 @@ func (c *CellApp) drawText(x1, y1, x2, y2 int, style tcell.Style, text string) {
 		}
 		if row > y2 {
 			break
+		}
+	}
+}
+
+func (c *CellApp) cleanArea(x1, y1, x2, y2 int) {
+	if y2 < y1 {
+		y1, y2 = y2, y1
+	}
+	if x2 < x1 {
+		x1, x2 = x2, x1
+	}
+
+	// Fill background
+	for row := y1; row <= y2; row++ {
+		for col := x1; col <= x2; col++ {
+			c.screen.SetContent(col, row, ' ', nil, c.style)
 		}
 	}
 }
