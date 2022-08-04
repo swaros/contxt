@@ -5,9 +5,9 @@ import (
 )
 
 const (
-	BubbleOff  = 0
-	BubbleDown = 1
-	BubbleUp   = 2
+	BubbleOff  = 0 // no 'bubble' check. so any element that can bit hit, is hitted
+	BubbleDown = 1 // only the last element on the list (what means it is visual on top) can be hit
+	BubbleUp   = 2 // reverse to BubleDown. means the first element (first drawn so visual in the background) only
 )
 
 var (
@@ -33,11 +33,13 @@ type CellApp struct {
 	exitKey      tcell.Key
 	style        tcell.Style
 	baseElements []CElement
+	bubbleBehave int
 }
 
 func New() *CellApp {
 	return &CellApp{
-		exitKey: tcell.KeyEscape,
+		exitKey:      tcell.KeyEscape,
+		bubbleBehave: BubbleDown,
 	}
 }
 
@@ -67,24 +69,75 @@ func (c *CellApp) cleanElements() {
 	}
 }
 
+// leaveElementCheck triggers the on leave event on any element that is no longer
+// affected by the hit test
+// here we iterate over the last elements, they we had stored as hovered before
 func (c *CellApp) leaveElementCheck(x, y int) {
-	var cleanUp []CElement
-	for _, el := range lastHits {
-		if !el.hitTest(x, y) {
-			el.onMouseLeaveHndl()
-		} else {
-			cleanUp = append(cleanUp, el)
+
+	if len(lastHits) < 1 { // no stored hits, we get out early
+		return
+	}
+
+	var cleanUp []CElement // prepare the new list of elements they stiff affected
+	switch c.bubbleBehave {
+	case BubbleOff, BubbleUp:
+		for _, el := range lastHits {
+			if !el.hitTest(x, y) {
+				el.onMouseLeaveHndl()
+			} else {
+				cleanUp = append(cleanUp, el) // memorize again this element, becasue it is not affected by hittest
+			}
+			if c.bubbleBehave == BubbleUp { // in case we just need the first element (again. is visual the element in the background)
+				lastHits = cleanUp // copy the list here already
+				return             // and get out
+			}
+		}
+	case BubbleDown: // this case is for the elements in front of the ui (visual) only. elements behind them do not count
+		found := false
+		for i := len(lastHits) - 1; i >= 0; i-- { // we look from the other way around ..last in map first
+			el := lastHits[i]
+
+			if !el.hitTest(x, y) { // this element is even no longer hivered. so we trigger the leave
+				el.onMouseLeaveHndl()
+			} else {
+				if !found { // as long we did not find a hovered element, we keep memorize the elements that still hovered.
+					cleanUp = append(cleanUp, el) // but this can be juts one element...
+					found = true                  // ...because from now on, we ignore anything else
+				} else {
+					el.onMouseLeaveHndl() // becasue we found our top element, any other have to leave
+				}
+			}
+
 		}
 	}
 	lastHits = cleanUp
 }
 
+// checks any element if they is hit by x and y coordinats
+// depends on the Bubble behavior
 func (c *CellApp) hoverElementCheck(x, y int) {
-	c.leaveElementCheck(x, y)           // check first if some elements lost focus
-	for _, el := range c.baseElements { // then lets test all
-		if el.hitTest(x, y) {
-			lastHits = append(lastHits, el) // keep track of elements that we had in focus
-			el.onMouseOverHndl(x, y)        // trigger the handler
+	c.leaveElementCheck(x, y) // check first if some elements lost focus
+	switch c.bubbleBehave {
+	case BubbleOff, BubbleUp: // here we fire the event to any element that is in range
+		for _, el := range c.baseElements { // then lets test all
+			if el.hitTest(x, y) {
+				lastHits = append(lastHits, el) // keep track of elements that we had in focus
+				el.onMouseOverHndl(x, y)        // trigger the handler
+				if c.bubbleBehave == BubbleUp {
+					return // if just want the first it, by BubbleUp behavior, we get out now
+				}
+			}
+		}
+	case BubbleDown: // here we fire the event on the last one in the list (what is being drawed latest)
+		var hitEl CElement = nil
+		for _, el := range c.baseElements { // then lets test all
+			if el.hitTest(x, y) {
+				hitEl = el
+			}
+		}
+		if hitEl != nil {
+			hitEl.onMouseOverHndl(x, y)        // trigger the handler
+			lastHits = append(lastHits, hitEl) // save this one
 		}
 	}
 }
