@@ -23,34 +23,24 @@ func main() {
 
 	}
 
+	newBox := tviewapp.NewBox()
+
+	app.Listener.OnLMouseDown = func(ca *tviewapp.CellApp, x, y int) {
+		demo.SetText(".... left MOUSE DOWN" + strconv.Itoa(x) + " x " + strconv.Itoa(y) + " .......")
+	}
+
+	app.Listener.OnLMouseUp = func(ca *tviewapp.CellApp, x, y, startx, starty int) {
+
+		newBox.SetDim(x, y, startx-x, starty-y)
+		ca.AddElement(newBox)
+		demo.SetText(".... left MOUSE LEAVE " + strconv.Itoa(x) + " x " + strconv.Itoa(y) + " .... " + strconv.Itoa(startx) + " x " + strconv.Itoa(starty) + " .......")
+	}
+
 	demo2.OnMouseLeave = func() {
 		demo.SetText("the blue box is untouched right now.....")
 	}
 
 	app.AddElement(demo, demo2)
 	app.RunLoop(func() { os.Exit(0) })
-
-	/*
-		app := tviewapp.NewApplication(true)
-		app.SetHeader("tview example")
-
-		exitButton := tviewapp.TvButton{
-			Label:   "exit app",
-			OnClick: func() { app.Stop() },
-		}
-
-		if err := app.NewPage("start", tviewapp.ButtonMenuPageStyle, exitButton); err != nil {
-			panic(err)
-		}
-
-		/*
-			demoPage := app.NewPageWithFlex("demo")
-			demoPage.AddItem(tview.NewButton("exit").SetSelectedFunc(func() {
-				app.Stop()
-			}), 0, 1, true).AddItem(tview.NewButton("set header").SetSelectedFunc(func() {
-				app.SetHeader("clicked")
-			}), 0, 1, false)
-	*/
-	//app.Start()
 
 }

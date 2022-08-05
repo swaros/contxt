@@ -37,6 +37,11 @@ type CElementBehavior struct {
 	static     bool // all elements they are not affected by any checks like mouse or key events. so they don't need to be handled
 }
 
+type CEListener struct {
+	OnLMouseDown func(*CellApp, int, int)
+	OnLMouseUp   func(*CellApp, int, int, int, int)
+}
+
 type CellApp struct {
 	screen       tcell.Screen
 	exitKey      tcell.Key
@@ -46,6 +51,7 @@ type CellApp struct {
 	statics      []int
 	bubbleBehave int
 	elementCount int
+	Listener     CEListener
 }
 
 func New() *CellApp {
@@ -79,14 +85,6 @@ func (c *CellApp) AddElement(el ...CElement) {
 	}
 }
 
-func (c *CellApp) getActives(active, static bool) []CElement {
-	var result []CElement
-	for _, index := range c.actives {
-		result = append(result, c.baseElements[index])
-	}
-	return result
-}
-
 func (c *CellApp) getElementByIndex(index int) (CElement, bool) {
 	if ce, ok := c.baseElements[index]; ok {
 		return ce, true
@@ -96,7 +94,7 @@ func (c *CellApp) getElementByIndex(index int) (CElement, bool) {
 
 // drawElements triggers the draw for any element
 func (c *CellApp) drawElements() {
-	//c.cleanElements()
+	c.cleanElements()
 	for i := 0; i < c.elementCount; i++ {
 		if el, ok := c.getElementByIndex(i); ok {
 			el.draw(c, false)
@@ -105,9 +103,11 @@ func (c *CellApp) drawElements() {
 }
 
 func (c *CellApp) cleanElements() {
-	for _, el := range c.baseElements {
-		if el.haveChanged() {
-			el.draw(c, true)
+	for i := 0; i < c.elementCount; i++ {
+		if el, ok := c.getElementByIndex(i); ok {
+			if el.haveChanged() {
+				el.draw(c, true)
+			}
 		}
 	}
 }
@@ -135,7 +135,7 @@ func (c *CellApp) hoverElementCheck(x, y int) {
 func (c *CellApp) RunLoop(exitCallBack func()) {
 	if c.screen != nil {
 		c.screen.EnableMouse()
-		ox, oy := -1, -1
+		lx, ly := -1, -1
 		for {
 			// Update screen
 			c.screen.Show()
@@ -164,27 +164,41 @@ func (c *CellApp) RunLoop(exitCallBack func()) {
 				button := ev.Buttons()
 				// Only process button events, not wheel events
 				button &= tcell.ButtonMask(0xff)
-
-				if button != tcell.ButtonNone && ox < 0 {
-					ox, oy = x, y
-				}
+				/*
+					if button != tcell.ButtonNone && ox < 0 {
+						ox, oy = x, y
+					}*/
 				switch ev.Buttons() {
-				case tcell.ButtonNone:
-					if ox >= 0 {
-						//label := fmt.Sprintf("%d,%d to %d,%d", ox, oy, x, y)
-						//c.drawBox(ox, oy, x, y, boxStyle, label)
-						newBox := NewBox()
-						newBox.SetDim(ox, oy, x-ox, y-oy)
-						c.AddElement(newBox)
-						newBox.OnMouseOver = func(x, y int) {
-							newBox.setStyle(tcell.StyleDefault.Foreground(tcell.ColorYellow).Background(tcell.ColorDarkGreen))
-						}
-
-						newBox.OnMouseLeave = func() {
-							newBox.setStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue))
-						}
-						ox, oy = -1, -1
+				case tcell.Button1:
+					if lx < 0 {
+						lx, ly = x, y
 					}
+					if c.Listener.OnLMouseDown != nil {
+						c.Listener.OnLMouseDown(c, x, y)
+					}
+
+				case tcell.ButtonNone:
+					if lx >= 0 && c.Listener.OnLMouseUp != nil {
+						c.Listener.OnLMouseUp(c, x, y, lx, ly)
+						lx, ly = -1, -1
+					}
+					/*
+						if ox >= 0 {
+							//label := fmt.Sprintf("%d,%d to %d,%d", ox, oy, x, y)
+							//c.drawBox(ox, oy, x, y, boxStyle, label)
+							newBox := NewBox()
+							newBox.SetDim(ox, oy, x-ox, y-oy)
+							c.AddElement(newBox)
+							newBox.OnMouseOver = func(x, y int) {
+								newBox.setStyle(tcell.StyleDefault.Foreground(tcell.ColorYellow).Background(tcell.ColorDarkGreen))
+							}
+
+							newBox.OnMouseLeave = func() {
+								newBox.setStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue))
+							}
+							ox, oy = -1, -1
+						}
+					*/
 				}
 
 			}
