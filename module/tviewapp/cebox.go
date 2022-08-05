@@ -27,6 +27,15 @@ func (box *CeBox) draw(ca *CellApp, cleanUp bool) {
 	ca.drawBox(box.left, box.top, box.left+box.width, box.top+box.height, box.drawStyle, "")
 }
 
+func (box *CeBox) GetBehavior() CElementBehavior {
+	return CElementBehavior{
+		selectable: true,
+		movable:    true,
+		hovers:     true,
+		static:     false,
+	}
+}
+
 func (box *CeBox) setStyle(style tcell.Style) {
 	box.drawStyle = style
 }

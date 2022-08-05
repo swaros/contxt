@@ -50,6 +50,15 @@ func (str *CeString) savePrevState() {
 	}
 }
 
+func (str *CeString) GetBehavior() CElementBehavior {
+	return CElementBehavior{
+		selectable: false,
+		movable:    false,
+		hovers:     false,
+		static:     true,
+	}
+}
+
 func (str *CeString) SetText(text string) {
 	str.text = text
 	if str.autosize {
