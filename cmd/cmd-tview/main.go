@@ -14,6 +14,8 @@ func main() {
 	app := tviewapp.New()
 	app.NewScreen()
 
+	card := tviewapp.NewCard("debug")
+
 	demo := tviewapp.NewText("hello world")
 
 	demo2 := tviewapp.NewBox()
@@ -23,7 +25,7 @@ func main() {
 
 	}
 
-	newBox := tviewapp.NewBox()
+	newBox := tviewapp.NewCard("hello world")
 
 	app.Listener.OnLMouseDown = func(ca *tviewapp.CellApp, x, y int) {
 		demo.SetText(".... left MOUSE DOWN" + strconv.Itoa(x) + " x " + strconv.Itoa(y) + " .......")
@@ -31,7 +33,7 @@ func main() {
 
 	app.Listener.OnLMouseUp = func(ca *tviewapp.CellApp, x, y, startx, starty int) {
 
-		newBox.SetDim(x, y, startx-x, starty-y)
+		newBox.SetDim(startx, starty, x-startx, y-starty)
 		ca.AddElement(newBox)
 		demo.SetText(".... left MOUSE LEAVE " + strconv.Itoa(x) + " x " + strconv.Itoa(y) + " .... " + strconv.Itoa(startx) + " x " + strconv.Itoa(starty) + " .......")
 	}
@@ -40,7 +42,7 @@ func main() {
 		demo.SetText("the blue box is untouched right now.....")
 	}
 
-	app.AddElement(demo, demo2)
+	app.AddElement(demo, demo2, card)
 	app.RunLoop(func() { os.Exit(0) })
 
 }

@@ -24,7 +24,7 @@ func (box *CeBox) draw(ca *CellApp, cleanUp bool) {
 		ca.cleanArea(box.left, box.top, box.left+box.width, box.top+box.height)
 		return
 	}
-	ca.drawBox(box.left, box.top, box.left+box.width, box.top+box.height, box.drawStyle, "")
+	ca.drawBox(box.left, box.top, box.left+box.width, box.top+box.height, box.drawStyle)
 }
 
 func (box *CeBox) GetBehavior() CElementBehavior {

@@ -265,7 +265,50 @@ func (c *CellApp) cleanArea(x1, y1, x2, y2 int) {
 	}
 }
 
-func (c *CellApp) drawBox(x1, y1, x2, y2 int, style tcell.Style, text string) {
+func (c *CellApp) drawFrameWs(cs CeSize, style tcell.Style) {
+	c.drawFrame(cs.left, cs.top, cs.left+cs.width, cs.top+cs.height, style)
+}
+
+func (c *CellApp) drawFrame(x1, y1, x2, y2 int, style tcell.Style) {
+	if y2 < y1 {
+		y1, y2 = y2, y1
+	}
+	if x2 < x1 {
+		x1, x2 = x2, x1
+	}
+
+	// Fill background
+	for row := y1; row <= y2; row++ {
+		for col := x1; col <= x2; col++ {
+			c.screen.SetContent(col, row, ' ', nil, style)
+		}
+	}
+}
+
+// convert CESize to screen coordinates
+func CESizeToCoords(cs CeSize) (int, int, int, int) {
+	return cs.left, cs.top, cs.left + cs.width, cs.top + cs.height
+}
+
+func (c *CellApp) drawBoxWs(cs CeSize, style tcell.Style) {
+	c.drawBox(cs.left, cs.top, cs.left+cs.width, cs.top+cs.height, style)
+}
+
+func (c *CellApp) drawHLine(x, y, w int, style tcell.Style) {
+	for col := x; col <= x+w; col++ {
+		c.screen.SetContent(col, y, tcell.RuneHLine, nil, style)
+
+	}
+}
+
+func (c *CellApp) drawHTopLine(x, y, w int, style tcell.Style) {
+	for col := x; col <= x+w; col++ {
+		c.screen.SetContent(col, y, tcell.RuneS1, nil, style)
+
+	}
+}
+
+func (c *CellApp) drawBox(x1, y1, x2, y2 int, style tcell.Style) {
 	if y2 < y1 {
 		y1, y2 = y2, y1
 	}
@@ -298,5 +341,4 @@ func (c *CellApp) drawBox(x1, y1, x2, y2 int, style tcell.Style, text string) {
 		c.screen.SetContent(x2, y2, tcell.RuneLRCorner, nil, style)
 	}
 
-	c.drawText(x1+1, y1+1, x2-1, y2-1, style, text)
 }
