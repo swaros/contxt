@@ -7,6 +7,7 @@ import (
 	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 	"github.com/swaros/contxt/configure"
+	"github.com/swaros/contxt/dirhandle"
 	"github.com/swaros/contxt/systools"
 	"github.com/swaros/manout"
 )
@@ -91,6 +92,15 @@ func (ui *CtxUi) createHeaderText() string {
 	path := ""
 	if configure.UsedConfig.LastIndex < len(configure.UsedConfig.Paths) {
 		path = configure.UsedConfig.Paths[configure.UsedConfig.LastIndex]
+
+		dir, err := dirhandle.Current()
+		if err != nil {
+			return "[red]" + err.Error()
+		}
+
+		if dir != path {
+			path = "[red]" + path + "[white](we are not in this path)"
+		}
 	}
 	header := "[blue]WORKSPACE [yellow]" + configure.UsedConfig.CurrentSet + " [blue]current active dir[yellow] " + path
 	return header
