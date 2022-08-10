@@ -1,4 +1,4 @@
-version: "0.2.3"
+version: "0.2.2"
 task:
   - id: go-check
     require:
@@ -18,15 +18,28 @@ task:
       - go env | Select-String GOVERSION
       - go version
 
-  - id: cleanup-dependencies
+  - id: dos2unix
+    require:
+      system: linux
     script:
-      - go mod tidy
+      - find . -type f -print0 | xargs -0 dos2unix
+
+  - id: cleanup-dependencies
+    script:      
+    {{- range $k, $test := $.module }}    
+      - | 
+       cd {{ $test.modul }}
+       go mod tidy
+       
+    {{- end }}
       - git status
       
   - id: test
     script:
-      - go clean -testcache ./..
-      - go test -cover -v -failfast ./...
+    {{- range $k, $test := $.module }}
+      #- go clean -testcache ./{{ $test.modul }}/./...
+      - go test -cover -v -failfast ./{{ $test.modul }}/./...
+    {{- end }}
 
   - id: test-each
     needs:
@@ -39,26 +52,26 @@ task:
     options:
       displaycmd: true
     script:
-      - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/systools
+      - go test -failfast -timeout 300s -v ./module/systools/./...      
 
   - id: test-conf
     options:
       displaycmd: true
-    script:
-      - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/configure
+    script:      
+      - go test -failfast -timeout 300s -v ./module/configure/./...
   
   - id: test-cmd
     options:
       displaycmd: true
       stickcursor: false
-    script:
-      - go test -failfast -timeout 300s -v github.com/swaros/contxt/context/cmdhandle
+    script:      
+      - go test -failfast -timeout 300s -v ./module/taskrun/./...
 
   - id: test-dir
     options:
       displaycmd: true
-    script:
-      - go test -failfast -timeout 20s -v github.com/swaros/contxt/context/dirhandle
+    script:      
+      - go test -failfast -timeout 300s -v ./module/dirhandle/./...
 
   - id: set-version
     options:
@@ -119,7 +132,7 @@ task:
     script:
       - echo "build start----"
       - echo "   target -- ${bin-out}"
-      - go build -ldflags "-X github.com/swaros/contxt/context/configure.minversion=${minor-version} -X github.com/swaros/contxt/context/configure.midversion=${mid-version} -X github.com/swaros/contxt/context/configure.mainversion=${main-version} -X github.com/swaros/contxt/context/configure.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
+      - go build -ldflags "-X github.com/swaros/contxt/configure.minversion=${minor-version} -X github.com/swaros/contxt/configure.midversion=${mid-version} -X github.com/swaros/contxt/configure.mainversion=${main-version} -X github.com/swaros/contxt/configure.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
       - echo "   done   -- build "
 
   - id: verify-build
@@ -218,4 +231,49 @@ task:
       - echo "check versions"
       - contxt version
 
-    
+## tview test app #####
+  - id: tview-build
+    require:
+      system: linux
+    script:
+      - echo "build tview for linux"
+      - go build -o ./bin/tview-example cmd/cmd-tview/main.go
+  
+  - id: tview-build
+    require:
+      system: windows
+    script:
+      - echo "build tview for windows"
+      - go build -o ./bin/tview-example.exe cmd/cmd-tview/main.go
+
+  - id: tview-build
+    require:
+      system: linux
+      exists:
+        - bin/tview-example
+    script:
+      - chmod 755 bin/tview-example
+      - echo "if not executed try to start the application with"
+      - echo "./bin/tview-example"
+      
+
+  - id: tview-run
+    needs:
+      - tview-build
+
+  - id: tview-run
+    require:
+      system: linux
+      exists:
+        - bin/tview-example
+    script:
+      - ./bin/tview-example        
+  
+  - id: tview-run
+    require:
+      system: windows
+      exists:
+        - bin/tview-example.exe
+    script:
+      - ./bin/tview-example.exe        
+  

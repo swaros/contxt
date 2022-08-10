@@ -1,0 +1,28 @@
+module:
+  - 
+    modul: module/configure
+    test:
+      timeout: 30s
+
+  - 
+    modul: module/dirhandle
+    test:
+      timeout: 30s
+
+  - 
+    modul: module/systools
+    test:
+      timeout: 30s
+
+  - 
+    modul: module/trigger
+    test:
+      timeout: 30s
+
+  - 
+    modul: module/taskrun
+    test:
+      timeout: 30s
+      
+  
+  
