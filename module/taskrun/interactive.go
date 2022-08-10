@@ -28,6 +28,9 @@ type CtxUi struct {
 	taskScr        *tview.TextView
 	selectedtarget string
 	targetCtrl     *tview.Form
+	targetList     *tview.List
+	wsList         *tview.List
+	pathList       *tview.List
 }
 
 func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
@@ -119,6 +122,22 @@ func (ui *CtxUi) createStautsText() string {
 
 	status := "[blue]path [yellow]" + path + " [blue]version[yellow] " + template.Version
 	return status
+}
+
+func (ui *CtxUi) UpdateAll() {
+
+}
+
+func (ui *CtxUi) UpdatePathList() {
+	ui.pathList.Clear()
+	ui.pathList.AddItem("[blue]<<< [green]BACK", "", 'x', func() {
+		ui.pages.SendToBack("paths")
+	})
+
+	configure.PathWorker(func(index int, name string) {
+		indxStr := strconv.Itoa(index)
+		ui.pathList.AddItem(name, "", rune(indxStr[0]), nil)
+	})
 }
 
 // createMenu creates the main menu as a default tview.List
@@ -232,7 +251,9 @@ func (ui *CtxUi) CreateWorkSpacePage() *tview.Flex {
 	uiWsList.ShowSecondaryText(false)
 	uiWsList.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
 		doMagicParamOne(s1)
+		ui.UpdateAll()
 		ui.pages.SendToBack("workspace")
+		ui.updateTaskView()
 	})
 	wsflex := tview.NewFlex().AddItem(uiWsList, 0, 1, true)
 	return wsflex
@@ -240,18 +261,11 @@ func (ui *CtxUi) CreateWorkSpacePage() *tview.Flex {
 
 func (ui *CtxUi) CreatePathSelectPage() *tview.Flex {
 
-	uiPathList := tview.NewList()
-	uiPathList.AddItem("[blue]<<< [green]BACK", "", 'x', func() {
-		ui.pages.SendToBack("paths")
-	})
-
-	configure.PathWorker(func(index int, name string) {
-		indxStr := strconv.Itoa(index)
-		uiPathList.AddItem(name, "", rune(indxStr[0]), nil)
-	})
-	uiPathList.SetHighlightFullLine(true)
-	uiPathList.ShowSecondaryText(false)
-	uiPathList.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
+	ui.pathList = tview.NewList()
+	ui.UpdatePathList()
+	ui.pathList.SetHighlightFullLine(true)
+	ui.pathList.ShowSecondaryText(false)
+	ui.pathList.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
 		//doMagicParamOne(s1)
 
 		configure.PathWorker(func(index int, path string) {
@@ -263,7 +277,7 @@ func (ui *CtxUi) CreatePathSelectPage() *tview.Flex {
 		})
 		ui.pages.SendToBack("paths")
 	})
-	wsflex := tview.NewFlex().AddItem(uiPathList, 0, 1, true)
+	wsflex := tview.NewFlex().AddItem(ui.pathList, 0, 1, true)
 	return wsflex
 }
 
@@ -277,7 +291,7 @@ func (ui *CtxUi) CreateRunPage() *tview.Flex {
 		ui.pages.SendToBack("target")
 	})
 	var keyList string = "abcdefghijklmnopqrstuvwyz1234567890" // shortcuts definition
-	if targets, ok := getAllTargets(); ok {                    // get all targets
+	if targets, ok := GetAllTargets(); ok {                    // get all targets
 		for index, target := range targets {
 			if index <= len(keyList) { // we just print targets until we have chars to map
 				uiTaskList.AddItem(target, "", rune(keyList[index]), nil) // add the target as listitem

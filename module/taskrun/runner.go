@@ -403,7 +403,7 @@ also go-template imports will be handled.
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
 			//targets, found := targetsAsMap()
-			targets, found := getAllTargets()
+			targets, found := GetAllTargets()
 			if !found {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
@@ -523,7 +523,7 @@ you will also see if a unexpected propertie found `,
 			if len(args) != 0 {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
-			targets, found := getAllTargets()
+			targets, found := GetAllTargets()
 			if !found {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
@@ -820,7 +820,7 @@ func doMagicParamOne(param string) bool {
 	return result
 }
 
-func getAllTargets() ([]string, bool) {
+func GetAllTargets() ([]string, bool) {
 	plainTargets, found := targetsAsMap()
 	template, _, exists, terr := GetTemplate()
 	if terr != nil {

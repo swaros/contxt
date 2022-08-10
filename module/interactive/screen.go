@@ -5,6 +5,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/swaros/contxt/taskrun"
 )
 
 type model struct {
@@ -15,7 +16,6 @@ type model struct {
 
 var initialModel = model{
 	// Our to-do list is just a grocery list
-	choices: []string{"Buy carrots", "Buy celery", "Buy kohlrabi"},
 
 	// A map which indicates which choices are selected. We're using
 	// the  map like a mathematical set. The keys refer to the indexes
@@ -101,6 +101,7 @@ func (m model) View() string {
 }
 
 func ScreenMain() {
+	initialModel.choices, _ = taskrun.GetAllTargets()
 	p := tea.NewProgram(initialModel)
 	if err := p.Start(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)

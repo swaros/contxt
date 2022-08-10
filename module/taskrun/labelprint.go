@@ -52,12 +52,13 @@ func CtxOut(msg ...interface{}) {
 
 	}
 	msg = newMsh
-	fmt.Print(manout.MessageCln(
-		manout.BackDarkGrey, "c",
-		manout.BackWhite, manout.ForeBlue,
-		"on", manout.ForeDarkGrey, ".", manout.ForeMagenta, "tx",
-		manout.BackDarkGrey, "t",
-		manout.CleanTag, " "))
+	/*fmt.Print(manout.MessageCln(
+
+	manout.BackDarkGrey, "c",
+	manout.BackWhite, manout.ForeBlue,
+	"on", manout.ForeDarkGrey, ".", manout.ForeMagenta, "tx",
+	manout.BackDarkGrey, "t",
+	manout.CleanTag, " "))*/
 	fmt.Println(manout.MessageCln(msg...))
 }
 

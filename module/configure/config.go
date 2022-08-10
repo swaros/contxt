@@ -202,20 +202,23 @@ func RemoveWorkspace(name string) {
 }
 
 // SaveDefaultConfiguration stores the current configuration as default
-func SaveDefaultConfiguration(workSpaceConfigUpdate bool) {
+func SaveDefaultConfiguration(workSpaceConfigUpdate bool) error {
 	path, err := getConfigPath(DefaultConfigFileName)
 	if err == nil {
-		SaveConfiguration(UsedConfig, path)
+		if err := SaveConfiguration(UsedConfig, path); err != nil {
+			return err
+		}
 		// save workspace config too
 		if workSpaceConfigUpdate {
 			pathWorkspace, secErr := getConfigPath(UsedConfig.CurrentSet + ".json")
 			if secErr == nil {
-				SaveConfiguration(UsedConfig, pathWorkspace)
+				return SaveConfiguration(UsedConfig, pathWorkspace)
 			}
 		}
 	} else {
-		fmt.Println(err)
+		return err
 	}
+	return nil
 }
 
 // ListWorkSpaces : list all existing workspaces
@@ -303,11 +306,6 @@ func WorkSpaces(callback func(string)) {
 	}
 }
 
-// SetLastIndex stores the last used index to get back to them after switch
-func SetLastIndex(index int) {
-
-}
-
 // ShowPaths : display all stored paths in the workspace
 func ShowPaths(current string) int {
 
@@ -335,24 +333,19 @@ func PathWorker(callback func(int, string)) error {
 	return nil
 }
 
-func loadConfigurationFile(path string) {
+func loadConfigurationFile(path string) error {
 	file, _ := os.Open(path)
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 
-	err := decoder.Decode(&UsedConfig)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
+	return decoder.Decode(&UsedConfig)
 }
 
 // SaveConfiguration : stores configuration in given path
-func SaveConfiguration(config Configuration, path string) {
+func SaveConfiguration(config Configuration, path string) error {
 	b, _ := json.MarshalIndent(config, "", " ")
-	err := ioutil.WriteFile(path, b, 0644)
-	if err != nil {
-		fmt.Println(err)
-	}
+	return ioutil.WriteFile(path, b, 0644)
+
 }
 
 // getConfigPath returns the user related  path
@@ -440,7 +433,9 @@ func checkSetup() error {
 
 		// load config file
 		if configFileExists && err == nil {
-			loadConfigurationFile(configPath)
+			if lErr := loadConfigurationFile(configPath); lErr != nil {
+				return lErr
+			}
 			if UsedConfig.CurrentSet == "" {
 				UsedConfig.CurrentSet = DefaultWorkspace
 				SaveDefaultConfiguration(false)
@@ -450,7 +445,7 @@ func checkSetup() error {
 			if secErr == nil {
 				confPathExists, _ := exists(pathWorkspace)
 				if confPathExists {
-					loadConfigurationFile(pathWorkspace)
+					return loadConfigurationFile(pathWorkspace)
 				} else {
 					UsedConfig.Paths = nil
 				}
@@ -461,15 +456,6 @@ func checkSetup() error {
 	return err
 }
 
-/*
-func getUserConfig() (string, error) {
-	homeDir, err := getUserDir()
-	if err == nil {
-		log.Println(homeDir)
-	}
-	return homeDir, err
-}
-*/
 func exists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
