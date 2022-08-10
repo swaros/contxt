@@ -44,7 +44,7 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 	menu.SetBorder(true)
 
 	status := tview.NewTextView()
-	status.SetText("[blue]version [yellow]" + configure.GetVersion() + "\n[blue]build[yellow] " + configure.GetBuild())
+	status.SetText(ui.createStautsText())
 	status.SetBorder(true)
 	status.SetDynamicColors(true)
 	ui.statusScr = status
@@ -63,7 +63,7 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 
 	pages.AddPage("main", flex, true, true)
 
-	stat := "[blue]version [yellow]" + configure.GetVersion() + " [blue]build[yellow] " + configure.GetBuild()
+	stat := ui.createHeaderText()
 
 	frame := tview.NewFrame(pages)
 	frame.SetBorders(1, 1, 1, 1, 0, 0).
@@ -85,6 +85,28 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 	}
 
 	return ui, nil
+}
+
+func (ui *CtxUi) createHeaderText() string {
+	path := ""
+	if configure.UsedConfig.LastIndex < len(configure.UsedConfig.Paths) {
+		path = configure.UsedConfig.Paths[configure.UsedConfig.LastIndex]
+	}
+	header := "[blue]WORKSPACE [yellow]" + configure.UsedConfig.CurrentSet + " [blue]current active dir[yellow] " + path
+	return header
+}
+
+func (ui *CtxUi) createStautsText() string {
+	template, path, exists, err := GetTemplate()
+	if err != nil {
+		return err.Error()
+	}
+	if !exists {
+		return "no template in this location"
+	}
+
+	status := "[blue]template [yellow]" + path + "[blue]build[yellow] " + template.Version
+	return status
 }
 
 // createMenu creates the main menu as a default tview.List

@@ -7,4 +7,5 @@ use (
 	./module/taskrun
 	./module/trigger
 	./module/tviewapp
+	./module/interactive
 )

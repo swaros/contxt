@@ -81,7 +81,7 @@ func FindTemplate() (string, bool) {
 	return "", false
 }
 
-// GetTemplate return current template
+// GetTemplate return current template, the absolute path,if it exists, any error
 func GetTemplate() (configure.RunConfig, string, bool, error) {
 
 	foundPath, success := FindTemplate()
