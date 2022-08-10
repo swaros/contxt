@@ -618,7 +618,7 @@ func initCobra() {
 
 	createCmd.AddCommand(createImport)
 
-	rootCmd.PersistentFlags().BoolVarP(&Experimental, "experimental", "E", false, "enable experimental features")
+	//rootCmd.PersistentFlags().BoolVarP(&Experimental, "experimental", "E", true, "enable experimental features")
 	rootCmd.PersistentFlags().BoolVarP(&showColors, "coloroff", "c", false, "disable usage of colors in output")
 	rootCmd.PersistentFlags().BoolVarP(&showHints, "nohints", "n", false, "disable printing hints")
 	rootCmd.PersistentFlags().StringVar(&loglevel, "loglevel", "FATAL", "set loglevel")
