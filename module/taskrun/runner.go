@@ -153,18 +153,6 @@ if these task are defined
 		},
 	}
 
-	interactiveCmd = &cobra.Command{
-		Use:   "interactive",
-		Short: "starts the interactive modus",
-		Long:  `start contxt in interactive modus`,
-		Run: func(cmd *cobra.Command, args []string) {
-			checkDefaultFlags(cmd, args)
-			if _, err := InitWindow(cmd, args); err != nil {
-				CtxOut(LabelErrF("error start the interactive mode"), err)
-			}
-		},
-	}
-
 	workspaceCmd = &cobra.Command{
 		Use:   "workspace",
 		Short: "create new workspace if not exists, and use them",
@@ -627,7 +615,6 @@ func initCobra() {
 	rootCmd.AddCommand(createCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(exportCmd)
-	rootCmd.AddCommand(interactiveCmd)
 
 	lintCmd.Flags().IntVar(&leftLen, "left", 45, "set the width for the source code")
 	lintCmd.Flags().IntVar(&rightLen, "right", 55, "set the witdh for the current state view")
