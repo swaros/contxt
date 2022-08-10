@@ -18,15 +18,28 @@ task:
       - go env | Select-String GOVERSION
       - go version
 
-  - id: cleanup-dependencies
+  - id: dos2unix
+    require:
+      system: linux
     script:
-      - go mod tidy
+      - find . -type f -print0 | xargs -0 dos2unix
+
+  - id: cleanup-dependencies
+    script:      
+    {{- range $k, $test := $.module }}    
+      - | 
+       cd {{ $test.modul }}
+       go mod tidy
+       
+    {{- end }}
       - git status
       
   - id: test
     script:
-      - go clean -testcache ./..
-      - go test -cover -v -failfast ./...
+    {{- range $k, $test := $.module }}
+      #- go clean -testcache ./{{ $test.modul }}/./...
+      - go test -cover -v -failfast ./{{ $test.modul }}/./...
+    {{- end }}
 
   - id: test-each
     needs:
@@ -39,30 +52,30 @@ task:
     options:
       displaycmd: true
     script:
-      - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/systools
+      - go test -failfast -timeout 300s -v ./module/systools/./...      
 
   - id: test-conf
     options:
       displaycmd: true
-    script:
-      - go test -failfast -timeout 30s -v github.com/swaros/contxt/context/configure
+    script:      
+      - go test -failfast -timeout 300s -v ./module/configure/./...
   
   - id: test-cmd
     options:
       displaycmd: true
       stickcursor: false
-    script:
-      - go test -failfast -timeout 300s -v github.com/swaros/contxt/context/cmdhandle
+    script:      
+      - go test -failfast -timeout 300s -v ./module/taskrun/./...
 
   - id: test-dir
     options:
       displaycmd: true
-    script:
-      - go test -failfast -timeout 20s -v github.com/swaros/contxt/context/dirhandle
+    script:      
+      - go test -failfast -timeout 300s -v ./module/dirhandle/./...
 
   - id: set-version
     options:
-      displaycmd: true
+      displaycmd: false
       invisible: true
     variables:
       bin-out: contxt
@@ -77,7 +90,7 @@ task:
 
   - id: set-version
     options:
-      displaycmd: true
+      displaycmd: false
       invisible: true
       maincmd: pwsh
       mainparams:
@@ -93,7 +106,7 @@ task:
 
   - id: set-version
     options:
-      displaycmd: true
+      displaycmd: false
       invisible: true
     script:
      - echo "version ${main-version}.${mid-version}.${minor-version} ${build-hash} out ${bin-out}"
@@ -106,7 +119,7 @@ task:
 
   - id: build-exec
     options:
-      displaycmd: true
+      displaycmd: false
       invisible: true
     require:
       variables:
@@ -117,18 +130,26 @@ task:
     next:
       - verify-build
     script:
-      - echo "build start"
-      - go build -ldflags "-X github.com/swaros/contxt/context/configure.minversion=${minor-version} -X github.com/swaros/contxt/context/configure.midversion=${mid-version} -X github.com/swaros/contxt/context/configure.mainversion=${main-version} -X github.com/swaros/contxt/context/configure.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
+      - echo "build start----"
+      - echo "   target -- ${bin-out}"
+      - go build -ldflags "-X github.com/swaros/contxt/configure.minversion=${minor-version} -X github.com/swaros/contxt/configure.midversion=${mid-version} -X github.com/swaros/contxt/configure.mainversion=${main-version} -X github.com/swaros/contxt/configure.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
+      - echo "   done   -- build "
 
   - id: verify-build
     options:
-      displaycmd: true
+      displaycmd: false
       invisible: true
     require:
       exists:
         - bin/${bin-out}
     script:
+       - echo "verifiy build version"
        - bin/${bin-out} version
+
+## install local. this is used by the Makefile
+## because contxt can not update himself while it is running,
+## or is just not installed yet
+## so make runs the new builded contxt binary
 
   - id: install-local
     variables:
@@ -137,13 +158,14 @@ task:
       - build
     next:
       - install-local-bin
-      - install-local-dot-bin
 
+## check for ~/bin 
   - id: install-local-bin
     script:
       - echo "try the ${HOME}/bin usage"
 
-  - id: install-local-bin
+## success for local bin/ 
+  - id: install-local-bin 
     options:
       displaycmd: true
     require:
@@ -154,15 +176,17 @@ task:
         local-install: "=yes"
         bin-out: "*"
     script:
-      - cp bin/${bin-out} $HOME/bin/${bin-out}
+      - echo "we will use /bin/${bin-out}"
+      - yes | cp -i bin/${bin-out} $HOME/bin/${bin-out} # # to solve the cp -i alias issue
+      - echo "check versions"
+      - contxt version
+      
 
 
 ## fail for local bin/
   - id: install-local-bin
     options:
       displaycmd: true
-    variables:
-      local-install: "NO" # if we take care... no one else should too
     require:
       notExists:
         - ${HOME}/bin
@@ -172,9 +196,13 @@ task:
         bin-out: "*"
     script:
       - echo "${HOME}/bin not exists. will not be used"
+    next:
+      - install-local-dot-bin
+    
 
   - id: install-local-dot-bin
-    
+    script:
+      - echo "try $HOME/.local/bin/"
 
   ## fail test .local/bin
   - id: install-local-dot-bin
@@ -199,8 +227,53 @@ task:
         bin-out: "*"        
     script:
       - echo "using ~/.local/bin/ to copy ${bin-out}"
-      - cp bin/${bin-out} $HOME/.local/bin/${bin-out}
+      - yes | cp -i bin/${bin-out} $HOME/.local/bin/${bin-out}  # to solve the cp -i alias issue
       - echo "check versions"
       - contxt version
 
-    
+## tview test app #####
+  - id: tview-build
+    require:
+      system: linux
+    script:
+      - echo "build tview for linux"
+      - go build -o ./bin/tview-example cmd/cmd-tview/main.go
+  
+  - id: tview-build
+    require:
+      system: windows
+    script:
+      - echo "build tview for windows"
+      - go build -o ./bin/tview-example.exe cmd/cmd-tview/main.go
+
+  - id: tview-build
+    require:
+      system: linux
+      exists:
+        - bin/tview-example
+    script:
+      - chmod 755 bin/tview-example
+      - echo "if not executed try to start the application with"
+      - echo "./bin/tview-example"
+      
+
+  - id: tview-run
+    needs:
+      - tview-build
+
+  - id: tview-run
+    require:
+      system: linux
+      exists:
+        - bin/tview-example
+    script:
+      - ./bin/tview-example        
+  
+  - id: tview-run
+    require:
+      system: windows
+      exists:
+        - bin/tview-example.exe
+    script:
+      - ./bin/tview-example.exe        
+  

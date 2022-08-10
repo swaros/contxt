@@ -15,9 +15,9 @@ builds:
       #- darwin
     main: ./cmd/cmd-contxt/main.go
     ldflags:
-      - -X github.com/swaros/contxt/context/configure.mainversion={{.Version}}
-      #- -X github.com/swaros/contxt/context/configure.midversion={{.Commit}}
-      - -X github.com/swaros/contxt/context/configure.build={{.Date}}
+      - -X github.com/swaros/contxt/configure.mainversion={{.Version}}
+      #- -X github.com/swaros/contxt/configure.midversion={{.Commit}}
+      - -X github.com/swaros/contxt/configure.build={{.Date}}
 
 archives:
   - replacements:
