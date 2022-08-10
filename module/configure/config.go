@@ -25,6 +25,7 @@ package configure
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -159,7 +160,7 @@ func createDefaultConfig() {
 }
 
 // ChangeWorkspace changing workspace
-func ChangeWorkspace(workspace string, oldspace func(string) bool, newspace func(string)) {
+func ChangeWorkspace(workspace string, oldspace func(string) bool, newspace func(string)) error {
 	// triggers execution of checking old Workspace
 	canChange := oldspace(UsedConfig.CurrentSet)
 	if canChange {
@@ -174,9 +175,9 @@ func ChangeWorkspace(workspace string, oldspace func(string) bool, newspace func
 		}
 		SaveDefaultConfiguration(true)
 		newspace(workspace)
-		fmt.Println(manout.MessageCln("current workspace is now:", manout.BackBlue, manout.ForeWhite, workspace))
+		return nil
 	} else {
-		fmt.Println(manout.MessageCln(manout.ForeLightYellow, "changing workspace failed."))
+		return errors.New("changing workspace failed.")
 	}
 }
 
@@ -312,7 +313,6 @@ func ShowPaths(current string) int {
 
 	PathWorker(func(index int, path string) {
 		if path == current {
-
 			fmt.Println(manout.MessageCln("\t[", manout.ForeLightYellow, index, manout.CleanTag, "]\t", manout.BoldTag, path))
 		} else {
 			fmt.Println(manout.MessageCln("\t ", manout.ForeLightBlue, index, manout.CleanTag, " \t", path))
@@ -323,16 +323,16 @@ func ShowPaths(current string) int {
 }
 
 // PathWorker executes a callback function in a path
-func PathWorker(callback func(int, string)) {
+func PathWorker(callback func(int, string)) error {
 	cnt := len(UsedConfig.Paths)
 	if cnt < 1 {
-		fmt.Println(manout.MessageCln("\t", manout.ForeYellow, "no paths actually stored ", manout.ForeDarkGrey, UsedConfig.CurrentSet))
-		return
+		return errors.New("no paths actually stored ")
 	}
 	for index, path := range UsedConfig.Paths {
 		os.Chdir(path)
 		callback(index, path)
 	}
+	return nil
 }
 
 func loadConfigurationFile(path string) {

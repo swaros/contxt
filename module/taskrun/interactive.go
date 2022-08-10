@@ -2,6 +2,8 @@ package taskrun
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -68,8 +70,8 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 
 	frame := tview.NewFrame(pages)
 	frame.SetBorders(1, 1, 1, 1, 0, 0).
-		AddText(stat, true, tview.AlignCenter, tcell.ColorLightBlue).
-		AddText("Footer middle", false, tview.AlignCenter, tcell.ColorGreen)
+		AddText(stat, true, tview.AlignCenter, tcell.ColorWhite).
+		AddText(configure.GetVersion()+" "+configure.GetBuild()+" "+configure.GetOs(), false, tview.AlignCenter, tcell.ColorWhite)
 
 	frame.SetBackgroundColor(tcell.ColorGray)
 
@@ -112,22 +114,29 @@ func (ui *CtxUi) createStautsText() string {
 		return err.Error()
 	}
 	if !exists {
-		return "no template in this location"
+		return "[yellow]no template in this location."
 	}
 
-	status := "[blue]template [yellow]" + path + "[blue]build[yellow] " + template.Version
+	status := "[blue]path [yellow]" + path + " [blue]version[yellow] " + template.Version
 	return status
 }
 
 // createMenu creates the main menu as a default tview.List
 func (ui *CtxUi) createMenu() *tview.List {
 
-	menu := tview.NewList().AddItem("Task", "tasks overview", 't', func() {
+	menu := tview.NewList().AddItem("Task", "task in the current path", 't', func() {
 		ui.pages.SendToFront("target")
-	}).AddItem("quit", "EXIT", 'q', func() {
+	}).AddItem("Workspaces", "change workspaces", 'w', func() {
+		ui.pages.SendToFront("workspace")
+	}).AddItem("Paths", "change to path in workspace", 'w', func() {
+		ui.pages.SendToFront("paths")
+	}).AddItem("quit", "exit this application", 'q', func() {
 		ui.app.Stop()
 	})
 	ui.pages.AddPage("target", ui.CreateRunPage(), true, true)
+	ui.pages.AddPage("workspace", ui.CreateWorkSpacePage(), true, true)
+	ui.pages.AddPage("paths", ui.CreatePathSelectPage(), true, true)
+	//CreatePathSelectPage
 	menu.SetHighlightFullLine(true)
 	ui.menu = menu
 	return menu
@@ -210,11 +219,63 @@ func (ui *CtxUi) updateTaskView() {
 	}
 }
 
+func (ui *CtxUi) CreateWorkSpacePage() *tview.Flex {
+
+	uiWsList := tview.NewList()
+	uiWsList.AddItem("[blue]<<< [green]BACK", "", 'x', func() {
+		ui.pages.SendToBack("workspace")
+	})
+	configure.WorkSpaces(func(name string) {
+		uiWsList.AddItem(name, "", rune(name[0]), nil)
+	})
+	uiWsList.SetHighlightFullLine(true)
+	uiWsList.ShowSecondaryText(false)
+	uiWsList.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
+		doMagicParamOne(s1)
+		ui.pages.SendToBack("workspace")
+	})
+	wsflex := tview.NewFlex().AddItem(uiWsList, 0, 1, true)
+	return wsflex
+}
+
+func (ui *CtxUi) CreatePathSelectPage() *tview.Flex {
+
+	uiPathList := tview.NewList()
+	uiPathList.AddItem("[blue]<<< [green]BACK", "", 'x', func() {
+		ui.pages.SendToBack("paths")
+	})
+
+	configure.PathWorker(func(index int, name string) {
+		indxStr := strconv.Itoa(index)
+		uiPathList.AddItem(name, "", rune(indxStr[0]), nil)
+	})
+	uiPathList.SetHighlightFullLine(true)
+	uiPathList.ShowSecondaryText(false)
+	uiPathList.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
+		//doMagicParamOne(s1)
+
+		configure.PathWorker(func(index int, path string) {
+			if path == s1 {
+				configure.UsedConfig.LastIndex = index
+				configure.SaveDefaultConfiguration(true)
+				os.Chdir(path)
+			}
+		})
+		ui.pages.SendToBack("paths")
+	})
+	wsflex := tview.NewFlex().AddItem(uiPathList, 0, 1, true)
+	return wsflex
+}
+
 // CreateRunPage builds the page that contains different elements
 // to inspect and run the targets
 func (ui *CtxUi) CreateRunPage() *tview.Flex {
 	// this uiTaskList contains any target and we use them as a menu
+
 	uiTaskList := tview.NewList()
+	uiTaskList.AddItem("[blue]<<< [green]BACK", "", 'x', func() {
+		ui.pages.SendToBack("target")
+	})
 	var keyList string = "abcdefghijklmnopqrstuvwyz1234567890" // shortcuts definition
 	if targets, ok := getAllTargets(); ok {                    // get all targets
 		for index, target := range targets {
@@ -236,9 +297,6 @@ func (ui *CtxUi) CreateRunPage() *tview.Flex {
 		}
 	})
 
-	uiTaskList.AddItem("close", "", 'x', func() {
-		ui.pages.SendToBack("target")
-	})
 	uiTaskList.SetBorder(true)
 	uiTaskList.SetTitle("select target")
 	uiTaskList.ShowSecondaryText(false)
