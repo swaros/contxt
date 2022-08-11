@@ -33,6 +33,7 @@ import (
 
 	"github.com/imdario/mergo"
 	"github.com/sirupsen/logrus"
+	"github.com/swaros/contxt/awaitgroup"
 	"github.com/swaros/contxt/dirhandle"
 	"github.com/swaros/manout"
 
@@ -184,21 +185,21 @@ func RunTargets(targets string, sharedRun bool) {
 				ExecPathFile(&wg, !runSequencially, template, trgt)
 			}
 		} else {
-			var futuresExecs []FutureStack
+			var futuresExecs []awaitgroup.FutureStack
 			for _, trgt := range allTargets { // iterate all targets
 				CtxOut(LabelFY("exec"), InfoMinor("execute target in Async"), ValF(trgt), manout.ForeLightCyan, " ", templatePath)
-				futuresExecs = append(futuresExecs, FutureStack{
+				futuresExecs = append(futuresExecs, awaitgroup.FutureStack{
 					AwaitFunc: func(ctx context.Context) interface{} {
-						ctxTarget := ctx.Value(CtxKey{}).(string)                       // get the target from context
+						ctxTarget := ctx.Value(awaitgroup.CtxKey{}).(string)            // get the target from context
 						SetPH("CTX_TARGET", ctxTarget)                                  // update global target. TODO: makes this any sense in async?
 						return ExecPathFile(&wg, !runSequencially, template, ctxTarget) // execute target
 					},
 					Argument: trgt,
 				})
 			}
-			futures := ExecFutureGroup(futuresExecs)                      // execute all async task
+			futures := awaitgroup.ExecFutureGroup(futuresExecs)           // execute all async task
 			CtxOut(LabelFY("exec"), "all targets started ", len(targets)) // just info
-			WaitAtGroup(futures)                                          // wait until all task are done
+			awaitgroup.WaitAtGroup(futures)                               // wait until all task are done
 			CtxOut(LabelFY("exec"), "all targets done ", len(targets))    // also just info for the user
 		}
 
@@ -238,7 +239,7 @@ func setLogLevelByString(loglevel string) {
 
 }
 
-func listenerWatch(script configure.Task, target, logLine string, waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig) {
+func listenerWatch(script configure.Task, target, logLine string, e error, waitGroup *sync.WaitGroup, useWaitGroup bool, runCfg configure.RunConfig) {
 	if script.Listener != nil {
 
 		GetLogger().WithFields(logrus.Fields{
@@ -247,7 +248,7 @@ func listenerWatch(script configure.Task, target, logLine string, waitGroup *syn
 		}).Debug("testing Listener")
 
 		for _, listener := range script.Listener {
-			triggerFound, triggerMessage := checkReason(listener.Trigger, logLine) // check if a trigger have a match
+			triggerFound, triggerMessage := checkReason(listener.Trigger, logLine, e) // check if a trigger have a match
 			if triggerFound {
 				SetPH("RUN."+target+".LOG.HIT", logLine)
 				if script.Options.Displaycmd {
@@ -383,7 +384,7 @@ func lineExecuter(
 	}
 	// here we execute the current script line
 	execCode, realExitCode, execErr := ExecuteScriptLine(mainCommand, script.Options.Mainparams, replacedLine,
-		func(logLine string) bool { // callback for any logline
+		func(logLine string, err error) bool { // callback for any logline
 
 			SetPH("RUN."+target+".LOG.LAST", logLine) // set or overwrite the last script output for the target
 
@@ -392,7 +393,7 @@ func lineExecuter(
 					"cnt":      len(script.Listener),
 					"listener": script.Listener,
 				}).Debug("CHECK Listener")
-				listenerWatch(script, target, logLine, waitGroup, useWaitGroup, runCfg) // listener handler
+				listenerWatch(script, target, logLine, err, waitGroup, useWaitGroup, runCfg) // listener handler
 			}
 			targetLabel.Target = target
 			// The whole output can be ignored by configuration
@@ -417,7 +418,7 @@ func lineExecuter(
 				}
 			}
 
-			stopReasonFound, message := checkReason(stopReason, logLine) // do we found a defined reason to stop execution
+			stopReasonFound, message := checkReason(stopReason, logLine, err) // do we found a defined reason to stop execution
 			if stopReasonFound {
 				if script.Options.Displaycmd {
 					CtxOut(LabelFY("stop-reason"), ValF(message))
@@ -473,16 +474,16 @@ func lineExecuter(
 	return ExitNoCode, true
 }
 
-func generateFuturesByTargetListAndExec(RunTargets []string, waitGroup *sync.WaitGroup, runCfg configure.RunConfig) []Future {
+func generateFuturesByTargetListAndExec(RunTargets []string, waitGroup *sync.WaitGroup, runCfg configure.RunConfig) []awaitgroup.Future {
 	if len(RunTargets) < 1 {
-		return []Future{}
+		return []awaitgroup.Future{}
 	}
-	var runTargetExecs []FutureStack
+	var runTargetExecs []awaitgroup.FutureStack
 	for _, needTarget := range RunTargets {
 		GetLogger().Debug("runTarget name should be added " + needTarget)
-		runTargetExecs = append(runTargetExecs, FutureStack{
+		runTargetExecs = append(runTargetExecs, awaitgroup.FutureStack{
 			AwaitFunc: func(ctx context.Context) interface{} {
-				argTask := ctx.Value(CtxKey{}).(string)
+				argTask := ctx.Value(awaitgroup.CtxKey{}).(string)
 				_, argmap := StringSplitArgs(argTask, "arg")
 				GetLogger().Debug("add runTarget task " + argTask)
 				return executeTemplate(waitGroup, true, runCfg, argTask, argmap)
@@ -491,7 +492,7 @@ func generateFuturesByTargetListAndExec(RunTargets []string, waitGroup *sync.Wai
 
 	}
 	CtxOut(LabelFY("async targets"), InfoF("count"), len(runTargetExecs), InfoF(" targets"))
-	return ExecFutureGroup(runTargetExecs)
+	return awaitgroup.ExecFutureGroup(runTargetExecs)
 }
 
 // merge a list of task to an single task.
@@ -641,7 +642,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 						CtxOut(messageCmdCtrl, LabelFY("target"), ValF(target), InfoF("require"), ValF(len(script.Needs)), InfoF("needs. async?"), ValF(runAsync))
 						GetLogger().WithField("needs", script.Needs).Debug("Needs for the script")
 						if runAsync {
-							var needExecs []FutureStack
+							var needExecs []awaitgroup.FutureStack
 							for _, needTarget := range script.Needs {
 								if TaskRunsAtLeast(needTarget, 1) {
 									CtxOut(messageCmdCtrl, LabelFY("need check"), ValF(target), InfoRed("already executed"), ValF(needTarget))
@@ -649,9 +650,9 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 								} else {
 									GetLogger().Debug("need name should be added " + needTarget)
 									CtxOut(messageCmdCtrl, LabelFY("need check"), ValF(target), InfoF("executing"), ValF(needTarget))
-									needExecs = append(needExecs, FutureStack{
+									needExecs = append(needExecs, awaitgroup.FutureStack{
 										AwaitFunc: func(ctx context.Context) interface{} {
-											argNeed := ctx.Value(CtxKey{}).(string)
+											argNeed := ctx.Value(awaitgroup.CtxKey{}).(string)
 											_, argmap := StringSplitArgs(argNeed, "arg")
 											GetLogger().Debug("add need task " + argNeed)
 											return executeTemplate(waitGroup, true, runCfg, argNeed, argmap)
@@ -659,8 +660,8 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 										Argument: needTarget})
 								}
 							}
-							futures := ExecFutureGroup(needExecs) // create the futures and start the tasks
-							results := WaitAtGroup(futures)       // wait until any task is executed
+							futures := awaitgroup.ExecFutureGroup(needExecs) // create the futures and start the tasks
+							results := awaitgroup.WaitAtGroup(futures)       // wait until any task is executed
 
 							GetLogger().WithField("result", results).Debug("needs result")
 						} else {
@@ -743,7 +744,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 				// these targets running at the same time
 				// so different to scope, we dont need to wait
 				// right now until they ends
-				var runTargetfutures []Future
+				var runTargetfutures []awaitgroup.Future
 				if Experimental {
 					runTargetfutures = generateFuturesByTargetListAndExec(script.RunTargets, waitGroup, runCfg)
 				} else {
@@ -767,7 +768,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 				// 'now' listener
 				if len(script.Script) < 1 {
 					GetLogger().Debug("no script lines defined. run listener anyway")
-					listenerWatch(script, target, "", waitGroup, runAsync, runCfg)
+					listenerWatch(script, target, "", nil, waitGroup, runAsync, runCfg)
 					// workaround til the async runnig is refactored
 					// now we need to give the subtask time to run and update the waitgroup
 					duration := time.Second
@@ -787,7 +788,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 				// waitin until the any target that runns also is done
 				if Experimental && len(runTargetfutures) > 0 {
 					CtxOut(messageCmdCtrl, LabelFY("wait targets"), "waiting until beside running targets are done")
-					trgtRes := WaitAtGroup(runTargetfutures)
+					trgtRes := awaitgroup.WaitAtGroup(runTargetfutures)
 					CtxOut(messageCmdCtrl, LabelFY("wait targets"), "waiting done", trgtRes)
 				}
 				// next are tarets they runs afterwards the regular
@@ -798,7 +799,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 				}).Debug("executeTemplate next definition")
 				if Experimental {
 					nextfutures := generateFuturesByTargetListAndExec(script.Next, waitGroup, runCfg)
-					nextRes := WaitAtGroup(nextfutures)
+					nextRes := awaitgroup.WaitAtGroup(nextfutures)
 					CtxOut(messageCmdCtrl, LabelFY("wait next"), "waiting done", nextRes)
 
 				} else {

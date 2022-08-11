@@ -23,6 +23,55 @@ task:
       system: linux
     script:
       - find . -type f -print0 | xargs -0 dos2unix
+  ##### module based task #####
+  ##### the definition for modules is stored in .modules.yml
+
+  - id: modules-verify
+    needs:  
+{{- range $k, $modul := $.module }}    
+      - verify-modul-{{ $modul.modul }}
+{{- end }}      
+{{- range $k, $modul := $.module }}      
+
+  ## create dir if not exists
+  - id: verify-modul-{{ $modul.modul }}
+    options:
+      invisible: true
+    require:      
+      notExists:
+        - ./module/{{ $modul.modul }}
+    script:
+      - mkdir ./module/{{ $modul.modul }}
+
+  ## create mod if not exists
+  - id: verify-modul-{{ $modul.modul }}
+    options:
+      invisible: true
+    require:      
+      notExists:
+        - ./module/{{ $modul.modul }}/go.mod
+    script:
+      - |
+        cd ./module/{{ $modul.modul }}
+        go mod init github.com/swaros/contxt/{{ $modul.modul }}
+      
+  - id: verify-modul-{{ $modul.modul }}
+    options:
+      invisible: true
+      ignoreCmdError: true
+    require:
+      system: linux
+    script:                  
+      - grep {{ $modul.modul }} go.work
+    listener:
+      - trigger:
+          onerror: true
+        action:
+          script:
+            - echo "update go.work for module {{ $modul.modul }}"
+            - go work use module/{{ $modul.modul }}
+
+{{- end }}
 
   - id: cleanup-dependencies
     script:      
@@ -38,7 +87,7 @@ task:
     script:
     {{- range $k, $test := $.module }}
       #- go clean -testcache ./{{ $test.modul }}/./...
-      - go test -cover -v -failfast ./{{ $test.modul }}/./...
+      - go test -cover -v -failfast ./module/{{ $test.modul }}/./...
     {{- end }}
 
   - id: test-each
@@ -113,6 +162,7 @@ task:
 
   - id: build
     needs:
+      - modules-verify
       - set-version
     next:
       - build-exec
@@ -143,7 +193,7 @@ task:
       exists:
         - bin/${bin-out}
     script:
-       - echo "verifiy build version"
+       - echo "verifiy build version. expected [${main-version}.${mid-version}.${minor-version} build ${build-hash}]"
        - bin/${bin-out} version
 
 ## install local. this is used by the Makefile

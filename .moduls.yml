@@ -1,28 +1,31 @@
 module:
   - 
-    modul: module/configure
+    modul: configure
     test:
       timeout: 30s
 
   - 
-    modul: module/dirhandle
+    modul: dirhandle
     test:
       timeout: 30s
 
   - 
-    modul: module/systools
+    modul: systools
     test:
       timeout: 30s
 
   - 
-    modul: module/trigger
+    modul: trigger
     test:
       timeout: 30s
 
   - 
-    modul: module/taskrun
+    modul: taskrun
     test:
       timeout: 30s
       
-  
+  - 
+    modul: awaitgroup
+    test:
+      timeout: 30s
   

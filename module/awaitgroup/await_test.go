@@ -1,17 +1,17 @@
-package taskrun_test
+package awaitgroup_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/contxt/awaitgroup"
 )
 
 func TestSingleRun(t *testing.T) {
 	checkVal := 1
 
-	future := taskrun.ExecFuture(nil, func() interface{} {
+	future := awaitgroup.ExecFuture(nil, func() interface{} {
 		time.Sleep(time.Millisecond * 500)
 		checkVal++
 		return 1
@@ -32,39 +32,39 @@ func TestSingleRun(t *testing.T) {
 }
 
 func TestRunGroup(t *testing.T) {
-	var tasks []taskrun.FutureStack
+	var tasks []awaitgroup.FutureStack
 
-	tasks = append(tasks, taskrun.FutureStack{
+	tasks = append(tasks, awaitgroup.FutureStack{
 		AwaitFunc: func(ctx context.Context) interface{} {
 			return 2
 		},
 		Argument: nil,
 	})
 
-	tasks = append(tasks, taskrun.FutureStack{
+	tasks = append(tasks, awaitgroup.FutureStack{
 		AwaitFunc: func(ctx context.Context) interface{} {
 			return 60
 		},
 		Argument: nil,
 	})
 
-	tasks = append(tasks, taskrun.FutureStack{
+	tasks = append(tasks, awaitgroup.FutureStack{
 		AwaitFunc: func(ctx context.Context) interface{} {
 			return 100
 		},
 		Argument: nil,
 	})
 
-	tasks = append(tasks, taskrun.FutureStack{
+	tasks = append(tasks, awaitgroup.FutureStack{
 		AwaitFunc: func(ctx context.Context) interface{} {
 			return 2000
 		},
 		Argument: nil,
 	})
 
-	futures := taskrun.ExecFutureGroup(tasks)
+	futures := awaitgroup.ExecFutureGroup(tasks)
 
-	results := taskrun.WaitAtGroup(futures)
+	results := awaitgroup.WaitAtGroup(futures)
 
 	sum := 0
 	for _, v := range results {
