@@ -174,7 +174,7 @@ task:
       - echo '<div class="report">' >> ./docs/coverage.html
       - go tool cover -func ./docs/test/coverage/test.{{ $test.modul }}.out >> ./docs/coverage.html
       - echo '</div>' >> ./docs/coverage.html
-      - echo '<a target="coverage_details" href="test/coverage/{{ $test.modul }}.html">report for {{ $test.modul }}</a>' >> ./docs/coverage.html
+      - echo '<a target="coverage_details" href="test/coverage/{{ $test.modul }}.html">report for module/{{ $test.modul }}</a>' >> ./docs/coverage.html
     {{- end }}
       - echo "${coverage-template-bottom}" >> ./docs/coverage.html
 
