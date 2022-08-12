@@ -1,6 +1,22 @@
 version: "0.2.2"
 config:
   variables:
+      depbot-file: .github/dependabot.yml
+      depbot-head: |
+                  # To get started with Dependabot version updates, you'll need to specify which
+                  # package ecosystems to update and where the package manifests are located.
+                  # Please see the documentation for all configuration options:
+                  # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+                  version: 2
+                  updates:
+      depbot-template: |
+                  ### dependencie for ${dep-bot-dep}
+                    - package-ecosystem: "gomod" 
+                      directory: "${dep-bot-dep}" 
+                      schedule:
+                         interval: "daily"
+                      assignees:
+                         - "swaros"
       coverage-template-top: |
                     <!DOCTYPE html>
                     <html>
@@ -66,11 +82,13 @@ task:
   ##### by using the regular go tool-set
 
   - id: modules-verify
+    runTargets:
+      - depandabot 
     needs:  
 {{- range $k, $modul := $.module }}    
       - verify-modul-{{ $modul.modul }}
 {{- end }}      
-{{- range $k, $modul := $.module }}      
+{{- range $k, $modul := $.module }}          
 
   ## create dir if not exists
   - id: verify-modul-{{ $modul.modul }}
@@ -112,6 +130,16 @@ task:
 
 {{- end }}
 
+#### update depandabot
+  - id: depandabot
+    script:
+      - echo "${depbot-head}" > ${depbot-file}
+     {{- range $k, $deb := $.module }}
+      - "#@set dep-bot-dep /module/{{ $deb.modul }}/" 
+      - echo "${depbot-template}" >> ${depbot-file}
+     {{- end }}  
+
+#### update dependencies for all modules
   - id: cleanup-dependencies
     script:      
     {{- range $k, $test := $.module }}    
