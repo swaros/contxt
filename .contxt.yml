@@ -1,4 +1,39 @@
 version: "0.2.2"
+config:
+  variables:
+      coverage-template-top: |
+                    <!DOCTYPE html>
+                    <html>
+                      <head>
+                        <meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
+                        <title>Context Coverage Report overview</title>
+                        <style>
+                          body {
+                            background: #333;
+                            color: rgb(125, 125, 125);
+                            font-family: Arial, Helvetica, sans-serif;
+                          }
+                          a, a:active {
+                            color: rgb(200,200,200)
+                          }
+                          h1,h2,h3 {
+                            color: white
+                          }
+                          .report {
+                            display: block;
+                            margin: 17px;
+                            font-family: monospace;
+                            white-space: break-spaces;
+                          }
+                        </style>
+                       </head>
+                       <body>
+                        <h1>Contxt coverage Report</h1>
+      coverage-template-bottom: |
+                            </body>
+                            </html>              
+####### just for quick checking the go env on different machines
+####### more then a note.
 task:
   - id: go-check
     require:
@@ -23,8 +58,12 @@ task:
       system: linux
     script:
       - find . -type f -print0 | xargs -0 dos2unix
+
   ##### module based task #####
   ##### the definition for modules is stored in .modules.yml
+  ##### here we check if all modules we expect
+  ##### exists. and if not we create this modul
+  ##### by using the regular go tool-set
 
   - id: modules-verify
     needs:  
@@ -82,45 +121,51 @@ task:
        
     {{- end }}
       - git status
-      
-  - id: test
-    script:
-    {{- range $k, $test := $.module }}
-      #- go clean -testcache ./{{ $test.modul }}/./...
-      - go test -cover -v -failfast ./module/{{ $test.modul }}/./...
-    {{- end }}
 
+#### the next is all about tests
+
+##### this is the regular test for all modules
+  - id: test
+    script:             
+    {{- range $k, $test := $.module }}      
+      - go test  -failfast ./module/{{ $test.modul }}/./...     
+    {{- end }}      
+
+##### like the regular test but now we update the coverage report
+##### maybe i overlooked an option to summerize them, but
+##### because it seems there is none, we just create oure own overview page
+##### and link to the detailed html report.
+##### also we add the -func output to the report
+  - id: test-coverage
+    script: 
+      - echo "${coverage-template-top}" > ./docs/coverage.html                 
+    {{- range $k, $test := $.module }}      
+      - go test -cover ./module/{{ $test.modul }}/./... -coverprofile ./docs/test/coverage/test.{{ $test.modul }}.out
+      - go tool cover -html ./docs/test/coverage/test.{{ $test.modul }}.out -o ./docs/test/coverage/{{ $test.modul }}.html
+      - echo '<h2>{{ $test.modul }}</h2>' >> ./docs/coverage.html
+      - echo '<div class="report">' >> ./docs/coverage.html
+      - go tool cover -func ./docs/test/coverage/test.{{ $test.modul }}.out >> ./docs/coverage.html
+      - echo '</div>' >> ./docs/coverage.html
+      - echo '<a target="coverage_details" href="test/coverage/{{ $test.modul }}.html">report for {{ $test.modul }}</a>' >> ./docs/coverage.html
+    {{- end }}
+      - echo "${coverage-template-bottom}" >> ./docs/coverage.html
+
+#### same as test but running async
+#### it is just faster
   - id: test-each
     needs:
-      - test-sys
-      - test-conf
-      - test-cmd
-      - test-dir
-
-  - id: test-sys
+    {{- range $k, $test := $.module }}
+      - atest-{{ $test.modul }}
+    {{- end }}
+      
+    {{- range $k, $test := $.module }}
+  - id: atest-{{ $test.modul }}
     options:
       displaycmd: true
     script:
-      - go test -failfast -timeout 300s -v ./module/systools/./...      
+      - go test -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...    
+    {{- end }}  
 
-  - id: test-conf
-    options:
-      displaycmd: true
-    script:      
-      - go test -failfast -timeout 300s -v ./module/configure/./...
-  
-  - id: test-cmd
-    options:
-      displaycmd: true
-      stickcursor: false
-    script:      
-      - go test -failfast -timeout 300s -v ./module/taskrun/./...
-
-  - id: test-dir
-    options:
-      displaycmd: true
-    script:      
-      - go test -failfast -timeout 300s -v ./module/dirhandle/./...
 
   - id: set-version
     options:
