@@ -37,12 +37,10 @@
 // so this can replace any concurrent tasks. for this reason i decided to have this as experimental feature.
 // there is not test that can check any side-effect. and yes we have side effects.
 
-package taskrun
+package awaitgroup
 
 import (
 	"context"
-
-	"github.com/sirupsen/logrus"
 )
 
 // CtxKey is just the global key for the arguments
@@ -96,25 +94,19 @@ func ExecFuture(arg interface{}, f func() interface{}) Future {
 // assotiated future handler
 func ExecFutureGroup(fg []FutureStack) []Future {
 	var futures []Future
-	GetLogger().WithField("taskCount", len(fg)).Debug("Task added")
 	for _, funcTr := range fg {
 		future := ExecFuture(funcTr.Argument, funcTr.Await)
 		futures = append(futures, future)
 	}
-	GetLogger().WithField("futureCount", len(futures)).Debug("futures created")
 	return futures
 }
 
 // WaitAtGroup wait until all Futures are executes
 func WaitAtGroup(futures []Future) []interface{} {
 	var results []interface{}
-	GetLogger().WithField("futureCount", len(futures)).Info("waiting of futures being executed")
-	for i, f := range futures {
-		GetLogger().WithFields(logrus.Fields{"cur": i, "of": len(futures)}).Debug("wating of...")
+	for _, f := range futures {
 		val := f.Await()
-		GetLogger().WithFields(logrus.Fields{"cur": i, "val": val, "of": len(futures)}).Info("await result ...")
 		results = append(results, val)
 	}
-	GetLogger().WithField("futureCount", len(futures)).Info("Waitgroup Done")
 	return results
 }

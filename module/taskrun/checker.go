@@ -152,7 +152,7 @@ func StringMatchTest(pattern, value string) bool {
 
 // checks reasons that is used for some triggers
 // retunrs bool and a message what trigger was matched and the reason
-func checkReason(checkReason configure.Trigger, output string) (bool, string) {
+func checkReason(checkReason configure.Trigger, output string, e error) (bool, string) {
 	GetLogger().WithFields(logrus.Fields{
 		"contains":   checkReason.OnoutContains,
 		"onError":    checkReason.Onerror,
@@ -167,6 +167,12 @@ func checkReason(checkReason configure.Trigger, output string) (bool, string) {
 		message = "reason now match always"
 		return true, message
 	}
+	// checks a error happens
+	if checkReason.Onerror && e != nil {
+		message = fmt.Sprint("reason match because a error happen (", e, ")  ")
+		return true, message
+	}
+
 	// checks if the output from comand contains les then X chars
 	if checkReason.OnoutcountLess > 0 && checkReason.OnoutcountLess > len(output) {
 		message = fmt.Sprint("reason match output len (", len(output), ") is less then ", checkReason.OnoutcountLess)

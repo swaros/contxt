@@ -28,6 +28,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/swaros/contxt/awaitgroup"
 )
 
 var procTracker sync.Map
@@ -81,7 +83,7 @@ type TaskWatched struct {
 
 type TaskGroup struct {
 	tasks  []TaskWatched
-	Awaits []Future // Future channels
+	Awaits []awaitgroup.Future // Future channels
 	// simple callback that can be used for regular output or loggings
 	LoggerFnc func(...interface{})
 }
@@ -252,16 +254,16 @@ func (Tg *TaskGroup) AddTask(name string, wg TaskWatched) *TaskGroup {
 
 func (Tg *TaskGroup) Exec() *TaskGroup {
 
-	var tasks []FutureStack
+	var tasks []awaitgroup.FutureStack
 	for _, tsk := range Tg.tasks {
 		tsk.Log("add task function ", tsk.taskName)
-		tasks = append(tasks, FutureStack{
+		tasks = append(tasks, awaitgroup.FutureStack{
 			AwaitFunc: func(_ context.Context) interface{} {
 				res := tsk.Run()
 				return res.Content
 			}, Argument: tsk.taskName})
 	}
-	Tg.Awaits = ExecFutureGroup(tasks)
+	Tg.Awaits = awaitgroup.ExecFutureGroup(tasks)
 	return Tg
 }
 
@@ -274,6 +276,6 @@ func (Tg *TaskGroup) Log(msg ...interface{}) {
 // Wait until all task are done, indepenet from any channel and waitgroup blocks
 func (Tg *TaskGroup) Wait(wait time.Duration, timeOut time.Duration) {
 	GetLogger().Debug("wait ... start")
-	WaitAtGroup(Tg.Awaits)
+	awaitgroup.WaitAtGroup(Tg.Awaits)
 	GetLogger().Debug("wait ... start")
 }

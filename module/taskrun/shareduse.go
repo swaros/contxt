@@ -201,7 +201,7 @@ func executeGitUpdate(path string) int {
 	os.Chdir(path)
 	gitCmd := "git pull"
 	exec, args := GetExecDefaults()
-	exitCode, _, _ := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
+	exitCode, _, _ := ExecuteScriptLine(exec, args, gitCmd, func(feed string, e error) bool {
 		fmt.Println(manout.MessageCln("\tgit: ", manout.ForeLightYellow, feed))
 		return true
 	}, func(process *os.Process) {
@@ -216,7 +216,7 @@ func executeGitUpdate(path string) int {
 func checkGitVersionInfo(usecase string, callback func(string, string)) (int, int, error) {
 	gitCmd := "git ls-remote --refs https://github.com/" + usecase
 	exec, args := GetExecDefaults()
-	internalExitCode, cmdError, err := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
+	internalExitCode, cmdError, err := ExecuteScriptLine(exec, args, gitCmd, func(feed string, e error) bool {
 		gitInfo := strings.Split(feed, "\t")
 		if len(gitInfo) >= 2 {
 			callback(gitInfo[0], gitInfo[1])
@@ -236,7 +236,7 @@ func createUseByGit(usecase, pathTouse string) string {
 	gitCmd := "git ls-remote --refs https://github.com/" + usecase
 	exec, args := GetExecDefaults()
 	var gitInfo []string
-	internalExitCode, cmdError, _ := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
+	internalExitCode, cmdError, _ := ExecuteScriptLine(exec, args, gitCmd, func(feed string, e error) bool {
 		gitInfo = strings.Split(feed, "\t")
 		if len(gitInfo) >= 2 && gitInfo[1] == version {
 			GetLogger().WithFields(logrus.Fields{"git-info": gitInfo, "cnt": len(gitInfo)}).Debug("found matching version")
@@ -336,7 +336,7 @@ func takeCareAboutRepo(pathTouse string, config configure.GitVersionInfo) config
 			gitCmd := "git clone https://github.com/" + config.Repositiory + ".git " + getSourcePath(pathTouse)
 			GetLogger().WithField("cmd", gitCmd).Info("using git to create new checkout from repo")
 			exec, args := GetExecDefaults()
-			codeInt, codeCmd, err := ExecuteScriptLine(exec, args, gitCmd, func(feed string) bool {
+			codeInt, codeCmd, err := ExecuteScriptLine(exec, args, gitCmd, func(feed string, e error) bool {
 				fmt.Println(feed)
 				return true
 			}, func(process *os.Process) {

@@ -1,4 +1,55 @@
 version: "0.2.2"
+config:
+  variables:
+      depbot-file: .github/dependabot.yml
+      depbot-head: |
+                  # To get started with Dependabot version updates, you'll need to specify which
+                  # package ecosystems to update and where the package manifests are located.
+                  # Please see the documentation for all configuration options:
+                  # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+                  version: 2
+                  updates:
+      depbot-template: |
+                  ### dependencie for ${dep-bot-dep}
+                    - package-ecosystem: "gomod" 
+                      directory: "${dep-bot-dep}" 
+                      schedule:
+                         interval: "daily"
+                      assignees:
+                         - "swaros"
+      coverage-template-top: |
+                    <!DOCTYPE html>
+                    <html>
+                      <head>
+                        <meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
+                        <title>Context Coverage Report overview</title>
+                        <style>
+                          body {
+                            background: #333;
+                            color: rgb(125, 125, 125);
+                            font-family: Arial, Helvetica, sans-serif;
+                          }
+                          a, a:active {
+                            color: rgb(200,200,200)
+                          }
+                          h1,h2,h3 {
+                            color: white
+                          }
+                          .report {
+                            display: block;
+                            margin: 17px;
+                            font-family: monospace;
+                            white-space: break-spaces;
+                          }
+                        </style>
+                       </head>
+                       <body>
+                        <h1>Contxt coverage Report</h1>
+      coverage-template-bottom: |
+                            </body>
+                            </html>              
+####### just for quick checking the go env on different machines
+####### more then a note.
 task:
   - id: go-check
     require:
@@ -24,6 +75,71 @@ task:
     script:
       - find . -type f -print0 | xargs -0 dos2unix
 
+  ##### module based task #####
+  ##### the definition for modules is stored in .modules.yml
+  ##### here we check if all modules we expect
+  ##### exists. and if not we create this modul
+  ##### by using the regular go tool-set
+
+  - id: modules-verify
+    runTargets:
+      - depandabot 
+    needs:  
+{{- range $k, $modul := $.module }}    
+      - verify-modul-{{ $modul.modul }}
+{{- end }}      
+{{- range $k, $modul := $.module }}          
+
+  ## create dir if not exists
+  - id: verify-modul-{{ $modul.modul }}
+    options:
+      invisible: true
+    require:      
+      notExists:
+        - ./module/{{ $modul.modul }}
+    script:
+      - mkdir ./module/{{ $modul.modul }}
+
+  ## create mod if not exists
+  - id: verify-modul-{{ $modul.modul }}
+    options:
+      invisible: true
+    require:      
+      notExists:
+        - ./module/{{ $modul.modul }}/go.mod
+    script:
+      - |
+        cd ./module/{{ $modul.modul }}
+        go mod init github.com/swaros/contxt/{{ $modul.modul }}
+      
+  - id: verify-modul-{{ $modul.modul }}
+    options:
+      invisible: true
+      ignoreCmdError: true
+    require:
+      system: linux
+    script:                  
+      - grep {{ $modul.modul }} go.work
+    listener:
+      - trigger:
+          onerror: true
+        action:
+          script:
+            - echo "update go.work for module {{ $modul.modul }}"
+            - go work use module/{{ $modul.modul }}
+
+{{- end }}
+
+#### update depandabot
+  - id: depandabot
+    script:
+      - echo "${depbot-head}" > ${depbot-file}
+     {{- range $k, $deb := $.module }}
+      - "#@set dep-bot-dep /module/{{ $deb.modul }}/" 
+      - echo "${depbot-template}" >> ${depbot-file}
+     {{- end }}  
+
+#### update dependencies for all modules
   - id: cleanup-dependencies
     script:      
     {{- range $k, $test := $.module }}    
@@ -33,45 +149,51 @@ task:
        
     {{- end }}
       - git status
-      
-  - id: test
-    script:
-    {{- range $k, $test := $.module }}
-      #- go clean -testcache ./{{ $test.modul }}/./...
-      - go test -cover -v -failfast ./{{ $test.modul }}/./...
-    {{- end }}
 
+#### the next is all about tests
+
+##### this is the regular test for all modules
+  - id: test
+    script:             
+    {{- range $k, $test := $.module }}      
+      - go test  -failfast ./module/{{ $test.modul }}/./...     
+    {{- end }}      
+
+##### like the regular test but now we update the coverage report
+##### maybe i overlooked an option to summerize them, but
+##### because it seems there is none, we just create oure own overview page
+##### and link to the detailed html report.
+##### also we add the -func output to the report
+  - id: test-coverage
+    script: 
+      - echo "${coverage-template-top}" > ./docs/coverage.html                 
+    {{- range $k, $test := $.module }}      
+      - go test -cover ./module/{{ $test.modul }}/./... -coverprofile ./docs/test/coverage/test.{{ $test.modul }}.out
+      - go tool cover -html ./docs/test/coverage/test.{{ $test.modul }}.out -o ./docs/test/coverage/{{ $test.modul }}.html
+      - echo '<h2>{{ $test.modul }}</h2>' >> ./docs/coverage.html
+      - echo '<div class="report">' >> ./docs/coverage.html
+      - go tool cover -func ./docs/test/coverage/test.{{ $test.modul }}.out >> ./docs/coverage.html
+      - echo '</div>' >> ./docs/coverage.html
+      - echo '<a target="coverage_details" href="test/coverage/{{ $test.modul }}.html">report for {{ $test.modul }}</a>' >> ./docs/coverage.html
+    {{- end }}
+      - echo "${coverage-template-bottom}" >> ./docs/coverage.html
+
+#### same as test but running async
+#### it is just faster
   - id: test-each
     needs:
-      - test-sys
-      - test-conf
-      - test-cmd
-      - test-dir
-
-  - id: test-sys
+    {{- range $k, $test := $.module }}
+      - atest-{{ $test.modul }}
+    {{- end }}
+      
+    {{- range $k, $test := $.module }}
+  - id: atest-{{ $test.modul }}
     options:
       displaycmd: true
     script:
-      - go test -failfast -timeout 300s -v ./module/systools/./...      
+      - go test -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...    
+    {{- end }}  
 
-  - id: test-conf
-    options:
-      displaycmd: true
-    script:      
-      - go test -failfast -timeout 300s -v ./module/configure/./...
-  
-  - id: test-cmd
-    options:
-      displaycmd: true
-      stickcursor: false
-    script:      
-      - go test -failfast -timeout 300s -v ./module/taskrun/./...
-
-  - id: test-dir
-    options:
-      displaycmd: true
-    script:      
-      - go test -failfast -timeout 300s -v ./module/dirhandle/./...
 
   - id: set-version
     options:
@@ -113,6 +235,7 @@ task:
 
   - id: build
     needs:
+      - modules-verify
       - set-version
     next:
       - build-exec
@@ -143,7 +266,7 @@ task:
       exists:
         - bin/${bin-out}
     script:
-       - echo "verifiy build version"
+       - echo "verifiy build version. expected [${main-version}.${mid-version}.${minor-version} build ${build-hash}]"
        - bin/${bin-out} version
 
 ## install local. this is used by the Makefile

@@ -83,8 +83,9 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 
 	ui.startCapture()
 	// register exist trigger to get the app closed before
-	systools.AddExitListener("interactive", func(exitCode int) {
+	systools.AddExitListener("interactive", func(exitCode int) systools.ExitBehavior {
 		app.Stop()
+		return systools.Continue
 	})
 	if err := app.Run(); err != nil {
 		return ui, err

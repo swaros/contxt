@@ -115,7 +115,7 @@ func GetDefaultCmdOpts(ShellToUse string, cmdArg []string) []string {
 
 // ExecuteScriptLine executes a simple shell script
 // returns internal exitsCode, process existcode, error
-func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callback func(string) bool, startInfo func(*os.Process)) (int, int, error) {
+func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callback func(string, error) bool, startInfo func(*os.Process)) (int, int, error) {
 	cmdArg = GetDefaultCmdOpts(ShellToUse, cmdArg)
 	cmdArg = append(cmdArg, command)
 	cmd := exec.Command(ShellToUse, cmdArg...)
@@ -143,7 +143,7 @@ func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callb
 	for scanner.Scan() {
 		m := scanner.Text()
 
-		keepRunning := callback(m)
+		keepRunning := callback(m, nil)
 
 		GetLogger().WithFields(logrus.Fields{
 			"keep-running": keepRunning,
@@ -157,6 +157,7 @@ func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callb
 	}
 	err = cmd.Wait()
 	if err != nil {
+		callback(err.Error(), err)
 		errRealCode := 0
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {

@@ -2,13 +2,54 @@
 # package ecosystems to update and where the package manifests are located.
 # Please see the documentation for all configuration options:
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-
 version: 2
 updates:
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/" # Location of package manifests
+
+### dependencie for /module/configure/
+  - package-ecosystem: gomod 
+    directory: /module/configure/ 
     schedule:
-      interval: "daily"
+       interval: daily
     assignees:
-      - "swaros"
-#    target-branch: "bot/develop"
+       - swaros
+
+### dependencie for /module/dirhandle/
+  - package-ecosystem: gomod 
+    directory: /module/dirhandle/ 
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+
+### dependencie for /module/systools/
+  - package-ecosystem: gomod 
+    directory: /module/systools/ 
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+
+### dependencie for /module/trigger/
+  - package-ecosystem: gomod 
+    directory: /module/trigger/ 
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+
+### dependencie for /module/taskrun/
+  - package-ecosystem: gomod 
+    directory: /module/taskrun/ 
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+
+### dependencie for /module/awaitgroup/
+  - package-ecosystem: gomod 
+    directory: /module/awaitgroup/ 
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+

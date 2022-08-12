@@ -1,11 +1,12 @@
 go 1.18
 
 use (
+	./module/awaitgroup
 	./module/configure
 	./module/dirhandle
+	./module/interactive
 	./module/systools
 	./module/taskrun
 	./module/trigger
 	./module/tviewapp
-	./module/interactive
 )
