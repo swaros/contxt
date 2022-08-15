@@ -57,7 +57,7 @@
 				
 				<option value="file0">github.com/swaros/contxt/taskrun/checker.go (90.1%)</option>
 				
-				<option value="file1">github.com/swaros/contxt/taskrun/cmdflow.go (60.6%)</option>
+				<option value="file1">github.com/swaros/contxt/taskrun/cmdflow.go (60.1%)</option>
 				
 				<option value="file2">github.com/swaros/contxt/taskrun/cmdhandl.go (56.8%)</option>
 				
@@ -843,7 +843,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
         }</span>
         // check if task is already running
         // this check depends on the target name.
-        <span class="cov8" title="1">if !runCfg.Config.AllowMutliRun &amp;&amp; TaskRunning(target) </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">if !runCfg.Config.AllowMutliRun &amp;&amp; TaskRunning(target) </span><span class="cov0" title="0">{
                 GetLogger().WithField("task", target).Warning("task would be triggered again while is already running. IGNORED")
                 return ExitAlreadyRunning
         }</span>

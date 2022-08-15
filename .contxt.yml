@@ -178,6 +178,15 @@ task:
     {{- end }}
       - echo "${coverage-template-bottom}" >> ./docs/coverage.html
 
+  - id: test-coverage
+    require:
+      system: linux
+      exists:
+        - docs/coverage.html
+    script:
+      - echo "try to open default browser with report ${CTX_PWD}"
+      - xdg-open file://${CTX_PWD}/docs/coverage.html
+
 #### same as test but running async
 #### it is just faster
   - id: test-each
