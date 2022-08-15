@@ -33,7 +33,7 @@ import (
 	"github.com/swaros/contxt/dirhandle"
 )
 
-// test all rwuirements
+// test all requirements
 // - operation system
 // - variable matches
 // - files exists

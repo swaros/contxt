@@ -55,9 +55,9 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/swaros/contxt/trigger/event.go (68.6%)</option>
+				<option value="file0">github.com/swaros/contxt/trigger/event.go (93.2%)</option>
 				
-				<option value="file1">github.com/swaros/contxt/trigger/listener.go (100.0%)</option>
+				<option value="file1">github.com/swaros/contxt/trigger/listener.go (90.9%)</option>
 				
 				</select>
 			</div>
@@ -90,25 +90,25 @@ func NewEvent(name string) (*Event, error) <span class="cov8" title="1">{
         if ok := addEvent(evt); ok </span><span class="cov8" title="1">{ // we do not overwrite existing events. this is handled by addEvent
                 return evt, nil
         }</span>
-        <span class="cov0" title="0">return evt, errors.New("event with the same name is already registered")</span>
+        <span class="cov8" title="1">return evt, errors.New("event with the same name is already registered")</span>
 }
 
 // NewEvents just wraps the NewEvent for multipe events
 // and executes an callback for each of the events.
 // this way we can stick to a more generic solution for a couple of events
-func NewEvents(names []string, cb func(*Event)) error <span class="cov0" title="0">{
-        for _, name := range names </span><span class="cov0" title="0">{
-                if evnt, err := NewEvent(name); err == nil </span><span class="cov0" title="0">{
+func NewEvents(names []string, cb func(*Event)) error <span class="cov8" title="1">{
+        for _, name := range names </span><span class="cov8" title="1">{
+                if evnt, err := NewEvent(name); err == nil </span><span class="cov8" title="1">{
                         cb(evnt)
-                }</span> else<span class="cov0" title="0"> {
+                }</span> else<span class="cov8" title="1"> {
                         return err
                 }</span>
         }
-        <span class="cov0" title="0">return nil</span>
+        <span class="cov8" title="1">return nil</span>
 }
 
 // GetName just returns the name of the event
-func (event *Event) GetName() string <span class="cov0" title="0">{
+func (event *Event) GetName() string <span class="cov8" title="1">{
         return event.name
 }</span>
 
@@ -155,19 +155,37 @@ var eventMap sync.Map
 // exiting events. if an event already exists
 // it returns false. otherwise true is returned
 func addEvent(event *Event) bool <span class="cov8" title="1">{
-        if _, found := eventMap.Load(event.name); found </span><span class="cov0" title="0">{
+        if _, found := eventMap.Load(event.name); found </span><span class="cov8" title="1">{
                 return false
         }</span>
         <span class="cov8" title="1">eventMap.Store(event.name, event)
         return true</span>
 }
 
-func updateEvent(eventName string, updateCallBack func(*Event)) <span class="cov8" title="1">{
+func GetEvent(name string) (*Event, error) <span class="cov8" title="1">{
+        if evt, found := eventMap.Load(name); found </span><span class="cov8" title="1">{
+                return evt.(*Event), nil
+        }</span>
+        <span class="cov8" title="1">return nil, errors.New("Event not exists " + name)</span>
+}
+
+func updateEvent(eventName string, updateCallBack func(*Event) error) error <span class="cov8" title="1">{
         if evt, found := eventMap.Load(eventName); found </span><span class="cov8" title="1">{
                 event := evt.(*Event)
                 updateCallBack(event)
                 eventMap.Store(event.name, event)
+        }</span> else<span class="cov8" title="1"> {
+                return errors.New("event " + eventName + " not exists")
         }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+func ResetAllEvents() <span class="cov8" title="1">{
+        eventMap.Range(func(key, value any) bool </span><span class="cov8" title="1">{
+                eventMap.Delete(key)
+                return true
+        }</span>)
+        <span class="cov8" title="1">ResetAllListener()</span>
 }
 </pre>
 		
@@ -185,6 +203,10 @@ type ListenerContainer struct {
 
 var trigger map[string]*ListenerContainer = make(map[string]*ListenerContainer)
 
+func ResetAllListener() <span class="cov8" title="1">{
+        trigger = make(map[string]*ListenerContainer)
+}</span>
+
 func NewListener(name string, calbck func(any ...interface{})) *ListenerContainer <span class="cov8" title="1">{
         trigger[name] = &amp;ListenerContainer{
                 name:     name,
@@ -194,16 +216,16 @@ func NewListener(name string, calbck func(any ...interface{})) *ListenerContaine
         return trigger[name]
 }</span>
 
-func UpdateEvents() <span class="cov8" title="1">{
+func UpdateEvents() error <span class="cov8" title="1">{
         for _, listener := range trigger </span><span class="cov8" title="1">{
                 for _, eventName := range listener.toEvents </span><span class="cov8" title="1">{
-                        updateEvent(eventName, func(e *Event) </span><span class="cov8" title="1">{
+                        return updateEvent(eventName, func(e *Event) error </span><span class="cov8" title="1">{
                                 e.ClearListener()
-                                e.AddListener(Listener{callback: listener.callback})
-
+                                return e.AddListener(Listener{callback: listener.callback})
                         }</span>)
                 }
         }
+        <span class="cov0" title="0">return nil</span>
 }
 
 func (trig *ListenerContainer) RegisterToEvent(eventName string) <span class="cov8" title="1">{
