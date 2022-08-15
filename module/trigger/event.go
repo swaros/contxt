@@ -89,10 +89,28 @@ func addEvent(event *Event) bool {
 	return true
 }
 
-func updateEvent(eventName string, updateCallBack func(*Event)) {
+func GetEvent(name string) (*Event, error) {
+	if evt, found := eventMap.Load(name); found {
+		return evt.(*Event), nil
+	}
+	return nil, errors.New("Event not exists " + name)
+}
+
+func updateEvent(eventName string, updateCallBack func(*Event) error) error {
 	if evt, found := eventMap.Load(eventName); found {
 		event := evt.(*Event)
 		updateCallBack(event)
 		eventMap.Store(event.name, event)
+	} else {
+		return errors.New("event " + eventName + " not exists")
 	}
+	return nil
+}
+
+func ResetAllEvents() {
+	eventMap.Range(func(key, value any) bool {
+		eventMap.Delete(key)
+		return true
+	})
+	ResetAllListener()
 }
