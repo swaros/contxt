@@ -51,7 +51,6 @@ func sliceList(offset int, list []string) ([]string, []string) {
 
 func assertRuntimeGroup(t *testing.T, path string, target string, testGroup TestRuntimeGroup) bool {
 	tresult := true
-	taskrun.Experimental = true
 	folderRunner(path, t, func(t *testing.T) {
 		taskrun.RunTargets(target, true)
 		result := taskrun.GetPH("teststr")
