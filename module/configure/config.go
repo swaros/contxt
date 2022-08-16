@@ -306,20 +306,6 @@ func WorkSpaces(callback func(string)) {
 	}
 }
 
-// ShowPaths : display all stored paths in the workspace
-func ShowPaths(current string) int {
-
-	PathWorker(func(index int, path string) {
-		if path == current {
-			fmt.Println(manout.MessageCln("\t[", manout.ForeLightYellow, index, manout.CleanTag, "]\t", manout.BoldTag, path))
-		} else {
-			fmt.Println(manout.MessageCln("\t ", manout.ForeLightBlue, index, manout.CleanTag, " \t", path))
-		}
-
-	})
-	return len(UsedConfig.Paths)
-}
-
 // PathWorker executes a callback function in a path
 func PathWorker(callback func(int, string)) error {
 	cnt := len(UsedConfig.Paths)
