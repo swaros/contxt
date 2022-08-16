@@ -22,9 +22,14 @@ func AddExitListener(name string, callbk func(int) ExitBehavior) {
 
 // Exit maps the os.Exit but
 // executes all callbacks before
-func Exit(code int) {
+// it the exit was aborted, you will get
+// false in return
+func Exit(code int) bool {
 	for _, listener := range exitListener {
-		listener(code)
+		if behave := listener(code); !behave.proceedWithExit {
+			return false
+		}
 	}
 	os.Exit(code)
+	return true
 }
