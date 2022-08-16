@@ -17,3 +17,7 @@ vendor/
 bin/
 dist/
 
+# coverage reports
+docs/coverage.html
+test/coverage/*.html
+
