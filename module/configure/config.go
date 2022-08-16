@@ -177,7 +177,7 @@ func ChangeWorkspace(workspace string, oldspace func(string) bool, newspace func
 		newspace(workspace)
 		return nil
 	} else {
-		return errors.New("changing workspace failed.")
+		return errors.New("changing workspace failed")
 	}
 }
 
