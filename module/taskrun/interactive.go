@@ -28,8 +28,6 @@ type CtxUi struct {
 	taskScr        *tview.TextView
 	selectedtarget string
 	targetCtrl     *tview.Form
-	targetList     *tview.List
-	wsList         *tview.List
 	pathList       *tview.List
 }
 

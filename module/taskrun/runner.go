@@ -221,7 +221,7 @@ you need to set the name for the workspace`,
 			fmt.Println(manout.MessageCln("\t", "paths stored in ", manout.ForeCyan, configure.UsedConfig.CurrentSet))
 			dir, err := dirhandle.Current()
 			if err == nil {
-				count := configure.ShowPaths(dir)
+				count := ShowPaths(dir)
 				if count > 0 && !showHints {
 					fmt.Println()
 					fmt.Println(manout.MessageCln("\t", "if you have installed the shell functions ", manout.ForeDarkGrey, "(contxt install bash|zsh|fish)", manout.CleanTag, " change the directory by ", manout.BoldTag, "cn ", count-1))
@@ -735,6 +735,20 @@ func MainExecute() {
 
 	}
 
+}
+
+// ShowPaths : display all stored paths in the workspace
+func ShowPaths(current string) int {
+
+	configure.PathWorker(func(index int, path string) {
+		if path == current {
+			fmt.Println(manout.MessageCln("\t[", manout.ForeLightYellow, index, manout.CleanTag, "]\t", manout.BoldTag, path))
+		} else {
+			fmt.Println(manout.MessageCln("\t ", manout.ForeLightBlue, index, manout.CleanTag, " \t", path))
+		}
+
+	})
+	return len(configure.UsedConfig.Paths)
 }
 
 func callBackOldWs(oldws string) bool {
