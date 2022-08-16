@@ -19,5 +19,5 @@ dist/
 
 # coverage reports
 docs/coverage.html
-test/coverage/*.html
+docs/test/coverage/*
 
