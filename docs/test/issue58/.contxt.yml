@@ -1,0 +1,22 @@
+config:
+    sequencially: true
+    coloroff: true
+    loglevel: warning
+    imports:
+      - import.yaml
+      - data.yml users
+    variables:
+        replace-me: testcase ${import.yaml:second.target} - ${users:password.john.plain}
+task:
+    - id: start
+      script:
+        - echo "it runs"
+        - echo "${import.yaml:testdata.check} world"
+    
+    - id: test1
+      script:
+        - echo "full check ${users:user.name} ${users:user.last}"
+    
+    - id: replace
+      script:
+        - echo "[${replace-me}]"

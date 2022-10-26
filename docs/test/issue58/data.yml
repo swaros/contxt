@@ -1,0 +1,7 @@
+user:
+  name: john
+  last: miller
+password:
+  john: 
+     plain: "mother"
+  

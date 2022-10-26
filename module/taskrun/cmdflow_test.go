@@ -74,6 +74,29 @@ func assertRuntimeGroup(t *testing.T, path string, target string, testGroup Test
 	return tresult
 }
 
+func TestIssue58(t *testing.T) {
+	folderRunner("./../../docs/test/issue58", t, func(t *testing.T) {
+
+		taskrun.RunTargets("test1", true)
+		res := taskrun.GetPH("RUN.test1.LOG.LAST")
+		if res != "full check john miller" {
+			t.Error("unexpected result [", res, "]")
+		}
+
+		taskrun.RunTargets("start", true)
+		test1Result := taskrun.GetPH("RUN.start.LOG.LAST")
+		if test1Result != "hello world" {
+			t.Error("result 2 should be 'hello world'.[", test1Result, "]")
+		}
+
+		taskrun.RunTargets("replace", true)
+		rep := taskrun.GetPH("RUN.replace.LOG.LAST")
+		if rep != "[testcase /usr - mother]" {
+			t.Error("the replacing of inline variables in defined variables is not working")
+		}
+	})
+}
+
 func TestMultipleTargets(t *testing.T) {
 	folderRunner("./../../docs/test/01multi", t, func(t *testing.T) {
 		taskrun.RunTargets("task", true)
