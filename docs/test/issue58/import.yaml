@@ -1,0 +1,6 @@
+testdata:
+   check: hello
+   var_1: AB123
+   var_2: EN555
+second:
+    target: /usr
