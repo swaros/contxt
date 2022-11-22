@@ -29,16 +29,37 @@ func caseRunner(id string, t *testing.T, testFunc func(t *testing.T)) {
 
 }
 
-func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) {
+// folderRunner takes a path relative to the current module path (most starts with "./../docs/")
+// and executes the the function.
+// if the folder is not valid, a error will be returned instead
+func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) error {
 	taskrun.ClearAll()
 	taskrun.ResetAllTaskInfos()
 	taskrun.InitDefaultVars()
 	old, derr := dirhandle.Current()
 	if derr != nil {
 		t.Error(derr)
+		return derr
 	}
-	os.Chdir(folder)
+	if err := os.Chdir(folder); err != nil {
+		t.Error(err)
+		return err
+	}
 	testFunc(t)
-	os.Chdir(old)
+	if err := os.Chdir(old); err != nil {
+		t.Error(err)
+		return err
+	}
+	return nil
 
+}
+
+func assertVarStrEquals(t *testing.T, keyname, expected string) bool {
+	check := clearStrings(taskrun.GetPH(keyname))
+
+	if check != clearStrings(expected) {
+		t.Error("expected " + expected + " as variable. but got <" + check + ">")
+		return false
+	}
+	return true
 }

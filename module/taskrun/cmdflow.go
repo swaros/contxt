@@ -125,7 +125,7 @@ func RunTargets(targets string, sharedRun bool) {
 
 	// validate first
 	if err := TestTemplate(); err != nil {
-		CtxOut("found issues in the current template ", err)
+		CtxOut("found issues in the current template. ", err)
 		systools.Exit(32)
 		return
 	}

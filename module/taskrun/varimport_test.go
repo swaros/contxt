@@ -299,6 +299,69 @@ func TestSetVar(t *testing.T) {
 	}
 }
 
+func TestVariablesSet(t *testing.T) {
+	fileName := "docs/test/03values/values.yml"
+	err := taskrun.ImportDataFromYAMLFile("case_a", "../../"+fileName)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// create script section
+	var script []string
+	script = append(script, "#@set-in-map case_a root.first.name rudolf")
+	taskrun.TryParse(script, func(line string) (bool, int) {
+		return false, taskrun.ExitOk
+	})
+
+	teststr := taskrun.GetJSONPathValueString("case_a", "root.first.name")
+	if teststr != "rudolf" {
+		t.Error("replace var by path is not working. got [", teststr, "]")
+	}
+
+}
+
+func TestExportAsYaml(t *testing.T) {
+	fileName := "docs/test/03values/values.yml"
+	err := taskrun.ImportDataFromYAMLFile("case_a", "../../"+fileName)
+	if err != nil {
+		t.Error(err)
+	}
+	// create script section
+	var script []string
+	script = append(script, "#@export-to-yaml case_a yamlstring")
+	taskrun.TryParse(script, func(line string) (bool, int) {
+		return false, taskrun.ExitOk
+	})
+	expect := `
+	root:
+		first:
+		  name: charly  
+	`
+	assertVarStrEquals(t, "yamlstring", expect)
+}
+
+func TestDynamicVarReplace(t *testing.T) {
+	if runError := folderRunner("./../../docs/test/03values", t, func(t *testing.T) {
+		// note. they keys are sorted in root. so version must be at the end
+		expectedYaml := `		
+		services:
+		   website:
+			  host: myhost
+			  port: 8080
+		version: 5
+	`
+
+		taskrun.RunTargets("main", false)
+		assertVarStrEquals(t, "host", "myhost")
+		assertVarStrEquals(t, "A", "myhost:8080")
+		assertVarStrEquals(t, "B", "myhost")
+		assertVarStrEquals(t, "C", expectedYaml)
+
+	}); runError != nil {
+		t.Error(runError)
+	}
+}
+
 /*
 func TestTryParseWithKeys(t *testing.T) {
 	err := taskrun.ImportDataFromYAMLFile("test-with-key", "../../docs/test/foreach/importFile.yaml")
