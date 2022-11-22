@@ -1,0 +1,17 @@
+config:
+  coloroff: true
+  variables:
+     version: "5"
+     host: myhost
+     port: "8080"
+  imports: 
+    - dynamic.yml dmap
+
+
+task:
+  - id: main
+    script:
+      - "#@set A ${host}:${port}"
+      - "#@set B ${dmap:services.website.host}"
+      - "#@export-to-yaml dmap C"
+      - printf "${C}"

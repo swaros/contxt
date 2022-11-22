@@ -29,6 +29,7 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -143,6 +144,16 @@ func GetData(key string) (bool, map[string]interface{}) {
 		return ok, result.(map[string]interface{})
 	}
 	return false, nil
+}
+
+// GetDataAsYaml converts the map given by key infto a yaml string
+func GetDataAsYaml(key string) (bool, string) {
+	if found, data := GetData(key); found {
+		if outData, err := yaml.Marshal(data); err == nil {
+			return true, string(outData)
+		}
+	}
+	return false, ""
 }
 
 // ClearAllData removes all entries

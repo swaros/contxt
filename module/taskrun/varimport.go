@@ -59,6 +59,7 @@ const (
 	parseVarsMark   = "#@var"
 	setvarMark      = "#@set"
 	setvarInMap     = "#@set-in-map"
+	exportToYaml    = "#@export-to-yaml"
 	addvarMark      = "#@add"
 	equalsMark      = "#@if-equals"
 	notEqualsMark   = "#@if-not-equals"
@@ -212,7 +213,18 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					manout.Error("invalid usage", setvarInMap, " needs 3 arguments at least. <mapName> <json.path> <value>")
 				}
-
+			case exportToYaml:
+				if len(parts) == 3 {
+					mapKey := parts[1]
+					varName := parts[2]
+					if exists, newStr := GetDataAsYaml(mapKey); exists {
+						SetPH(varName, HandlePlaceHolder(newStr))
+					} else {
+						manout.Error("map with key ", mapKey, " not exists")
+					}
+				} else {
+					manout.Error("invalid usage", exportToYaml, " needs 2 arguments at least. <map-key> <variable>")
+				}
 			case parseVarsMark:
 				if len(parts) >= 2 {
 					var returnValues []string
@@ -301,6 +313,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				}
 			default:
 				GetLogger().WithField("unknown", parts[0]).Error("there is no command exists")
+				manout.Error("ERROR depending inline macros annotated with "+startMark, " there is no macro defined named ", parts[0])
 			}
 		} else {
 			parsedScript = append(parsedScript, line)
