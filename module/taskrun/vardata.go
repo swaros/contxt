@@ -25,11 +25,13 @@ package taskrun
 
 import (
 	"encoding/json"
+	"errors"
 	"sync"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 )
 
 var dataStorage sync.Map
@@ -65,6 +67,27 @@ func GetJSONPathValueString(key, path string) string {
 		GetLogger().WithField("key", key).Error("placeholder: error by getting data from named map")
 	}
 	return ""
+}
+
+func SetJSONValueByPath(key, path, value string) error {
+	ok, data := GetData(key)
+	if ok && data != nil {
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return err
+		}
+		if newContent, err := sjson.Set(string(jsonData), path, value); err != nil {
+			return err
+		} else {
+			if err2 := AddJSON(key, newContent); err2 != nil {
+				return err2
+			}
+			return nil
+		}
+
+	}
+	return errors.New("error by getting data from " + key)
+
 }
 
 // GetJSONPathResult returns the value depending key and path as string

@@ -58,6 +58,7 @@ const (
 	fromJSONCmdMark = "#@import-json-exec"
 	parseVarsMark   = "#@var"
 	setvarMark      = "#@set"
+	setvarInMap     = "#@set-in-map"
 	addvarMark      = "#@add"
 	equalsMark      = "#@if-equals"
 	notEqualsMark   = "#@if-not-equals"
@@ -200,6 +201,18 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 				} else {
 					manout.Error("invalid usage", setvarMark, " needs 2 arguments at least. <keyname> <value>")
 				}
+			case setvarInMap:
+				if len(parts) >= 3 {
+					mapName := parts[1]
+					path := parts[2]
+					setValue := strings.Join(parts[3:], " ")
+					if err := SetJSONValueByPath(mapName, path, setValue); err != nil {
+						manout.Error(err.Error())
+					}
+				} else {
+					manout.Error("invalid usage", setvarInMap, " needs 3 arguments at least. <mapName> <json.path> <value>")
+				}
+
 			case parseVarsMark:
 				if len(parts) >= 2 {
 					var returnValues []string

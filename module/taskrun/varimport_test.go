@@ -299,6 +299,27 @@ func TestSetVar(t *testing.T) {
 	}
 }
 
+func TestVariablesSet(t *testing.T) {
+	fileName := "docs/test/03values/values.yml"
+	err := taskrun.ImportDataFromYAMLFile("case_a", "../../"+fileName)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// create script section
+	var script []string
+	script = append(script, "#@set-in-map case_a root.first.name rudolf")
+	taskrun.TryParse(script, func(line string) (bool, int) {
+		return false, taskrun.ExitOk
+	})
+
+	teststr := taskrun.GetJSONPathValueString("case_a", "root.first.name")
+	if teststr != "rudolf" {
+		t.Error("replace var by path is not working. got [", teststr, "]")
+	}
+
+}
+
 /*
 func TestTryParseWithKeys(t *testing.T) {
 	err := taskrun.ImportDataFromYAMLFile("test-with-key", "../../docs/test/foreach/importFile.yaml")
