@@ -41,7 +41,12 @@ func CtxOut(msg ...interface{}) {
 				return
 			}
 		case CtxTargetOut:
-			labelStr := systools.LabelPrintWithArg(systools.PadStringToR(ctrl.Target, ctrl.PanelSize), ctrl.ForeCol, ctrl.BackCol, 1)
+			labelStr := ""
+			if ctrl.Alternative != "" {
+				labelStr = systools.LabelPrint(ctrl.Alternative, 1)
+			} else {
+				labelStr = systools.LabelPrintWithArg(systools.PadStringToR(ctrl.Target, ctrl.PanelSize), ctrl.ForeCol, ctrl.BackCol, 1)
+			}
 			newMsh = append(newMsh, labelStr)
 		case CtxOutLabel:
 			colmsg := manout.Message(ctrl.FColor, ctrl.Message) + " "

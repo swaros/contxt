@@ -1,7 +1,6 @@
 // Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -360,7 +359,10 @@ func lineExecuter(
 				// the background color
 				if script.Options.Format != "" { // do we have a specific format for the label, then we use them instead
 					format := HandlePlaceHolderWithScope(script.Options.Format, script.Variables) // handle placeholder in the label
-					fomatedOutStr := manout.Message(fmt.Sprintf(format, target))                  // also format the message depending format codes
+					fomatedOutStr := manout.Message(format)                                       // first just get the format as it is
+					if strings.Contains(format, "%s") {                                           // do we have the string placeholder?
+						fomatedOutStr = manout.Message(fmt.Sprintf(format, target)) // ... then format the message depending format codes
+					}
 					targetLabel.Alternative = fomatedOutStr
 				}
 
