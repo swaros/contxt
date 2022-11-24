@@ -1,9 +1,9 @@
-# Task
+# contxt.yml task
 this document will give a plain overview how task are created and executed.
 tasks are a collection of scripts they are depending to the current directory. this tasks are defined in a taskfile named **.contxt.yml**.
 <!-- TOC -->
 
-- [Task](#task)
+- [contxt.yml task](#contxtyml-task)
     - [task create and run](#task-create-and-run)
         - [basic use case](#basic-use-case)
             - [create  a new task](#create--a-new-task)
@@ -13,6 +13,14 @@ tasks are a collection of scripts they are depending to the current directory. t
             - [run task from anywhere](#run-task-from-anywhere)
             - [list all task](#list-all-task)
 - [structure](#structure)
+    - [Task](#task)
+        - [task structure](#task-structure)
+            - [ID string](#id-string)
+            - [Variables](#variables)
+            - [Requires](#requires)
+                - [system string](#system-string)
+                - [exists, notExists](#exists-notexists)
+                - [Variables, Environment](#variables-environment)
     - [config](#config)
         - [sequencially bool](#sequencially-bool)
         - [coloroff bool](#coloroff-bool)
@@ -31,6 +39,7 @@ tasks are a collection of scripts they are depending to the current directory. t
         - [Use. Shared Tasks 1/2](#use-shared-tasks-12)
             - [example for linux users](#example-for-linux-users)
         - [Require. Shared Task 2/2](#require-shared-task-22)
+        - [allowmultiplerun bool](#allowmultiplerun-bool)
 
 <!-- /TOC -->
 ## task create and run 
@@ -115,7 +124,7 @@ if you use `contxt run build -a` it will run on target no **0** only because no 
 and if you run `contxt run clean -a` it will run on target **0** and **2**
 
 # structure 
-
+## Task
 the structure differs to most of all other yaml based task runners or ci tools. contxt using a list of task and not a `[string]task` list.
 this results in a structure that may seems a little bit more complicated.
 ````yaml
@@ -164,6 +173,113 @@ task:
      script:
        - Get-Location | Foreach-Object { $_.Path }
 ````
+
+### task structure
+#### ID (string)
+
+the ID sets the identifier for the task. as descriped already, they 
+canbe present multiple times, with different requirements.
+````yaml
+task:
+   - id: task-identifier           
+````
+
+#### Variables 
+the variables section defines varibales, or update existing variables.
+these variables will be exists also if the task is done.
+
+> **IMPORTANT** variables synced but always global. be aware of raise conditions if you use the same variables in different tasks.
+
+````yaml
+task:
+  - id: task-identifier
+    variables:
+      example-var: something               
+````
+
+these variables can be used by the placeholder key like `${example-var}`
+
+> see variables documentation *config -> variables*. there are more details about how to use variables.
+
+#### Requires
+requires checks different cases. if one of these requirements are not matching, then this task section is ignored. **this is not meaning the whole task is ignored**
+
+for example depending on the system that is used, only one of
+these section from **task** will be exected.
+
+````yaml
+task:
+   - id: task
+     require:
+       system: linux
+     script:
+       - echo "hello linux"
+
+   - id: task
+     require:
+       system: windows
+     script:
+       - echo "hello windows"
+````
+
+##### system (string)
+  
+this requirement checks the system. the current system have to match with the reported ones. here the most used (the system name is taken from go's `runtime.GOOS`)
+
+- windows
+- linux
+- darwin
+
+````yaml
+task:
+  - id: run-bat
+    require:
+      system: windows  
+````
+
+##### exists, notExists
+these two requirements checks if a file exists, or not.
+you can use any variable here. (environment is also an variable)
+
+````yaml
+task:
+  - id: copy-files-if-exists
+    require:
+      exists: 
+        - ${HOME}/target/
+        - ./source/copy-this-file.cpp
+````
+
+any of these files have to exists. if one of them missing, the task is
+ignored.
+
+to check if a file not exists, use `notExists` instead
+
+
+````yaml
+task:
+  - id: create-file
+    require:
+      notExists:         
+        - ./source/create-this-file.cpp
+````
+also if one of the files in the lists, exists, the whole task will be ignored.
+
+
+##### Variables, Environment
+these two requirements works in the same way. the different is, `variables` checks the contxt variables, and `environment` is checking
+against the environment variables.
+
+````yaml
+task:
+  - id: deploy
+    require:
+      variables: 
+        target: "*"
+      environment:
+        DEPLOY_TO: "=stage"
+````
+---
 ## config
 
 *config* is a root element that defines the behaviour of the task runner. 
@@ -528,5 +644,17 @@ if you execute *script*, you will not see any difference to the regular executio
 
 ![image](https://user-images.githubusercontent.com/5437750/203771904-d7ec69e1-fa07-4eb8-bfad-9d0014c6c43c.png)
 
+### allowmultiplerun (bool)
+
+the regular behavior is to run all dependencies once, and no other task twice at the same time.
+
+it might be the case, this should be disabled, so anytime a task is required, it will be executed (for example to get the current time).
+
+this option is then valid for any task in this task file.
+
+````yaml
+config:
+  allowmultiplerun: true    
+````
 
 
