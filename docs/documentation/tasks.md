@@ -21,6 +21,12 @@ tasks are a collection of scripts they are depending to the current directory. t
                 - [system string](#system-string)
                 - [exists, notExists](#exists-notexists)
                 - [Variables, Environment](#variables-environment)
+            - [Stopreasons](#stopreasons)
+            - [Options](#options)
+                - [ignorecmderror bool](#ignorecmderror-bool)
+                - [format string](#format-string)
+                - [stickcursor bool](#stickcursor-bool)
+                    - [colorcode and bgcolorcode](#colorcode-and-bgcolorcode)
     - [config](#config)
         - [sequencially bool](#sequencially-bool)
         - [coloroff bool](#coloroff-bool)
@@ -277,8 +283,112 @@ task:
       variables: 
         target: "*"
       environment:
-        DEPLOY_TO: "=stage"
+        DEPLOY_TO: "stage"
 ````
+
+this requirement checks the content of a context-variable/environment-variable. the first letter tells _contxt_  how to verify the variable/environment
+
+- the usual check is **equals**. 
+````yaml
+  target: "development"
+````
+- the example above for **equals** is the shortcut for **=**
+````yaml
+  target: "=development"
+````
+- to check **not equals** use **!**
+````yaml
+  target: "!prodution"
+````
+- to check if the variable is **not empty** use * (no matter what the value is. just not "". but they must exists)
+````yaml
+  target: "*"
+````
+- to check if the variable is **greather then** use **>**
+````yaml
+  version: ">4.1"
+````
+- to check if the variable is **lower then** use **<**
+````yaml
+  version: "<4.3"
+````
+
+#### Stopreasons
+
+this section defines a _trigger_ that reacts on a errorcase.
+
+#### Options
+
+the option section contains the task specialized configuration.
+this can be be done for any task, even if they have the same **ID**.
+some of them, like the visibility, have no effect. if one task with the same id is visible, then this task will be shown (autocomplete, task lists) even if any other task are invisible.
+
+but any runtime specific setting is used for this part of the task only. 
+
+##### ignorecmderror (bool)
+if any task reports an error, contxt will exit. independent if any other paralel running task is doing well, or this error could be ignored (or handled elsewhere)
+
+so if you have a task, they can fail, set `ignorecmderror` to true.
+
+````yaml
+task:
+  - id: this-can-fail
+    options:
+      ignorecmderror:  true
+````
+
+##### format (string)
+formats the left label for the output. you can use %s as placeholder what would be used for the current **ID** of the task.
+
+````yaml
+task:
+  - id: own-label
+    options:
+      format: "WATCH ME !!!111 ----  I AM IMPORTANT ---- (i am the task named %s)"
+````
+
+you can also use any existing variable.
+
+````yaml
+task:
+  - id: own-label
+    options:
+      format: "hello ${USER} ... did you see that log-output? -->"
+````
+
+also the internal colorcodes can be used
+
+````yaml
+task:
+  - id: own-label
+    options:
+      format: "<b:red><f:white>this is the<f:yellow>DANGER ZONE</>"
+````
+
+##### stickcursor (bool)
+just a simple flag to use escape sequences, to stay at the last line.
+there is no big magic behind, so longer lines, thenthe max-with o the terminal, will push the content.
+
+but can be usefull to prevent spamming minor informations, while other important stuff, from paralel running task, get lost.
+
+````yaml
+task:
+  - id: lot-of-text-lines-incomming
+    options:
+      stickcursor: true
+````
+
+###### colorcode and bgcolorcode
+foreground and background ANSII color code for the label.
+
+````yaml
+task:
+  - id: lot-of-text-lines-incomming
+    options:
+      colorcode: "97"
+      bgcolorcode: "47"
+````
+
 ---
 ## config
 
