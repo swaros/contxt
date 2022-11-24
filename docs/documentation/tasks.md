@@ -26,7 +26,12 @@ tasks are a collection of scripts they are depending to the current directory. t
                 - [ignorecmderror bool](#ignorecmderror-bool)
                 - [format string](#format-string)
                 - [stickcursor bool](#stickcursor-bool)
-                    - [colorcode and bgcolorcode](#colorcode-and-bgcolorcode)
+                - [colorcode and bgcolorcode string](#colorcode-and-bgcolorcode-string)
+                - [panelsize int](#panelsize-int)
+                - [displaycmd bool](#displaycmd-bool)
+                - [hideout bool](#hideout-bool)
+                - [invisible bool](#invisible-bool)
+                - [maincmd string](#maincmd-string)
     - [config](#config)
         - [sequencially bool](#sequencially-bool)
         - [coloroff bool](#coloroff-bool)
@@ -399,7 +404,7 @@ task:
       stickcursor: true
 ````
 
-###### colorcode and bgcolorcode
+##### colorcode and bgcolorcode (string)
 foreground and background ANSI color code for the label.
 
 ````yaml
@@ -409,6 +414,115 @@ task:
       colorcode: "97"
       bgcolorcode: "47"
 ````
+
+##### panelsize (int)
+defines the width of the left panel (count of chars) for the output screen.
+
+````yaml
+task:
+  - id: example-task
+    options:
+      panelsize: 15      
+````
+
+##### displaycmd (bool)
+if this is set to true, contxt will show additional information
+on the regular output, like the composed comand, the current pid for
+this task and so on. **this is only active for this section of the task**
+
+this is usefull for fast inspecting, without enable debug
+and having a lot output from any sources.
+
+````yaml
+task:
+  - id: example-task
+    options:
+      displaycmd: true
+````
+
+
+##### hideout (bool)
+if this is set to true, any output to screen is disabled for this task.
+
+````yaml
+task:
+  - id: example-task
+    options:
+      hideout: true
+````
+
+##### invisible (bool)
+if true, this task will not shown in autocomplete, or in the task list.
+> keep in mind. if the task having mutliple sections, then all of them needs to be invisible.
+
+````yaml
+task:
+  - id: example-task
+    options:
+      invisible: true
+````
+
+##### maincmd (string), mainparams (list)
+**maincmd** defines the main command for the script section. if not set,
+then the default is `bash`
+
+for this you would often need to define startup arguments. 
+this is done by **mainparams**
+
+````yaml
+task:
+  - id: php-example-task
+    options:
+      maincmd: "php"
+      mainparam: 
+        - "-r"
+    script:
+      - phpinfo();
+      - var_dump($_SERVER);
+````
+
+##### workingdir (string)
+
+if you need to change the directory, while running a task, the following
+example will **not work**.
+
+````yaml
+task:
+  - id: example-task
+    script:
+      - cd build
+      - make
+````
+
+this is because any entry in the script list, will run in his own context.
+so it has by default his own `bash` running.
+
+a quickfix would just use the **- |** yaml annotation, to get a long string, 
+that can have line breaks.
+
+so it would **work as expected**
+````yaml
+task:
+  - id: example-task
+    script:
+      - | 
+       cd build
+       make
+````
+
+but then you have 2 task running as one task (what makes sense i  many cases). 
+the alternative is to set the **workingdir**
+
+````yaml
+task:
+  - id: example-task
+    options:
+      workingdir: build
+    script:      
+      - make
+````
+
+
 
 ---
 ## config
