@@ -52,7 +52,7 @@ tasks are a collection of scripts they are depending to the current directory. t
 ### basic use case
 #### create  a new task
 with `contxt create` you can create a simple task file.
-this will looks like this
+this will look like this
 ````yaml
 task:
   - id: script
@@ -91,7 +91,7 @@ and you can combine this
 task can be started also by different definitions in the task-file. for now just a overview.
 |definition|behaviour|
 |--|--|
-| needs | a list of task's they needs to be executed at least ones  |
+| needs | a list of task's they need to be executed at least ones  |
 | runTargets | a list of task they have to be executed together asynchronously |
 | next | a list of task's they have to be executed afterwards|
 |listener|*can* also be used to execute task or a script depending on the output|
@@ -125,21 +125,25 @@ especially to get a overview what tasks are defined, the `contxt dir`command is 
 
 ````
 you will see all targets on the right side of any path.
-so if you use `contxt run init -a` the task will be executed in path no **0** and **1**.
-if you use `contxt run build -a` it will run on target no **0** only because no other path a target named **build**
+so if you use `contxt run init -a` the task will be executed in path 
+no **0** and **1**.
+if you use `contxt run build -a` it will run on target no **0** only 
+because no other path a target named **build**
 and if you run `contxt run clean -a` it will run on target **0** and **2**
 
 # structure 
 ## Task
-the structure differs to most of all other yaml based task runners or ci tools. contxt using a list of task and not a `[string]task` list.
-this results in a structure that may seems a little bit more complicated.
+the structure differs to most of all yaml based task runners or ci tools.
+contxt using a list of task and not a `[string]task` list.
+this results in a structure that may seem a little  more complicated.
 ````yaml
 task:
   - id: first-task
   - id: second-task
 ````
 
-but this allows us to define a task with different behaviours depending on some requirements. 
+but this allows us to define a task with different behaviours 
+depending on some requirements. 
 
 like this.
 
@@ -157,9 +161,12 @@ task:
      script:
        - echo "hello windows"
 ````
-in this case, we still execute this task on any system `ctx run task` but depending on the operating system, only the task that matches the requirements will be executed.
+in this case, we still execute this task on any system `ctx run task` 
+but depending on the operating system, only the task that 
+matches the requirements will be executed.
 
-you can also combine these as much if you like, for example to have a task that will runs always, and others they will check if the can run or not.
+you can also combine these as much if you like, for example to have a 
+task that will run always, and others they will check if the can run or not.
 
 ````yaml
 task:
@@ -183,16 +190,16 @@ task:
 ### task structure
 #### ID (string)
 
-the ID sets the identifier for the task. as descriped already, they 
-canbe present multiple times, with different requirements.
+the ID sets the identifier for the task. as described already, they 
+can be present multiple times, with different requirements.
 ````yaml
 task:
    - id: task-identifier           
 ````
 
 #### Variables 
-the variables section defines varibales, or update existing variables.
-these variables will be exists also if the task is done.
+the variables' section defines variables, or update existing variables.
+these variables will be existed also if the task is done.
 
 > **IMPORTANT** variables synced but always global. be aware of raise conditions if you use the same variables in different tasks.
 
@@ -208,10 +215,12 @@ these variables can be used by the placeholder key like `${example-var}`
 > see variables documentation *config -> variables*. there are more details about how to use variables.
 
 #### Requires
-requires checks different cases. if one of these requirements are not matching, then this task section is ignored. **this is not meaning the whole task is ignored**
+Require checks different cases. if one of these requirements 
+are not matching, then this task section is ignored. **this is not meaning
+the whole task is ignored**
 
 for example depending on the system that is used, only one of
-these section from **task** will be exected.
+these section from **task** will be executed.
 
 ````yaml
 task:
@@ -230,7 +239,9 @@ task:
 
 ##### system (string)
   
-this requirement checks the system. the current system have to match with the reported ones. here the most used (the system name is taken from go's `runtime.GOOS`)
+this requirement checks the system. the current system have to match 
+with the reported ones. here the most used (the system name is taken
+from go's `runtime.GOOS`)
 
 - windows
 - linux
@@ -245,7 +256,7 @@ task:
 
 ##### exists, notExists
 these two requirements checks if a file exists, or not.
-you can use any variable here. (environment is also an variable)
+you can use any variable here. (environment is also a variable)
 
 ````yaml
 task:
@@ -273,7 +284,8 @@ also if one of the files in the lists, exists, the whole task will be ignored.
 
 
 ##### Variables, Environment
-these two requirements works in the same way. the different is, `variables` checks the contxt variables, and `environment` is checking
+these two requirements works in the same way. the different is,
+`variables` checks the contxt variables, and `environment` is checking
 against the environment variables.
 
 ````yaml
@@ -286,7 +298,8 @@ task:
         DEPLOY_TO: "stage"
 ````
 
-this requirement checks the content of a context-variable/environment-variable. the first letter tells _contxt_  how to verify the variable/environment
+this requirement checks the content of a context-variable/environment-variable.
+the first letter tells _contxt_  how to verify the variable/environment
 
 - the usual check is **equals**. 
 ````yaml
@@ -300,33 +313,38 @@ this requirement checks the content of a context-variable/environment-variable. 
 ````yaml
   target: "!prodution"
 ````
-- to check if the variable is **not empty** use * (no matter what the value is. just not "". but they must exists)
+- to check if the variable is **not empty** use * (no matter what the value is. 
+- just not "". but they must exists)
 ````yaml
   target: "*"
 ````
-- to check if the variable is **greather then** use **>**
+- to check if the variable is **greater than** use **>**
 ````yaml
   version: ">4.1"
 ````
-- to check if the variable is **lower then** use **<**
+- to check if the variable is **lower than** use **<**
 ````yaml
   version: "<4.3"
 ````
 
 #### Stopreasons
 
-this section defines a _trigger_ that reacts on a errorcase.
+this section defines a _trigger_ that reacts on an error.
 
 #### Options
 
 the option section contains the task specialized configuration.
-this can be be done for any task, even if they have the same **ID**.
-some of them, like the visibility, have no effect. if one task with the same id is visible, then this task will be shown (autocomplete, task lists) even if any other task are invisible.
+this can be done for any task, even if they have the same **ID**.
+some of them, like the visibility, have no effect. if one task with the 
+same id is visible, then this task will be shown (autocomplete, task lists) 
+even if any other task are invisible.
 
 but any runtime specific setting is used for this part of the task only. 
 
 ##### ignorecmderror (bool)
-if any task reports an error, contxt will exit. independent if any other paralel running task is doing well, or this error could be ignored (or handled elsewhere)
+if any task reports an error, contxt will exit. independent if any other
+parallel running task is doing well, or this error could be 
+ignored (or handled elsewhere)
 
 so if you have a task, they can fail, set `ignorecmderror` to true.
 
@@ -338,7 +356,8 @@ task:
 ````
 
 ##### format (string)
-formats the left label for the output. you can use %s as placeholder what would be used for the current **ID** of the task.
+formats the left label for the output. you can use %s as placeholder 
+what would be used for the current **ID** of the task.
 
 ````yaml
 task:
@@ -356,7 +375,7 @@ task:
       format: "hello ${USER} ... did you see that log-output? -->"
 ````
 
-also the internal colorcodes can be used
+also the internal color codes can be used
 
 ````yaml
 task:
@@ -367,23 +386,25 @@ task:
 
 ##### stickcursor (bool)
 just a simple flag to use escape sequences, to stay at the last line.
-there is no big magic behind, so longer lines, thenthe max-with o the terminal, will push the content.
+there is no big magic behind, so longer lines, then the max-with o the terminal,
+will push the content.
 
-but can be usefull to prevent spamming minor informations, while other important stuff, from paralel running task, get lost.
+but can be usefully to prevent spamming minor information, 
+while other important stuff, from parallel running task, get lost.
 
 ````yaml
 task:
-  - id: lot-of-text-lines-incomming
+  - id: lot-of-text-lines-incoming
     options:
       stickcursor: true
 ````
 
 ###### colorcode and bgcolorcode
-foreground and background ANSII color code for the label.
+foreground and background ANSI color code for the label.
 
 ````yaml
 task:
-  - id: lot-of-text-lines-incomming
+  - id: colored-task
     options:
       colorcode: "97"
       bgcolorcode: "47"
@@ -394,7 +415,9 @@ task:
 
 *config* is a root element that defines the behaviour of the task runner. 
 ### sequencially (bool)
-by default any task will be started asynchronous. this behavior can be disabled by this option. set it to true, and any task and any dependency will run one by one after the first one is done. 
+by default any task will be started asynchronous. 
+this behavior can be disabled by this option. set it to true, 
+and any task and any dependency will run one by one after the first one is done. 
 ````yaml
 config:
   sequencially: true     
@@ -439,7 +462,9 @@ config:
      update-command: git stash && git pull --rebase && git stash pop
 ````
 
-variables are dynamic place-holder that can be set globally or in a task. but any variable is accessible globally always, even if you define them in a task.
+variables are dynamic place-holder that can be set globally or in
+a task. but any variable is accessible globally always, even if you define 
+them in a task.
 **also keep in mind:** that means variables are not bound to a scope. 
 
 to use them just write `${hostname}`. variables can be used in values only. 
@@ -448,7 +473,8 @@ to use them just write `${hostname}`. variables can be used in values only.
 > use `ctx create import <filename>` to create a relationship
 > to the files that should be used for template
 
-depending on the global scope of all variables you need to keep this in mind on more complex dependencies.
+depending on the global scope of all variables you need to keep 
+this in mind on more complex dependencies.
 #### working with variables
 to explain the variables behaviour while runtime:
 
@@ -468,7 +494,8 @@ task:
        - echo "${test-output} world"
 
 ````
-because we can run multiple targets, we will do this now by using`ctx run testvar rewrite`. 
+because we can run multiple targets, we will do this 
+now by using`ctx run testvar rewrite`. 
 ````bash
 [exec:async] testvar /home/example4/.contxt.yml
    testvar : hello world
@@ -479,12 +506,14 @@ because we can run multiple targets, we will do this now by using`ctx run testva
 
 ````
 
-so first **testvar** just prints the content of the global defined variable `${test-output}`.
+so first **testvar** just prints the content of the global 
+defined variable `${test-output}`.
 
 afterwards **rewrite** is executed and redefines these variable.
 and because this is a global change, it would be affect any other following tasks.
 
-so if we execute the same in different order `ctx run rewrite testvar`, we got a different outcome.
+so if we execute the same in different order `ctx run rewrite testvar`,
+we got a different outcome.
 ````bash
 [exec:async] rewrite /home/tziegler/code/playground/go/ctx-examples/example4/.contxt.yml
    rewrite : rescue the world
@@ -493,10 +522,12 @@ so if we execute the same in different order `ctx run rewrite testvar`, we got a
    testvar : rescue the world
 [done] testvar
 ````
-now booth of the targets have the same content of the variable, because `rewrite` changed the value before `testvar` is executed.
+now booth of the targets have the same content of the 
+variable, because `rewrite` changed the value before `testvar` is executed.
 
 #### asynchronously behaviour
-important depending this behaviour, it is only reliable if the tasks are running `sequencially`. so if you start booth task in his
+important depending on this behaviour, it is only reliable if the 
+tasks are running `sequencially`. so if you start booth task in his
 own process, then you will get a different behaviour.
 
 to start all task together use `ctx run rewrite,testvar`. 
@@ -509,7 +540,9 @@ to start all task together use `ctx run rewrite,testvar`.
 [done] rewrite,testvar
 ````
 
-as you can see, the variable in the task *testvar* is not changed, because all tasks started close at the same time. it can be also the case the task running in different orders. 
+as you can see, the variable in the task *testvar* is not 
+changed, because all tasks started close at the same time. 
+it can be also the case the task running in different orders. 
 
 > short explanation. the arguments of run is any **ctx run** *sequentially* *sequentially* 
 > so any argument split by space will be run one be one, after the task before is done.
@@ -517,7 +550,8 @@ as you can see, the variable in the task *testvar* is not changed, because all t
 > you can test this with `ctx run testvar rewrite,testvar testvar`
 
 #### set variables from command line
-variables are set at first in the config root section. but these variables can also be set from outside with run flags `-v, --var stringToString`
+variables are set at first in the config root section. but these 
+variables can also be set from outside with run flags `-v, --var stringToString`
 this flag can be used multiple to overwrite the default value of different variables
 `ctx run task -v firstvar=new-out -v secondvar="new out"`
 
@@ -539,7 +573,7 @@ but still. variables redefined in tasks are not affected.
 
 #### import variables
 you can import `yaml` and `json` files as variables and use the content of them.
-as example we use the official **docker-compose.yml** from *postgress*.
+as example, we use the official **docker-compose.yml** from *postgress*.
 ````yaml
 version: '3.1'
 services:
@@ -561,9 +595,12 @@ config:
   imports:
     - docker-compose.yml
 ````
-this will load the whole file as variable. to access the values we use [gson](https://github.com/tidwall/gjson) for the path, and the file-name as entry point. `${`*filename*`:`*gson.path*`}`
+this will load the whole file as variable. to access the values 
+we use [gson](https://github.com/tidwall/gjson) for the path, and 
+the file-name as entry point. `${`*filename*`:`*gson.path*`}`
 
-to get the **image name** from the service named **db** the Placeholder would looks like this
+to get the **image name** from the service named **db** the 
+Placeholder would look like this
 `${docker-compose.yml:services.db.image}`
 
 so in a task you can use them as you like. for example:
@@ -589,7 +626,9 @@ task:
 ````
 
 ##### import as short cut
-especially if you have to use long paths (for example if have to use files in different directories) it would make sense to use a shortcut instead. you just need to write them behind the file name in the import list.
+especially if you have to use long paths (for example if you have to use 
+files in different directories) it would make sense to use a shortcut 
+instead. you just need to write them behind the file name in the import list.
 
 so now we use the name *postgres* as shortcut instead the filename docker-compose.
 ````yaml
@@ -606,10 +645,10 @@ task:
 
 ### autorun
 the autorun option defines task they will be executed if you switch the
-workspace. this task are regular contxt task.
+workspace. this task is regular contxt task.
 
-this should help to setup automatically all needs if you have to work
-on this project and needs to setup something.
+this should help to set up automatically all needs if you have to work
+on this project and needs to set up something.
 
 ````yaml
 config:
@@ -632,7 +671,7 @@ task:
 
 #### onenter
 this defines the task that should be executed if you enter this workspace.
-enterring the workspace means 
+entering the workspace means 
  `ctx switch <workspace>` 
 
 #### onleave
@@ -640,7 +679,10 @@ this defines the task that should be executed if you leave the workspace.
 leave means you switch to another workspace.
 
 #### example
-for example: if you are working on project *java-project-version-11* and you have to work with *java-project-version-8* execute `ctx switch java-project-8` then the first that will be executed, is any **onleave** task in the current *java-project-version-11* project. 
+for example: if you are working on project *java-project-version-11,* 
+and you have to work with *java-project-version-8* execute 
+`ctx switch java-project-8` then the first that will be executed, 
+is any **onleave** task in the current *java-project-version-11* project. 
 
 and then afterwards the *onenter* task in *java-project-version-8*
 
@@ -653,7 +695,8 @@ defines a list of **yaml** or **json** files, they will be imported as variable 
 
 
 accessing these variables is similar to the regular `variables`.
-any imported json or yaml file will be stored by the filename as key (full path) or by a specific key that just added in the same line 
+any imported json or yaml file will be stored by the filename
+as key (full path) or by a specific key that just added in the same line 
 
 ````yaml
 config:
@@ -684,7 +727,8 @@ shared tasks are **contxt** tasks defined in a seperated location in the user ho
 `$HOME/.contxt/shared`
 
 if you have anything that needs to be done in different projects, you can
-create a folder in this path. this folder needs an subfolder called **source** and there we can put the `contxt.yml`
+create a folder in this path. this folder needs a sub folder 
+called **source** and there we can put the `contxt.yml`
 
 
 here the path as tree.
@@ -710,7 +754,7 @@ task:
 
 if you are working already in a workspace, then just go back to them by typing `cn`.
 
-edit the .contxt.yml file in youre current project and add the usage for the new script.
+edit the .contxt.yml file in your current project and add the usage for the new script.
 
 
 ````yaml
@@ -727,15 +771,16 @@ and can be started like it would be a part of the current tasks.
 
 ![image](https://user-images.githubusercontent.com/5437750/203767843-3df4d868-37e6-4010-b54b-692802cd165d.png)
 
-these task, defined with **use**, will be run in the shared context before any other task from the "real" tasks are executed.
+these task, defined with **use**, will be run in the shared 
+context before any other task from the "real" tasks are executed.
 
 
 ### Require. Shared Task (2/2)
 
-read part (1/2) before depending **use**, because there the meaning of
+read part (1/2) before, depending on **use**, because there the meaning of
 shared task is explained. and how to create a shared task.
 
-similiar to `use` the `require` will be make use of the shared task.
+similar to `use` the `require` will be make use of the shared task.
 but instead of just running them in front of the "real" task, in the 
 shared context (including the shared path), the whole shared tasks 
 are merged with the current tasks.
@@ -756,9 +801,12 @@ if you execute *script*, you will not see any difference to the regular executio
 
 ### allowmultiplerun (bool)
 
-the regular behavior is to run all dependencies once, and no other task twice at the same time.
+the regular behavior is to run all dependencies once, and 
+no other task twice at the same time.
 
-it might be the case, this should be disabled, so anytime a task is required, it will be executed (for example to get the current time).
+it might be the case, this should be disabled, 
+so anytime a task is required, it will be executed 
+(for example to get the current time).
 
 this option is then valid for any task in this task file.
 
