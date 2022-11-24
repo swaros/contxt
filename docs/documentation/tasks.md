@@ -28,6 +28,8 @@ tasks are a collection of scripts they are depending to the current directory. t
             - [onleave](#onleave)
             - [example](#example)
         - [Imports](#imports)
+        - [Use. Shared Tasks](#use-shared-tasks)
+            - [example for linux users](#example-for-linux-users)
 
 <!-- /TOC -->
 ## task create and run 
@@ -448,3 +450,49 @@ task:
 ````
 
 > see **imports** sub-section from the **variables** in this document, for details about working with variables
+
+### Use. Shared Tasks
+shared tasks are **contxt** tasks defined in a seperated location in the user home dir.
+
+`$HOME/.contxt/shared`
+
+if you have anything that needs to be done in different projects, you can
+create a folder in this path. this folder needs an subfolder called **source** and there we can put the `contxt.yml`
+
+
+here the path as tree.
+- $HOME
+  - .contxt
+    - shared
+      - source
+        - .contxt.yml
+
+#### example for linux users
+
+```shell
+> mkdir -p $HOME/.contxt/shared/my-shard-task/source
+> cd $HOME/.contxt/shared/my-shard-task/source
+> ctx create
+write execution template to  /home/user/.contxt/shared/my-shard-task/source/.contxt.yml
+> cat .contxt.yml
+task:
+  - id: script
+    script:
+      - echo "hello world"
+```
+
+if you are working already in a workspace, then just go back to them by typing `cn`.
+
+edit the .contxt.yml file in youre current project and add the usage for the new script.
+
+
+````yaml
+config:
+  use:
+    - my-shard-task
+````
+
+now the `script` task is also shown as valid task target (even in autocomplete) and can be started.
+
+
+
