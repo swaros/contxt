@@ -524,5 +524,9 @@ from now on, anything from the shared task is part of current tasks.
 even if you execute `ctx lint` you will see the external *script* task 
 in the current project.
 
+if you execute *script*, you will not see any difference to the regular execution.
+
+![image](https://user-images.githubusercontent.com/5437750/203771904-d7ec69e1-fa07-4eb8-bfad-9d0014c6c43c.png)
+
 
 
