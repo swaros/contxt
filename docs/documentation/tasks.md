@@ -1,6 +1,35 @@
 # Task
 this document will give a plain overview how task are created and executed.
-tasks are a collection of scripts they are depending to the current directory. this tasks are defined in a taskfile named **.contxt.yml**. 
+tasks are a collection of scripts they are depending to the current directory. this tasks are defined in a taskfile named **.contxt.yml**.
+<!-- TOC -->
+
+- [Task](#task)
+    - [task create and run](#task-create-and-run)
+        - [basic use case](#basic-use-case)
+            - [create  a new task](#create--a-new-task)
+            - [list and run a task](#list-and-run-a-task)
+        - [extended use-case](#extended-use-case)
+            - [how to avoid running asynchronously](#how-to-avoid-running-asynchronously)
+            - [run task from anywhere](#run-task-from-anywhere)
+            - [list all task](#list-all-task)
+- [structure](#structure)
+    - [config](#config)
+        - [sequencially bool](#sequencially-bool)
+        - [coloroff bool](#coloroff-bool)
+        - [loglevel](#loglevel)
+        - [variables](#variables)
+            - [working with variables](#working-with-variables)
+            - [asynchronously behaviour](#asynchronously-behaviour)
+            - [set variables from command line](#set-variables-from-command-line)
+            - [import variables](#import-variables)
+                - [import as short cut](#import-as-short-cut)
+        - [autorun](#autorun)
+            - [onenter](#onenter)
+            - [onleave](#onleave)
+            - [example](#example)
+        - [Imports](#imports)
+
+<!-- /TOC -->
 ## task create and run 
 ### basic use case
 #### create  a new task
@@ -82,7 +111,7 @@ so if you use `contxt run init -a` the task will be executed in path no **0** an
 if you use `contxt run build -a` it will run on target no **0** only because no other path a target named **build**
 and if you run `contxt run clean -a` it will run on target **0** and **2**
 
-## structure 
+# structure 
 
 the structure differs to most of all other yaml based task runners or ci tools. contxt using a list of task and not a `[string]task` list.
 this results in a structure that may seems a little bit more complicated.
@@ -135,6 +164,42 @@ task:
 ## config
 
 *config* is a root element that defines the behaviour of the task runner. 
+### sequencially (bool)
+by default any task will be started asynchronous. this behavior can be disabled by this option. set it to true, and any task and any dependency will run one by one after the first one is done. 
+````yaml
+config:
+  sequencially: true     
+````
+ 
+### coloroff (bool)
+contxt enables ANSII colored output if possible. you can turn this off
+by this setting. 
+````yaml
+config:
+  coloroff: true     
+````
+
+runtime flag is `--coloroff` , `-c`
+
+### loglevel
+sets the logger level. 
+possible values are
+- panic
+- fatal
+- error
+- warn
+- info
+- debug
+- trace
+
+````yaml
+config:
+  loglevel: debug
+````
+
+runtime flag is `--loglevel debug`
+
+> used logger library is [logrus](https://github.com/sirupsen/logrus)
 
 ### variables
 
@@ -294,7 +359,7 @@ task:
 
 ````
 
-##### import short cuts
+##### import as short cut
 especially if you have to use long paths (for example if have to use files in different directories) it would make sense to use a shortcut instead. you just need to write them behind the file name in the import list.
 
 so now we use the name *postgres* as shortcut instead the filename docker-compose.
@@ -310,3 +375,76 @@ task:
       - echo "a adminer instance is running too on port ${postgres:services.adminer.ports.0}"
 ````
 
+### autorun
+the autorun option defines task they will be executed if you switch the
+workspace. this task are regular contxt task.
+
+this should help to setup automatically all needs if you have to work
+on this project and needs to setup something.
+
+````yaml
+config:
+  autorun:
+    onleave: leave
+    onenter: init
+task:
+  - id: init
+    script:
+      - echo "doing something to get this project running" 
+      - git pull --rebase
+      - and so on
+ 
+  - id: leave
+    script:
+      - echo "doing something to cleanup this project til i come back"
+      - rm -rf *.log
+      - and so on
+````
+
+#### onenter
+this defines the task that should be executed if you enter this workspace.
+enterring the workspace means 
+ `ctx switch <workspace>` 
+
+#### onleave
+this defines the task that should be executed if you leave the workspace.
+leave means you switch to another workspace.
+
+#### example
+for example: if you are working on project *java-project-version-11* and you have to work with *java-project-version-8* execute `ctx switch java-project-8` then the first that will be executed, is any **onleave** task in the current *java-project-version-11* project. 
+
+and then afterwards the *onenter* task in *java-project-version-8*
+
+> this affects any autorun task definition in any assigned path to this workspace. but, of course, any of these task runs in his own path.
+
+### Imports
+defines a list of **yaml** or **json** files, they will be imported as variable map.
+
+> **NOTE** for yaml files the only accepted extensions are *.yml* and *.yaml*. for json it is *.json' only.
+
+
+accessing these variables is similar to the regular `variables`.
+any imported json or yaml file will be stored by the filename as key (full path) or by a specific key that just added in the same line 
+
+````yaml
+config:
+  imports:
+    - path/to/file <optional-key-name>
+    
+````
+
+as example
+
+````yaml
+config:
+  imports:
+    - docker-compose.yml docker
+    - composer.json
+task:
+  - id: script
+    script:      
+      - echo "used database image is ${docker:services.db.image}"
+      - echo "php platform is {composer.json:config.platform.php}"
+````
+
+> see **imports** sub-section from the **variables** in this document, for details about working with variables
