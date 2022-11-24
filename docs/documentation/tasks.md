@@ -28,8 +28,9 @@ tasks are a collection of scripts they are depending to the current directory. t
             - [onleave](#onleave)
             - [example](#example)
         - [Imports](#imports)
-        - [Use. Shared Tasks](#use-shared-tasks)
+        - [Use. Shared Tasks 1/2](#use-shared-tasks-12)
             - [example for linux users](#example-for-linux-users)
+        - [Require. Shared Task 2/2](#require-shared-task-22)
 
 <!-- /TOC -->
 ## task create and run 
@@ -451,7 +452,7 @@ task:
 
 > see **imports** sub-section from the **variables** in this document, for details about working with variables
 
-### Use. Shared Tasks
+### Use. Shared Tasks (1/2)
 shared tasks are **contxt** tasks defined in a seperated location in the user home dir.
 
 `$HOME/.contxt/shared`
@@ -502,6 +503,26 @@ and can be started like it would be a part of the current tasks.
 
 these task, defined with **use**, will be run in the shared context before any other task from the "real" tasks are executed.
 
+
+### Require. Shared Task (2/2)
+
+read part (1/2) before depending **use**, because there the meaning of
+shared task is explained. and how to create a shared task.
+
+similiar to `use` the `require` will be make use of the shared task.
+but instead of just running them in front of the "real" task, in the 
+shared context (including the shared path), the whole shared tasks 
+are merged with the current tasks.
+
+````yaml
+config:
+  require:
+    - my-shard-task
+````
+
+from now on, anything from the shared task is part of current tasks.
+even if you execute `ctx lint` you will see the external *script* task 
+in the current project.
 
 
 
