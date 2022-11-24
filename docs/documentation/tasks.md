@@ -493,7 +493,9 @@ config:
 ````
 
 now the `script` task is also shown as valid task target (even in autocomplete)
+
 ![image](https://user-images.githubusercontent.com/5437750/203767268-12d7e1b7-579e-464c-81ff-99773e6c4de9.png)
+
 and can be started like it would be a part of the current tasks.
 
 ![image](https://user-images.githubusercontent.com/5437750/203767843-3df4d868-37e6-4010-b54b-692802cd165d.png)
