@@ -182,7 +182,7 @@ task:
   - id: example
     script:
       - "#@import-json CONFIG cat user-config.json" # just to load something            
-      - "export-to-yaml CONFIG CONFIG_YAML" 
+      - "#@export-to-yaml CONFIG CONFIG_YAML" 
       - printf "${CONFIG_YAML}"
 
 ````
