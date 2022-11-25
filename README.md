@@ -13,7 +13,7 @@ it is not the main feature of contxt, but fast switching to the related director
 Contxt itself have no control about the current directory of the current shell in there contxt is running. After any binary exists, it is still in the same path as before. this is the regular behavior for all executables in a shell.
 to *fix* this issue, contxt will be mapped by a shell function called **ctx** (for contxt itself), and **cn** for changing directories depending the current project. 
 
-![cn command](https://github.com/swaros/docu-asset-store/blob/main/cn.png)
+![cn command](https://github.com/swaros/docu-asset-store/blob/main/bash_demo_01.gif)
 
 this works because shell functions are in same context.
 so for any supported shell a shell function is needed.
