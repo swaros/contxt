@@ -312,6 +312,13 @@ func TestCase7(t *testing.T) {
 	})
 }
 
+// testing on error behavior for the stop reasons
+func TestCase71(t *testing.T) {
+	assertCaseLogLastEquals(t, "7", "trigger", "two")                   // testing outpout match
+	assertCaseLogLastEquals(t, "7", "len", "123")                       // test onoutLess
+	assertCaseLogLastEquals(t, "7", "lenmore", "b123456abcdefghijklmn") // test onoutMore
+}
+
 // test variables. replace set at config variables to hallo-welt
 func TestCase8(t *testing.T) {
 	caseRunner("8", t, func(t *testing.T) {

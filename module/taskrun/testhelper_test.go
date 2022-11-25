@@ -63,3 +63,16 @@ func assertVarStrEquals(t *testing.T, keyname, expected string) bool {
 	}
 	return true
 }
+
+// assertCaseLogLastEquals tests for a case (docs/tests/case<nr>) if the last output
+// is equasl to the expected.
+// depending on the executed targetName
+func assertCaseLogLastEquals(t *testing.T, caseNr, targetName, expected string) {
+	caseRunner(caseNr, t, func(t *testing.T) {
+		taskrun.RunTargets(targetName, true)
+		log := taskrun.GetPH("RUN." + targetName + ".LOG.LAST")
+		if log != expected {
+			t.Error("the last executed script should be "+expected+". not ", log)
+		}
+	})
+}

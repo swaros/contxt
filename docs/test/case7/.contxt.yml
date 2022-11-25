@@ -18,6 +18,7 @@ task:
             - "run-cmd"
         action:
           target: sub
+
   - id: sub
     stopreasons:
       onerror: true
@@ -32,3 +33,30 @@ task:
       - echo 'next-should-fail'
       - a-unknown-command
       - echo 'sub-end'
+
+  - id: trigger
+    stopreasons:
+      onoutContains: 
+        - two
+    script:
+      - echo one
+      - echo two
+      - echo four
+
+  - id: len
+    stopreasons:
+      onoutcountLess: 4
+    script:
+      - echo 1234567890
+      - echo 123456
+      - echo 123
+      - echo 1234567
+
+  - id: lenmore
+    stopreasons:
+      onoutcountMore: 13
+    script:
+      - echo a1234567890
+      - echo b123456abcdefghijklmn
+      - echo c123
+      - echo d1234567    
