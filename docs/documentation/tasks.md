@@ -22,6 +22,12 @@ tasks are a collection of scripts they are depending to the current directory. t
                 - [exists, notExists](#exists-notexists)
                 - [Variables, Environment](#variables-environment)
             - [Stopreasons](#stopreasons)
+                - [onoutContains](#onoutcontains)
+                - [onoutcountLess, onoutcountMore](#onoutcountless-onoutcountmore)
+            - [listener](#listener)
+                - [trigger](#trigger)
+                    - [onoutContains](#onoutcontains)
+                    - [onoutcountLess, onoutcountMore](#onoutcountless-onoutcountmore)
             - [Options](#options)
                 - [ignorecmderror bool](#ignorecmderror-bool)
                 - [format string](#format-string)
@@ -335,7 +341,152 @@ the first letter tells _contxt_  how to verify the variable/environment
 
 #### Stopreasons
 
-this section defines a _trigger_ that reacts on an error.
+this section defines a _trigger_ that reacts on the content 
+from the output or an error, to decide if the execution should be stopped.
+
+##### onoutContains
+checks the output from the scripts and stops contxt if a match was found.
+the matches are a list of strings. if one of them part of the output,
+the execution will be stopped.
+````yaml
+task:
+  - id: example-task
+    stopreasons:
+      onoutContains:
+         - check-for-this
+         - or-for-this
+````
+
+##### onoutcountLess, onoutcountMore
+this checks the length of the output (any line, not summerized).
+in this example the execution will be stopped, if the output of the script section
+is at some point less than 4 chars or more than 13 chars.
+
+> i am just lazy, so i put this two together in this example. they do not depends on each other
+
+````yaml
+task:
+  - id: example-task
+    stopreasons:
+       onoutcountLess: 4
+       onoutcountMore: 13         
+````
+
+#### listener
+listener are watching the script output and reacts to them.
+so you can, for example by running a docker-compose, wait til the database is 
+fully running, before you start some integration tests.
+
+like so ...just as an fast example
+````yaml
+task:
+  - id: start-compose
+    script:
+      - docker-compose up # no -d option because we need to the ouput
+    listener:
+      - trigger:
+          onoutContains:
+           - "ready for connections." # now the db is ready
+        action:
+          target: integration-test    # then execute the task we want
+
+  - id: integration-test
+    script:
+      - sh run-integration-test.sh # this is just an example of something that could be done after the database is initialized
+      - docker-compose down # and now just stop docker-compose
+````
+
+listener contains a list of triggers and actions. 
+so any task can have multiple trigger/action combinations.
+the action defines what should happen, if the
+trigger found a match.
+
+##### trigger
+
+
+````yaml
+task:
+  - id: test-company-login    
+    listener:
+      - trigger:
+          onoutContains:
+           - "login failed"
+           - "wrong password"
+           - "not reachable" 
+        action:
+          target: write-mail-to-sysop-topic-why-again
+
+      - trigger:
+          onoutContains:
+           - "wrong password" 
+        action:
+          target: write-mail-to-wife-topic-rememberme
+
+````
+
+###### trigger onoutContains
+checks a list of strings if one of them is in the output.
+````yaml
+task:
+  - id: test-company-login    
+    listener:
+      - trigger:
+          onoutContains:
+           - "login failed"
+           - "wrong password"
+           - "not reachable" 
+````
+
+###### trigger onoutcountLess and onoutcountMore
+this checks the length of the output (any line, not summerized).
+in this example the execution will be stopped, if the output of the script section
+
+````yaml
+task:
+  - id: test-company-login    
+    listener:
+      - trigger:
+          onoutcountLess: 1
+          onoutcountMore: 256
+````
+
+##### action
+a action can have a target, what is a existing _contxt task_. 
+
+targets are started in async mode (by default). keep this in mind, if you 
+are watching on a short running task, and nothing else is running as task.
+
+````yaml
+task:
+  - id: example    
+    listener:
+      - trigger:
+          onoutContains:
+           - "hello"
+        action:
+          target: say-hello-too      
+
+````
+
+... or just his own script section. 
+**it is sometimes important to use script, instead of target**.
+if you ever run in a case, the target can not be executed (raise condition, timing issue -- because the task is done before we could start the target .... and so on)
+
+the script section stays in the same scope and is not running async. so this will run, even the command, that triggers the action, is finished already. 
+
+````yaml
+task:
+  - id: example    
+    listener:
+      - trigger:
+          onoutContains:
+           - "hello"
+        action:
+          script: 
+            - echo "oh ...yes hello"
+            - echo "all fine so far?"
+
+````
 
 #### Options
 
