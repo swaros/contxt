@@ -22,7 +22,7 @@ module:
   - 
     modul: taskrun
     test:
-      timeout: 30s
+      timeout: 60s
       
   - 
     modul: awaitgroup
