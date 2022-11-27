@@ -11,12 +11,12 @@ config:
                   updates:
       depbot-template: |
                   ### dependencie for ${dep-bot-dep}
-                    - package-ecosystem: "gomod" 
-                      directory: "${dep-bot-dep}" 
+                    - package-ecosystem: gomod 
+                      directory: ${dep-bot-dep} 
                       schedule:
-                         interval: "daily"
+                         interval: daily
                       assignees:
-                         - "swaros"
+                         - swaros
       coverage-template-top: |
                     <!DOCTYPE html>
                     <html>
