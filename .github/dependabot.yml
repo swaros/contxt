@@ -53,3 +53,11 @@ updates:
     assignees:
        - swaros
 
+### dependencie for /module/outlaw/
+  - package-ecosystem: gomod 
+    directory: /module/outlaw/ 
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+

@@ -1,7 +1,17 @@
 package main
 
-import "github.com/swaros/contxt/taskrun"
+import (
+	"os"
+
+	"github.com/swaros/contxt/outlaw"
+	"github.com/swaros/contxt/taskrun"
+)
 
 func main() {
-	taskrun.MainExecute()
+	if len(os.Args) > 1 {
+		taskrun.MainExecute()
+	} else {
+		outlaw.RunIShell()
+	}
+
 }

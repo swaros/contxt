@@ -1,47 +1,73 @@
 package main
 
+// this whole main usage is
+
 import (
-	"github.com/swaros/contxt/interactive"
+	"fmt"
+	"os"
+	"strconv"
+
+	"github.com/swaros/contxt/outlaw"
+	"github.com/swaros/contxt/tviewapp"
 )
 
 func main() {
-	interactive.ScreenMain()
+	//	interactive.ScreenMain()
 
-	/*
-		fmt.Println("tview example")
+	//protoType()
+	ishell()
 
-		app := tviewapp.New()
-		app.NewScreen()
+}
 
-		card := tviewapp.NewCard("debug")
+func ishell() {
+	outlaw.RunIShell()
+}
 
-		demo := tviewapp.NewText("hello world")
+func protoType() {
+	app := tviewapp.New()
+	app.NewScreen()
 
-		demo2 := tviewapp.NewBox()
-		demo2.SetDim(2, 10, 40, 3)
-		demo2.OnMouseOver = func(x, y int) {
-			demo.SetText(".... HOVER " + strconv.Itoa(x) + " x " + strconv.Itoa(y) + " .......")
+	topHeader := tviewapp.NewCard("contxt")
+	topHeader.SetDim(2, 3, 10, 20)
 
-		}
+	app.AddElement(topHeader)
+	app.RunLoop(func() { os.Exit(0) })
+}
 
-		newBox := tviewapp.NewCard("hello world")
+func testScreen() {
+	fmt.Println("tview example")
 
-		app.Listener.OnLMouseDown = func(ca *tviewapp.CellApp, x, y int) {
-			demo.SetText(".... left MOUSE DOWN" + strconv.Itoa(x) + " x " + strconv.Itoa(y) + " .......")
-		}
+	app := tviewapp.New()
+	app.NewScreen()
 
-		app.Listener.OnLMouseUp = func(ca *tviewapp.CellApp, x, y, startx, starty int) {
+	card := tviewapp.NewCard("debug")
 
-			newBox.SetDim(startx, starty, x-startx, y-starty)
-			ca.AddElement(newBox)
-			demo.SetText(".... left MOUSE LEAVE " + strconv.Itoa(x) + " x " + strconv.Itoa(y) + " .... " + strconv.Itoa(startx) + " x " + strconv.Itoa(starty) + " .......")
-		}
+	demo := tviewapp.NewText("hello world")
 
-		demo2.OnMouseLeave = func() {
-			demo.SetText("the blue box is untouched right now.....")
-		}
+	demo2 := tviewapp.NewBox()
+	demo2.SetDim(2, 10, 40, 3)
+	demo2.OnMouseOver = func(x, y int) {
+		demo.SetText(".... HOVER " + strconv.Itoa(x) + " x " + strconv.Itoa(y) + " .......")
 
-		app.AddElement(demo, demo2, card)
-		app.RunLoop(func() { os.Exit(0) })*/
+	}
 
+	newBox := tviewapp.NewCard("hello world")
+
+	app.Listener.OnLMouseDown = func(ca *tviewapp.CellApp, x, y int) {
+		demo.SetText(".... left MOUSE DOWN" + strconv.Itoa(x) + " x " + strconv.Itoa(y) + " .......")
+	}
+
+	app.Listener.OnLMouseUp = func(ca *tviewapp.CellApp, x, y, startx, starty int) {
+
+		newBox.SetDim(startx, starty, x-startx, y-starty)
+		ca.AddElement(newBox)
+		demo.SetText(".... left MOUSE LEAVE " + strconv.Itoa(x) + " x " + strconv.Itoa(y) + " .... " + strconv.Itoa(startx) + " x " + strconv.Itoa(starty) + " .......")
+	}
+
+	demo2.OnMouseLeave = func() {
+		demo.SetText("the blue box is untouched right now.....")
+	}
+
+	app.AddElement(demo, demo2, card)
+	app.RunLoop(func() { os.Exit(0) })
 }
