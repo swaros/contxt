@@ -6,9 +6,11 @@ import (
 	"github.com/abiosoft/ishell"
 	"github.com/swaros/contxt/configure"
 	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/manout"
 )
 
 func RunIShell() {
+	taskrun.MainInit()
 	shell := ishell.New()
 
 	// display welcome info.
@@ -22,10 +24,14 @@ func RunIShell() {
 		},
 	})
 	CreateRunCommands(shell)
-	CreateRunAsyncList(shell)
 	CreateDefaultComands(shell)
-	shell.SetPrompt("[ctx:]>> ")
+	updatePrompt(shell)
 	shell.Run()
+}
+
+func updatePrompt(shell *ishell.Shell) {
+	prompt := manout.Message(manout.ForeBlue, "CTX.SHELL", manout.ForeCyan, " [", configure.UsedConfig.CurrentSet, "] ", manout.ForeLightYellow, ">> ", manout.CleanTag)
+	shell.SetPrompt(prompt)
 }
 
 func headScreen(shell *ishell.Shell) {
@@ -37,51 +43,46 @@ func CreateDefaultComands(shell *ishell.Shell) {
 		Name: "lint",
 		Help: "checks the current .contxt.yml",
 		Func: func(c *ishell.Context) {
-			taskrun.ShowAsYaml(true, false, 0)
+			taskrun.LintOut(50, 50, false, false)
 		},
 	})
 }
 
 func CreateRunCommands(shell *ishell.Shell) {
-	if targets, found := taskrun.GetAllTargets(); found {
-		for _, target := range targets {
-			shell.AddCmd(&ishell.Cmd{
-				Name: "run." + target,
-				Help: "run target " + target,
-				Func: func(c *ishell.Context) {
-					c.Println("start target " + target)
-					taskrun.RunTargets(target, true)
-				},
-			})
-		}
-	}
-}
+	if _, found := taskrun.GetAllTargets(); found {
 
-func CreateRunAsyncList(shell *ishell.Shell) {
-	if targets, found := taskrun.GetAllTargets(); found {
 		shell.AddCmd(&ishell.Cmd{
 			Name: "run",
-			Help: "runs multiple targets async",
+			Help: "run one target ",
+			Completer: func(args []string) []string {
+				targets, _ := taskrun.GetAllTargets()
+				return targets
+			},
 			Func: func(c *ishell.Context) {
+				if len(c.Args) > 0 {
+					taskrun.RunTargets(strings.Join(c.Args, ","), true)
+				} else {
+					if targets, found := taskrun.GetAllTargets(); found {
+						choices := c.Checklist(targets,
+							"select targets they needs to be run togehter", nil)
 
-				choices := c.Checklist(targets,
-					"select targets they needs to be run togehter", nil)
-
-				if len(choices) < 1 {
-					c.Println("no targets selected")
-					c.Println("you have to select the targets by pressing space")
-					return
+						if len(choices) < 1 {
+							c.Println("no targets selected")
+							c.Println("you have to select the targets by pressing space")
+							return
+						}
+						var selected []string = []string{}
+						for _, nr := range choices {
+							selected = append(selected, targets[nr])
+						}
+						runs := strings.Join(selected, ",")
+						c.Println("running selected targets: ", runs)
+						taskrun.RunTargets(runs, true)
+						c.Println("done")
+					}
 				}
-				var selected []string = []string{}
-				for _, nr := range choices {
-					selected = append(selected, targets[nr])
-				}
-				runs := strings.Join(selected, ",")
-				c.Println("running selected targets: ", runs)
-				taskrun.RunTargets(runs, true)
-				c.Println("done")
 			},
 		})
-	}
 
+	}
 }

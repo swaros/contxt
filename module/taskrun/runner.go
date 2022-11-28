@@ -719,8 +719,7 @@ func InitDefaultVars() {
 	}
 }
 
-// MainExecute runs main. parsing flags
-func MainExecute() {
+func MainInit() {
 	pathIndex = -1
 	initLogger()
 	InitDefaultVars()
@@ -732,6 +731,11 @@ func MainExecute() {
 	currentDir, _ := dirhandle.Current()
 	SetPH("CTX_PWD", currentDir)
 
+}
+
+// MainExecute runs main. parsing flags
+func MainExecute() {
+	MainInit()
 	// first handle shortcuts
 	// before we get cobra controll
 	if !shortcuts() {
