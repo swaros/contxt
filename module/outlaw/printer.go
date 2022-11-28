@@ -1,10 +1,12 @@
 package outlaw
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/abiosoft/ishell"
 	"github.com/swaros/contxt/configure"
+	"github.com/swaros/contxt/dirhandle"
 	"github.com/swaros/contxt/taskrun"
 	"github.com/swaros/manout"
 )
@@ -30,7 +32,17 @@ func RunIShell() {
 }
 
 func updatePrompt(shell *ishell.Shell) {
-	prompt := manout.Message(manout.ForeBlue, "CTX.SHELL", manout.ForeCyan, " [", configure.UsedConfig.CurrentSet, "] ", manout.ForeLightYellow, ">> ", manout.CleanTag)
+	dir, err := dirhandle.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	dirPrompt := manout.Message(manout.ForeLightGreen, fmt.Sprintf("%10s", dir))
+
+	if !configure.PathMeightPartOfWs(dir) {
+		dirPrompt = manout.Message(manout.ForeLightRed, dir, manout.ForeDarkGrey, " {path is out of context}")
+	}
+	prompt := manout.Message(manout.ForeBlue, "CTX.SHELL ", dirPrompt, manout.ForeCyan, " [", configure.UsedConfig.CurrentSet, "] ", manout.ForeLightYellow, ">> ", manout.CleanTag)
 	shell.SetPrompt(prompt)
 }
 
