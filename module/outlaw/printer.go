@@ -17,20 +17,14 @@ func RunIShell() {
 
 	// display welcome info.
 	headScreen(shell)
-	// register a function for "greet" command.
-	shell.AddCmd(&ishell.Cmd{
-		Name: "greet",
-		Help: "greet user",
-		Func: func(c *ishell.Context) {
-			c.Println("Hello", strings.Join(c.Args, " "))
-		},
-	})
 	CreateRunCommands(shell)
 	CreateDefaultComands(shell)
+	CreateWsCmd(shell)
 	updatePrompt(shell)
 	shell.Run()
 }
 
+// updatePrompt updates the prompt
 func updatePrompt(shell *ishell.Shell) {
 	dir, err := dirhandle.Current()
 	if err != nil {
@@ -46,10 +40,21 @@ func updatePrompt(shell *ishell.Shell) {
 	shell.SetPrompt(prompt)
 }
 
+// headScreen renders the welcome screen
 func headScreen(shell *ishell.Shell) {
-	shell.Println("contxt interactive shell ... " + configure.GetBuild())
+	manout.Om.Println("welcome to contxt interactive shell")
+	manout.Om.Println("   version: ", configure.GetVersion())
+	manout.Om.Println("  build-no: ", configure.GetBuild())
+	manout.Om.Println(" workspace: ", configure.UsedConfig.CurrentSet)
+	manout.Om.Println(" ---")
+	manout.Om.Println(`
+	you entered the interactive shell because you run contxt 
+	without any argument.
+	`)
 }
 
+// CreateDefaultComands simple comands they just used as command.
+// - lint
 func CreateDefaultComands(shell *ishell.Shell) {
 	shell.AddCmd(&ishell.Cmd{
 		Name: "lint",
@@ -58,14 +63,45 @@ func CreateDefaultComands(shell *ishell.Shell) {
 			taskrun.LintOut(50, 50, false, false)
 		},
 	})
+
 }
 
+// CreateWsCmd command to switch the workspaces
+func CreateWsCmd(shell *ishell.Shell) {
+
+	shell.AddCmd(&ishell.Cmd{
+		Name:    "switch",
+		Aliases: []string{"ws", "workspace"},
+		Help:    "switch workspace for this session",
+		Completer: func(args []string) []string {
+			var ws []string = []string{}
+			configure.WorkSpaces(func(s string) {
+				ws = append(ws, s)
+			})
+			return ws
+		},
+		Func: func(c *ishell.Context) {
+			if len(c.Args) > 0 {
+				configure.WorkSpaces(func(ws string) {
+					if c.Args[0] == ws {
+						configure.ChangeWorkspace(ws, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
+						updatePrompt(shell)
+					}
+				})
+			} else {
+				manout.Error("missing workspace name")
+			}
+		},
+	})
+}
+
+// CreateRunCommands to display any run target. without an targetname, we will display a pick list
 func CreateRunCommands(shell *ishell.Shell) {
 	if _, found := taskrun.GetAllTargets(); found {
 
 		shell.AddCmd(&ishell.Cmd{
 			Name: "run",
-			Help: "run one target ",
+			Help: "run one target <target>. press tab for the target ",
 			Completer: func(args []string) []string {
 				targets, _ := taskrun.GetAllTargets()
 				return targets

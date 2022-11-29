@@ -174,7 +174,7 @@ you need to set the name for the workspace`,
 			if workspace == "" {
 				manout.Error("paramater missing", "name is required")
 			} else {
-				configure.ChangeWorkspace(workspace, callBackOldWs, callBackNewWs)
+				configure.ChangeWorkspace(workspace, CallBackOldWs, CallBackNewWs)
 			}
 		},
 	}
@@ -212,7 +212,7 @@ you need to set the name for the workspace`,
 
 			if setWs != "" {
 				GetLogger().WithField("workspace", setWs).Info("create a new worspace")
-				configure.ChangeWorkspace(setWs, callBackOldWs, callBackNewWs)
+				configure.ChangeWorkspace(setWs, CallBackOldWs, CallBackNewWs)
 				defaulttask = false
 			}
 
@@ -764,7 +764,7 @@ func ShowPaths(current string) int {
 	return len(configure.UsedConfig.Paths)
 }
 
-func callBackOldWs(oldws string) bool {
+func CallBackOldWs(oldws string) bool {
 	GetLogger().Info("OLD workspace: ", oldws)
 	// get all paths first
 	configure.PathWorker(func(_ int, path string) {
@@ -792,7 +792,7 @@ func callBackOldWs(oldws string) bool {
 	return true
 }
 
-func callBackNewWs(newWs string) {
+func CallBackNewWs(newWs string) {
 	GetLogger().Info("NEW workspace: ", newWs)
 	configure.PathWorker(func(_ int, path string) {
 
@@ -826,7 +826,7 @@ func doMagicParamOne(param string) bool {
 	// param is a workspace ?
 	configure.WorkSpaces(func(ws string) {
 		if param == ws {
-			configure.ChangeWorkspace(ws, callBackOldWs, callBackNewWs)
+			configure.ChangeWorkspace(ws, CallBackOldWs, CallBackNewWs)
 			result = true
 		}
 	})
