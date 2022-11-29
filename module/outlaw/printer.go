@@ -51,6 +51,13 @@ func headScreen(shell *ishell.Shell) {
 	you entered the interactive shell because you run contxt 
 	without any argument.
 	`)
+
+	if !inWs() {
+		autoRecoverWs()
+		manout.Om.Println("... we change the the workspace path automatically")
+		manout.Om.Println("... ")
+
+	}
 }
 
 // CreateDefaultComands simple comands they just used as command.
