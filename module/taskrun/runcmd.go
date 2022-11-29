@@ -35,7 +35,7 @@ import (
 	"github.com/swaros/manout"
 )
 
-func DirFind(args []string) {
+func DirFind(args []string) string {
 	useIndex := -1
 	usePath := "."
 	if len(args) == 0 {
@@ -66,7 +66,9 @@ func DirFind(args []string) {
 		}
 
 		fmt.Println(usePath)
+
 	}
+	return usePath
 }
 
 func PrintCnPaths(hints bool) {
@@ -74,7 +76,7 @@ func PrintCnPaths(hints bool) {
 	dir, err := dirhandle.Current()
 	if err == nil {
 		count := ShowPaths(dir)
-		if count > 0 && !hints {
+		if count > 0 && hints {
 			fmt.Println()
 			fmt.Println(manout.MessageCln("\t", "if you have installed the shell functions ", manout.ForeDarkGrey, "(contxt install bash|zsh|fish)", manout.CleanTag, " change the directory by ", manout.BoldTag, "cn ", count-1))
 			fmt.Println(manout.MessageCln("\t", "this will be the same as ", manout.BoldTag, "cd ", dirhandle.GetDir(count-1)))

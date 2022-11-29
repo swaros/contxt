@@ -2,6 +2,7 @@ package outlaw
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/abiosoft/ishell"
@@ -96,7 +97,10 @@ func CreateCnCmd(shell *ishell.Shell) {
 		},
 		Func: func(c *ishell.Context) {
 			if len(c.Args) > 0 {
-				taskrun.DirFind(c.Args)
+				if path := taskrun.DirFind(c.Args); path != "." {
+					os.Chdir(path)
+					updatePrompt(shell)
+				}
 			} else {
 				taskrun.PrintCnPaths(false)
 			}

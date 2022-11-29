@@ -226,7 +226,7 @@ you need to set the name for the workspace`,
 		Short: "show assigned paths",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			PrintCnPaths(showHints)
+			PrintCnPaths(!showHints)
 		},
 	}
 
