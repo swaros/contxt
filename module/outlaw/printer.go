@@ -12,13 +12,15 @@ import (
 	"github.com/swaros/manout"
 )
 
+var runCmdAdded = false
+
 func RunIShell() {
 	taskrun.MainInit()
 	shell := ishell.New()
 
 	// display welcome info.
 	headScreen(shell)
-	CreateRunCommands(shell)
+	runCmdAdded = CreateRunCommands(shell)
 	CreateDefaultComands(shell)
 	CreateWsCmd(shell)
 	updatePrompt(shell)
@@ -31,6 +33,12 @@ func updatePrompt(shell *ishell.Shell) {
 	dir, err := dirhandle.Current()
 	if err != nil {
 		panic(err)
+	}
+	// if the runcommand was not added already
+	// (this can be the case, if no comands aviable)
+	// we will check again
+	if !runCmdAdded {
+		runCmdAdded = CreateRunCommands(shell)
 	}
 
 	dirPrompt := manout.Message(manout.ForeLightGreen, fmt.Sprintf("%10s", dir))
@@ -138,7 +146,7 @@ func CreateWsCmd(shell *ishell.Shell) {
 }
 
 // CreateRunCommands to display any run target. without an targetname, we will display a pick list
-func CreateRunCommands(shell *ishell.Shell) {
+func CreateRunCommands(shell *ishell.Shell) bool {
 	if _, found := taskrun.GetAllTargets(); found {
 
 		shell.AddCmd(&ishell.Cmd{
@@ -173,6 +181,7 @@ func CreateRunCommands(shell *ishell.Shell) {
 				}
 			},
 		})
-
+		return true
 	}
+	return false
 }
