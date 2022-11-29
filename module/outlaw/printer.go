@@ -88,6 +88,15 @@ func CreateDefaultComands(shell *ishell.Shell) {
 			c.Println(configure.GetVersion())
 		},
 	})
+	shell.AddCmd(&ishell.Cmd{
+		Name: "vars",
+		Help: "shows current variables",
+		Func: func(c *ishell.Context) {
+			taskrun.GetPlaceHoldersFnc(func(phKey, phValue string) {
+				manout.Om.Println(manout.Message(manout.ForeCyan, phKey, ":", manout.ForeYellow, phValue))
+			})
+		},
+	})
 
 }
 
@@ -107,6 +116,7 @@ func CreateCnCmd(shell *ishell.Shell) {
 			if len(c.Args) > 0 {
 				if path := taskrun.DirFind(c.Args); path != "." {
 					os.Chdir(path)
+					resetShell()
 					updatePrompt(shell)
 				}
 			} else {
@@ -134,6 +144,7 @@ func CreateWsCmd(shell *ishell.Shell) {
 			if len(c.Args) > 0 {
 				configure.WorkSpaces(func(ws string) {
 					if c.Args[0] == ws {
+						resetShell()
 						configure.ChangeWorkspace(ws, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
 						updatePrompt(shell)
 					}

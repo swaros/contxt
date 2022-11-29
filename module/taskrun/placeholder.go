@@ -77,6 +77,13 @@ func GetPH(key string) string {
 	return ""
 }
 
+func GetPlaceHoldersFnc(inspectFunc func(phKey string, phValue string)) {
+	keyValue.Range(func(key, value any) bool {
+		inspectFunc(key.(string), value.(string))
+		return true
+	})
+}
+
 // HandlePlaceHolder replaces all defined placeholders
 func HandlePlaceHolder(line string) string {
 	var scopeVars map[string]string = make(map[string]string)

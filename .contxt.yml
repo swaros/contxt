@@ -168,7 +168,7 @@ task:
   - id: test-coverage
     require:
       system: linux
-    script:     
+    script:    
       - mkdir -p ./docs/test/coverage/
     
 

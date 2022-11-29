@@ -23,3 +23,8 @@ func inWs() bool {
 	}
 	return configure.PathMeightPartOfWs(dir)
 }
+
+func resetShell() {
+	taskrun.ClearAll()
+	taskrun.MainInit()
+}
