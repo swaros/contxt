@@ -21,6 +21,7 @@ func RunIShell() {
 	CreateDefaultComands(shell)
 	CreateWsCmd(shell)
 	updatePrompt(shell)
+	CreateCnCmd(shell)
 	shell.Run()
 }
 
@@ -62,6 +63,7 @@ func headScreen(shell *ishell.Shell) {
 
 // CreateDefaultComands simple comands they just used as command.
 // - lint
+// - version
 func CreateDefaultComands(shell *ishell.Shell) {
 	shell.AddCmd(&ishell.Cmd{
 		Name: "lint",
@@ -70,7 +72,36 @@ func CreateDefaultComands(shell *ishell.Shell) {
 			taskrun.LintOut(50, 50, false, false)
 		},
 	})
+	shell.AddCmd(&ishell.Cmd{
+		Name: "version",
+		Help: "print the current version",
+		Func: func(c *ishell.Context) {
+			c.Println(configure.GetVersion())
+		},
+	})
 
+}
+
+func CreateCnCmd(shell *ishell.Shell) {
+	shell.AddCmd(&ishell.Cmd{
+		Name: "cn",
+		Help: "change path in workspace",
+		Completer: func(args []string) []string {
+			var paths []string = []string{}
+			configure.PathWorker(func(i int, s string) {
+
+				paths = append(paths, fmt.Sprintf("%v", i))
+			})
+			return paths
+		},
+		Func: func(c *ishell.Context) {
+			if len(c.Args) > 0 {
+				taskrun.DirFind(c.Args)
+			} else {
+				taskrun.PrintCnPaths(false)
+			}
+		},
+	})
 }
 
 // CreateWsCmd command to switch the workspaces
@@ -96,7 +127,7 @@ func CreateWsCmd(shell *ishell.Shell) {
 					}
 				})
 			} else {
-				manout.Error("missing workspace name")
+				configure.DisplayWorkSpaces()
 			}
 		},
 	})

@@ -26,7 +26,6 @@ package taskrun
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -227,16 +226,7 @@ you need to set the name for the workspace`,
 		Short: "show assigned paths",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			fmt.Println(manout.MessageCln("\t", "paths stored in ", manout.ForeCyan, configure.UsedConfig.CurrentSet))
-			dir, err := dirhandle.Current()
-			if err == nil {
-				count := ShowPaths(dir)
-				if count > 0 && !showHints {
-					fmt.Println()
-					fmt.Println(manout.MessageCln("\t", "if you have installed the shell functions ", manout.ForeDarkGrey, "(contxt install bash|zsh|fish)", manout.CleanTag, " change the directory by ", manout.BoldTag, "cn ", count-1))
-					fmt.Println(manout.MessageCln("\t", "this will be the same as ", manout.BoldTag, "cd ", dirhandle.GetDir(count-1)))
-				}
-			}
+			PrintCnPaths(showHints)
 		},
 	}
 
@@ -245,38 +235,7 @@ you need to set the name for the workspace`,
 		Short: "find path by a part of them",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			useIndex := -1
-			usePath := "."
-			if len(args) == 0 {
-				dirhandle.PrintDir(configure.UsedConfig.LastIndex)
-			} else {
-				configure.PathWorker(func(index int, path string) {
-					for _, search := range args {
-						found := strings.Contains(path, search)
-						if found {
-							useIndex = index
-							usePath = path
-							GetLogger().WithFields(logrus.Fields{"index": useIndex, "path": usePath}).Debug("Found match by comparing strings")
-						} else {
-							// this part is not found. but maybe it is a index number?
-							sIndex, err := strconv.Atoi(search)
-							if err == nil && index == sIndex {
-								useIndex = index
-								usePath = path
-								GetLogger().WithFields(logrus.Fields{"index": useIndex, "path": usePath}).Debug("Found match by using param as index")
-							}
-						}
-					}
-				})
-
-				if useIndex >= 0 && useIndex != configure.UsedConfig.LastIndex {
-					configure.UsedConfig.LastIndex = useIndex
-					configure.SaveDefaultConfiguration(true)
-				}
-
-				fmt.Println(usePath)
-			}
-
+			DirFind(args)
 		},
 	}
 
