@@ -128,6 +128,14 @@ func CreateDefaultComands(shell *ishell.Shell) {
 		},
 	})
 
+	shell.AddCmd(&ishell.Cmd{
+		Name: "test",
+		Help: "testing ui",
+		Func: func(c *ishell.Context) {
+			handleWorkSpaces(c)
+		},
+	})
+
 }
 
 func CreateCnCmd(shell *ishell.Shell) {
@@ -150,7 +158,10 @@ func CreateCnCmd(shell *ishell.Shell) {
 					updatePrompt(shell)
 				}
 			} else {
-				taskrun.PrintCnPaths(false)
+				if handleContexNavigation(c) {
+					resetShell()
+					updatePrompt(shell)
+				}
 			}
 		},
 	})
@@ -180,7 +191,9 @@ func CreateWsCmd(shell *ishell.Shell) {
 					}
 				})
 			} else {
-				configure.DisplayWorkSpaces()
+				if handleWorkSpaces(c) {
+					updatePrompt(shell)
+				}
 			}
 		},
 	})
@@ -199,26 +212,9 @@ func CreateRunCommands(shell *ishell.Shell) bool {
 			},
 			Func: func(c *ishell.Context) {
 				if len(c.Args) > 0 {
-					taskrun.RunTargets(strings.Join(c.Args, ","), true)
+					taskrun.RunTargets(strings.Join(c.Args, " "), true)
 				} else {
-					if targets, found := taskrun.GetAllTargets(); found {
-						choices := c.Checklist(targets,
-							"select targets they needs to be run togehter", nil)
-
-						if len(choices) < 1 {
-							c.Println("no targets selected")
-							c.Println("you have to select the targets by pressing space")
-							return
-						}
-						var selected []string = []string{}
-						for _, nr := range choices {
-							selected = append(selected, targets[nr])
-						}
-						runs := strings.Join(selected, ",")
-						c.Println("running selected targets: ", runs)
-						taskrun.RunTargets(runs, true)
-						c.Println("done")
-					}
+					handleRunCmds(c)
 				}
 			},
 		})
