@@ -8,6 +8,7 @@ import (
 	"github.com/abiosoft/ishell"
 	"github.com/swaros/contxt/configure"
 	"github.com/swaros/contxt/dirhandle"
+	"github.com/swaros/contxt/systools"
 	"github.com/swaros/contxt/taskrun"
 	"github.com/swaros/manout"
 )
@@ -15,6 +16,10 @@ import (
 var runCmdAdded = false
 
 func RunIShell() {
+	if !systools.IsStdOutTerminal() {
+		noShellScreen()
+		return
+	}
 	taskrun.MainInit()
 	shell := ishell.New()
 
@@ -40,14 +45,39 @@ func updatePrompt(shell *ishell.Shell) {
 	if !runCmdAdded {
 		runCmdAdded = CreateRunCommands(shell)
 	}
+	bufferSize := 10
+	if width, _, err := systools.GetStdOutTermSize(); err == nil {
+		prompt := ">> "
+		ctxPromt := "CTX.SHELL "
+		if width > 15 {
 
-	dirPrompt := manout.Message(manout.ForeLightGreen, fmt.Sprintf("%10s", dir))
+			sizeForInput := width / 2 // half of the screen should be for the left for the input
+			need := sizeForInput + systools.StrLen(configure.UsedConfig.CurrentSet) + bufferSize + systools.StrLen(ctxPromt)
+			if need <= width { // we have size left, so compose the longer version of the prompt
+				sizeLeft := width - (need - 5) // 5 chars buffer
+				dirlabel := ""
+				if sizeLeft > 5 { // at least something usefull shold be displayed. so lets say at least 5 chars
+					dirlabel = systools.StringSubRight(dir, sizeLeft) // cut the path string if needed
+					pathColor := manout.ForeGreen                     // green color by default for the path
+					if !configure.PathMeightPartOfWs(dir) {           // check if we are in the workspace
+						pathColor = manout.ForeMagenta // if not, then set color to magenta
+					}
+					dirlabel = pathColor + dirlabel
+				}
+				prompt = manout.Message(manout.ForeBlue, ctxPromt, dirlabel, manout.ForeCyan, " [", configure.UsedConfig.CurrentSet, "] ", manout.ForeLightYellow, ">> ", manout.CleanTag)
 
-	if !configure.PathMeightPartOfWs(dir) {
-		dirPrompt = manout.Message(manout.ForeLightRed, dir, manout.ForeDarkGrey, " {path is out of context}")
+			}
+		}
+		shell.SetPrompt(prompt)
+	} else {
+		panic(err)
 	}
-	prompt := manout.Message(manout.ForeBlue, "CTX.SHELL ", dirPrompt, manout.ForeCyan, " [", configure.UsedConfig.CurrentSet, "] ", manout.ForeLightYellow, ">> ", manout.CleanTag)
-	shell.SetPrompt(prompt)
+}
+
+// noShellScreen prints info if we do not detect running in an terminal
+func noShellScreen() {
+	manout.Om.Println("Contxt ", configure.GetVersion(), " build: ", configure.GetBuild())
+	manout.Om.Println("no terminal detected. ctx.shell skipped")
 }
 
 // headScreen renders the welcome screen
