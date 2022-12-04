@@ -175,8 +175,7 @@ task:
   - id: test-coverage
     script: 
       - echo "${coverage-template-top}" > ./docs/coverage.html                 
-    {{- range $k, $test := $.module }}
-      - echo "" > ./docs/test/coverage/test.{{ $test.modul }}.out      
+    {{- range $k, $test := $.module }}      
       - go test -cover ./module/{{ $test.modul }}/./... -coverprofile ./docs/test/coverage/test.{{ $test.modul }}.out
       - go tool cover -html ./docs/test/coverage/test.{{ $test.modul }}.out -o ./docs/test/coverage/{{ $test.modul }}.html
       - echo '<h2>{{ $test.modul }}</h2>' >> ./docs/coverage.html
