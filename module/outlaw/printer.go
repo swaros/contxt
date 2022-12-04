@@ -30,6 +30,11 @@ func RunIShell() {
 	CreateWsCmd(shell)
 	updatePrompt(shell)
 	CreateCnCmd(shell)
+	// do not let the application stops by an error case in execution
+	systools.AddExitListener("iShell", func(code int) systools.ExitBehavior {
+		shell.Println("ERROR while execution. reported exit code ", code)
+		return systools.Interrupt
+	})
 	shell.Run()
 }
 
