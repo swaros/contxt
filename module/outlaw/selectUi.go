@@ -15,29 +15,23 @@ type selectItem struct {
 	title, desc string
 }
 
-type selectResult struct {
-	isSelected bool
-	item       selectItem
-}
-
 var (
-	selected selectResult
-	items    []selectItem
+	items []selectItem
 )
 
 func (i selectItem) Title() string       { return i.title }
 func (i selectItem) Description() string { return i.desc }
 func (i selectItem) FilterValue() string { return i.title }
 
-type model struct {
+type selectUiModel struct {
 	list list.Model
 }
 
-func (m model) Init() tea.Cmd {
+func (m selectUiModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m selectUiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
@@ -63,7 +57,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m selectUiModel) View() string {
 	return docStyle.Render(m.list.View())
 }
 
@@ -83,7 +77,7 @@ func uIselectItem(title string) selectResult {
 		displayItems = append(displayItems, itm)
 	}
 
-	listModel := model{list: list.New(displayItems, list.NewDefaultDelegate(), 0, 0)}
+	listModel := selectUiModel{list: list.New(displayItems, list.NewDefaultDelegate(), 0, 0)}
 	listModel.list.Title = title
 
 	p := tea.NewProgram(listModel, tea.WithAltScreen())

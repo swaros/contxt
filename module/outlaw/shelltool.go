@@ -1,7 +1,6 @@
 package outlaw
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/abiosoft/ishell"
@@ -37,15 +36,21 @@ func resetShell() {
 // handleWorkSpaces display a list of workspace to select one.
 // it returns true, if the workspace is switched
 func handleWorkSpaces(c *ishell.Context) bool {
+	var ws []string
 	// adds workspaces to the list by callback iterator
 	configure.WorkSpaces(func(s string) {
-		desc := "other then now"
-		if s == configure.UsedConfig.CurrentSet {
-			desc = "this is the current workspace"
-		}
-		AddItemToSelect(selectItem{title: s, desc: desc})
+		ws = append(ws, s)
+		/*
+			desc := "other then now"
+			if s == configure.UsedConfig.CurrentSet {
+				desc = "this is the current workspace"
+			}
+			AddItemToSelect(selectItem{title: s, desc: desc})
+		*/
+
 	})
-	selectedWs := uIselectItem("workspaces")
+	//selectedWs := uIselectItem("workspaces")
+	selectedWs := simpleSelect("workspaces", ws)
 	if selectedWs.isSelected {
 		c.Println("change to workspace: ", selectedWs.item.title)
 		configure.ChangeWorkspace(selectedWs.item.title, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
@@ -55,12 +60,20 @@ func handleWorkSpaces(c *ishell.Context) bool {
 }
 
 func handleContexNavigation(c *ishell.Context) bool {
+	var cns []string
 	configure.PathWorker(func(i int, s string) {
-		AddItemToSelect(selectItem{title: fmt.Sprintf("CN %v", i), desc: s})
+		cns = append(cns, s)
+		// AddItemToSelect(selectItem{title: fmt.Sprintf("CN %v", i), desc: s})
 	})
-	selectedCn := uIselectItem("select path in workspace ")
+	//selectedCn := uIselectItem("select path in workspace ")
+	selectedCn := simpleSelect("select path in workspace ", cns)
 	if selectedCn.isSelected {
-		if err := os.Chdir(selectedCn.item.desc); err != nil {
+		/*
+			if err := os.Chdir(selectedCn.item.desc); err != nil {
+				manout.Om.Print(manout.ForeRed, "Error while trying to enter path", manout.CleanTag, err)
+				return false
+			}*/
+		if err := os.Chdir(selectedCn.item.title); err != nil {
 			manout.Om.Print(manout.ForeRed, "Error while trying to enter path", manout.CleanTag, err)
 			return false
 		}
@@ -80,10 +93,12 @@ func handleContexNavigation(c *ishell.Context) bool {
 
 func handleRunCmds(c *ishell.Context) bool {
 	if targets, found := taskrun.GetAllTargets(); found {
-		for _, target := range targets {
-			AddItemToSelect(selectItem{title: target, desc: ""})
-		}
-		selectedTarget := uIselectItem("select target to execute")
+		// commented. maybe we add an description for run targets so the other list would makes sense
+		/*
+			for _, target := range targets {
+				AddItemToSelect(selectItem{title: target, desc: ""})
+			}*/
+		selectedTarget := simpleSelect("select target to execute", targets)
 		if selectedTarget.isSelected {
 			c.Println("running selected targets: ", selectedTarget.item.title)
 			taskrun.RunTargets(selectedTarget.item.title, true)

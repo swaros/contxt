@@ -137,7 +137,7 @@ func CreateDefaultComands(shell *ishell.Shell) {
 		Name: "test",
 		Help: "testing ui",
 		Func: func(c *ishell.Context) {
-			handleWorkSpaces(c)
+			simpleSelect("test selection", []string{"test1", "test2"})
 		},
 	})
 
