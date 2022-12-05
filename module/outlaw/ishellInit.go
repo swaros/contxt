@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/abiosoft/ishell"
+	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/configure"
 	"github.com/swaros/contxt/dirhandle"
 	"github.com/swaros/contxt/systools"
@@ -30,6 +31,7 @@ func RunIShell() {
 	CreateWsCmd(shell)
 	updatePrompt(shell)
 	CreateCnCmd(shell)
+	CreateDebugLevelCmd(shell)
 	// do not let the application stops by an error case in execution
 	systools.AddExitListener("iShell", func(code int) systools.ExitBehavior {
 		shell.Println("ERROR while execution. reported exit code ", code)
@@ -226,4 +228,30 @@ func CreateRunCommands(shell *ishell.Shell) bool {
 		return true
 	}
 	return false
+}
+
+func CreateDebugLevelCmd(shell *ishell.Shell) {
+	shell.AddCmd(&ishell.Cmd{
+		Name:    "loglevel",
+		Aliases: []string{},
+		Func: func(c *ishell.Context) {
+			if len(c.Args) > 0 {
+				loglevel := c.Args[0]
+				if loglevel != "" {
+					lvl, err := logrus.ParseLevel(loglevel)
+					if err != nil {
+						taskrun.GetLogger().Fatal(err)
+					}
+					taskrun.GetLogger().SetLevel(lvl)
+				}
+			} else {
+				c.Println("valid loglevel is required")
+			}
+		},
+		Help:     "set the loglevel to trace, debug, info, warn, error or critical",
+		LongHelp: "",
+		Completer: func(args []string) []string {
+			return []string{"TRACE", "DEBUG", "INFO", "WARN", "CRITICAL"}
+		},
+	})
 }
