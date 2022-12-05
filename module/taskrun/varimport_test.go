@@ -362,6 +362,26 @@ func TestDynamicVarReplace(t *testing.T) {
 	}
 }
 
+func TestImportFileAsTemplae(t *testing.T) {
+	if err := folderRunner("./../../docs/test/01tplImport", t, func(t *testing.T) {
+		taskrun.RunTargets("tpl-test", false)
+		mapData := taskrun.GetOriginMap()
+		if mapData == nil {
+			t.Error("task data should be exists")
+		}
+		expectedYaml := `
+		testing:
+           checks:
+               check-out-ABC: set
+               check-out-CHECK: set
+               check-out-something: set
+`
+		assertVarStrEquals(t, "OUT-TO-YAML", expectedYaml)
+	}); err != nil {
+		t.Error(err)
+	}
+}
+
 /*
 func TestTryParseWithKeys(t *testing.T) {
 	err := taskrun.ImportDataFromYAMLFile("test-with-key", "../../docs/test/foreach/importFile.yaml")

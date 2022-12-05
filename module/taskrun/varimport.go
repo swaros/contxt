@@ -391,43 +391,41 @@ func YAMLToMap(source string) (map[string]interface{}, error) {
 
 // ImportYAMLFile imports a yaml file as used for json map
 func ImportYAMLFile(filename string) (map[string]interface{}, error) {
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
+	if data, err := parseFileAsTemplateToByte(filename); err == nil {
+		jsond, jerr := yaml.YAMLToJSON(data)
+		if jerr != nil {
+			return nil, jerr
+		}
+		m := make(map[string]interface{})
+		if err := json.Unmarshal([]byte(jsond), &m); err != nil {
+			return nil, err
+		}
+		if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
+			traceMap(m, filename)
+		}
+		return m, nil
+	} else {
 		return nil, err
 	}
-
-	jsond, jerr := yaml.YAMLToJSON(data)
-	if jerr != nil {
-		return nil, jerr
-	}
-	m := make(map[string]interface{})
-	if err = json.Unmarshal([]byte(jsond), &m); err != nil {
-		return nil, err
-	}
-	if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
-		traceMap(m, filename)
-	}
-	return m, nil
-
 }
 
 // ImportJSONFile imports a json file for reading
 func ImportJSONFile(fileName string) (map[string]interface{}, error) {
-	data, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		GetLogger().Error(err)
+
+	if data, err := parseFileAsTemplateToByte(fileName); err == nil {
+		m := make(map[string]interface{})
+		err = json.Unmarshal([]byte(data), &m)
+		if err != nil {
+			GetLogger().Error("ImportJSONFile : Unmarshal :", fileName, " : ", err)
+			return nil, err
+		}
+		if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
+			traceMap(m, fileName)
+		}
+		return m, nil
+	} else {
 		return nil, err
 	}
-	m := make(map[string]interface{})
-	err = json.Unmarshal([]byte(data), &m)
-	if err != nil {
-		GetLogger().Error("ImportJSONFile : Unmarshal :", fileName, " : ", err)
-		return nil, err
-	}
-	if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
-		traceMap(m, fileName)
-	}
-	return m, nil
 
 }
 
@@ -478,6 +476,33 @@ func ImportFolders(templatePath string, paths ...string) (string, error) {
 	template = result
 
 	return template, nil
+}
+
+func parseFileAsTemplateToByte(path string) ([]byte, error) {
+	var data []byte
+	if parsedCnt, err := ParseFileAsTemplate(path); err != nil {
+		return nil, err
+	} else {
+		data = []byte(parsedCnt)
+		return data, nil
+	}
+
+}
+
+func ParseFileAsTemplate(path string) (string, error) {
+	path = HandlePlaceHolder(path)               // take care about placeholders
+	mapOrigin := GetOriginMap()                  // load the current maps
+	fileContent, terr := ImportFileContent(path) // load file content as string
+	if terr != nil {
+		return "", terr
+	}
+
+	// parsing as template
+	if result, herr := HandleJSONMap(fileContent, mapOrigin); herr != nil {
+		return "", herr
+	} else {
+		return result, nil
+	}
 }
 
 func GetOriginMap() map[string]interface{} {
@@ -546,7 +571,7 @@ func ImportFolder(path string, _ string) (map[string]interface{}, error) {
 
 // ImportFileContent imports a file and returns content as string
 func ImportFileContent(filename string) (string, error) {
-	GetLogger().WithField("file", filename).Debug("import file template")
+	GetLogger().WithField("file", filename).Debug("import file content")
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Println("File reading error", err)

@@ -724,14 +724,22 @@ func handleFileImportsToVars(imports []string) {
 			if keyname == "" {
 				keyname = jsonBaseName
 			}
-			ImportDataFromJSONFile(keyname, filename)
+			if err := ImportDataFromJSONFile(keyname, filename); err != nil {
+				GetLogger().Error("error while loading import: ", filename)
+				manout.Error("error loading import:", filename, " ", err)
+				systools.Exit(ERRORCODE_ON_CONFIG_IMPORT)
+			}
 
 		}, func(yamlBaseName string) {
 			GetLogger().Debug("loading yaml File: as second level variables", filename)
 			if keyname == "" {
 				keyname = yamlBaseName
 			}
-			ImportDataFromYAMLFile(keyname, filename)
+			if err := ImportDataFromYAMLFile(keyname, filename); err != nil {
+				GetLogger().Error("error while loading import", filename)
+				manout.Error("error loading import:", filename, " ", err)
+				systools.Exit(ERRORCODE_ON_CONFIG_IMPORT)
+			}
 
 		}, func(path string, err error) {
 			GetLogger().Errorln("file not exists:", err)

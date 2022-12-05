@@ -1,0 +1,6 @@
+testdata:
+  map:
+    data:
+      - ABC
+      - CHECK
+      - something

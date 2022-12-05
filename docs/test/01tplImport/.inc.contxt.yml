@@ -1,0 +1,4 @@
+include:
+  basedir: false
+  folders:
+  - tmplates/variables.yml
