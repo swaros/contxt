@@ -1,7 +1,9 @@
 package outlaw
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/abiosoft/ishell"
 	"github.com/swaros/contxt/configure"
@@ -40,16 +42,7 @@ func handleWorkSpaces(c *ishell.Context) bool {
 	// adds workspaces to the list by callback iterator
 	configure.WorkSpaces(func(s string) {
 		ws = append(ws, s)
-		/*
-			desc := "other then now"
-			if s == configure.UsedConfig.CurrentSet {
-				desc = "this is the current workspace"
-			}
-			AddItemToSelect(selectItem{title: s, desc: desc})
-		*/
-
 	})
-	//selectedWs := uIselectItem("workspaces")
 	selectedWs := simpleSelect("workspaces", ws)
 	if selectedWs.isSelected {
 		c.Println("change to workspace: ", selectedWs.item.title)
@@ -60,19 +53,26 @@ func handleWorkSpaces(c *ishell.Context) bool {
 }
 
 func handleContexNavigation(c *ishell.Context) bool {
-	var cns []string
-	configure.PathWorker(func(i int, s string) {
-		cns = append(cns, s)
-		// AddItemToSelect(selectItem{title: fmt.Sprintf("CN %v", i), desc: s})
-	})
-	//selectedCn := uIselectItem("select path in workspace ")
-	selectedCn := simpleSelect("select path in workspace ", cns)
+	workspace, err := taskrun.CollectWorkspaceInfos() // get workspace meta-info
+	if err != nil {
+		manout.Om.Print(manout.ForeRed, "Error parsing workspace", manout.CleanTag, err)
+		return false
+	}
+
+	for _, wsPath := range workspace.Paths { // iterate the path infos
+		if wsPath.HaveTemplate {
+			// build description by the tasks the beeing used
+			label := fmt.Sprintf("%d tasks:  ", len(wsPath.Targets))
+			AddItemToSelect(selectItem{title: wsPath.Path, desc: label + strings.Join(wsPath.Targets, "|")})
+		} else {
+			// plain added path. no template there
+			AddItemToSelect(selectItem{title: wsPath.Path, desc: "no tasks in this path"})
+		}
+
+	}
+
+	selectedCn := uIselectItem("choose path in " + workspace.CurrentWs)
 	if selectedCn.isSelected {
-		/*
-			if err := os.Chdir(selectedCn.item.desc); err != nil {
-				manout.Om.Print(manout.ForeRed, "Error while trying to enter path", manout.CleanTag, err)
-				return false
-			}*/
 		if err := os.Chdir(selectedCn.item.title); err != nil {
 			manout.Om.Print(manout.ForeRed, "Error while trying to enter path", manout.CleanTag, err)
 			return false

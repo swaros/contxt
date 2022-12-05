@@ -5,5 +5,6 @@ var selected selectResult
 
 type selectResult struct {
 	isSelected bool
+	aborted    bool
 	item       selectItem
 }

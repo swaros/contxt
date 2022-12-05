@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/swaros/contxt/systools"
+	"github.com/swaros/contxt/taskrun"
 )
 
 var (
@@ -58,6 +59,7 @@ func (m simpleSelectModel) Init() tea.Cmd {
 }
 
 func (m simpleSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.list.SetWidth(msg.Width)
@@ -65,8 +67,11 @@ func (m simpleSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case "ctrl+c":
+		case "ctrl+c", "esc", "q":
+			taskrun.GetLogger().WithField("status", selected).Debug("hit a cancel button")
 			m.quitting = true
+			selected.aborted = true
+			selected.isSelected = false
 			return m, tea.Quit
 
 		case "enter":
@@ -74,11 +79,16 @@ func (m simpleSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if ok {
 				m.choice = string(i)
 				selected.isSelected = true
+				selected.aborted = false
 				selected.item.desc = ""
 				selected.item.title = string(i)
 			}
 			return m, tea.Quit
+			// if some wierd happen again
+			/*default:
+			taskrun.GetLogger().WithField("msg", msg.String()).Debug("hit a button")*/
 		}
+
 	}
 
 	var cmd tea.Cmd
@@ -87,18 +97,19 @@ func (m simpleSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m simpleSelectModel) View() string {
-
+	taskrun.GetLogger().WithField("status", selected).Debug("update status")
 	if selected.isSelected {
 		return quitTextStyle.Render(fmt.Sprintf("%s .", selected.item.title))
 	}
-	if m.quitting {
-		return quitTextStyle.Render("escape")
+	if selected.aborted {
+		return quitTextStyle.Render("nothing selected... get out")
 	}
-	return m.list.View()
+	return "\n" + m.list.View()
 }
 
 func simpleSelect(title string, selectable []string) selectResult {
 	selected.isSelected = false
+	selected.aborted = false
 	items := []list.Item{}
 
 	for _, sel := range selectable {
