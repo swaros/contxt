@@ -17,7 +17,7 @@ var (
 	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
 	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
-	//quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
+	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
 )
 
 type item string
@@ -87,13 +87,13 @@ func (m simpleSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m simpleSelectModel) View() string {
-	/*
-		if m.choice != "" {
-			return quitTextStyle.Render(fmt.Sprintf("%s? Sounds good to me.", m.choice))
-		}
-		if m.quitting {
-			return quitTextStyle.Render("Not hungry? That’s cool.")
-		}*/
+
+	if selected.isSelected {
+		return quitTextStyle.Render(fmt.Sprintf("%s .", selected.item.title))
+	}
+	if m.quitting {
+		return quitTextStyle.Render("escape")
+	}
 	return m.list.View()
 }
 
