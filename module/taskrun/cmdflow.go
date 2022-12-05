@@ -165,10 +165,10 @@ func RunTargets(targets string, sharedRun bool) {
 	// handle all imports.
 	// these are yaml or json files, they can be accessed for reading by the gson doted format
 	if len(template.Config.Imports) > 0 {
-		GetLogger().WithField("Import", template.Config.Imports).Info("import second level vars")
+		GetLogger().WithField("Import", template.Config.Imports).Info("import variables from Files")
 		handleFileImportsToVars(template.Config.Imports)
 	} else {
-		GetLogger().Info("No second level Variables defined")
+		GetLogger().Info("No Imports defined")
 	}
 
 	// experimental usage of taskrunner
@@ -726,7 +726,7 @@ func handleFileImportsToVars(imports []string) {
 			}
 			if err := ImportDataFromJSONFile(keyname, filename); err != nil {
 				GetLogger().Error("error while loading import: ", filename)
-				manout.Error("error loading import:", filename, " ", err)
+				manout.Error("error loading json file base import:", filename, " ", err)
 				systools.Exit(ERRORCODE_ON_CONFIG_IMPORT)
 			}
 
@@ -737,8 +737,21 @@ func handleFileImportsToVars(imports []string) {
 			}
 			if err := ImportDataFromYAMLFile(keyname, filename); err != nil {
 				GetLogger().Error("error while loading import", filename)
-				manout.Error("error loading import:", filename, " ", err)
+				manout.Error("error loading yaml based import:", filename, " ", err)
 				systools.Exit(ERRORCODE_ON_CONFIG_IMPORT)
+			}
+		}, func(filenameBase string, ext string) {
+			if keyname == "" {
+				keyname = filename
+			}
+			GetLogger().Debug("loading File: as plain named variable", filename, ext)
+
+			if str, err := ParseFileAsTemplate(filename); err != nil {
+				GetLogger().Error("error while loading import", filename)
+				manout.Error("error loading text file import:", filename, " ", err)
+				systools.Exit(ERRORCODE_ON_CONFIG_IMPORT)
+			} else {
+				SetPH(keyname, str)
 			}
 
 		}, func(path string, err error) {

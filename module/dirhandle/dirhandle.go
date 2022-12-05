@@ -77,7 +77,7 @@ func Exists(path string) (bool, error) {
 
 // FileTypeHandler calls function depending on file ending
 // and if this fil exists
-func FileTypeHandler(path string, jsonHandle func(string), yamlHandle func(string), notExists func(string, error)) {
+func FileTypeHandler(path string, jsonHandle func(string), yamlHandle func(string), anyElse func(string, ext string), notExists func(string, error)) {
 	fileInfo, err := os.Stat(path)
 	if err == nil && !fileInfo.IsDir() {
 		var extension = filepath.Ext(path)
@@ -87,6 +87,8 @@ func FileTypeHandler(path string, jsonHandle func(string), yamlHandle func(strin
 			yamlHandle(basename)
 		case ".json":
 			jsonHandle(basename)
+		default:
+			anyElse(basename, extension)
 		}
 	} else {
 		notExists(path, err)

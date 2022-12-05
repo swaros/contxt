@@ -1,53 +1,12 @@
 version: "0.2.2"
 config:
+  imports:
+    - ./imports/dependabot.tpl depandabot
+    - ./imports/coverage.html coverage
   variables:
-      depbot-file: .github/dependabot.yml
-      depbot-head: |
-                  # To get started with Dependabot version updates, you'll need to specify which
-                  # package ecosystems to update and where the package manifests are located.
-                  # Please see the documentation for all configuration options:
-                  # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-                  version: 2
-                  updates:
-      depbot-template: |
-                  ### dependencie for ${dep-bot-dep}
-                    - package-ecosystem: gomod 
-                      directory: ${dep-bot-dep} 
-                      schedule:
-                         interval: daily
-                      assignees:
-                         - swaros
-      coverage-template-top: |
-                    <!DOCTYPE html>
-                    <html>
-                      <head>
-                        <meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
-                        <title>Context Coverage Report overview</title>
-                        <style>
-                          body {
-                            background: #333;
-                            color: rgb(125, 125, 125);
-                            font-family: Arial, Helvetica, sans-serif;
-                          }
-                          a, a:active {
-                            color: rgb(200,200,200)
-                          }
-                          h1,h2,h3 {
-                            color: white
-                          }
-                          .report {
-                            display: block;
-                            margin: 17px;
-                            font-family: monospace;
-                            white-space: break-spaces;
-                          }
-                        </style>
-                       </head>
-                       <body>
-                        <h1>Contxt coverage Report</h1>
-      coverage-template-bottom: |
-                            </body>
-                            </html>              
+      coverage-report: ""
+      depbot-file: .github/dependabot.yml     
+      
 ####### just for quick checking the go env on different machines
 ####### more then a note.
 task:
@@ -133,11 +92,7 @@ task:
 #### update depandabot
   - id: depandabot
     script:
-      - echo "${depbot-head}" > ${depbot-file}
-     {{- range $k, $deb := $.module }}
-      - "#@set dep-bot-dep /module/{{ $deb.modul }}/" 
-      - echo "${depbot-template}" >> ${depbot-file}
-     {{- end }}  
+       - "#@var-to-file depandabot ${depbot-file}"
 
 #### update dependencies for all modules
   - id: cleanup-dependencies
@@ -171,20 +126,20 @@ task:
     script:    
       - mkdir -p ./docs/test/coverage/
     
-
   - id: test-coverage
-    script: 
-      - echo "${coverage-template-top}" > ./docs/coverage.html                 
-    {{- range $k, $test := $.module }}      
+    script:
+      - "#@set coverage-report <b></b>"
+      {{- range $k, $test := $.module }}      
       - go test -cover ./module/{{ $test.modul }}/./... -coverprofile ./docs/test/coverage/test.{{ $test.modul }}.out
       - go tool cover -html ./docs/test/coverage/test.{{ $test.modul }}.out -o ./docs/test/coverage/{{ $test.modul }}.html
-      - echo '<h2>{{ $test.modul }}</h2>' >> ./docs/coverage.html
-      - echo '<div class="report">' >> ./docs/coverage.html
-      - go tool cover -func ./docs/test/coverage/test.{{ $test.modul }}.out >> ./docs/coverage.html
-      - echo '</div>' >> ./docs/coverage.html
-      - echo '<a target="coverage_details" href="test/coverage/{{ $test.modul }}.html">report for {{ $test.modul }}</a>' >> ./docs/coverage.html
+      - "#@add coverage-report <h2>{{ $test.modul }}</h2>"
+      - "#@add coverage-report <div class=\"report\">"
+      - "#@var report-cover go tool cover -func ./docs/test/coverage/test.{{ $test.modul }}.out"
+      - "#@add coverage-report ${report-cover}"
+      - "#@add coverage-report </div>"
+      - "#@add coverage-report <a target=\"coverage_details\" href=\"test/coverage/{{ $test.modul }}.html\">report for {{ $test.modul }}</a>"
     {{- end }}
-      - echo "${coverage-template-bottom}" >> ./docs/coverage.html
+      - "#@var-to-file coverage ./docs/coverage.html"
 
   - id: test-coverage
     require:

@@ -25,6 +25,7 @@ package taskrun
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -66,6 +67,7 @@ const (
 	osCheck         = "#@if-os"
 	codeLinePH      = "__LINE__"
 	codeKeyPH       = "__KEY__"
+	writeVarToFile  = "#@var-to-file"
 )
 
 // TryParse to parse a line and set a value depending on the line command
@@ -212,6 +214,14 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					}
 				} else {
 					manout.Error("invalid usage", setvarInMap, " needs 3 arguments at least. <mapName> <json.path> <value>")
+				}
+			case writeVarToFile:
+				if len(parts) == 3 {
+					varName := parts[1]
+					fileName := parts[2]
+					ExportVarToFile(varName, fileName)
+				} else {
+					manout.Error("invalid usage", writeVarToFile, " needs 2 arguments at least. <variable> <filename>")
 				}
 			case exportToYaml:
 				if len(parts) == 3 {
@@ -387,6 +397,24 @@ func YAMLToMap(source string) (map[string]interface{}, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func ExportVarToFile(variable string, filename string) error {
+	strData := GetPH(variable)
+	if strData == "" {
+		return errors.New("variable " + variable + " can not be used for export to file. not exists or empty")
+	}
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	var scopeVars map[string]string // empty but required
+	if _, err2 := f.WriteString(handlePlaceHolder(strData, scopeVars)); err != nil {
+		return err2
+	}
+
+	return nil
 }
 
 // ImportYAMLFile imports a yaml file as used for json map
