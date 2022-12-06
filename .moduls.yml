@@ -1,35 +1,35 @@
 module:
-  - 
+  -
     modul: configure
     test:
       timeout: 30s
 
-  - 
+  -
     modul: dirhandle
     test:
       timeout: 30s
 
-  - 
+  -
     modul: systools
     test:
       timeout: 30s
 
-  - 
+  -
     modul: trigger
     test:
       timeout: 30s
 
-  - 
+  -
     modul: taskrun
     test:
       timeout: 60s
-      
-  - 
+
+  -
     modul: awaitgroup
     test:
       timeout: 30s
-  
-  - 
+
+  -
     modul: shellcmd
     test:
       timeout: 30s

@@ -1,4 +1,4 @@
-version: "0.4.0"
+version: "{{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.minor}}"
 config:
   imports:
     - ./imports/dependabot.tpl depandabot
@@ -177,6 +177,13 @@ task:
       - go test -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...
     {{- end }}
 
+  - id: set-version
+    options:
+      invisible: true
+    script:
+      - "#@set main-version {{$.release.version.main}}"
+      - "#@set mid-version {{$.release.version.mid}}"
+      - "#@set minor-version {{$.release.version.minor}}"
 
   - id: set-version
     options:
@@ -187,9 +194,6 @@ task:
     require:
       system: linux
     script:
-      - "#@var main-version cat docs/mainversion"
-      - "#@var mid-version cat docs/midversion"
-      - "#@var minor-version cat docs/minversion"
       - "#@var build-hash date -u +.%Y%m%d.%H%M%S"
       - "#@set bin-out contxt"
 
@@ -203,9 +207,6 @@ task:
     require:
       system: windows
     script:
-      - "#@var main-version type docs/mainversion"
-      - "#@var mid-version type docs/midversion"
-      - "#@var minor-version type docs/minversion"
       - "#@var build-hash Get-Date -UFormat \"%m.%d.%Y.%R\""
       - "#@set bin-out contxt.exe"
 
