@@ -11,44 +11,44 @@ updates:
        interval: daily
     assignees:
        - swaros
-### dependencie for /module/configure/
+### dependencie for /module/dirhandle/
   - package-ecosystem: gomod 
     directory: /module/dirhandle/ 
     schedule:
        interval: daily
     assignees:
        - swaros
-### dependencie for /module/configure/
+### dependencie for /module/systools/
   - package-ecosystem: gomod 
     directory: /module/systools/ 
     schedule:
        interval: daily
     assignees:
        - swaros
-### dependencie for /module/configure/
+### dependencie for /module/trigger/
   - package-ecosystem: gomod 
     directory: /module/trigger/ 
     schedule:
        interval: daily
     assignees:
        - swaros
-### dependencie for /module/configure/
+### dependencie for /module/taskrun/
   - package-ecosystem: gomod 
     directory: /module/taskrun/ 
     schedule:
        interval: daily
     assignees:
        - swaros
-### dependencie for /module/configure/
+### dependencie for /module/awaitgroup/
   - package-ecosystem: gomod 
     directory: /module/awaitgroup/ 
     schedule:
        interval: daily
     assignees:
        - swaros
-### dependencie for /module/configure/
+### dependencie for /module/shellcmd/
   - package-ecosystem: gomod 
-    directory: /module/outlaw/ 
+    directory: /module/shellcmd/ 
     schedule:
        interval: daily
     assignees:

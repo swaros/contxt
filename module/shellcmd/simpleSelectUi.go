@@ -86,7 +86,7 @@ func (m simpleSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 			// if some wierd happen again
 			/*default:
-			taskrun.GetLogger().WithField("msg", msg.String()).Debug("hit a button")*/
+			taskrun.GetLogger().WithField("msg", msg.String()).Debug("hit a key")*/
 		}
 
 	}

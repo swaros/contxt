@@ -30,6 +30,6 @@ module:
       timeout: 30s
   
   - 
-    modul: outlaw
+    modul: shellcmd
     test:
       timeout: 30s

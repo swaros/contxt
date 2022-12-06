@@ -5,7 +5,7 @@ use (
 	./module/configure
 	./module/dirhandle
 	./module/interactive
-	./module/outlaw
+	./module/shellcmd
 	./module/systools
 	./module/taskrun
 	./module/trigger
