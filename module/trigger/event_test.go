@@ -3,7 +3,7 @@ package trigger_test
 import (
 	"testing"
 
-	"github.com/swaros/contxt/trigger"
+	"github.com/swaros/contxt/module/trigger"
 )
 
 func TestEvent(t *testing.T) {

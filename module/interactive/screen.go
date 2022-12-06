@@ -5,7 +5,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/contxt/module/taskrun"
 )
 
 type model struct {

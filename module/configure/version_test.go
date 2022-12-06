@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/swaros/contxt/configure"
+	"github.com/swaros/contxt/module/configure"
 )
 
 func TestGetOs(t *testing.T) {

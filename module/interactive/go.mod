@@ -1,4 +1,4 @@
-module github.com/swaros/contxt/interactive
+module github.com/swaros/contxt/module/interactive
 
 go 1.18
 

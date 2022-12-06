@@ -3,7 +3,7 @@ package systools_test
 import (
 	"testing"
 
-	"github.com/swaros/contxt/systools"
+	"github.com/swaros/contxt/module/systools"
 )
 
 func TestPrintColoredChanges(t *testing.T) {

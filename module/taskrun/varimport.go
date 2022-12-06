@@ -39,8 +39,8 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/tidwall/gjson"
 
-	"github.com/swaros/contxt/configure"
-	"github.com/swaros/contxt/systools"
+	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
 
 	"github.com/sirupsen/logrus"

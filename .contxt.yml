@@ -3,7 +3,9 @@ config:
   imports:
     - ./imports/dependabot.tpl depandabot
     - ./imports/coverage.html coverage
+    - ./imports/Makefile.tpl makefile
   variables:
+      configmodul: github.com/swaros/contxt/module/configure
       coverage-report: ""
       depbot-file: .github/dependabot.yml     
       
@@ -40,20 +42,28 @@ task:
   ##### exists. and if not we create this modul
   ##### by using the regular go tool-set
 
+  ## update makefile
+  - id: makefile-update
+    needs:
+      - set-version
+    script:
+    - "#@var-to-file makefile Makefile"
+
+  ## verify the modules
   - id: modules-verify
     runTargets:
-      - depandabot 
-    needs:  
-{{- range $k, $modul := $.module }}    
+      - depandabot
+    needs:
+{{- range $k, $modul := $.module }}
       - verify-modul-{{ $modul.modul }}
-{{- end }}      
-{{- range $k, $modul := $.module }}          
+{{- end }}
+{{- range $k, $modul := $.module }}
 
   ## create dir if not exists
   - id: verify-modul-{{ $modul.modul }}
     options:
       invisible: true
-    require:      
+    require:
       notExists:
         - ./module/{{ $modul.modul }}
     script:
@@ -63,21 +73,21 @@ task:
   - id: verify-modul-{{ $modul.modul }}
     options:
       invisible: true
-    require:      
+    require:
       notExists:
         - ./module/{{ $modul.modul }}/go.mod
     script:
       - |
         cd ./module/{{ $modul.modul }}
-        go mod init github.com/swaros/contxt/{{ $modul.modul }}
-      
+        go mod init github.com/swaros/contxt/module/{{ $modul.modul }}
+
   - id: verify-modul-{{ $modul.modul }}
     options:
       invisible: true
       ignoreCmdError: true
     require:
       system: linux
-    script:                  
+    script:
       - grep {{ $modul.modul }} go.work
     listener:
       - trigger:
@@ -96,12 +106,12 @@ task:
 
 #### update dependencies for all modules
   - id: cleanup-dependencies
-    script:      
-    {{- range $k, $test := $.module }}    
-      - | 
+    script:
+    {{- range $k, $test := $.module }}
+      - |
        cd {{ $test.modul }}
        go mod tidy
-       
+
     {{- end }}
       - git status
 
@@ -109,10 +119,11 @@ task:
 
 ##### this is the regular test for all modules
   - id: test
-    script:             
-    {{- range $k, $test := $.module }}      
-      - go test  -failfast ./module/{{ $test.modul }}/./...     
-    {{- end }}      
+    script:
+    {{- range $k, $test := $.module }}
+      - echo "testing modul {{ $test.modul }}"
+      - go test  -failfast ./module/{{ $test.modul }}/./...
+    {{- end }}
 
 ##### like the regular test but now we update the coverage report
 ##### maybe i overlooked an option to summerize them, but
@@ -123,13 +134,13 @@ task:
   - id: test-coverage
     require:
       system: linux
-    script:    
+    script:
       - mkdir -p ./docs/test/coverage/
-    
+
   - id: test-coverage
     script:
       - "#@set coverage-report <b></b>"
-      {{- range $k, $test := $.module }}      
+      {{- range $k, $test := $.module }}
       - go test -cover ./module/{{ $test.modul }}/./... -coverprofile ./docs/test/coverage/test.{{ $test.modul }}.out
       - go tool cover -html ./docs/test/coverage/test.{{ $test.modul }}.out -o ./docs/test/coverage/{{ $test.modul }}.html
       - "#@add coverage-report <h2>{{ $test.modul }}</h2>"
@@ -157,14 +168,14 @@ task:
     {{- range $k, $test := $.module }}
       - atest-{{ $test.modul }}
     {{- end }}
-      
+
     {{- range $k, $test := $.module }}
   - id: atest-{{ $test.modul }}
     options:
       displaycmd: true
     script:
-      - go test -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...    
-    {{- end }}  
+      - go test -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...
+    {{- end }}
 
 
   - id: set-version
@@ -227,7 +238,7 @@ task:
     script:
       - echo "build start----"
       - echo "   target -- ${bin-out}"
-      - go build -ldflags "-X github.com/swaros/contxt/configure.minversion=${minor-version} -X github.com/swaros/contxt/configure.midversion=${mid-version} -X github.com/swaros/contxt/configure.mainversion=${main-version} -X github.com/swaros/contxt/configure.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
+      - go build -ldflags "-X ${configmodul}.minversion=${minor-version} -X ${configmodul}.midversion=${mid-version} -X ${configmodul}.mainversion=${main-version} -X ${configmodul}.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
       - echo "   done   -- build "
 
   - id: verify-build
@@ -254,13 +265,13 @@ task:
     next:
       - install-local-bin
 
-## check for ~/bin 
+## check for ~/bin
   - id: install-local-bin
     script:
       - echo "try the ${HOME}/bin usage"
 
-## success for local bin/ 
-  - id: install-local-bin 
+## success for local bin/
+  - id: install-local-bin
     options:
       displaycmd: true
     require:
@@ -275,7 +286,6 @@ task:
       - yes | cp -i bin/${bin-out} $HOME/bin/${bin-out} # # to solve the cp -i alias issue
       - echo "check versions"
       - contxt version
-      
 
 
 ## fail for local bin/
@@ -293,7 +303,6 @@ task:
       - echo "${HOME}/bin not exists. will not be used"
     next:
       - install-local-dot-bin
-    
 
   - id: install-local-dot-bin
     script:
@@ -307,10 +316,10 @@ task:
       system: linux
       variables:
         local-install: "=yes"
-        bin-out: "*"        
+        bin-out: "*"
     script:
-      - echo "no .local/bin dir"      
-      
+      - echo "no .local/bin dir"
+
 ## if exists ...copy file
   - id: install-local-dot-bin
     require:
@@ -319,56 +328,10 @@ task:
       system: linux
       variables:
         local-install: "=yes"
-        bin-out: "*"        
+        bin-out: "*"
     script:
       - echo "using ~/.local/bin/ to copy ${bin-out}"
       - yes | cp -i bin/${bin-out} $HOME/.local/bin/${bin-out}  # to solve the cp -i alias issue
       - echo "check versions"
       - contxt version
 
-## tview test app #####
-  - id: tview-build
-    require:
-      system: linux
-    script:
-      - echo "build tview for linux"
-      - go build -o ./bin/tview-example cmd/cmd-tview/main.go
-  
-  - id: tview-build
-    require:
-      system: windows
-    script:
-      - echo "build tview for windows"
-      - go build -o ./bin/tview-example.exe cmd/cmd-tview/main.go
-
-  - id: tview-build
-    require:
-      system: linux
-      exists:
-        - bin/tview-example
-    script:
-      - chmod 755 bin/tview-example
-      - echo "if not executed try to start the application with"
-      - echo "./bin/tview-example"
-      
-
-  - id: tview-run
-    needs:
-      - tview-build
-
-  - id: tview-run
-    require:
-      system: linux
-      exists:
-        - bin/tview-example
-    script:
-      - ./bin/tview-example        
-  
-  - id: tview-run
-    require:
-      system: windows
-      exists:
-        - bin/tview-example.exe
-    script:
-      - ./bin/tview-example.exe        
-  

@@ -32,13 +32,13 @@ import (
 
 	"github.com/imdario/mergo"
 	"github.com/sirupsen/logrus"
-	"github.com/swaros/contxt/awaitgroup"
-	"github.com/swaros/contxt/dirhandle"
+	"github.com/swaros/contxt/module/awaitgroup"
+	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/manout"
 
-	"github.com/swaros/contxt/systools"
+	"github.com/swaros/contxt/module/systools"
 
-	"github.com/swaros/contxt/configure"
+	"github.com/swaros/contxt/module/configure"
 )
 
 const (

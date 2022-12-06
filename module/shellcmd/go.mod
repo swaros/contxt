@@ -1,4 +1,4 @@
-module github.com/swaros/contxt/outlaw
+module github.com/swaros/contxt/module/shellcmd
 
 go 1.18
 

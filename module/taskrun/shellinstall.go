@@ -33,7 +33,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/swaros/contxt/dirhandle"
+	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/manout"
 )
 

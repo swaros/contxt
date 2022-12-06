@@ -1,4 +1,4 @@
-package outlaw
+package shellcmd
 
 import (
 	"fmt"
@@ -8,8 +8,8 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/swaros/contxt/systools"
-	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/contxt/module/systools"
+	"github.com/swaros/contxt/module/taskrun"
 )
 
 var (

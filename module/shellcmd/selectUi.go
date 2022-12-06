@@ -1,4 +1,4 @@
-package outlaw
+package shellcmd
 
 import (
 	"fmt"

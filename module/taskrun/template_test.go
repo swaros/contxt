@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/swaros/contxt/dirhandle"
-	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/taskrun"
 )
 
 func getTestTemplate(filename string) string {

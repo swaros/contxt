@@ -29,7 +29,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/swaros/contxt/configure"
+	"github.com/swaros/contxt/module/configure"
 )
 
 // Current returns the current path

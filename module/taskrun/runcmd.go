@@ -30,8 +30,8 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"github.com/swaros/contxt/configure"
-	"github.com/swaros/contxt/dirhandle"
+	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/manout"
 )
 

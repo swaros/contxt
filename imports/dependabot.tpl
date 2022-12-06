@@ -6,8 +6,8 @@ version: 2
 updates:
 {{- range $k, $deb := $.module }}
 ### dependencie for /module/{{ $deb.modul }}/
-  - package-ecosystem: gomod 
-    directory: /module/{{ $deb.modul }}/ 
+  - package-ecosystem: gomod
+    directory: /module/{{ $deb.modul }}/
     schedule:
        interval: daily
     assignees:

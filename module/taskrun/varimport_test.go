@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/swaros/contxt/configure"
-	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/taskrun"
 )
 
 func clearStrings(compare string) string {

@@ -1,4 +1,4 @@
-package outlaw
+package shellcmd
 
 import (
 	"fmt"
@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/abiosoft/ishell"
-	"github.com/swaros/contxt/configure"
-	"github.com/swaros/contxt/dirhandle"
-	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/taskrun"
 	"github.com/swaros/manout"
 )
 
