@@ -1,4 +1,4 @@
-version: "0.2.2"
+version: "0.4.0"
 config:
   imports:
     - ./imports/dependabot.tpl depandabot
@@ -7,8 +7,8 @@ config:
   variables:
       configmodul: github.com/swaros/contxt/module/configure
       coverage-report: ""
-      depbot-file: .github/dependabot.yml     
-      
+      depbot-file: .github/dependabot.yml
+
 ####### just for quick checking the go env on different machines
 ####### more then a note.
 task:
@@ -19,8 +19,8 @@ task:
       - echo ${GOROOT}
       - go env | grep GOROOT
       - go env | grep GOVERSION
-      - go version 
- 
+      - go version
+
   - id: go-check
     require:
       system: windows

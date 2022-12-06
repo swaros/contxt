@@ -26,8 +26,9 @@ tasks are a collection of scripts they are depending to the current directory. t
                 - [onoutcountLess, onoutcountMore](#onoutcountless-onoutcountmore)
             - [listener](#listener)
                 - [trigger](#trigger)
-                    - [onoutContains](#onoutcontains)
-                    - [onoutcountLess, onoutcountMore](#onoutcountless-onoutcountmore)
+                    - [trigger onoutContains](#trigger-onoutcontains)
+                    - [trigger onoutcountLess and onoutcountMore](#trigger-onoutcountless-and-onoutcountmore)
+                - [action](#action)
             - [Options](#options)
                 - [ignorecmderror bool](#ignorecmderror-bool)
                 - [format string](#format-string)
@@ -937,18 +938,18 @@ task:
 
 #### onenter
 this defines the task that should be executed if you enter this workspace.
-entering the workspace means 
- `ctx switch <workspace>` 
+entering the workspace means
+ `ctx switch <workspace>`
 
 #### onleave
 this defines the task that should be executed if you leave the workspace.
 leave means you switch to another workspace.
 
 #### example
-for example: if you are working on project *java-project-version-11,* 
-and you have to work with *java-project-version-8* execute 
-`ctx switch java-project-8` then the first that will be executed, 
-is any **onleave** task in the current *java-project-version-11* project. 
+for example: if you are working on project *java-project-version-11,*
+and you have to work with *java-project-version-8* execute
+`ctx switch java-project-8` then the first that will be executed,
+is any **onleave** task in the current *java-project-version-11* project.
 
 and then afterwards the *onenter* task in *java-project-version-8*
 
@@ -958,6 +959,14 @@ and then afterwards the *onenter* task in *java-project-version-8*
 defines a list of **yaml** or **json** files, they will be imported as variable map.
 
 > **NOTE** for yaml files the only accepted extensions are *.yml* and *.yaml*. for json it is *.json' only.
+> **since version `0.4.0`** you can also import any other (text) file. but
+this will be then a simple variable, instead of an variable map.
+
+**since version `0.4.0`** any imported file can also use **go/template**
+but this requires the values are imported before.
+
+`ctx create import <path-to-values-file.(yml|yaml|json)>` or
+`ctx create import <path-to-values-folder/>`. only _yml_, _yaml_ and _json_ files in this folder would be used as values.
 
 
 accessing these variables is similar to the regular `variables`.
@@ -968,7 +977,7 @@ as key (full path) or by a specific key that just added in the same line
 config:
   imports:
     - path/to/file <optional-key-name>
-    
+
 ````
 
 as example
@@ -980,7 +989,7 @@ config:
     - composer.json
 task:
   - id: script
-    script:      
+    script:
       - echo "used database image is ${docker:services.db.image}"
       - echo "php platform is {composer.json:config.platform.php}"
 ````

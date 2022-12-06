@@ -13,6 +13,7 @@
         - [if-equals](#if-equals)
         - [if-not-equals](#if-not-equals)
         - [if-os](#if-os)
+        - [var-to-file](#var-to-file)
 
 <!-- /TOC -->
 script cheats are special lines in the script section, they are not submitted to the target command.
@@ -42,7 +43,7 @@ task:
       - "#@end"
 ````
 
-this will work at one level only. this cheats should not being a new 
+this will work at one level only. this cheats should not being a new
 intepreter language. if you like doing more complex logic, then this is the wrong place.
 
 so this example is **not** working.
@@ -54,24 +55,25 @@ task:
       - "#@if-os linux"
       - "#@if-equals ${USER} root "
       - echo "oh ..hello root"
-      - "#@end"      
+      - "#@end"
       - "#@end"
 ````
 ## overview of cheats
 
-| aviable             |
-|---------------------|
-|"#@import-json"      |
-|"#@import-json-exec" | 
-|"#@var"              |
-|"#@set"              |
-|"#@set-in-map"       |
-|"#@export-to-yaml"   |
-|"#@add"              |
-|"#@if-equals"        |
-|"#@if-not-equals"    |
-|"#@if-os"            |
-|"#@end"              |
+| aviable           |
+|-------------------|
+|#@import-json      |
+|#@import-json-exec |
+|#@var              |
+|#@set              |
+|#@set-in-map       |
+|#@export-to-yaml   |
+|#@add              |
+|#@if-equals        |
+|#@if-not-equals    |
+|#@if-os            |
+|#@end              |
+|#@var-to-file      |
 
 
 
@@ -174,23 +176,23 @@ task:
 export the content of an existing key-map as yaml in a variable
 > uses [sjson](https://github.com/tidwall/sjson) annotation
 
-**arguments**: `map-key-name` `variable-name` 
+**arguments**: `map-key-name` `variable-name`
 
 example
 ````yaml
 task:
   - id: example
     script:
-      - "#@import-json CONFIG cat user-config.json" # just to load something            
-      - "#@export-to-yaml CONFIG CONFIG_YAML" 
+      - "#@import-json CONFIG cat user-config.json" # just to load something
+      - "#@export-to-yaml CONFIG CONFIG_YAML"
       - printf "${CONFIG_YAML}"
 
 ````
 
 ### add
 
-adds a string at the end to an existing string. 
-this is the same result as by using **set** 
+adds a string at the end to an existing string.
+this is the same result as by using **set**
 (`#@set HELLO ${HELLO} plus this`)
 but without raise conditions.
 
@@ -218,7 +220,7 @@ task:
     script:
       - "#@if-equals ${USER} root"
       - echo "root!? okay then lets do the danger things"
-      - "#@end"      
+      - "#@end"
 ````
 
 ### if-not-equals
@@ -231,7 +233,7 @@ task:
     script:
       - "#@if-not-equals ${USER} root"
       - echo "you have no power!"
-      - "#@end"      
+      - "#@end"
 ````
 
 ### if-os
@@ -248,4 +250,33 @@ task:
       - "#@if-os windows"
       - echo "hello windows user"
       - "#@end"
+````
+### var-to-file
+writes a variable into a file. any placeholder will be parsed first.
+this is usefull in combination of importing a text file into a
+variable.
+
+
+simple info file
+````md
+# current version
+current version is ${version}
+````
+
+````yaml
+config:
+  imports:
+    - version.tpl
+  variables:
+    version: "1.0.4"
+task:
+  - id: write-makefile
+    script:
+      - "#@var-to-file version.md"
+````
+
+contetn of *version.md* would then be
+````md
+# current version
+current version is 1.0.4
 ````
