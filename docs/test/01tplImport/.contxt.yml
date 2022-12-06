@@ -1,0 +1,10 @@
+config:
+  imports:
+    - ./tmplates/parsed.yml testvar
+
+task:
+  - id: tpl-test
+    script:
+      - echo "hello world"
+      - "#@export-to-yaml testvar OUT-TO-YAML"
+      - echo "${OUT-TO-YAML}"

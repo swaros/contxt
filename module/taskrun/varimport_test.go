@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/swaros/contxt/configure"
-	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/taskrun"
 )
 
 func clearStrings(compare string) string {
@@ -359,6 +359,26 @@ func TestDynamicVarReplace(t *testing.T) {
 
 	}); runError != nil {
 		t.Error(runError)
+	}
+}
+
+func TestImportFileAsTemplae(t *testing.T) {
+	if err := folderRunner("./../../docs/test/01tplImport", t, func(t *testing.T) {
+		taskrun.RunTargets("tpl-test", false)
+		mapData := taskrun.GetOriginMap()
+		if mapData == nil {
+			t.Error("task data should be exists")
+		}
+		expectedYaml := `
+		testing:
+           checks:
+               check-out-ABC: set
+               check-out-CHECK: set
+               check-out-something: set
+`
+		assertVarStrEquals(t, "OUT-TO-YAML", expectedYaml)
+	}); err != nil {
+		t.Error(err)
 	}
 }
 

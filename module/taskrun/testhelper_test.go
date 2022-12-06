@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/swaros/contxt/dirhandle"
-	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/taskrun"
 )
 
 // caseRunner helps to switch a testrunn in testcase directory to this

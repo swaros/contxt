@@ -3,7 +3,7 @@ package tviewapp_test
 import (
 	"testing"
 
-	"github.com/swaros/contxt/tviewapp"
+	"github.com/swaros/contxt/module/tviewapp"
 )
 
 func TestHit(t *testing.T) {

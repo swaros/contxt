@@ -32,13 +32,13 @@ import (
 
 	"github.com/imdario/mergo"
 	"github.com/sirupsen/logrus"
-	"github.com/swaros/contxt/awaitgroup"
-	"github.com/swaros/contxt/dirhandle"
+	"github.com/swaros/contxt/module/awaitgroup"
+	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/manout"
 
-	"github.com/swaros/contxt/systools"
+	"github.com/swaros/contxt/module/systools"
 
-	"github.com/swaros/contxt/configure"
+	"github.com/swaros/contxt/module/configure"
 )
 
 const (
@@ -165,10 +165,10 @@ func RunTargets(targets string, sharedRun bool) {
 	// handle all imports.
 	// these are yaml or json files, they can be accessed for reading by the gson doted format
 	if len(template.Config.Imports) > 0 {
-		GetLogger().WithField("Import", template.Config.Imports).Info("import second level vars")
+		GetLogger().WithField("Import", template.Config.Imports).Info("import variables from Files")
 		handleFileImportsToVars(template.Config.Imports)
 	} else {
-		GetLogger().Info("No second level Variables defined")
+		GetLogger().Info("No Imports defined")
 	}
 
 	// experimental usage of taskrunner
@@ -724,14 +724,35 @@ func handleFileImportsToVars(imports []string) {
 			if keyname == "" {
 				keyname = jsonBaseName
 			}
-			ImportDataFromJSONFile(keyname, filename)
+			if err := ImportDataFromJSONFile(keyname, filename); err != nil {
+				GetLogger().Error("error while loading import: ", filename)
+				manout.Error("error loading json file base import:", filename, " ", err)
+				systools.Exit(ERRORCODE_ON_CONFIG_IMPORT)
+			}
 
 		}, func(yamlBaseName string) {
 			GetLogger().Debug("loading yaml File: as second level variables", filename)
 			if keyname == "" {
 				keyname = yamlBaseName
 			}
-			ImportDataFromYAMLFile(keyname, filename)
+			if err := ImportDataFromYAMLFile(keyname, filename); err != nil {
+				GetLogger().Error("error while loading import", filename)
+				manout.Error("error loading yaml based import:", filename, " ", err)
+				systools.Exit(ERRORCODE_ON_CONFIG_IMPORT)
+			}
+		}, func(filenameBase string, ext string) {
+			if keyname == "" {
+				keyname = filename
+			}
+			GetLogger().Debug("loading File: as plain named variable", filename, ext)
+
+			if str, err := ParseFileAsTemplate(filename); err != nil {
+				GetLogger().Error("error while loading import", filename)
+				manout.Error("error loading text file import:", filename, " ", err)
+				systools.Exit(ERRORCODE_ON_CONFIG_IMPORT)
+			} else {
+				SetPH(keyname, str)
+			}
 
 		}, func(path string, err error) {
 			GetLogger().Errorln("file not exists:", err)

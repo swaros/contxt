@@ -1,4 +1,4 @@
-module github.com/swaros/contxt/taskrun
+module github.com/swaros/contxt/module/taskrun
 
 go 1.18
 

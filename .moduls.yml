@@ -29,3 +29,7 @@ module:
     test:
       timeout: 30s
   
+  - 
+    modul: shellcmd
+    test:
+      timeout: 30s

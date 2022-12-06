@@ -30,7 +30,7 @@ import (
 
 // undefined variables they will be
 // set by the linker
-// example: go build -ldflags "-X github.com/swaros/contxt/context/configure.minversion=1-alpha -X github.com/swaros/contxt/context/configure.midversion=0 -X github.com/swaros/contxt/context/configure.mainversion=0"
+// example: go build -ldflags "-X github.com/swaros/contxt/module/context/configure.minversion=1-alpha -X github.com/swaros/contxt/module/context/configure.midversion=0 -X github.com/swaros/contxt/module/context/configure.mainversion=0"
 // for all the variables you can use
 //     go tool nm bin/contxt | grep version
 // to figure out how the variable can be set

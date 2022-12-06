@@ -26,20 +26,17 @@ package taskrun
 import (
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/swaros/contxt/configure"
-	"github.com/swaros/contxt/dirhandle"
-	"github.com/swaros/contxt/systools"
+	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
 )
 
-//var log = logrus.New()
 var (
 	log = &logrus.Logger{
 		Out:       os.Stdout,
@@ -174,7 +171,7 @@ you need to set the name for the workspace`,
 			if workspace == "" {
 				manout.Error("paramater missing", "name is required")
 			} else {
-				configure.ChangeWorkspace(workspace, callBackOldWs, callBackNewWs)
+				configure.ChangeWorkspace(workspace, CallBackOldWs, CallBackNewWs)
 			}
 		},
 	}
@@ -212,7 +209,7 @@ you need to set the name for the workspace`,
 
 			if setWs != "" {
 				GetLogger().WithField("workspace", setWs).Info("create a new worspace")
-				configure.ChangeWorkspace(setWs, callBackOldWs, callBackNewWs)
+				configure.ChangeWorkspace(setWs, CallBackOldWs, CallBackNewWs)
 				defaulttask = false
 			}
 
@@ -227,16 +224,7 @@ you need to set the name for the workspace`,
 		Short: "show assigned paths",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			fmt.Println(manout.MessageCln("\t", "paths stored in ", manout.ForeCyan, configure.UsedConfig.CurrentSet))
-			dir, err := dirhandle.Current()
-			if err == nil {
-				count := ShowPaths(dir)
-				if count > 0 && !showHints {
-					fmt.Println()
-					fmt.Println(manout.MessageCln("\t", "if you have installed the shell functions ", manout.ForeDarkGrey, "(contxt install bash|zsh|fish)", manout.CleanTag, " change the directory by ", manout.BoldTag, "cn ", count-1))
-					fmt.Println(manout.MessageCln("\t", "this will be the same as ", manout.BoldTag, "cd ", dirhandle.GetDir(count-1)))
-				}
-			}
+			PrintCnPaths(!showHints)
 		},
 	}
 
@@ -245,38 +233,7 @@ you need to set the name for the workspace`,
 		Short: "find path by a part of them",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			useIndex := -1
-			usePath := "."
-			if len(args) == 0 {
-				dirhandle.PrintDir(configure.UsedConfig.LastIndex)
-			} else {
-				configure.PathWorker(func(index int, path string) {
-					for _, search := range args {
-						found := strings.Contains(path, search)
-						if found {
-							useIndex = index
-							usePath = path
-							GetLogger().WithFields(logrus.Fields{"index": useIndex, "path": usePath}).Debug("Found match by comparing strings")
-						} else {
-							// this part is not found. but maybe it is a index number?
-							sIndex, err := strconv.Atoi(search)
-							if err == nil && index == sIndex {
-								useIndex = index
-								usePath = path
-								GetLogger().WithFields(logrus.Fields{"index": useIndex, "path": usePath}).Debug("Found match by using param as index")
-							}
-						}
-					}
-				})
-
-				if useIndex >= 0 && useIndex != configure.UsedConfig.LastIndex {
-					configure.UsedConfig.LastIndex = useIndex
-					configure.SaveDefaultConfiguration(true)
-				}
-
-				fmt.Println(usePath)
-			}
-
+			DirFind(args)
 		},
 	}
 
@@ -719,8 +676,7 @@ func InitDefaultVars() {
 	}
 }
 
-// MainExecute runs main. parsing flags
-func MainExecute() {
+func MainInit() {
 	pathIndex = -1
 	initLogger()
 	InitDefaultVars()
@@ -732,6 +688,11 @@ func MainExecute() {
 	currentDir, _ := dirhandle.Current()
 	SetPH("CTX_PWD", currentDir)
 
+}
+
+// MainExecute runs main. parsing flags
+func MainExecute() {
+	MainInit()
 	// first handle shortcuts
 	// before we get cobra controll
 	if !shortcuts() {
@@ -746,21 +707,7 @@ func MainExecute() {
 
 }
 
-// ShowPaths : display all stored paths in the workspace
-func ShowPaths(current string) int {
-
-	configure.PathWorker(func(index int, path string) {
-		if path == current {
-			fmt.Println(manout.MessageCln("\t[", manout.ForeLightYellow, index, manout.CleanTag, "]\t", manout.BoldTag, path))
-		} else {
-			fmt.Println(manout.MessageCln("\t ", manout.ForeLightBlue, index, manout.CleanTag, " \t", path))
-		}
-
-	})
-	return len(configure.UsedConfig.Paths)
-}
-
-func callBackOldWs(oldws string) bool {
+func CallBackOldWs(oldws string) bool {
 	GetLogger().Info("OLD workspace: ", oldws)
 	// get all paths first
 	configure.PathWorker(func(_ int, path string) {
@@ -788,7 +735,7 @@ func callBackOldWs(oldws string) bool {
 	return true
 }
 
-func callBackNewWs(newWs string) {
+func CallBackNewWs(newWs string) {
 	GetLogger().Info("NEW workspace: ", newWs)
 	configure.PathWorker(func(_ int, path string) {
 
@@ -822,108 +769,12 @@ func doMagicParamOne(param string) bool {
 	// param is a workspace ?
 	configure.WorkSpaces(func(ws string) {
 		if param == ws {
-			configure.ChangeWorkspace(ws, callBackOldWs, callBackNewWs)
+			configure.ChangeWorkspace(ws, CallBackOldWs, CallBackNewWs)
 			result = true
 		}
 	})
 
 	return result
-}
-
-func GetAllTargets() ([]string, bool) {
-	plainTargets, found := targetsAsMap()
-	template, _, exists, terr := GetTemplate()
-	if terr != nil {
-		return plainTargets, found
-	}
-	if exists {
-		shareds := detectSharedTargetsAsMap(template)
-		plainTargets = append(plainTargets, shareds...)
-	}
-	return plainTargets, exists && found
-}
-
-func detectSharedTargetsAsMap(current configure.RunConfig) []string {
-	var targets []string
-	SharedFolderExecuter(current, func(_, _ string) {
-		sharedTargets, have := targetsAsMap()
-		if have {
-			targets = append(targets, sharedTargets...)
-		}
-	})
-
-	return targets
-}
-
-func ExistInStrMap(testStr string, check []string) bool {
-	for _, str := range check {
-		if strings.TrimSpace(str) == strings.TrimSpace(testStr) {
-			return true
-		}
-	}
-	return false
-}
-
-func targetsAsMap() ([]string, bool) {
-	var targets []string
-	template, _, exists, terr := GetTemplate()
-	if terr != nil {
-		targets = append(targets, terr.Error())
-		return targets, false
-	}
-	if exists {
-		return templateTargetsAsMap(template)
-	}
-	return targets, false
-}
-
-func templateTargetsAsMap(template configure.RunConfig) ([]string, bool) {
-	var targets []string
-	found := false
-
-	if len(template.Task) > 0 {
-		for _, tasks := range template.Task {
-			if !ExistInStrMap(tasks.ID, targets) && (!tasks.Options.Invisible || showInvTarget) {
-				found = true
-				targets = append(targets, strings.TrimSpace(tasks.ID))
-			}
-		}
-	}
-
-	return targets, found
-}
-
-func printTargets() {
-
-	template, path, exists, terr := GetTemplate()
-	if terr != nil {
-		return
-	}
-	if exists {
-		fmt.Println(manout.MessageCln(manout.ForeDarkGrey, "used taskfile:\t", manout.CleanTag, path))
-		fmt.Println(manout.MessageCln(manout.ForeDarkGrey, "tasks count:  \t", manout.CleanTag, len(template.Task)))
-		if len(template.Task) > 0 {
-			fmt.Println(manout.MessageCln(manout.BoldTag, "existing targets:"))
-			taskList, _ := templateTargetsAsMap(template)
-			for _, tasks := range taskList {
-				fmt.Println("\t", tasks)
-			}
-		} else {
-			fmt.Println(manout.MessageCln("that is what we gor so far:"))
-			fmt.Println()
-		}
-
-		sharedTargets := detectSharedTargetsAsMap(template)
-		if len(sharedTargets) > 0 {
-
-			for _, stasks := range sharedTargets {
-				fmt.Println("\t", stasks, manout.MessageCln(manout.ForeDarkGrey, " shared", manout.CleanTag))
-			}
-
-		}
-	} else {
-		fmt.Println(manout.MessageCln(manout.ForeCyan, "no task-file exists. you can create one by ", manout.CleanTag, " contxt create"))
-	}
 }
 
 func runTargets(_ string, targets string) {
@@ -941,65 +792,4 @@ func printOutHeader() {
 func printInfo() {
 	printOutHeader()
 	printPaths()
-}
-
-func printPaths() {
-	dir, err := dirhandle.Current()
-	if err == nil {
-		fmt.Println(manout.MessageCln(manout.ForeWhite, " current directory: ", manout.BoldTag, dir))
-		fmt.Println(manout.MessageCln(manout.ForeWhite, " current workspace: ", manout.BoldTag, configure.UsedConfig.CurrentSet))
-		notWorkspace := true
-		pathColor := manout.ForeLightBlue
-		if !configure.PathMeightPartOfWs(dir) {
-			pathColor = manout.ForeLightMagenta
-		} else {
-			notWorkspace = false
-		}
-		fmt.Println(" contains paths:")
-		configure.PathWorker(func(index int, path string) {
-			template, _, exists, _ := GetTemplate()
-			add := ""
-			if strings.Contains(dir, path) {
-				add = manout.ResetDim + manout.ForeCyan
-			}
-			if dir == path {
-				add = manout.ResetDim + manout.ForeGreen
-			}
-			if exists {
-				outTasks := ""
-				targets, _ := templateTargetsAsMap(template)
-				for _, tasks := range targets {
-					outTasks = outTasks + " " + tasks
-				}
-
-				fmt.Println(manout.MessageCln("       path: ", manout.Dim, " no ", manout.ForeYellow, index, " ", pathColor, add, path, manout.CleanTag, " targets", "[", manout.ForeYellow, outTasks, manout.CleanTag, "]"))
-			} else {
-				fmt.Println(manout.MessageCln("       path: ", manout.Dim, " no ", manout.ForeYellow, index, " ", pathColor, add, path))
-			}
-		})
-		if notWorkspace {
-			fmt.Println()
-			fmt.Println(manout.MessageCln(manout.BackYellow, manout.ForeBlue, " WARNING ! ", manout.CleanTag, "\tyou are currently in none of the assigned locations."))
-			fmt.Println("\t\tso maybe you are using the wrong workspace")
-		}
-		if !showHints {
-			fmt.Println()
-			fmt.Println(manout.MessageCln(" targets can be executes by ", manout.BoldTag, "contxt run <targetname>", manout.CleanTag, "(for the current directory)"))
-			fmt.Println(manout.MessageCln(" a target can also be executed in all stored paths by ", manout.BoldTag, "contxt run -a <targetname>", manout.CleanTag, " independend from current path"))
-		}
-
-		fmt.Println()
-		if !showHints {
-			fmt.Println(manout.MessageCln(" all workspaces:", " ... change by ", manout.BoldTag, "contxt <workspace>", ""))
-		} else {
-			fmt.Println(manout.MessageCln(" all workspaces:"))
-		}
-		configure.WorkSpaces(func(name string) {
-			if name == configure.UsedConfig.CurrentSet {
-				fmt.Println(manout.MessageCln("\t[ ", manout.BoldTag, name, manout.CleanTag, " ]"))
-			} else {
-				fmt.Println(manout.MessageCln("\t  ", name, "   "))
-			}
-		})
-	}
 }

@@ -1,4 +1,4 @@
-module github.com/swaros/contxt/tviewapp
+module github.com/swaros/contxt/module/tviewapp
 
 go 1.18
 

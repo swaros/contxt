@@ -25,6 +25,7 @@ package taskrun
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -38,8 +39,8 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/tidwall/gjson"
 
-	"github.com/swaros/contxt/configure"
-	"github.com/swaros/contxt/systools"
+	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
 
 	"github.com/sirupsen/logrus"
@@ -66,6 +67,7 @@ const (
 	osCheck         = "#@if-os"
 	codeLinePH      = "__LINE__"
 	codeKeyPH       = "__KEY__"
+	writeVarToFile  = "#@var-to-file"
 )
 
 // TryParse to parse a line and set a value depending on the line command
@@ -212,6 +214,14 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					}
 				} else {
 					manout.Error("invalid usage", setvarInMap, " needs 3 arguments at least. <mapName> <json.path> <value>")
+				}
+			case writeVarToFile:
+				if len(parts) == 3 {
+					varName := parts[1]
+					fileName := parts[2]
+					ExportVarToFile(varName, fileName)
+				} else {
+					manout.Error("invalid usage", writeVarToFile, " needs 2 arguments at least. <variable> <filename>")
 				}
 			case exportToYaml:
 				if len(parts) == 3 {
@@ -389,45 +399,61 @@ func YAMLToMap(source string) (map[string]interface{}, error) {
 	return m, nil
 }
 
+func ExportVarToFile(variable string, filename string) error {
+	strData := GetPH(variable)
+	if strData == "" {
+		return errors.New("variable " + variable + " can not be used for export to file. not exists or empty")
+	}
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	var scopeVars map[string]string // empty but required
+	if _, err2 := f.WriteString(handlePlaceHolder(strData, scopeVars)); err != nil {
+		return err2
+	}
+
+	return nil
+}
+
 // ImportYAMLFile imports a yaml file as used for json map
 func ImportYAMLFile(filename string) (map[string]interface{}, error) {
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
+	if data, err := parseFileAsTemplateToByte(filename); err == nil {
+		jsond, jerr := yaml.YAMLToJSON(data)
+		if jerr != nil {
+			return nil, jerr
+		}
+		m := make(map[string]interface{})
+		if err := json.Unmarshal([]byte(jsond), &m); err != nil {
+			return nil, err
+		}
+		if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
+			traceMap(m, filename)
+		}
+		return m, nil
+	} else {
 		return nil, err
 	}
-
-	jsond, jerr := yaml.YAMLToJSON(data)
-	if jerr != nil {
-		return nil, jerr
-	}
-	m := make(map[string]interface{})
-	if err = json.Unmarshal([]byte(jsond), &m); err != nil {
-		return nil, err
-	}
-	if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
-		traceMap(m, filename)
-	}
-	return m, nil
-
 }
 
 // ImportJSONFile imports a json file for reading
 func ImportJSONFile(fileName string) (map[string]interface{}, error) {
-	data, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		GetLogger().Error(err)
+
+	if data, err := parseFileAsTemplateToByte(fileName); err == nil {
+		m := make(map[string]interface{})
+		err = json.Unmarshal([]byte(data), &m)
+		if err != nil {
+			GetLogger().Error("ImportJSONFile : Unmarshal :", fileName, " : ", err)
+			return nil, err
+		}
+		if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
+			traceMap(m, fileName)
+		}
+		return m, nil
+	} else {
 		return nil, err
 	}
-	m := make(map[string]interface{})
-	err = json.Unmarshal([]byte(data), &m)
-	if err != nil {
-		GetLogger().Error("ImportJSONFile : Unmarshal :", fileName, " : ", err)
-		return nil, err
-	}
-	if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
-		traceMap(m, fileName)
-	}
-	return m, nil
 
 }
 
@@ -478,6 +504,33 @@ func ImportFolders(templatePath string, paths ...string) (string, error) {
 	template = result
 
 	return template, nil
+}
+
+func parseFileAsTemplateToByte(path string) ([]byte, error) {
+	var data []byte
+	if parsedCnt, err := ParseFileAsTemplate(path); err != nil {
+		return nil, err
+	} else {
+		data = []byte(parsedCnt)
+		return data, nil
+	}
+
+}
+
+func ParseFileAsTemplate(path string) (string, error) {
+	path = HandlePlaceHolder(path)               // take care about placeholders
+	mapOrigin := GetOriginMap()                  // load the current maps
+	fileContent, terr := ImportFileContent(path) // load file content as string
+	if terr != nil {
+		return "", terr
+	}
+
+	// parsing as template
+	if result, herr := HandleJSONMap(fileContent, mapOrigin); herr != nil {
+		return "", herr
+	} else {
+		return result, nil
+	}
 }
 
 func GetOriginMap() map[string]interface{} {
@@ -546,7 +599,7 @@ func ImportFolder(path string, _ string) (map[string]interface{}, error) {
 
 // ImportFileContent imports a file and returns content as string
 func ImportFileContent(filename string) (string, error) {
-	GetLogger().WithField("file", filename).Debug("import file template")
+	GetLogger().WithField("file", filename).Debug("import file content")
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Println("File reading error", err)

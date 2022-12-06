@@ -35,9 +35,9 @@ import (
 
 	"github.com/imdario/mergo"
 
-	"github.com/swaros/contxt/configure"
-	"github.com/swaros/contxt/dirhandle"
-	"github.com/swaros/contxt/systools"
+	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
 	"gopkg.in/yaml.v2"
 )

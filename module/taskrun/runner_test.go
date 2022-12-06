@@ -3,7 +3,7 @@ package taskrun_test
 import (
 	"testing"
 
-	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/contxt/module/taskrun"
 )
 
 func TestTargetAsMapUnique(t *testing.T) {

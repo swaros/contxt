@@ -5,6 +5,7 @@ use (
 	./module/configure
 	./module/dirhandle
 	./module/interactive
+	./module/shellcmd
 	./module/systools
 	./module/taskrun
 	./module/trigger

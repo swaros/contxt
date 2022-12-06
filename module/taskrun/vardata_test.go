@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/contxt/module/taskrun"
 )
 
 func TestAddAndGet(t *testing.T) {

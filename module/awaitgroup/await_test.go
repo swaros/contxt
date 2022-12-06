@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/swaros/contxt/awaitgroup"
+	"github.com/swaros/contxt/module/awaitgroup"
 )
 
 func TestSingleRun(t *testing.T) {

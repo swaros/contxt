@@ -6,7 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"github.com/swaros/contxt/trigger"
+	"github.com/swaros/contxt/module/trigger"
 )
 
 const (

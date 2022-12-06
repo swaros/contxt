@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/swaros/contxt/configure"
-	"github.com/swaros/contxt/dirhandle"
-	"github.com/swaros/contxt/taskrun"
+	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/taskrun"
 )
 
 type RuntimeGroupExpected struct {

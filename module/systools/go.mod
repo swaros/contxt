@@ -1,4 +1,4 @@
-module github.com/swaros/contxt/systools
+module github.com/swaros/contxt/module/systools
 
 go 1.18
 

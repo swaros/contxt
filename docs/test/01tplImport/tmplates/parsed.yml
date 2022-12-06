@@ -1,0 +1,5 @@
+testing:
+  checks:
+    {{- range $k, $out := $.testdata.map.data }}  
+       check-out-{{ $out }}: "set"
+    {{- end }}
