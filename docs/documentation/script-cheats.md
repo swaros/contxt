@@ -256,6 +256,7 @@ writes a variable into a file. any placeholder will be parsed first.
 this is usefull in combination of importing a text file into a
 variable.
 
+**arguments**: `variable` `filename`
 
 simple info file
 ````md
@@ -266,16 +267,16 @@ current version is ${version}
 ````yaml
 config:
   imports:
-    - version.tpl
+    - version.tpl V-INFO
   variables:
     version: "1.0.4"
 task:
   - id: write-makefile
     script:
-      - "#@var-to-file version.md"
+      - "#@var-to-file V-INFO version.md"
 ````
 
-contetn of *version.md* would then be
+content of *version.md* would then be
 ````md
 # current version
 current version is 1.0.4
