@@ -5,50 +5,50 @@
 version: 2
 updates:
 ### dependencie for /module/configure/
-  - package-ecosystem: gomod 
-    directory: /module/configure/ 
+  - package-ecosystem: gomod
+    directory: /module/configure/
     schedule:
        interval: daily
     assignees:
        - swaros
 ### dependencie for /module/dirhandle/
-  - package-ecosystem: gomod 
-    directory: /module/dirhandle/ 
+  - package-ecosystem: gomod
+    directory: /module/dirhandle/
     schedule:
        interval: daily
     assignees:
        - swaros
 ### dependencie for /module/systools/
-  - package-ecosystem: gomod 
-    directory: /module/systools/ 
+  - package-ecosystem: gomod
+    directory: /module/systools/
     schedule:
        interval: daily
     assignees:
        - swaros
 ### dependencie for /module/trigger/
-  - package-ecosystem: gomod 
-    directory: /module/trigger/ 
+  - package-ecosystem: gomod
+    directory: /module/trigger/
     schedule:
        interval: daily
     assignees:
        - swaros
 ### dependencie for /module/taskrun/
-  - package-ecosystem: gomod 
-    directory: /module/taskrun/ 
+  - package-ecosystem: gomod
+    directory: /module/taskrun/
     schedule:
        interval: daily
     assignees:
        - swaros
 ### dependencie for /module/awaitgroup/
-  - package-ecosystem: gomod 
-    directory: /module/awaitgroup/ 
+  - package-ecosystem: gomod
+    directory: /module/awaitgroup/
     schedule:
        interval: daily
     assignees:
        - swaros
 ### dependencie for /module/shellcmd/
-  - package-ecosystem: gomod 
-    directory: /module/shellcmd/ 
+  - package-ecosystem: gomod
+    directory: /module/shellcmd/
     schedule:
        interval: daily
     assignees:
