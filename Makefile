@@ -1,7 +1,7 @@
 build: test	build-no-test
 
 build-no-test:
-	go build -ldflags "-X github.com/swaros/contxt/module/configure.minversion=0 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20221206.141611" -o ./bin/contxt cmd/cmd-contxt/main.go
+	go build -ldflags "-X github.com/swaros/contxt/module/configure.minversion=0 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20221206.145231" -o ./bin/contxt cmd/cmd-contxt/main.go
 
 install-local: build
 	./bin/contxt run install-local

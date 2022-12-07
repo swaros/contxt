@@ -22,6 +22,8 @@
 // SOFTWARE.
 package taskrun
 
+// note: parshlp = parsing-helper.
+
 import (
 	"fmt"
 	"strings"

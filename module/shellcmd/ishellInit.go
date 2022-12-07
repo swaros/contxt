@@ -151,8 +151,7 @@ func CreateCnCmd(shell *ishell.Shell) {
 		Help: "change path in workspace",
 		Completer: func(args []string) []string {
 			var paths []string = []string{}
-			configure.PathWorker(func(i int, s string) {
-
+			configure.PathWorkerNoCd(func(i int, s string) {
 				paths = append(paths, fmt.Sprintf("%v", i))
 			})
 			return paths
@@ -161,6 +160,7 @@ func CreateCnCmd(shell *ishell.Shell) {
 			if len(c.Args) > 0 {
 				if path := taskrun.DirFind(c.Args); path != "." {
 					os.Chdir(path)
+					configure.SaveActualPathByPath(path)
 					resetShell()
 					updatePrompt(shell)
 				}

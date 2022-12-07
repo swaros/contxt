@@ -136,8 +136,8 @@ PowerShell:
 	gotoCmd = &cobra.Command{
 		Use:   "switch",
 		Short: "switch workspace",
-		Long: `switch the workspace to a existing ones. 
-all defined onEnter and onLeave task will be executed 
+		Long: `switch the workspace to a existing ones.
+all defined onEnter and onLeave task will be executed
 if these task are defined
 `,
 		Run: func(_ *cobra.Command, args []string) {
@@ -233,7 +233,12 @@ you need to set the name for the workspace`,
 		Short: "find path by a part of them",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			DirFind(args)
+			if len(args) < 1 {
+				dirhandle.PrintDir(configure.UsedConfig.LastIndex) // without arguments prinst the last used path
+			} else {
+				path, _ := DirFindApplyAndSave(args)
+				fmt.Println(path) // path only as output. so cn can handle it
+			}
 		},
 	}
 
@@ -461,7 +466,7 @@ you will also see if a unexpected propertie found `,
 				path, err := dirhandle.Current()
 				if err == nil {
 					if runAtAll {
-						configure.PathWorker(func(_ int, path string) {
+						configure.PathWorkerNoCd(func(_ int, path string) {
 							GetLogger().WithField("path", path).Info("change dir")
 							os.Chdir(path)
 							runTargets(path, arg)
@@ -676,6 +681,20 @@ func InitDefaultVars() {
 	}
 }
 
+func InitWsVariables() {
+	SetPH("CTX_DBG", "[YES]")
+	if ws, err := CollectWorkspaceInfos(); err == nil {
+		SetPH("CTX_WS", "["+ws.CurrentWs+"]")
+		for _, wsInfo := range ws.Paths {
+			prefix := ws.CurrentWs + "_" + wsInfo.Path
+			SetPH("CTX_"+prefix, wsInfo.Path)
+
+		}
+	} else {
+		manout.Error("fail loading workspace information ", "we run in a error while we tryed to parse the workspaces.", err)
+	}
+}
+
 func MainInit() {
 	pathIndex = -1
 	initLogger()
@@ -687,7 +706,7 @@ func MainInit() {
 
 	currentDir, _ := dirhandle.Current()
 	SetPH("CTX_PWD", currentDir)
-
+	InitWsVariables()
 }
 
 // MainExecute runs main. parsing flags
@@ -710,7 +729,7 @@ func MainExecute() {
 func CallBackOldWs(oldws string) bool {
 	GetLogger().Info("OLD workspace: ", oldws)
 	// get all paths first
-	configure.PathWorker(func(_ int, path string) {
+	configure.PathWorkerNoCd(func(_ int, path string) {
 
 		os.Chdir(path)
 		template, templateFile, exists, _ := GetTemplate()
@@ -737,7 +756,7 @@ func CallBackOldWs(oldws string) bool {
 
 func CallBackNewWs(newWs string) {
 	GetLogger().Info("NEW workspace: ", newWs)
-	configure.PathWorker(func(_ int, path string) {
+	configure.PathWorkerNoCd(func(_ int, path string) {
 
 		os.Chdir(path)
 		template, templateFile, exists, _ := GetTemplate()

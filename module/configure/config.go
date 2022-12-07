@@ -220,14 +220,58 @@ func SaveDefaultConfiguration(workSpaceConfigUpdate bool) error {
 	return nil
 }
 
-// PathWorker executes a callback function in a path
-func PathWorker(callback func(int, string)) error {
+func SaveActualPathByIndex(useIndex int) error {
+	if useIndex >= 0 && useIndex != UsedConfig.LastIndex {
+		UsedConfig.LastIndex = useIndex
+		return SaveDefaultConfiguration(true)
+	}
+	if useIndex < 0 {
+		return errors.New("invalid index number")
+	}
+	// just no need to save. no error.
+	return nil
+}
+
+func SaveActualPathByPath(pathToSave string) error {
+	for index, path := range UsedConfig.Paths {
+		if path == pathToSave {
+			return SaveActualPathByIndex(index)
+		}
+	}
+	return errors.New("this path " + pathToSave + " is not part of the stored paths")
+}
+
+// PathWorkerWithCd executes a callback function in a path
+func PathWorker(callbackInDirextory func(int, string), callbackBackToOrigin func(origin string)) error {
+	if current, err := os.Getwd(); err != nil {
+		return err
+	} else {
+		cnt := len(UsedConfig.Paths)
+		if cnt < 1 {
+			return errors.New("no paths actually stored ")
+		}
+		for index, path := range UsedConfig.Paths {
+			if err := os.Chdir(path); err == nil {
+				callbackInDirextory(index, path)
+			} else {
+				return err
+			}
+		}
+		if err := os.Chdir(current); err == nil {
+			callbackBackToOrigin(current)
+		} else {
+			return err
+		}
+		return nil
+	}
+}
+
+func PathWorkerNoCd(callback func(int, string)) error {
 	cnt := len(UsedConfig.Paths)
 	if cnt < 1 {
 		return errors.New("no paths actually stored ")
 	}
 	for index, path := range UsedConfig.Paths {
-		os.Chdir(path)
 		callback(index, path)
 	}
 	return nil

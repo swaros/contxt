@@ -41,21 +41,6 @@ import (
 	"github.com/swaros/contxt/module/configure"
 )
 
-const (
-	// ExitOk the process was executed without errors
-	ExitOk = 0
-	// ExitByStopReason the process stopped because of a defined reason
-	ExitByStopReason = 101
-	// ExitNoCode means there was no code associated
-	ExitNoCode = 102
-	// ExitCmdError means the execution of the command fails. a error by the command itself
-	ExitCmdError = 103
-	// ExitByRequirement means a requirement was not fulfills
-	ExitByRequirement = 104
-	// ExitAlreadyRunning means the task is not started, because it is already created
-	ExitAlreadyRunning = 105
-)
-
 // SharedFolderExecuter runs shared .contxt.yml files directly without merging them into
 // the current contxt file
 func SharedFolderExecuter(template configure.RunConfig, locationHandle func(string, string)) {
@@ -690,9 +675,11 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 			}
 
 		}
+		// we have at least none of the possible task executed.
 		if !targetFound {
-			CtxOut(manout.MessageCln(manout.ForeYellow, "target not defined: ", manout.ForeWhite, target))
+			CtxOut(manout.MessageCln(manout.ForeYellow, "target not defined or matching any requirement: ", manout.ForeWhite, target))
 			GetLogger().Error("Target can not be found: ", target)
+			return ExitByNoTargetExists
 		}
 
 		GetLogger().WithFields(logrus.Fields{
