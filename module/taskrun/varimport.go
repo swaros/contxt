@@ -544,9 +544,22 @@ func GetOriginMap() map[string]interface{} {
 	return mapOrigin
 }
 
+// UpdateOriginMap updates the main templating map with an new one
 func UpdateOriginMap(mapData map[string]interface{}) {
 	GetLogger().WithField("DATA", mapData).Trace("update variables map")
 	AddData("CTX_VAR_MAP", mapData)
+}
+
+// copies the placeholder to the origin map
+// so there can be used in templates to
+// this should be done after initilize the application.
+// but not while runtime
+func CopyPlaceHolder2Origin() {
+	origin := GetOriginMap()
+	GetPlaceHoldersFnc(func(phKey, phValue string) {
+		origin[phKey] = phValue
+	})
+	UpdateOriginMap(origin)
 }
 
 // ImportFolder reads folder recursiv and reads all .json, .yml and .yaml files

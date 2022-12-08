@@ -656,6 +656,8 @@ func shortcuts() bool {
 
 func InitDefaultVars() {
 	SetPH("CTX_OS", configure.GetOs())
+	SetPH("CTX_VERSION", configure.GetVersion())
+	SetPH("CTX_BUILDNO", configure.GetBuild())
 	// on windows we have to deal with old powershell and cmd versions, the do not
 	// support ANSII.
 	if configure.GetOs() == "windows" {
@@ -730,11 +732,13 @@ func MainInit() {
 	pathIndex = -1                         // this is the path index used for the current path. -1 means unset
 	initLogger()                           // init the logger. currently there is nothing happens except sometime for local debug
 	InitDefaultVars()                      // init all the default variables first, they are independend from any configuration
+	CopyPlaceHolder2Origin()               // doing this 1/2 to have the current variables already in palce until we parse the config
 	var configErr = configure.InitConfig() // try to initialize current config
 	if configErr != nil {
 		log.Fatal(configErr)
 	}
-	InitWsVariables() // like InitDefaultVars but these variables needs the configuration initalized
+	InitWsVariables()        // like InitDefaultVars but these variables needs the configuration initalized
+	CopyPlaceHolder2Origin() // make placeholders usable as golang/template again
 }
 
 // MainExecute runs main. parsing flags

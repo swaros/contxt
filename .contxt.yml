@@ -1,8 +1,15 @@
+# we use the build version for not running in a version conflict, if we do not have the new version installed
 version: "{{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.minor}}"
+
+# define oure workspace
 workspace:
    project: contxt
    role: root
    version: "{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}"
+
+# we need a couple of imports to create some
+# content depending the values we imported
+# see .inc.contxt.yml where all value files defined
 config:
   imports:
     - ./imports/dependabot.tpl depandabot
@@ -16,6 +23,18 @@ config:
 ####### just for quick checking the go env on different machines
 ####### more then a note.
 task:
+  - id: welcome
+    script:
+      - echo "welcome to contxt"
+      - echo " --- required build version        [ - {{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.minor}} - ]"
+      - echo " --- targets build version         [ - {{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}} - ]"
+      - echo " --- self version                  [ - ${CTX_VERSION} - ]"
+      - echo " --- operationg system             [ - ${CTX_OS} - ]"
+{{- if $.WS0_CONTXT_ROOT}} # always check if is set. without project info, this is not exists
+      - echo " --- WS0_CONTXT_ROOT = go/template [ - {{$.WS0_CONTXT_ROOT}} - ]"
+{{- end}}
+      - echo " --- WS0_CONTXT_ROOT = ctx/var     [ - ${WS0_CONTXT_ROOT} - ]"
+
   - id: go-check
     require:
       system: linux
