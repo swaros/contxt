@@ -243,9 +243,12 @@ func SaveActualPathByPath(pathToSave string) error {
 
 // PathWorkerWithCd executes a callback function in a path
 func PathWorker(callbackInDirextory func(int, string), callbackBackToOrigin func(origin string)) error {
+	// checking current directory. store it for going back later
 	if current, err := os.Getwd(); err != nil {
 		return err
 	} else {
+		// do we have targets? then iterate
+		// on them, got to the directory, and execute the callback
 		cnt := len(UsedConfig.Paths)
 		if cnt < 1 {
 			return errors.New("no paths actually stored ")
@@ -257,6 +260,7 @@ func PathWorker(callbackInDirextory func(int, string), callbackBackToOrigin func
 				return err
 			}
 		}
+		// now it is time for going back to the dir we was before
 		if err := os.Chdir(current); err == nil {
 			callbackBackToOrigin(current)
 		} else {
@@ -278,7 +282,10 @@ func PathWorkerNoCd(callback func(int, string)) error {
 }
 
 func loadConfigurationFile(path string) error {
-	file, _ := os.Open(path)
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 
@@ -287,7 +294,10 @@ func loadConfigurationFile(path string) error {
 
 // SaveConfiguration : stores configuration in given path
 func SaveConfiguration(config Configuration, path string) error {
-	b, _ := json.MarshalIndent(config, "", " ")
+	b, err := json.MarshalIndent(config, "", " ")
+	if err != nil {
+		return err
+	}
 	return ioutil.WriteFile(path, b, 0644)
 
 }
@@ -359,43 +369,47 @@ func checkSetup() error {
 	if err == nil {
 		var dirPath = homeDir + DefaultPath
 		var configPath = homeDir + DefaultPath + DefaultConfigFileName
-		pathExists, err := exists(dirPath)
-		// path dos not exists. create it
-		if !pathExists && err == nil {
-			err := os.Mkdir(dirPath, os.ModePerm)
+		if pathExists, err := exists(dirPath); err != nil {
+			return err
+		} else {
+			// path dos not exists. create it
+			if !pathExists && err == nil {
+				err := os.Mkdir(dirPath, os.ModePerm)
+				if err != nil {
+					log.Fatal(err)
+					return err
+				}
+			}
+
+			configFileExists, err := exists(configPath)
 			if err != nil {
-				log.Fatal(err)
 				return err
 			}
-		}
-
-		configFileExists, err := exists(configPath)
-		// no config file exists. create default config
-		if !configFileExists && err == nil {
-			createDefaultConfig()
-		}
-
-		// load config file
-		if configFileExists && err == nil {
-			if lErr := loadConfigurationFile(configPath); lErr != nil {
-				return lErr
-			}
-			if UsedConfig.CurrentSet == "" {
-				UsedConfig.CurrentSet = DefaultWorkspace
-				SaveDefaultConfiguration(false)
-			}
-			// now copy content of set
-			pathWorkspace, secErr := getConfigPath(UsedConfig.CurrentSet + ".json")
-			if secErr == nil {
-				confPathExists, _ := exists(pathWorkspace)
-				if confPathExists {
-					return loadConfigurationFile(pathWorkspace)
+			// no config file exists. create default config
+			if !configFileExists {
+				createDefaultConfig()
+			} else {
+				if lErr := loadConfigurationFile(configPath); lErr != nil {
+					return lErr
+				}
+				if UsedConfig.CurrentSet == "" {
+					UsedConfig.CurrentSet = DefaultWorkspace
+					SaveDefaultConfiguration(false)
+				}
+				// now copy content of set
+				pathWorkspace, secErr := getConfigPath(UsedConfig.CurrentSet + ".json")
+				if secErr == nil {
+					confPathExists, _ := exists(pathWorkspace)
+					if confPathExists {
+						return loadConfigurationFile(pathWorkspace)
+					} else {
+						UsedConfig.Paths = nil
+					}
 				} else {
-					UsedConfig.Paths = nil
+					return secErr
 				}
 			}
 		}
-
 	}
 	return err
 }

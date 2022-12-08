@@ -98,10 +98,13 @@ func headScreen(shell *ishell.Shell) {
 	you entered the interactive shell because you run contxt 
 	without any argument.
 	`)
+	autoCn()
+}
 
+func autoCn() {
 	if !inWs() {
 		autoRecoverWs()
-		manout.Om.Println("... we change the the workspace path automatically")
+		manout.Om.Println("... we changed the the workspace path automatically")
 		manout.Om.Println("... ")
 
 	}
@@ -194,6 +197,7 @@ func CreateWsCmd(shell *ishell.Shell) {
 					if c.Args[0] == ws {
 						resetShell()
 						configure.ChangeWorkspace(ws, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
+						autoRecoverWs()
 						updatePrompt(shell)
 					}
 				})

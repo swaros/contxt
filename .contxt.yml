@@ -20,8 +20,8 @@ config:
       coverage-report: ""
       depbot-file: .github/dependabot.yml
 
-####### just for quick checking the go env on different machines
-####### more then a note.
+###### contxt welcome message
+###### just to display default variables
 task:
   - id: welcome
     script:
@@ -34,7 +34,11 @@ task:
       - echo " --- WS0_CONTXT_ROOT = go/template [ - {{$.WS0_CONTXT_ROOT}} - ]"
 {{- end}}
       - echo " --- WS0_CONTXT_ROOT = ctx/var     [ - ${WS0_CONTXT_ROOT} - ]"
+    next:
+      - go-check
 
+####### just for quick checking the go env on different machines
+####### more then a note.
   - id: go-check
     require:
       system: linux

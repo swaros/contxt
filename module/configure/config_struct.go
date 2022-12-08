@@ -9,6 +9,7 @@ type Configuration struct {
 	Paths      []string
 	LastIndex  int
 	LastPath   string // since 0.5.0
+	PathInfo   map[string]WorkspaceInfo
 }
 
 // CommandLine defines a line of commands that can be executed

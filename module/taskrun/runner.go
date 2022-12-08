@@ -729,6 +729,7 @@ func InitWsVariables() {
 // currently we have two of them.
 // by running in interactive in ishell, and by running with parameters.
 func MainInit() {
+	ResetVariables()                       // needed because we could run in a shell
 	pathIndex = -1                         // this is the path index used for the current path. -1 means unset
 	initLogger()                           // init the logger. currently there is nothing happens except sometime for local debug
 	InitDefaultVars()                      // init all the default variables first, they are independend from any configuration
@@ -787,10 +788,10 @@ func CallBackOldWs(oldws string) bool {
 }
 
 func CallBackNewWs(newWs string) {
+	ResetVariables() // reset old variables while change the workspace. (req for shell mode)
+	MainInit()       // initialize the workspace
 	GetLogger().Info("NEW workspace: ", newWs)
-	configure.PathWorkerNoCd(func(_ int, path string) {
-
-		os.Chdir(path)
+	configure.PathWorker(func(_ int, path string) { // iterate any path
 		template, templateFile, exists, _ := GetTemplate()
 
 		GetLogger().WithFields(logrus.Fields{
@@ -799,6 +800,7 @@ func CallBackNewWs(newWs string) {
 			"path":         path,
 		}).Debug("path parsing")
 
+		// try to run onEnter func at any possible target in the workspace
 		if exists && template.Config.Autorun.Onenter != "" {
 			onEnterTarget := template.Config.Autorun.Onenter
 			GetLogger().WithFields(logrus.Fields{
@@ -808,6 +810,10 @@ func CallBackNewWs(newWs string) {
 			RunTargets(onEnterTarget, true)
 		}
 
+	}, func(origin string) {
+		GetLogger().WithFields(logrus.Fields{
+			"current-dir": origin,
+		}).Debug("done calling autoruns on sub-dirs")
 	})
 }
 
@@ -843,4 +849,9 @@ func printOutHeader() {
 func printInfo() {
 	printOutHeader()
 	printPaths()
+}
+
+func ResetVariables() {
+	ClearAll()     // clears all placeholders
+	ClearAllData() // clears all stored maps
 }

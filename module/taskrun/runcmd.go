@@ -219,12 +219,12 @@ func printPaths() {
 }
 
 type pathInfo struct {
-	Path         string                     // the stored path
-	Targets      []string                   // all existing targets
-	Active       bool                       // this is the active path
-	IsSubDir     bool                       // this path is the active or a subdir of current dir
-	HaveTemplate bool                       // in this folder a template exists
-	Project      configure.ProjectWorkspace // infos about the project could be there
+	Path         string                  // the stored path
+	Targets      []string                // all existing targets
+	Active       bool                    // this is the active path
+	IsSubDir     bool                    // this path is the active or a subdir of current dir
+	HaveTemplate bool                    // in this folder a template exists
+	Project      configure.WorkspaceInfo // infos about the project could be there
 }
 
 type workspace struct {
