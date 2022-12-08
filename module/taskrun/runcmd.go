@@ -219,11 +219,12 @@ func printPaths() {
 }
 
 type pathInfo struct {
-	Path         string   // the stored path
-	Targets      []string // all existing targets
-	Active       bool     // this is the active path
-	IsSubDir     bool     // this path is the active or a subdir of current dir
-	HaveTemplate bool     // in this folder a template exists
+	Path         string                     // the stored path
+	Targets      []string                   // all existing targets
+	Active       bool                       // this is the active path
+	IsSubDir     bool                       // this path is the active or a subdir of current dir
+	HaveTemplate bool                       // in this folder a template exists
+	Project      configure.ProjectWorkspace // infos about the project could be there
 }
 
 type workspace struct {
@@ -250,6 +251,7 @@ func CollectWorkspaceInfos() (workspace, error) {
 			template, _, exists, _ := GetTemplate()
 			pInfo.HaveTemplate = exists
 			pInfo.Active = (dir == path)
+			pInfo.Project = template.Workspace
 			pInfo.IsSubDir = strings.Contains(dir, path)
 			if exists {
 				pInfo.Targets, _ = templateTargetsAsMap(template)

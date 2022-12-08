@@ -6,6 +6,16 @@ import (
 	"github.com/swaros/contxt/module/systools"
 )
 
+func TestCheckForCleanString(t *testing.T) {
+	if str, err := systools.CheckForCleanString("0.4.6"); err != nil {
+		t.Error("should be able to handle this string")
+	} else {
+		if str != "0-4-6" {
+			t.Error("unexpectd string ", str)
+		}
+	}
+}
+
 func TestStrLen(t *testing.T) {
 	len := systools.StrLen("hello world")
 

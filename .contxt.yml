@@ -1,4 +1,8 @@
 version: "{{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.minor}}"
+workspace:
+   project: contxt
+   role: root
+   version: "{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}"
 config:
   imports:
     - ./imports/dependabot.tpl depandabot

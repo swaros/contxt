@@ -26,6 +26,7 @@ package taskrun
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -66,7 +67,7 @@ var (
 		Short: "workspaces for the shell",
 		Long: `Contxt helps you to organize projects.
 it helps also to execute tasks depending these projects.
-this task can be used to setup and cleanup the workspace 
+this task can be used to setup and cleanup the workspace
 if you enter or leave them.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
@@ -655,13 +656,17 @@ func shortcuts() bool {
 
 func InitDefaultVars() {
 	SetPH("CTX_OS", configure.GetOs())
+	// on windows we have to deal with old powershell and cmd versions, the do not
+	// support ANSII.
 	if configure.GetOs() == "windows" {
-		manout.ColorEnabled = false
-		if os.Getenv("CTX_COLOR") == "ON" {
+		manout.ColorEnabled = false         //  by default we turn off the colors.
+		if os.Getenv("CTX_COLOR") == "ON" { // then lets see if this should forced for beeing enabled by env-var
 			manout.ColorEnabled = true
 		} else {
-			cmd := "$PSVersionTable.PSVersion.Major"
-			cmdArg := []string{"-nologo", "-noprofile"}
+			// if not forced already we try to figure out, by oure own, if the powershell is able to support ANSII
+			// this is since version 7 the case
+			cmd := "$PSVersionTable.PSVersion.Major"    // powershell cmd to get actual version
+			cmdArg := []string{"-nologo", "-noprofile"} // these the arguments for powrshell
 			version := ""
 			ExecuteScriptLine(GetDefaultCmd(), cmdArg, cmd, func(s string, e error) bool {
 				version = s
@@ -669,44 +674,67 @@ func InitDefaultVars() {
 			}, func(p *os.Process) {
 
 			})
-			SetPH("CTX_PS_VERSION", version)
+			SetPH("CTX_PS_VERSION", version) // also setup varibale to have the PS version in place
 			if version >= "7" {
-				manout.ColorEnabled = true
+				manout.ColorEnabled = true // enable colors if we have powershell equals or greater then 7
 			}
 		}
 	}
 	// we checking the console support
+	// and turn the color off again if we do not have an terminal
+	inTerminal := "YES"
 	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		manout.ColorEnabled = false
+		inTerminal = "NO"
+	}
+	SetPH("CTX_IN_TERMINAL", inTerminal) // do we have terminal running?
+
+	if currentDir, err := os.Getwd(); err == nil { // location as var
+		SetPH("CTX_PWD", currentDir)
+	} else {
+		CtxOut("Critical error while reading directory", err)
+		systools.Exit(systools.ErrorBySystem)
 	}
 }
 
+// InitWsVariables is setting up variables depending the current found configuration (.contxt.yml)
 func InitWsVariables() {
-	SetPH("CTX_DBG", "[YES]")
 	if ws, err := CollectWorkspaceInfos(); err == nil {
-		SetPH("CTX_WS", "["+ws.CurrentWs+"]")
+		SetPH("CTX_WS", ws.CurrentWs)
+
 		for _, wsInfo := range ws.Paths {
-			prefix := ws.CurrentWs + "_" + wsInfo.Path
-			SetPH("CTX_"+prefix, wsInfo.Path)
+			if wsInfo.Project.Project != "" && wsInfo.Project.Role != "" {
+				prefix := wsInfo.Project.Project + "_" + wsInfo.Project.Role
+				SetPH("WS0_"+strings.ToUpper(prefix), wsInfo.Path) // at least ws0 without any version. this could be overwritten by other checkouts
+				if wsInfo.Project.Version != "" {
+					// if version is set, we use them for avoid conflicts with different checkouts
+					if versionSan, err := systools.CheckForCleanString(wsInfo.Project.Version); err == nil {
+						prefix += "_" + versionSan
+						SetPH("WS1_"+strings.ToUpper(prefix), wsInfo.Path) // add it to ws1 as prefix for versionized keys
+					}
+				}
+			}
 
 		}
 	} else {
 		manout.Error("fail loading workspace information ", "we run in a error while we tryed to parse the workspaces.", err)
+		systools.Exit(systools.ErrorTemplateReading)
 	}
 }
 
+// MainInit initilaize the Application.
+// this is required for any entrie-point
+// currently we have two of them.
+// by running in interactive in ishell, and by running with parameters.
 func MainInit() {
-	pathIndex = -1
-	initLogger()
-	InitDefaultVars()
-	var configErr = configure.InitConfig()
+	pathIndex = -1                         // this is the path index used for the current path. -1 means unset
+	initLogger()                           // init the logger. currently there is nothing happens except sometime for local debug
+	InitDefaultVars()                      // init all the default variables first, they are independend from any configuration
+	var configErr = configure.InitConfig() // try to initialize current config
 	if configErr != nil {
 		log.Fatal(configErr)
 	}
-
-	currentDir, _ := dirhandle.Current()
-	SetPH("CTX_PWD", currentDir)
-	InitWsVariables()
+	InitWsVariables() // like InitDefaultVars but these variables needs the configuration initalized
 }
 
 // MainExecute runs main. parsing flags
