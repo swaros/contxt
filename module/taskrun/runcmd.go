@@ -31,6 +31,7 @@ import (
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
 )
 
@@ -252,6 +253,7 @@ func CollectWorkspaceInfos() (workspace, error) {
 			pInfo.HaveTemplate = exists
 			pInfo.Active = (dir == path)
 			pInfo.Project = template.Workspace
+			UpdateProjectRelation(pInfo)
 			pInfo.IsSubDir = strings.Contains(dir, path)
 			if exists {
 				pInfo.Targets, _ = templateTargetsAsMap(template)
@@ -262,4 +264,38 @@ func CollectWorkspaceInfos() (workspace, error) {
 		return ws, nil
 	}
 	return ws, err
+}
+
+func UpdateProjectRelation(pInfo pathInfo) {
+	if pInfo.Project.Project != "" && pInfo.Project.Role != "" {
+		haveChanges := false
+		// could be nil. so we initilize them first if needed
+		if configure.UsedConfig.PathInfo == nil {
+			configure.UsedConfig.PathInfo = make(map[string]configure.WorkspaceInfo)
+			haveChanges = true
+		}
+		if sanitizedPath, err := systools.CheckForCleanString(pInfo.Path); err == nil {
+
+			if storedInfos, ok := configure.UsedConfig.PathInfo[sanitizedPath]; ok {
+				// differs? then we need to update too
+				if storedInfos != pInfo.Project {
+					configure.UsedConfig.PathInfo[sanitizedPath] = pInfo.Project
+					haveChanges = true
+				}
+			} else {
+				// not existing. so we add them
+				configure.UsedConfig.PathInfo[sanitizedPath] = pInfo.Project
+				haveChanges = true
+			}
+			// TODO: this should not be done anytime. we should check diffs
+		} else {
+			CtxOut("error sanitize path name ", err, " ", pInfo.Path, " ignored")
+		}
+
+		if haveChanges {
+			GetLogger().WithField("project", pInfo.Project.Project).Info("Update global configuration")
+			configure.SaveDefaultConfiguration(false)
+		}
+
+	}
 }

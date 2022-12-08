@@ -30,7 +30,11 @@ func StrLen(str string) int {
 }
 
 func CheckForCleanString(s string) (cleanString string, err error) {
-	s = strings.ReplaceAll(s, ".", "-") // remove dots at least vor using configs versions
+	// replace some expected chars comming from version (dots) nd paths (/\:)
+	s = strings.ReplaceAll(s, ".", "-")
+	s = strings.ReplaceAll(s, "/", "_")
+	s = strings.ReplaceAll(s, "\\", "_")
+	s = strings.ReplaceAll(s, ":", "--") // windows paths
 	if isMatch := regexp.MustCompile(`^[A-Za-z0-9_-]*$`).MatchString(s); isMatch {
 		return s, nil
 	}
