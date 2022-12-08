@@ -251,7 +251,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						GetLogger().WithField(parseVarsMark, proc).Trace("sub process")
 					})
 
-					if internalCode == ExitOk && errorFromCm == nil && cmdCode == 0 {
+					if internalCode == systools.ExitOk && errorFromCm == nil && cmdCode == 0 {
 						GetLogger().WithField("values", returnValues).Trace("got values")
 						SetPH(parts[1], HandlePlaceHolder(strings.Join(returnValues, "\n")))
 					} else {
@@ -278,7 +278,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					GetLogger().Debug("ITERATION: DONE")
 					inIteration = false
 					abortFound := false
-					returnCode := ExitOk
+					returnCode := systools.ExitOk
 
 					iterationCollect.ForEach(func(key gjson.Result, value gjson.Result) bool {
 						var parsedExecLines []string
@@ -341,7 +341,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 	GetLogger().WithFields(logrus.Fields{
 		"parsed": parsedScript,
 	}).Debug("... parsed result")
-	return false, ExitOk, parsedScript
+	return false, systools.ExitOk, parsedScript
 }
 
 func GetArgQuotedEntries(oristr string) ([]string, bool) {
@@ -473,7 +473,7 @@ func traceMap(mapShow map[string]interface{}, add string) {
 func MergeVariableMap(mapin map[string]interface{}, maporigin map[string]interface{}) map[string]interface{} {
 	if err := mergo.Merge(&maporigin, mapin, mergo.WithOverride); err != nil {
 		manout.Error("FATAL", "error while trying merge map")
-		systools.Exit(10)
+		systools.Exit(systools.ErrorTemplate)
 	}
 	return maporigin
 }

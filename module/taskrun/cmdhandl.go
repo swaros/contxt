@@ -35,6 +35,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/systools"
 )
 
 const (
@@ -125,7 +126,7 @@ func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callb
 	err := cmd.Start()
 	if err != nil {
 		GetLogger().Warn("execution error: ", err)
-		return ExitCmdError, 0, err
+		return systools.ExitCmdError, 0, err
 	}
 
 	GetLogger().WithFields(logrus.Fields{
@@ -151,7 +152,7 @@ func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callb
 		}).Info("handle-result")
 		if !keepRunning {
 			cmd.Process.Kill()
-			return ExitByStopReason, 0, err
+			return systools.ExitByStopReason, 0, err
 		}
 
 	}
@@ -168,10 +169,10 @@ func ExecuteScriptLine(ShellToUse string, cmdArg []string, command string, callb
 		} else {
 			GetLogger().Warn("execution error: ", err)
 		}
-		return ExitCmdError, errRealCode, err
+		return systools.ExitCmdError, errRealCode, err
 	}
 
-	return ExitOk, 0, err
+	return systools.ExitOk, 0, err
 }
 
 // WriteTemplate create path based execution file

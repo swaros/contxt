@@ -193,7 +193,7 @@ func RemoveWorkspace(name string) {
 			os.Remove(path)
 		} else {
 			fmt.Println("no workspace exists with name: ", manout.MessageCln(manout.ForeLightYellow, name))
-			systools.Exit(5)
+			systools.Exit(systools.ErrorWhileLoadCfg)
 		}
 	} else {
 		fmt.Println(err)

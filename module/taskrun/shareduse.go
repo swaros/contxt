@@ -64,7 +64,7 @@ func CheckOrCreateUseConfig(externalUseCase string) (string, error) {
 				exists, _ := dirhandle.Exists(path)
 				if !exists {
 					manout.Error("USE Error", "shared usecase not exist and can not be downloaded", " ", path)
-					systools.Exit(10)
+					systools.Exit(systools.ErrorBySystem)
 				}
 				GetLogger().WithField("shared-path", path).Debug("use existing shared path")
 			}
@@ -177,7 +177,7 @@ func updateGitRepo(config configure.GitVersionInfo, doUpdate bool, workDir strin
 					fmt.Print(manout.MessageCln(manout.ForeYellow, " [update found]"))
 					if doUpdate {
 						gCode := executeGitUpdate(getSourcePath(workDir))
-						if gCode == ExitOk {
+						if gCode == systools.ExitOk {
 							config.HashUsed = hash
 							if werr := writeGitConfig(workDir+"/"+config_file, config); werr != nil {
 								manout.Error("unable to create version info", werr)
@@ -251,7 +251,7 @@ func createUseByGit(usecase, pathTouse string) string {
 		pidStr := fmt.Sprintf("%d", process.Pid)
 		GetLogger().WithFields(logrus.Fields{"process": pidStr}).Debug("git process id")
 	})
-	if internalExitCode != ExitOk {
+	if internalExitCode != systools.ExitOk {
 		// git info was failing. so we did not create anything right now by using git
 		// so now we have to check if this is a local repository
 		GetLogger().WithFields(logrus.Fields{

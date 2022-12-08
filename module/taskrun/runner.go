@@ -719,7 +719,7 @@ func MainExecute() {
 		err := executeCobra()
 		if err != nil {
 			manout.Error("error", err)
-			systools.Exit(1)
+			systools.Exit(systools.ErrorInitApp)
 		}
 
 	}
