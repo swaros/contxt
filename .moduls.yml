@@ -45,3 +45,8 @@ module:
     modul: manout
     local: false
     path: ${WS0_manout_root}
+
+  -
+    modul: outinject
+    local: false
+    path: ${WS0_outinject_root}

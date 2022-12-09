@@ -36,8 +36,20 @@ task:
       - echo " --- WS0_contxt_root = go/template [ - {{$.WS0_contxt_root}} - ]"
 {{- end}}
       - echo " --- WS0_contxt_root = ctx/var     [ - ${WS0_contxt_root} - ]"
+{{- range $k, $modul := $.module }}
+
+  ### create tasks for external modules
+  {{- if not $modul.local}}
+      - echo " --- external modul  -->  {{ $modul.modul }} [ - {{ $modul.path }} - ]"
+  {{- end }}
+{{- end }}
     next:
       - go-check
+
+######
+  - id: dev-external
+    variables:
+      include-dev-externals: "YES"
 
 ####### just for quick checking the go env on different machines
 ####### more then a note.
