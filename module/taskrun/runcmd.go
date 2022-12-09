@@ -266,6 +266,20 @@ func CollectWorkspaceInfos() (workspace, error) {
 	return ws, err
 }
 
+func ParseWorkspaceConfig(cfg configure.Configuration, pathInfoWorker func(forPath string, info configure.WorkspaceInfo)) {
+	if cfg.PathInfo != nil { // do we have informations about the paths?
+		for _, path := range cfg.Paths { // look for assignements for any of these paths
+			// build path key (sanitizedPath) if possible...
+			if sanitizedPath, err := systools.CheckForCleanString(path); err == nil {
+				// ...and check then if we infos with this path specific key
+				if storedInfos, ok := cfg.PathInfo[sanitizedPath]; ok {
+					pathInfoWorker(path, storedInfos)
+				}
+			}
+		}
+	}
+}
+
 func UpdateProjectRelation(pInfo pathInfo) {
 	if pInfo.Project.Project != "" && pInfo.Project.Role != "" {
 		haveChanges := false

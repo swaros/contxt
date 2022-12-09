@@ -134,7 +134,7 @@ func getUserDir() (string, error) {
 // GetSharedPath returns the full path to the shared repository
 func GetSharedPath(sharedName string) (string, error) {
 	fileName := SanitizeFilename(sharedName, true) // make sure we have an valid filename
-	sharedDir, err := getConfigPath(Sharedpath)    // get the path where we store shared repos
+	sharedDir, err := GetConfigPath(Sharedpath)    // get the path where we store shared repos
 	if err == nil {
 		var configPath = sharedDir + fileName // add the filename. sharedDir have the pathSeperator
 		return configPath, err
@@ -186,7 +186,7 @@ func RemoveWorkspace(name string) {
 		fmt.Println("can not remove current workspace")
 		return
 	}
-	path, err := getConfigPath(name + ".json")
+	path, err := GetConfigPath(name + ".json")
 	if err == nil {
 		var cfgExists, err = exists(path)
 		if err == nil && cfgExists {
@@ -202,14 +202,14 @@ func RemoveWorkspace(name string) {
 
 // SaveDefaultConfiguration stores the current configuration as default
 func SaveDefaultConfiguration(workSpaceConfigUpdate bool) error {
-	path, err := getConfigPath(DefaultConfigFileName)
+	path, err := GetConfigPath(DefaultConfigFileName)
 	if err == nil {
 		if err := SaveConfiguration(UsedConfig, path); err != nil {
 			return err
 		}
 		// save workspace config too
 		if workSpaceConfigUpdate {
-			pathWorkspace, secErr := getConfigPath(UsedConfig.CurrentSet + ".json")
+			pathWorkspace, secErr := GetConfigPath(UsedConfig.CurrentSet + ".json")
 			if secErr == nil {
 				return SaveConfiguration(UsedConfig, pathWorkspace)
 			}
@@ -292,6 +292,19 @@ func loadConfigurationFile(path string) error {
 	return decoder.Decode(&UsedConfig)
 }
 
+func LoadExtConfiguration(path string) (Configuration, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return Configuration{}, err
+	}
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	var cfg = Configuration{}
+	err = decoder.Decode(&cfg)
+
+	return cfg, err
+}
+
 // SaveConfiguration : stores configuration in given path
 func SaveConfiguration(config Configuration, path string) error {
 	b, err := json.MarshalIndent(config, "", " ")
@@ -304,7 +317,7 @@ func SaveConfiguration(config Configuration, path string) error {
 
 // getConfigPath returns the user related  path
 // it do not checks if this exists
-func getConfigPath(fileName string) (string, error) {
+func GetConfigPath(fileName string) (string, error) {
 	homeDir, err := getUserDir()
 	if err == nil {
 		var configPath = homeDir + DefaultPath + fileName
@@ -397,7 +410,7 @@ func checkSetup() error {
 					SaveDefaultConfiguration(false)
 				}
 				// now copy content of set
-				pathWorkspace, secErr := getConfigPath(UsedConfig.CurrentSet + ".json")
+				pathWorkspace, secErr := GetConfigPath(UsedConfig.CurrentSet + ".json")
 				if secErr == nil {
 					confPathExists, _ := exists(pathWorkspace)
 					if confPathExists {

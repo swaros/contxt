@@ -30,10 +30,10 @@ task:
       - echo " --- targets build version         [ - {{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}} - ]"
       - echo " --- self version                  [ - ${CTX_VERSION} - ]"
       - echo " --- operationg system             [ - ${CTX_OS} - ]"
-{{- if $.WS0_CONTXT_ROOT}} # always check if is set. without project info, this is not exists
-      - echo " --- WS0_CONTXT_ROOT = go/template [ - {{$.WS0_CONTXT_ROOT}} - ]"
+{{- if $.WS0_contxt_root}} # always check if is set. without project info, this is not exists
+      - echo " --- WS0_contxt_root = go/template [ - {{$.WS0_contxt_root}} - ]"
 {{- end}}
-      - echo " --- WS0_CONTXT_ROOT = ctx/var     [ - ${WS0_CONTXT_ROOT} - ]"
+      - echo " --- WS0_contxt_root = ctx/var     [ - ${WS0_contxt_root} - ]"
     next:
       - go-check
 

@@ -91,3 +91,18 @@ func WorkSpaces(callback func(string)) {
 		}
 	}
 }
+
+func AllWorkspacesConfig(configHandl func(config Configuration, path string)) error {
+	var wErr error = nil
+	WorkSpaces(func(s string) {
+		filename, _ := GetConfigPath(s + ".json")
+		if cfg, err := LoadExtConfiguration(filename); err == nil {
+			for _, path := range cfg.Paths {
+				configHandl(cfg, path)
+			}
+		} else {
+			wErr = err
+		}
+	})
+	return wErr
+}

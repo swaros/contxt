@@ -26,7 +26,6 @@ package taskrun
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -699,28 +698,43 @@ func InitDefaultVars() {
 	}
 }
 
+func setWorkspaceVariables() {
+	if err := configure.AllWorkspacesConfig(func(config configure.Configuration, path string) {
+		ParseWorkspaceConfig(config, func(forPath string, info configure.WorkspaceInfo) {
+			setConfigVaribales(info, path, "WS")
+		})
+	}); err != nil {
+		manout.Error("Configuration error", "[", err, "] there is an error in the global configuration files.")
+		systools.Exit(systools.ERRORCODE_ON_CONFIG_IMPORT)
+	}
+}
+
 // InitWsVariables is setting up variables depending the current found configuration (.contxt.yml)
 func InitWsVariables() {
+	setWorkspaceVariables()
 	if ws, err := CollectWorkspaceInfos(); err == nil {
 		SetPH("CTX_WS", ws.CurrentWs)
-
-		for _, wsInfo := range ws.Paths {
-			if wsInfo.Project.Project != "" && wsInfo.Project.Role != "" {
-				prefix := wsInfo.Project.Project + "_" + wsInfo.Project.Role
-				SetPH("WS0_"+strings.ToUpper(prefix), wsInfo.Path) // at least ws0 without any version. this could be overwritten by other checkouts
-				if wsInfo.Project.Version != "" {
-					// if version is set, we use them for avoid conflicts with different checkouts
-					if versionSan, err := systools.CheckForCleanString(wsInfo.Project.Version); err == nil {
-						prefix += "_" + versionSan
-						SetPH("WS1_"+strings.ToUpper(prefix), wsInfo.Path) // add it to ws1 as prefix for versionized keys
-					}
-				}
-			}
-
-		}
+		/*
+			for _, wsInfo := range ws.Paths {
+				setConfigVaribales(wsInfo.Project, wsInfo.Path, "WS")
+			}*/
 	} else {
 		manout.Error("fail loading workspace information ", "we run in a error while we tryed to parse the workspaces.", err)
 		systools.Exit(systools.ErrorTemplateReading)
+	}
+}
+
+func setConfigVaribales(wsInfo configure.WorkspaceInfo, path, varPrefix string) {
+	if wsInfo.Project != "" && wsInfo.Role != "" {
+		prefix := wsInfo.Project + "_" + wsInfo.Role
+		SetPH(varPrefix+"0_"+prefix, path) // at least XXX0 without any version. this could be overwritten by other checkouts
+		if wsInfo.Version != "" {
+			// if version is set, we use them for avoid conflicts with different checkouts
+			if versionSan, err := systools.CheckForCleanString(wsInfo.Version); err == nil {
+				prefix += "_" + versionSan
+				SetPH(varPrefix+"1_"+prefix, path) // add it to ws1 as prefix for versionized keys
+			}
+		}
 	}
 }
 
