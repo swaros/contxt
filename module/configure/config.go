@@ -33,7 +33,6 @@ import (
 	"os/user"
 	"strings"
 
-	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
 )
 
@@ -181,10 +180,9 @@ func ChangeWorkspace(workspace string, oldspace func(string) bool, newspace func
 }
 
 // RemoveWorkspace removes a workspace
-func RemoveWorkspace(name string) {
+func RemoveWorkspace(name string) error {
 	if name == UsedConfig.CurrentSet {
-		fmt.Println("can not remove current workspace")
-		return
+		return errors.New("can not remove current workspace")
 	}
 	path, err := GetConfigPath(name + ".json")
 	if err == nil {
@@ -192,12 +190,10 @@ func RemoveWorkspace(name string) {
 		if err == nil && cfgExists {
 			os.Remove(path)
 		} else {
-			fmt.Println("no workspace exists with name: ", manout.MessageCln(manout.ForeLightYellow, name))
-			systools.Exit(systools.ErrorWhileLoadCfg)
+			return errors.New("no workspace exists with name: " + name)
 		}
-	} else {
-		fmt.Println(err)
 	}
+	return err
 }
 
 // SaveDefaultConfiguration stores the current configuration as default
@@ -389,7 +385,6 @@ func checkSetup() error {
 			if !pathExists && err == nil {
 				err := os.Mkdir(dirPath, os.ModePerm)
 				if err != nil {
-					log.Fatal(err)
 					return err
 				}
 			}

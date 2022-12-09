@@ -714,7 +714,7 @@ func handleFileImportsToVars(imports []string) {
 			if err := ImportDataFromJSONFile(keyname, filename); err != nil {
 				GetLogger().Error("error while loading import: ", filename)
 				manout.Error("error loading json file base import:", filename, " ", err)
-				systools.Exit(systools.ERRORCODE_ON_CONFIG_IMPORT)
+				systools.Exit(systools.ErrorOnConfigImport)
 			}
 
 		}, func(yamlBaseName string) {
@@ -725,7 +725,7 @@ func handleFileImportsToVars(imports []string) {
 			if err := ImportDataFromYAMLFile(keyname, filename); err != nil {
 				GetLogger().Error("error while loading import", filename)
 				manout.Error("error loading yaml based import:", filename, " ", err)
-				systools.Exit(systools.ERRORCODE_ON_CONFIG_IMPORT)
+				systools.Exit(systools.ErrorOnConfigImport)
 			}
 		}, func(filenameBase string, ext string) {
 			if keyname == "" {
@@ -736,7 +736,7 @@ func handleFileImportsToVars(imports []string) {
 			if str, err := ParseFileAsTemplate(filename); err != nil {
 				GetLogger().Error("error while loading import", filename)
 				manout.Error("error loading text file import:", filename, " ", err)
-				systools.Exit(systools.ERRORCODE_ON_CONFIG_IMPORT)
+				systools.Exit(systools.ErrorOnConfigImport)
 			} else {
 				SetPH(keyname, str)
 			}

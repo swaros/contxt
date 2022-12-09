@@ -8,7 +8,6 @@ type Configuration struct {
 	CurrentSet string
 	Paths      []string
 	LastIndex  int
-	LastPath   string // since 0.5.0
 	PathInfo   map[string]WorkspaceInfo
 }
 

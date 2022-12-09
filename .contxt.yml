@@ -29,7 +29,7 @@ task:
       - echo " --- required build version        [ - {{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.minor}} - ]"
       - echo " --- targets build version         [ - {{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}} - ]"
       - echo " --- self version                  [ - ${CTX_VERSION} - ]"
-      - echo " --- operationg system             [ - ${CTX_OS} - ]"
+      - echo " --- operating system              [ - ${CTX_OS} - ]"
 {{- if $.WS0_contxt_root}} # always check if is set. without project info, this is not exists
       - echo " --- WS0_contxt_root = go/template [ - {{$.WS0_contxt_root}} - ]"
 {{- end}}

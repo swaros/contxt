@@ -1,15 +1,3 @@
-package taskrun
-
-import (
-	"sort"
-	"strconv"
-	"strings"
-
-	"github.com/sirupsen/logrus"
-	"github.com/swaros/contxt/module/configure"
-	"github.com/swaros/contxt/module/systools"
-)
-
 // Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
 // Licensed under the MIT License
@@ -35,6 +23,17 @@ import (
 
 // Package to decide what path is ment by some inputs, and also
 // creates a label for them, if not set
+package taskrun
+
+import (
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/sirupsen/logrus"
+	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/systools"
+)
 
 func DirFindApplyAndSave(args []string) (string, error) {
 	dir := DirFind(args)

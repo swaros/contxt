@@ -203,7 +203,10 @@ you need to set the name for the workspace`,
 
 			if deleteWs != "" {
 				GetLogger().WithField("workspace", deleteWs).Info("got remove workspace option")
-				configure.RemoveWorkspace(deleteWs)
+				if err := configure.RemoveWorkspace(deleteWs); err != nil {
+					manout.Error("error while trying to deleting workspace", err)
+					systools.Exit(systools.ErrorBySystem)
+				}
 				defaulttask = false
 			}
 
@@ -705,7 +708,7 @@ func setWorkspaceVariables() {
 		})
 	}); err != nil {
 		manout.Error("Configuration error", "[", err, "] there is an error in the global configuration files.")
-		systools.Exit(systools.ERRORCODE_ON_CONFIG_IMPORT)
+		systools.Exit(systools.ErrorOnConfigImport)
 	}
 }
 
