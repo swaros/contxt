@@ -33,6 +33,8 @@ import (
 )
 
 // Current returns the current path
+// TODO: what i was doing here? seek and destroy. no need to map os.Getwd with exactly the same behavior (except just dying)
+
 func Current() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {

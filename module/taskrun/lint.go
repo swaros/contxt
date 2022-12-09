@@ -138,7 +138,7 @@ func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
 	template, path, exists, terr := GetTemplate()
 	if terr != nil {
 		fmt.Println(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
-		systools.Exit(33)
+		systools.Exit(systools.ErrorTemplateReading)
 		return
 	}
 	var b bytes.Buffer
@@ -156,14 +156,14 @@ func ShowAsYaml(fullparsed bool, trySupress bool, indent int) {
 
 			} else {
 				manout.Error("error parsing template", conerr)
-				systools.Exit(1)
+				systools.Exit(systools.ErrorTemplateReading)
 			}
 
 		} else {
 			data, err := GetParsedTemplateSource(path)
 			if err != nil {
 				manout.Error("template loading", err)
-				systools.Exit(1)
+				systools.Exit(systools.ErrorTemplateReading)
 			}
 			fmt.Println(data)
 		}

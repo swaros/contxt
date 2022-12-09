@@ -1,4 +1,15 @@
-version: "0.4.0"
+# we use the build version for not running in a version conflict, if we do not have the new version installed
+version: "{{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.minor}}"
+
+# define oure workspace
+workspace:
+   project: contxt
+   role: root
+   version: "{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}"
+
+# we need a couple of imports to create some
+# content depending the values we imported
+# see .inc.contxt.yml where all value files defined
 config:
   imports:
     - ./imports/dependabot.tpl depandabot
@@ -9,9 +20,25 @@ config:
       coverage-report: ""
       depbot-file: .github/dependabot.yml
 
+###### contxt welcome message
+###### just to display default variables
+task:
+  - id: welcome
+    script:
+      - echo "welcome to contxt"
+      - echo " --- required build version        [ - {{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.minor}} - ]"
+      - echo " --- targets build version         [ - {{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}} - ]"
+      - echo " --- self version                  [ - ${CTX_VERSION} - ]"
+      - echo " --- operating system              [ - ${CTX_OS} - ]"
+{{- if $.WS0_contxt_root}} # always check if is set. without project info, this is not exists
+      - echo " --- WS0_contxt_root = go/template [ - {{$.WS0_contxt_root}} - ]"
+{{- end}}
+      - echo " --- WS0_contxt_root = ctx/var     [ - ${WS0_contxt_root} - ]"
+    next:
+      - go-check
+
 ####### just for quick checking the go env on different machines
 ####### more then a note.
-task:
   - id: go-check
     require:
       system: linux
@@ -177,6 +204,13 @@ task:
       - go test -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...
     {{- end }}
 
+  - id: set-version
+    options:
+      invisible: true
+    script:
+      - "#@set main-version {{$.release.version.main}}"
+      - "#@set mid-version {{$.release.version.mid}}"
+      - "#@set minor-version {{$.release.version.minor}}"
 
   - id: set-version
     options:
@@ -187,9 +221,6 @@ task:
     require:
       system: linux
     script:
-      - "#@var main-version cat docs/mainversion"
-      - "#@var mid-version cat docs/midversion"
-      - "#@var minor-version cat docs/minversion"
       - "#@var build-hash date -u +.%Y%m%d.%H%M%S"
       - "#@set bin-out contxt"
 
@@ -203,9 +234,6 @@ task:
     require:
       system: windows
     script:
-      - "#@var main-version type docs/mainversion"
-      - "#@var mid-version type docs/midversion"
-      - "#@var minor-version type docs/minversion"
       - "#@var build-hash Get-Date -UFormat \"%m.%d.%Y.%R\""
       - "#@set bin-out contxt.exe"
 

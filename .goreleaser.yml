@@ -1,7 +1,7 @@
 # This is an example goreleaser.yaml file with some sane defaults.
 # Make sure to check the documentation at http://goreleaser.com
 before:
-  hooks:     
+  hooks:
     # You may remove this if you don't use go modules.
     # - go mod download
     # you may remove this if you don't need go generate
@@ -37,7 +37,7 @@ changelog:
       - '^docs:'
       - '^test:'
 
-env_files:  
+env_files:
   github_token: ~/keystore/tokens/goreleaser.token
 
 nfpms:
@@ -57,7 +57,6 @@ nfpms:
       compression: lzma
 
 
-    
 
 
 

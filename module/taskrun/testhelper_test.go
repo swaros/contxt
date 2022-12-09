@@ -54,8 +54,19 @@ func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) erro
 
 }
 
+// assertVarStrEquals is testing a contxt variable content against the expected value
 func assertVarStrEquals(t *testing.T, keyname, expected string) bool {
 	check := clearStrings(taskrun.GetPH(keyname))
+
+	if check != clearStrings(expected) {
+		t.Error("expected " + expected + " as variable. but got <" + check + ">")
+		return false
+	}
+	return true
+}
+
+func assertStringEquals(t *testing.T, actual, expected string) bool {
+	check := clearStrings(actual)
 
 	if check != clearStrings(expected) {
 		t.Error("expected " + expected + " as variable. but got <" + check + ">")

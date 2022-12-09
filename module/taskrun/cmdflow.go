@@ -41,21 +41,6 @@ import (
 	"github.com/swaros/contxt/module/configure"
 )
 
-const (
-	// ExitOk the process was executed without errors
-	ExitOk = 0
-	// ExitByStopReason the process stopped because of a defined reason
-	ExitByStopReason = 101
-	// ExitNoCode means there was no code associated
-	ExitNoCode = 102
-	// ExitCmdError means the execution of the command fails. a error by the command itself
-	ExitCmdError = 103
-	// ExitByRequirement means a requirement was not fulfills
-	ExitByRequirement = 104
-	// ExitAlreadyRunning means the task is not started, because it is already created
-	ExitAlreadyRunning = 105
-)
-
 // SharedFolderExecuter runs shared .contxt.yml files directly without merging them into
 // the current contxt file
 func SharedFolderExecuter(template configure.RunConfig, locationHandle func(string, string)) {
@@ -125,7 +110,7 @@ func RunTargets(targets string, sharedRun bool) {
 	// validate first
 	if err := TestTemplate(); err != nil {
 		CtxOut("found issues in the current template. ", err)
-		systools.Exit(32)
+		systools.Exit(systools.ErrorTemplate)
 		return
 	}
 
@@ -144,7 +129,7 @@ func RunTargets(targets string, sharedRun bool) {
 	template, templatePath, exists, terr := GetTemplate()
 	if terr != nil {
 		CtxOut(manout.MessageCln(manout.ForeRed, "Error ", manout.CleanTag, terr.Error()))
-		systools.Exit(33)
+		systools.Exit(systools.ErrorTemplateReading)
 		return
 	}
 	GetLogger().WithField("targets", allTargets).Info("run targets...")
@@ -401,12 +386,12 @@ func lineExecuter(
 	}
 	// check execution codes
 	switch execCode {
-	case ExitByStopReason:
-		return ExitByStopReason, true
-	case ExitCmdError:
+	case systools.ExitByStopReason:
+		return systools.ExitByStopReason, true
+	case systools.ExitCmdError:
 		if script.Options.IgnoreCmdError {
 			if script.Stopreasons.Onerror {
-				return ExitByStopReason, true
+				return systools.ExitByStopReason, true
 			}
 			CtxOut(manout.MessageCln(manout.ForeYellow, "NOTE!\t", manout.BackLightYellow, manout.ForeDarkGrey, " a script execution was failing. no stopreason is set so execution will continued "))
 			CtxOut(manout.MessageCln("\t", manout.BackLightYellow, manout.ForeDarkGrey, " if this is expected you can ignore this message.                                 "))
@@ -426,12 +411,12 @@ func lineExecuter(
 			GetLogger().Error("runtime error:", execErr, "exit", realExitCode)
 			systools.Exit(realExitCode)
 			// returns the error code
-			return ExitCmdError, true
+			return systools.ExitCmdError, true
 		}
-	case ExitOk:
-		return ExitOk, false
+	case systools.ExitOk:
+		return systools.ExitOk, false
 	}
-	return ExitNoCode, true
+	return systools.ExitNoCode, true
 }
 
 func generateFuturesByTargetListAndExec(RunTargets []string, waitGroup *sync.WaitGroup, runCfg configure.RunConfig) []awaitgroup.Future {
@@ -492,7 +477,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 	// this check depends on the target name.
 	if !runCfg.Config.AllowMutliRun && TaskRunning(target) {
 		GetLogger().WithField("task", target).Warning("task would be triggered again while is already running. IGNORED")
-		return ExitAlreadyRunning
+		return systools.ExitAlreadyRunning
 	}
 	// increment task counter
 	incTaskCount(target)
@@ -505,7 +490,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 	// Checking if the Tasklist have something
 	// to handle
 	if len(runCfg.Task) > 0 {
-		returnCode := ExitOk
+		returnCode := systools.ExitOk
 
 		// the main variables will be set at first
 		// but only if the they not already exists
@@ -583,7 +568,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 					chDirError := os.Chdir(HandlePlaceHolderWithScope(script.Options.WorkingDir, scopeVars))
 					if chDirError != nil {
 						manout.Error("Workspace setting seems invalid ", chDirError)
-						systools.Exit(10)
+						systools.Exit(systools.ErrorBySystem)
 					}
 				}
 
@@ -690,9 +675,11 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 			}
 
 		}
+		// we have at least none of the possible task executed.
 		if !targetFound {
-			CtxOut(manout.MessageCln(manout.ForeYellow, "target not defined: ", manout.ForeWhite, target))
+			CtxOut(manout.MessageCln(manout.ForeYellow, "target not defined or matching any requirement: ", manout.ForeWhite, target))
 			GetLogger().Error("Target can not be found: ", target)
+			return systools.ExitByNoTargetExists
 		}
 
 		GetLogger().WithFields(logrus.Fields{
@@ -700,7 +687,7 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 		}).Info("executeTemplate. target do not contains tasks")
 		return returnCode
 	}
-	return ExitNoCode
+	return systools.ExitNoCode
 }
 
 func defaultString(line string, defaultString string) string {
@@ -727,7 +714,7 @@ func handleFileImportsToVars(imports []string) {
 			if err := ImportDataFromJSONFile(keyname, filename); err != nil {
 				GetLogger().Error("error while loading import: ", filename)
 				manout.Error("error loading json file base import:", filename, " ", err)
-				systools.Exit(ERRORCODE_ON_CONFIG_IMPORT)
+				systools.Exit(systools.ErrorOnConfigImport)
 			}
 
 		}, func(yamlBaseName string) {
@@ -738,7 +725,7 @@ func handleFileImportsToVars(imports []string) {
 			if err := ImportDataFromYAMLFile(keyname, filename); err != nil {
 				GetLogger().Error("error while loading import", filename)
 				manout.Error("error loading yaml based import:", filename, " ", err)
-				systools.Exit(ERRORCODE_ON_CONFIG_IMPORT)
+				systools.Exit(systools.ErrorOnConfigImport)
 			}
 		}, func(filenameBase string, ext string) {
 			if keyname == "" {
@@ -749,7 +736,7 @@ func handleFileImportsToVars(imports []string) {
 			if str, err := ParseFileAsTemplate(filename); err != nil {
 				GetLogger().Error("error while loading import", filename)
 				manout.Error("error loading text file import:", filename, " ", err)
-				systools.Exit(ERRORCODE_ON_CONFIG_IMPORT)
+				systools.Exit(systools.ErrorOnConfigImport)
 			} else {
 				SetPH(keyname, str)
 			}

@@ -33,7 +33,6 @@ import (
 	"os/user"
 	"strings"
 
-	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
 )
 
@@ -134,7 +133,7 @@ func getUserDir() (string, error) {
 // GetSharedPath returns the full path to the shared repository
 func GetSharedPath(sharedName string) (string, error) {
 	fileName := SanitizeFilename(sharedName, true) // make sure we have an valid filename
-	sharedDir, err := getConfigPath(Sharedpath)    // get the path where we store shared repos
+	sharedDir, err := GetConfigPath(Sharedpath)    // get the path where we store shared repos
 	if err == nil {
 		var configPath = sharedDir + fileName // add the filename. sharedDir have the pathSeperator
 		return configPath, err
@@ -181,35 +180,32 @@ func ChangeWorkspace(workspace string, oldspace func(string) bool, newspace func
 }
 
 // RemoveWorkspace removes a workspace
-func RemoveWorkspace(name string) {
+func RemoveWorkspace(name string) error {
 	if name == UsedConfig.CurrentSet {
-		fmt.Println("can not remove current workspace")
-		return
+		return errors.New("can not remove current workspace")
 	}
-	path, err := getConfigPath(name + ".json")
+	path, err := GetConfigPath(name + ".json")
 	if err == nil {
 		var cfgExists, err = exists(path)
 		if err == nil && cfgExists {
 			os.Remove(path)
 		} else {
-			fmt.Println("no workspace exists with name: ", manout.MessageCln(manout.ForeLightYellow, name))
-			systools.Exit(5)
+			return errors.New("no workspace exists with name: " + name)
 		}
-	} else {
-		fmt.Println(err)
 	}
+	return err
 }
 
 // SaveDefaultConfiguration stores the current configuration as default
 func SaveDefaultConfiguration(workSpaceConfigUpdate bool) error {
-	path, err := getConfigPath(DefaultConfigFileName)
+	path, err := GetConfigPath(DefaultConfigFileName)
 	if err == nil {
 		if err := SaveConfiguration(UsedConfig, path); err != nil {
 			return err
 		}
 		// save workspace config too
 		if workSpaceConfigUpdate {
-			pathWorkspace, secErr := getConfigPath(UsedConfig.CurrentSet + ".json")
+			pathWorkspace, secErr := GetConfigPath(UsedConfig.CurrentSet + ".json")
 			if secErr == nil {
 				return SaveConfiguration(UsedConfig, pathWorkspace)
 			}
@@ -220,37 +216,104 @@ func SaveDefaultConfiguration(workSpaceConfigUpdate bool) error {
 	return nil
 }
 
-// PathWorker executes a callback function in a path
-func PathWorker(callback func(int, string)) error {
+func SaveActualPathByIndex(useIndex int) error {
+	if useIndex >= 0 && useIndex != UsedConfig.LastIndex {
+		UsedConfig.LastIndex = useIndex
+		return SaveDefaultConfiguration(true)
+	}
+	if useIndex < 0 {
+		return errors.New("invalid index number")
+	}
+	// just no need to save. no error.
+	return nil
+}
+
+func SaveActualPathByPath(pathToSave string) error {
+	for index, path := range UsedConfig.Paths {
+		if path == pathToSave {
+			return SaveActualPathByIndex(index)
+		}
+	}
+	return errors.New("this path " + pathToSave + " is not part of the stored paths")
+}
+
+// PathWorkerWithCd executes a callback function in a path
+func PathWorker(callbackInDirextory func(int, string), callbackBackToOrigin func(origin string)) error {
+	// checking current directory. store it for going back later
+	if current, err := os.Getwd(); err != nil {
+		return err
+	} else {
+		// do we have targets? then iterate
+		// on them, got to the directory, and execute the callback
+		cnt := len(UsedConfig.Paths)
+		if cnt < 1 {
+			return errors.New("no paths actually stored ")
+		}
+		for index, path := range UsedConfig.Paths {
+			if err := os.Chdir(path); err == nil {
+				callbackInDirextory(index, path)
+			} else {
+				return err
+			}
+		}
+		// now it is time for going back to the dir we was before
+		if err := os.Chdir(current); err == nil {
+			callbackBackToOrigin(current)
+		} else {
+			return err
+		}
+		return nil
+	}
+}
+
+func PathWorkerNoCd(callback func(int, string)) error {
 	cnt := len(UsedConfig.Paths)
 	if cnt < 1 {
 		return errors.New("no paths actually stored ")
 	}
 	for index, path := range UsedConfig.Paths {
-		os.Chdir(path)
 		callback(index, path)
 	}
 	return nil
 }
 
 func loadConfigurationFile(path string) error {
-	file, _ := os.Open(path)
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 
 	return decoder.Decode(&UsedConfig)
 }
 
+func LoadExtConfiguration(path string) (Configuration, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return Configuration{}, err
+	}
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	var cfg = Configuration{}
+	err = decoder.Decode(&cfg)
+
+	return cfg, err
+}
+
 // SaveConfiguration : stores configuration in given path
 func SaveConfiguration(config Configuration, path string) error {
-	b, _ := json.MarshalIndent(config, "", " ")
+	b, err := json.MarshalIndent(config, "", " ")
+	if err != nil {
+		return err
+	}
 	return ioutil.WriteFile(path, b, 0644)
 
 }
 
 // getConfigPath returns the user related  path
 // it do not checks if this exists
-func getConfigPath(fileName string) (string, error) {
+func GetConfigPath(fileName string) (string, error) {
 	homeDir, err := getUserDir()
 	if err == nil {
 		var configPath = homeDir + DefaultPath + fileName
@@ -315,43 +378,46 @@ func checkSetup() error {
 	if err == nil {
 		var dirPath = homeDir + DefaultPath
 		var configPath = homeDir + DefaultPath + DefaultConfigFileName
-		pathExists, err := exists(dirPath)
-		// path dos not exists. create it
-		if !pathExists && err == nil {
-			err := os.Mkdir(dirPath, os.ModePerm)
+		if pathExists, err := exists(dirPath); err != nil {
+			return err
+		} else {
+			// path dos not exists. create it
+			if !pathExists && err == nil {
+				err := os.Mkdir(dirPath, os.ModePerm)
+				if err != nil {
+					return err
+				}
+			}
+
+			configFileExists, err := exists(configPath)
 			if err != nil {
-				log.Fatal(err)
 				return err
 			}
-		}
-
-		configFileExists, err := exists(configPath)
-		// no config file exists. create default config
-		if !configFileExists && err == nil {
-			createDefaultConfig()
-		}
-
-		// load config file
-		if configFileExists && err == nil {
-			if lErr := loadConfigurationFile(configPath); lErr != nil {
-				return lErr
-			}
-			if UsedConfig.CurrentSet == "" {
-				UsedConfig.CurrentSet = DefaultWorkspace
-				SaveDefaultConfiguration(false)
-			}
-			// now copy content of set
-			pathWorkspace, secErr := getConfigPath(UsedConfig.CurrentSet + ".json")
-			if secErr == nil {
-				confPathExists, _ := exists(pathWorkspace)
-				if confPathExists {
-					return loadConfigurationFile(pathWorkspace)
+			// no config file exists. create default config
+			if !configFileExists {
+				createDefaultConfig()
+			} else {
+				if lErr := loadConfigurationFile(configPath); lErr != nil {
+					return lErr
+				}
+				if UsedConfig.CurrentSet == "" {
+					UsedConfig.CurrentSet = DefaultWorkspace
+					SaveDefaultConfiguration(false)
+				}
+				// now copy content of set
+				pathWorkspace, secErr := GetConfigPath(UsedConfig.CurrentSet + ".json")
+				if secErr == nil {
+					confPathExists, _ := exists(pathWorkspace)
+					if confPathExists {
+						return loadConfigurationFile(pathWorkspace)
+					} else {
+						UsedConfig.Paths = nil
+					}
 				} else {
-					UsedConfig.Paths = nil
+					return secErr
 				}
 			}
 		}
-
 	}
 	return err
 }

@@ -2,3 +2,4 @@ include:
   basedir: false
   folders:
   - ./.moduls.yml
+  - version.yml

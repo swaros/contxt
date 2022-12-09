@@ -1,10 +1,14 @@
 package configure
 
 // Configuration includes all paths for the current workspace
+// this is the main Configuration that is needed to eep track which path
+// is currently used.
+// this is the used format til version 0.4.0
 type Configuration struct {
 	CurrentSet string
 	Paths      []string
 	LastIndex  int
+	PathInfo   map[string]WorkspaceInfo
 }
 
 // CommandLine defines a line of commands that can be executed

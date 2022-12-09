@@ -25,53 +25,15 @@
 package taskrun
 
 import (
+	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
 )
-
-// DirFind returns the best matching part of depending the arguments, what of the stored paths
-// would be the expected one
-func DirFind(args []string) string {
-	useIndex := -1
-	usePath := "."
-	if len(args) == 0 {
-		dirhandle.PrintDir(configure.UsedConfig.LastIndex)
-	} else {
-		configure.PathWorker(func(index int, path string) {
-			for _, search := range args {
-				found := strings.Contains(path, search)
-				if found {
-					useIndex = index
-					usePath = path
-					GetLogger().WithFields(logrus.Fields{"index": useIndex, "path": usePath}).Debug("Found match by comparing strings")
-				} else {
-					// this part is not found. but maybe it is a index number?
-					sIndex, err := strconv.Atoi(search)
-					if err == nil && index == sIndex {
-						useIndex = index
-						usePath = path
-						GetLogger().WithFields(logrus.Fields{"index": useIndex, "path": usePath}).Debug("Found match by using param as index")
-					}
-				}
-			}
-		})
-
-		if useIndex >= 0 && useIndex != configure.UsedConfig.LastIndex {
-			configure.UsedConfig.LastIndex = useIndex
-			configure.SaveDefaultConfiguration(true)
-		}
-
-		fmt.Println(usePath)
-
-	}
-	return usePath
-}
 
 func PrintCnPaths(hints bool) {
 	fmt.Println(manout.MessageCln("\t", "paths stored in ", manout.ForeCyan, configure.UsedConfig.CurrentSet))
@@ -89,7 +51,7 @@ func PrintCnPaths(hints bool) {
 // ShowPaths : display all stored paths in the workspace
 func ShowPaths(current string) int {
 
-	configure.PathWorker(func(index int, path string) {
+	configure.PathWorkerNoCd(func(index int, path string) {
 		if path == current {
 			fmt.Println(manout.MessageCln("\t[", manout.ForeLightYellow, index, manout.CleanTag, "]\t", manout.BoldTag, path))
 		} else {
@@ -229,7 +191,7 @@ func printPaths() {
 			} else {
 				fmt.Println(manout.MessageCln("       path: ", manout.Dim, " no ", manout.ForeYellow, index, " ", pathColor, add, path))
 			}
-		})
+		}, func(origin string) {})
 		if notWorkspace {
 			fmt.Println()
 			fmt.Println(manout.MessageCln(manout.BackYellow, manout.ForeBlue, " WARNING ! ", manout.CleanTag, "\tyou are currently in none of the assigned locations."))
@@ -258,11 +220,12 @@ func printPaths() {
 }
 
 type pathInfo struct {
-	Path         string   // the stored path
-	Targets      []string // all existing targets
-	Active       bool     // this is the active path
-	IsSubDir     bool     // this path is the active or a subdir of current dir
-	HaveTemplate bool     // in this folder a template exists
+	Path         string                  // the stored path
+	Targets      []string                // all existing targets
+	Active       bool                    // this is the active path
+	IsSubDir     bool                    // this path is the active or a subdir of current dir
+	HaveTemplate bool                    // in this folder a template exists
+	Project      configure.WorkspaceInfo // infos about the project could be there
 }
 
 type workspace struct {
@@ -274,6 +237,9 @@ type workspace struct {
 
 func CollectWorkspaceInfos() (workspace, error) {
 	var ws workspace
+	if configure.UsedConfig.CurrentSet == "" {
+		return ws, errors.New("no workspace loaded")
+	}
 	dir, err := dirhandle.Current()
 	if err == nil {
 		ws.CurrentDir = dir
@@ -286,14 +252,64 @@ func CollectWorkspaceInfos() (workspace, error) {
 			template, _, exists, _ := GetTemplate()
 			pInfo.HaveTemplate = exists
 			pInfo.Active = (dir == path)
+			pInfo.Project = template.Workspace
+			UpdateProjectRelation(pInfo)
 			pInfo.IsSubDir = strings.Contains(dir, path)
 			if exists {
 				pInfo.Targets, _ = templateTargetsAsMap(template)
 			}
 			ws.Paths = append(ws.Paths, pInfo)
 
-		})
+		}, func(origin string) {})
 		return ws, nil
 	}
 	return ws, err
+}
+
+func ParseWorkspaceConfig(cfg configure.Configuration, pathInfoWorker func(forPath string, info configure.WorkspaceInfo)) {
+	if cfg.PathInfo != nil { // do we have informations about the paths?
+		for _, path := range cfg.Paths { // look for assignements for any of these paths
+			// build path key (sanitizedPath) if possible...
+			if sanitizedPath, err := systools.CheckForCleanString(path); err == nil {
+				// ...and check then if we infos with this path specific key
+				if storedInfos, ok := cfg.PathInfo[sanitizedPath]; ok {
+					pathInfoWorker(path, storedInfos)
+				}
+			}
+		}
+	}
+}
+
+func UpdateProjectRelation(pInfo pathInfo) {
+	if pInfo.Project.Project != "" && pInfo.Project.Role != "" {
+		haveChanges := false
+		// could be nil. so we initilize them first if needed
+		if configure.UsedConfig.PathInfo == nil {
+			configure.UsedConfig.PathInfo = make(map[string]configure.WorkspaceInfo)
+			haveChanges = true
+		}
+		if sanitizedPath, err := systools.CheckForCleanString(pInfo.Path); err == nil {
+
+			if storedInfos, ok := configure.UsedConfig.PathInfo[sanitizedPath]; ok {
+				// differs? then we need to update too
+				if storedInfos != pInfo.Project {
+					configure.UsedConfig.PathInfo[sanitizedPath] = pInfo.Project
+					haveChanges = true
+				}
+			} else {
+				// not existing. so we add them
+				configure.UsedConfig.PathInfo[sanitizedPath] = pInfo.Project
+				haveChanges = true
+			}
+			// TODO: this should not be done anytime. we should check diffs
+		} else {
+			CtxOut("error sanitize path name ", err, " ", pInfo.Path, " ignored")
+		}
+
+		if haveChanges {
+			GetLogger().WithField("project", pInfo.Project.Project).Info("Update global configuration")
+			configure.SaveDefaultConfiguration(false)
+		}
+
+	}
 }

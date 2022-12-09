@@ -133,7 +133,7 @@ func (ui *CtxUi) UpdatePathList() {
 		ui.pages.SendToBack("paths")
 	})
 
-	configure.PathWorker(func(index int, name string) {
+	configure.PathWorkerNoCd(func(index int, name string) {
 		indxStr := strconv.Itoa(index)
 		ui.pathList.AddItem(name, "", rune(indxStr[0]), nil)
 	})
@@ -267,7 +267,7 @@ func (ui *CtxUi) CreatePathSelectPage() *tview.Flex {
 	ui.pathList.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
 		//doMagicParamOne(s1)
 
-		configure.PathWorker(func(index int, path string) {
+		configure.PathWorkerNoCd(func(index int, path string) {
 			if path == s1 {
 				configure.UsedConfig.LastIndex = index
 				configure.SaveDefaultConfiguration(true)

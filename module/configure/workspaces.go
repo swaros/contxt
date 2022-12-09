@@ -15,7 +15,10 @@ func ListWorkSpaces() []string {
 	if err == nil {
 		fullHomeDir = homeDir + DefaultPath
 		err := filepath.Walk(fullHomeDir, func(path string, info os.FileInfo, err error) error {
-			files = append(files, path)
+			var basePath = filepath.Dir(path)
+			if basePath+string(os.PathSeparator) == fullHomeDir && filepath.Ext(path) == ".json" {
+				files = append(files, path)
+			}
 			return nil
 		})
 		if err != nil {
@@ -90,4 +93,19 @@ func WorkSpaces(callback func(string)) {
 			}
 		}
 	}
+}
+
+func AllWorkspacesConfig(configHandl func(config Configuration, path string)) error {
+	var wErr error = nil
+	WorkSpaces(func(s string) {
+		filename, _ := GetConfigPath(s + ".json")
+		if cfg, err := LoadExtConfiguration(filename); err == nil {
+			for _, path := range cfg.Paths {
+				configHandl(cfg, path)
+			}
+		} else {
+			wErr = err
+		}
+	})
+	return wErr
 }

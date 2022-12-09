@@ -56,10 +56,18 @@ type IncludePaths struct {
 //
 
 // RunConfig defines the structure of the local stored execution files
+// this is the ROOT of the contxt.yml
 type RunConfig struct {
-	Version string `yaml:"version"`
-	Config  Config `yaml:"config"`
-	Task    []Task `yaml:"task"`
+	Version   string        `yaml:"version"`
+	Config    Config        `yaml:"config"`
+	Task      []Task        `yaml:"task"`
+	Workspace WorkspaceInfo `yaml:"workspace,omitempty"`
+}
+
+type WorkspaceInfo struct {
+	Project string `yaml:"project"` // the name of the project
+	Role    string `yaml:"role"`    // what is this path about.
+	Version string `yaml:"version"` // optional version
 }
 
 // Autorun defines the targets they have to be executed

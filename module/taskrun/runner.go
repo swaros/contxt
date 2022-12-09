@@ -66,7 +66,7 @@ var (
 		Short: "workspaces for the shell",
 		Long: `Contxt helps you to organize projects.
 it helps also to execute tasks depending these projects.
-this task can be used to setup and cleanup the workspace 
+this task can be used to setup and cleanup the workspace
 if you enter or leave them.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
@@ -136,8 +136,8 @@ PowerShell:
 	gotoCmd = &cobra.Command{
 		Use:   "switch",
 		Short: "switch workspace",
-		Long: `switch the workspace to a existing ones. 
-all defined onEnter and onLeave task will be executed 
+		Long: `switch the workspace to a existing ones.
+all defined onEnter and onLeave task will be executed
 if these task are defined
 `,
 		Run: func(_ *cobra.Command, args []string) {
@@ -203,7 +203,10 @@ you need to set the name for the workspace`,
 
 			if deleteWs != "" {
 				GetLogger().WithField("workspace", deleteWs).Info("got remove workspace option")
-				configure.RemoveWorkspace(deleteWs)
+				if err := configure.RemoveWorkspace(deleteWs); err != nil {
+					manout.Error("error while trying to deleting workspace", err)
+					systools.Exit(systools.ErrorBySystem)
+				}
 				defaulttask = false
 			}
 
@@ -233,7 +236,12 @@ you need to set the name for the workspace`,
 		Short: "find path by a part of them",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			DirFind(args)
+			if len(args) < 1 {
+				dirhandle.PrintDir(configure.UsedConfig.LastIndex) // without arguments prinst the last used path
+			} else {
+				path, _ := DirFindApplyAndSave(args)
+				fmt.Println(path) // path only as output. so cn can handle it
+			}
 		},
 	}
 
@@ -461,7 +469,7 @@ you will also see if a unexpected propertie found `,
 				path, err := dirhandle.Current()
 				if err == nil {
 					if runAtAll {
-						configure.PathWorker(func(_ int, path string) {
+						configure.PathWorkerNoCd(func(_ int, path string) {
 							GetLogger().WithField("path", path).Info("change dir")
 							os.Chdir(path)
 							runTargets(path, arg)
@@ -650,13 +658,19 @@ func shortcuts() bool {
 
 func InitDefaultVars() {
 	SetPH("CTX_OS", configure.GetOs())
+	SetPH("CTX_VERSION", configure.GetVersion())
+	SetPH("CTX_BUILDNO", configure.GetBuild())
+	// on windows we have to deal with old powershell and cmd versions, the do not
+	// support ANSII.
 	if configure.GetOs() == "windows" {
-		manout.ColorEnabled = false
-		if os.Getenv("CTX_COLOR") == "ON" {
+		manout.ColorEnabled = false         //  by default we turn off the colors.
+		if os.Getenv("CTX_COLOR") == "ON" { // then lets see if this should forced for beeing enabled by env-var
 			manout.ColorEnabled = true
 		} else {
-			cmd := "$PSVersionTable.PSVersion.Major"
-			cmdArg := []string{"-nologo", "-noprofile"}
+			// if not forced already we try to figure out, by oure own, if the powershell is able to support ANSII
+			// this is since version 7 the case
+			cmd := "$PSVersionTable.PSVersion.Major"    // powershell cmd to get actual version
+			cmdArg := []string{"-nologo", "-noprofile"} // these the arguments for powrshell
 			version := ""
 			ExecuteScriptLine(GetDefaultCmd(), cmdArg, cmd, func(s string, e error) bool {
 				version = s
@@ -664,30 +678,85 @@ func InitDefaultVars() {
 			}, func(p *os.Process) {
 
 			})
-			SetPH("CTX_PS_VERSION", version)
+			SetPH("CTX_PS_VERSION", version) // also setup varibale to have the PS version in place
 			if version >= "7" {
-				manout.ColorEnabled = true
+				manout.ColorEnabled = true // enable colors if we have powershell equals or greater then 7
 			}
 		}
 	}
 	// we checking the console support
+	// and turn the color off again if we do not have an terminal
+	inTerminal := "YES"
 	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		manout.ColorEnabled = false
+		inTerminal = "NO"
+	}
+	SetPH("CTX_IN_TERMINAL", inTerminal) // do we have terminal running?
+
+	if currentDir, err := os.Getwd(); err == nil { // location as var
+		SetPH("CTX_PWD", currentDir)
+	} else {
+		CtxOut("Critical error while reading directory", err)
+		systools.Exit(systools.ErrorBySystem)
 	}
 }
 
+func setWorkspaceVariables() {
+	if err := configure.AllWorkspacesConfig(func(config configure.Configuration, path string) {
+		ParseWorkspaceConfig(config, func(forPath string, info configure.WorkspaceInfo) {
+			setConfigVaribales(info, path, "WS")
+		})
+	}); err != nil {
+		manout.Error("Configuration error", "[", err, "] there is an error in the global configuration files.")
+		systools.Exit(systools.ErrorOnConfigImport)
+	}
+}
+
+// InitWsVariables is setting up variables depending the current found configuration (.contxt.yml)
+func InitWsVariables() {
+	setWorkspaceVariables()
+	if ws, err := CollectWorkspaceInfos(); err == nil {
+		SetPH("CTX_WS", ws.CurrentWs)
+		/*
+			for _, wsInfo := range ws.Paths {
+				setConfigVaribales(wsInfo.Project, wsInfo.Path, "WS")
+			}*/
+	} else {
+		manout.Error("fail loading workspace information ", "we run in a error while we tryed to parse the workspaces.", err)
+		systools.Exit(systools.ErrorTemplateReading)
+	}
+}
+
+func setConfigVaribales(wsInfo configure.WorkspaceInfo, path, varPrefix string) {
+	if wsInfo.Project != "" && wsInfo.Role != "" {
+		prefix := wsInfo.Project + "_" + wsInfo.Role
+		SetPH(varPrefix+"0_"+prefix, path) // at least XXX0 without any version. this could be overwritten by other checkouts
+		if wsInfo.Version != "" {
+			// if version is set, we use them for avoid conflicts with different checkouts
+			if versionSan, err := systools.CheckForCleanString(wsInfo.Version); err == nil {
+				prefix += "_" + versionSan
+				SetPH(varPrefix+"1_"+prefix, path) // add it to ws1 as prefix for versionized keys
+			}
+		}
+	}
+}
+
+// MainInit initilaize the Application.
+// this is required for any entrie-point
+// currently we have two of them.
+// by running in interactive in ishell, and by running with parameters.
 func MainInit() {
-	pathIndex = -1
-	initLogger()
-	InitDefaultVars()
-	var configErr = configure.InitConfig()
+	ResetVariables()                       // needed because we could run in a shell
+	pathIndex = -1                         // this is the path index used for the current path. -1 means unset
+	initLogger()                           // init the logger. currently there is nothing happens except sometime for local debug
+	InitDefaultVars()                      // init all the default variables first, they are independend from any configuration
+	CopyPlaceHolder2Origin()               // doing this 1/2 to have the current variables already in palce until we parse the config
+	var configErr = configure.InitConfig() // try to initialize current config
 	if configErr != nil {
 		log.Fatal(configErr)
 	}
-
-	currentDir, _ := dirhandle.Current()
-	SetPH("CTX_PWD", currentDir)
-
+	InitWsVariables()        // like InitDefaultVars but these variables needs the configuration initalized
+	CopyPlaceHolder2Origin() // make placeholders usable as golang/template again
 }
 
 // MainExecute runs main. parsing flags
@@ -700,7 +769,7 @@ func MainExecute() {
 		err := executeCobra()
 		if err != nil {
 			manout.Error("error", err)
-			systools.Exit(1)
+			systools.Exit(systools.ErrorInitApp)
 		}
 
 	}
@@ -710,7 +779,7 @@ func MainExecute() {
 func CallBackOldWs(oldws string) bool {
 	GetLogger().Info("OLD workspace: ", oldws)
 	// get all paths first
-	configure.PathWorker(func(_ int, path string) {
+	configure.PathWorkerNoCd(func(_ int, path string) {
 
 		os.Chdir(path)
 		template, templateFile, exists, _ := GetTemplate()
@@ -736,10 +805,10 @@ func CallBackOldWs(oldws string) bool {
 }
 
 func CallBackNewWs(newWs string) {
+	ResetVariables() // reset old variables while change the workspace. (req for shell mode)
+	MainInit()       // initialize the workspace
 	GetLogger().Info("NEW workspace: ", newWs)
-	configure.PathWorker(func(_ int, path string) {
-
-		os.Chdir(path)
+	configure.PathWorker(func(_ int, path string) { // iterate any path
 		template, templateFile, exists, _ := GetTemplate()
 
 		GetLogger().WithFields(logrus.Fields{
@@ -748,6 +817,7 @@ func CallBackNewWs(newWs string) {
 			"path":         path,
 		}).Debug("path parsing")
 
+		// try to run onEnter func at any possible target in the workspace
 		if exists && template.Config.Autorun.Onenter != "" {
 			onEnterTarget := template.Config.Autorun.Onenter
 			GetLogger().WithFields(logrus.Fields{
@@ -757,6 +827,10 @@ func CallBackNewWs(newWs string) {
 			RunTargets(onEnterTarget, true)
 		}
 
+	}, func(origin string) {
+		GetLogger().WithFields(logrus.Fields{
+			"current-dir": origin,
+		}).Debug("done calling autoruns on sub-dirs")
 	})
 }
 
@@ -792,4 +866,9 @@ func printOutHeader() {
 func printInfo() {
 	printOutHeader()
 	printPaths()
+}
+
+func ResetVariables() {
+	ClearAll()     // clears all placeholders
+	ClearAllData() // clears all stored maps
 }

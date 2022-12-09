@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/taskrun"
 )
 
@@ -158,7 +159,7 @@ func TestTryParse(t *testing.T) {
 		if fails {
 			t.Error("failing because line", hitCounter, "have unexpected content [", line, "]")
 		}
-		return false, taskrun.ExitOk
+		return false, systools.ExitOk
 	})
 
 	if len(newScript) < 1 {
@@ -186,7 +187,7 @@ func TestTryParseError(t *testing.T) {
 		hitCounter++
 		fails := false
 		abort := false
-		returnCode := taskrun.ExitOk
+		returnCode := systools.ExitOk
 		switch hitCounter {
 		case 1:
 			if line != "not changed" {
@@ -201,7 +202,7 @@ func TestTryParseError(t *testing.T) {
 				fails = true
 			}
 			abort = true
-			returnCode = taskrun.ExitByStopReason
+			returnCode = systools.ExitByStopReason
 		}
 		if fails {
 			t.Error("failing because line", hitCounter, "have unexpected content [", line, "]")
@@ -220,7 +221,7 @@ func TestTryParseError(t *testing.T) {
 		t.Error("unexpected abort result ")
 	}
 
-	if rCode != taskrun.ExitByStopReason {
+	if rCode != systools.ExitByStopReason {
 		t.Error("unexpected return code")
 	}
 
@@ -231,7 +232,7 @@ func TestTryParseJsonImport(t *testing.T) {
 	script = append(script, "#@import-json json-data {\"hello\":\"world\"}")
 
 	taskrun.TryParse(script, func(line string) (bool, int) {
-		return false, taskrun.ExitOk
+		return false, systools.ExitOk
 	})
 
 	have, data := taskrun.GetData("json-data")
@@ -255,7 +256,7 @@ func TestTryParseJsonImportByExec(t *testing.T) {
 	}
 
 	taskrun.TryParse(script, func(line string) (bool, int) {
-		return false, taskrun.ExitOk
+		return false, systools.ExitOk
 	})
 
 	have, data := taskrun.GetData("exec-import-data")
@@ -278,7 +279,7 @@ func TestTryParseVar(t *testing.T) {
 	script = append(script, "#@var check-replace-out echo test-${test-var-out}-case")
 
 	taskrun.TryParse(script, func(line string) (bool, int) {
-		return false, taskrun.ExitOk
+		return false, systools.ExitOk
 	})
 
 	teststr := taskrun.GetPH("check-replace-out")
@@ -291,7 +292,7 @@ func TestSetVar(t *testing.T) {
 	var script []string
 	script = append(script, "#@set test-var-set hello")
 	taskrun.TryParse(script, func(line string) (bool, int) {
-		return false, taskrun.ExitOk
+		return false, systools.ExitOk
 	})
 	teststr := taskrun.GetPH("test-var-set")
 	if teststr != "hello" {
@@ -310,7 +311,7 @@ func TestVariablesSet(t *testing.T) {
 	var script []string
 	script = append(script, "#@set-in-map case_a root.first.name rudolf")
 	taskrun.TryParse(script, func(line string) (bool, int) {
-		return false, taskrun.ExitOk
+		return false, systools.ExitOk
 	})
 
 	teststr := taskrun.GetJSONPathValueString("case_a", "root.first.name")
@@ -330,12 +331,12 @@ func TestExportAsYaml(t *testing.T) {
 	var script []string
 	script = append(script, "#@export-to-yaml case_a yamlstring")
 	taskrun.TryParse(script, func(line string) (bool, int) {
-		return false, taskrun.ExitOk
+		return false, systools.ExitOk
 	})
 	expect := `
 	root:
 		first:
-		  name: charly  
+		  name: charly
 	`
 	assertVarStrEquals(t, "yamlstring", expect)
 }
@@ -343,7 +344,7 @@ func TestExportAsYaml(t *testing.T) {
 func TestDynamicVarReplace(t *testing.T) {
 	if runError := folderRunner("./../../docs/test/03values", t, func(t *testing.T) {
 		// note. they keys are sorted in root. so version must be at the end
-		expectedYaml := `		
+		expectedYaml := `
 		services:
 		   website:
 			  host: myhost

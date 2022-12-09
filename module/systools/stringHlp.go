@@ -1,5 +1,11 @@
 package systools
 
+import (
+	"errors"
+	"regexp"
+	"strings"
+)
+
 func StringSubLeft(path string, max int) string {
 	if len := StrLen(path); len <= max {
 		return path
@@ -21,4 +27,16 @@ func StringSubRight(path string, max int) string {
 
 func StrLen(str string) int {
 	return len([]rune(str))
+}
+
+func CheckForCleanString(s string) (cleanString string, err error) {
+	// replace some expected chars comming from version (dots) nd paths (/\:)
+	s = strings.ReplaceAll(s, ".", "-")
+	s = strings.ReplaceAll(s, "/", "_")
+	s = strings.ReplaceAll(s, "\\", "_")
+	s = strings.ReplaceAll(s, ":", "--") // windows paths
+	if isMatch := regexp.MustCompile(`^[A-Za-z0-9_-]*$`).MatchString(s); isMatch {
+		return s, nil
+	}
+	return "", errors.New("string contains not accepted chars ")
 }
