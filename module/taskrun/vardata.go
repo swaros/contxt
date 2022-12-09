@@ -156,6 +156,16 @@ func GetDataAsYaml(key string) (bool, string) {
 	return false, ""
 }
 
+// GetDataAsYaml converts the map given by key infto a yaml string
+func GetDataAsJson(key string) (bool, string) {
+	if found, data := GetData(key); found {
+		if outData, err := json.MarshalIndent(data, "", "  "); err == nil {
+			return true, string(outData)
+		}
+	}
+	return false, ""
+}
+
 // ClearAllData removes all entries
 func ClearAllData() {
 	dataStorage.Range(func(key, _ interface{}) bool {

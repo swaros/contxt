@@ -15,7 +15,9 @@ config:
     - ./imports/dependabot.tpl depandabot
     - ./imports/coverage.html coverage
     - ./imports/Makefile.tpl makefile
+    - ./imports/vscode.workspace.yml vscode-ws
   variables:
+      include-dev-externals: ""
       configmodul: github.com/swaros/contxt/module/configure
       coverage-report: ""
       depbot-file: .github/dependabot.yml
@@ -86,6 +88,55 @@ task:
 {{- end }}
 {{- range $k, $modul := $.module }}
 
+  ### create tasks for external modules
+  {{- if not $modul.local}}
+  - id: verify-modul-{{ $modul.modul }}
+    options:
+      invisible: true
+    require:
+      variables:
+        include-dev-externals: "=YES"
+    script:
+      - echo "EXTERNAL >>> verify external module {{ $modul.modul }} on {{ $modul.path }}"
+
+  - id: verify-modul-{{ $modul.modul }}
+    options:
+      invisible: true
+    require:
+      variables:
+        include-dev-externals: "!YES"
+    script:
+      - echo "IGNORE EXTERNAL >>> {{ $modul.modul }}"
+      - echo "to force external modules set var include-dev-externals to yes (ctx run modules-verify -v include-dev-externals=YES) "
+
+  ### add external module
+  - id: verify-modul-{{ $modul.modul }}
+    options:
+      invisible: true
+      ignoreCmdError: true
+    require:
+      system: linux
+      variables:
+        include-dev-externals: "=YES"
+      exists:
+        - {{ $modul.path }}
+    script:
+      - grep {{ $modul.path }} go.work
+    listener:
+      - trigger:
+          onerror: true
+        action:
+          script:
+            - echo "EXTERNAL >>> update go.work for external module {{ $modul.modul }}"
+            - echo "EXTERNAL >>> using path {{ $modul.path }}"
+            - echo "             [go work use {{ $modul.path }}]"
+            - go work use {{ $modul.path }}
+
+  {{- end }}
+
+
+  ### create tasks for local modul dependencies
+  {{- if $modul.local}}
   ## create dir if not exists
   - id: verify-modul-{{ $modul.modul }}
     options:
@@ -121,10 +172,16 @@ task:
           onerror: true
         action:
           script:
-            - echo "update go.work for module {{ $modul.modul }}"
+            - echo "update go.work for local module {{ $modul.modul }}"
             - go work use module/{{ $modul.modul }}
-
+  {{- end}}
 {{- end }}
+
+#### generate visual studio code workspace file
+  - id: code-workspace
+    script:
+       - "#@export-to-json vscode-ws VS_WS_CONFIG"
+       - "#@var-to-file VS_WS_CONFIG contxt.code-workspace"
 
 #### update depandabot
   - id: depandabot
@@ -135,10 +192,11 @@ task:
   - id: cleanup-dependencies
     script:
     {{- range $k, $test := $.module }}
+    {{- if $test.local}}
       - |
        cd {{ $test.modul }}
        go mod tidy
-
+    {{- end }}
     {{- end }}
       - git status
 
@@ -148,8 +206,10 @@ task:
   - id: test
     script:
     {{- range $k, $test := $.module }}
+    {{- if $test.local}}
       - echo "testing modul {{ $test.modul }}"
       - go test  -failfast ./module/{{ $test.modul }}/./...
+    {{- end }}
     {{- end }}
 
 ##### like the regular test but now we update the coverage report
@@ -168,6 +228,7 @@ task:
     script:
       - "#@set coverage-report <b></b>"
       {{- range $k, $test := $.module }}
+      {{- if $test.local}}
       - go test -cover ./module/{{ $test.modul }}/./... -coverprofile ./docs/test/coverage/test.{{ $test.modul }}.out
       - go tool cover -html ./docs/test/coverage/test.{{ $test.modul }}.out -o ./docs/test/coverage/{{ $test.modul }}.html
       - "#@add coverage-report <h2>{{ $test.modul }}</h2>"
@@ -176,6 +237,7 @@ task:
       - "#@add coverage-report ${report-cover}"
       - "#@add coverage-report </div>"
       - "#@add coverage-report <a target=\"coverage_details\" href=\"test/coverage/{{ $test.modul }}.html\">report for {{ $test.modul }}</a>"
+    {{- end }}
     {{- end }}
       - "#@var-to-file coverage ./docs/coverage.html"
 
@@ -193,15 +255,19 @@ task:
   - id: test-each
     needs:
     {{- range $k, $test := $.module }}
+    {{- if $test.local}}
       - atest-{{ $test.modul }}
+    {{- end }}
     {{- end }}
 
     {{- range $k, $test := $.module }}
+    {{- if $test.local}}
   - id: atest-{{ $test.modul }}
     options:
       displaycmd: true
     script:
       - go test -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...
+    {{- end }}
     {{- end }}
 
   - id: set-version

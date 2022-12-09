@@ -21,3 +21,6 @@ dist/
 docs/coverage.html
 docs/test/coverage/*
 
+#auto generated files
+contxt.code-workspace
+

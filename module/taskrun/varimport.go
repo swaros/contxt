@@ -61,6 +61,7 @@ const (
 	setvarMark      = "#@set"
 	setvarInMap     = "#@set-in-map"
 	exportToYaml    = "#@export-to-yaml"
+	exportToJson    = "#@export-to-json"
 	addvarMark      = "#@add"
 	equalsMark      = "#@if-equals"
 	notEqualsMark   = "#@if-not-equals"
@@ -222,6 +223,18 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					ExportVarToFile(varName, fileName)
 				} else {
 					manout.Error("invalid usage", writeVarToFile, " needs 2 arguments at least. <variable> <filename>")
+				}
+			case exportToJson:
+				if len(parts) == 3 {
+					mapKey := parts[1]
+					varName := parts[2]
+					if exists, newStr := GetDataAsJson(mapKey); exists {
+						SetPH(varName, HandlePlaceHolder(newStr))
+					} else {
+						manout.Error("map with key ", mapKey, " not exists")
+					}
+				} else {
+					manout.Error("invalid usage", exportToJson, " needs 2 arguments at least. <map-key> <variable>")
 				}
 			case exportToYaml:
 				if len(parts) == 3 {
