@@ -16,7 +16,7 @@ func ListWorkSpaces() []string {
 		fullHomeDir = homeDir + DefaultPath
 		err := filepath.Walk(fullHomeDir, func(path string, info os.FileInfo, err error) error {
 			var basePath = filepath.Dir(path)
-			if basePath+string(os.PathSeparator) == fullHomeDir && filepath.Ext(path) == ".json" {
+			if basePath == filepath.Dir(fullHomeDir) && filepath.Ext(path) == ".json" {
 				files = append(files, path)
 			}
 			return nil
