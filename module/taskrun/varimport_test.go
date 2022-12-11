@@ -17,6 +17,34 @@ func clearStrings(compare string) string {
 	return compare
 }
 
+func TestIssue82(t *testing.T) {
+	jsonFileName := "../../docs/test/issue82/docker-inspect.json"
+	data, jerr := taskrun.ImportJSONFile(jsonFileName)
+	if jerr != nil {
+		t.Error(jerr)
+	}
+
+	if _, ok := data["data"]; !ok {
+		t.Error("could not key one data")
+	}
+
+}
+
+func TestIssue82Usage(t *testing.T) {
+	assertTestFolderVarFn(t, "issue82", "issue82", func() {
+		assertVarStrNotEquals(t, "IMAGE-INFO", "")
+	})
+}
+
+func TestIssue82_2(t *testing.T) {
+	jsonFileName := "../../docs/test/issue82/mapped-inspect.json"
+	_, jerr := taskrun.ImportJSONFile(jsonFileName)
+	if jerr != nil {
+		t.Error(jerr)
+	}
+
+}
+
 func TestParseArgLine(t *testing.T) {
 	param1 := `i sayed 'Hello you' and got the response 'fuck you'`
 	params, found := taskrun.GetArgQuotedEntries(param1)

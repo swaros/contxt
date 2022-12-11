@@ -65,6 +65,17 @@ func assertVarStrEquals(t *testing.T, keyname, expected string) bool {
 	return true
 }
 
+// assertVarStrEquals is testing a contxt variable content against the expected value
+func assertVarStrNotEquals(t *testing.T, keyname, unExpected string) bool {
+	check := clearStrings(taskrun.GetPH(keyname))
+
+	if check == clearStrings(unExpected) {
+		t.Error("unexpected [" + unExpected + "] is present ")
+		return false
+	}
+	return true
+}
+
 func assertStringEquals(t *testing.T, actual, expected string) bool {
 	check := clearStrings(actual)
 
@@ -86,4 +97,13 @@ func assertCaseLogLastEquals(t *testing.T, caseNr, targetName, expected string) 
 			t.Error("the last executed script should be "+expected+". not ", log)
 		}
 	})
+}
+
+func assertTestFolderVarFn(t *testing.T, folder, targetRun string, fn func()) {
+	if runError := folderRunner("./../../docs/test/"+folder, t, func(t *testing.T) {
+		taskrun.RunTargets(targetRun, false)
+		fn()
+	}); runError != nil {
+		t.Error(runError)
+	}
 }

@@ -150,7 +150,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						manout.Error("import from json string failed", parts[2], err)
 					}
 				} else {
-					manout.Error("invalid usage", fromJSONMark, " needs 2 arguments. <keyname> <json-source>")
+					manout.Error("invalid usage", fromJSONMark, " needs 2 arguments. <keyname> <json-source-string>")
 				}
 
 			case fromJSONCmdMark:
@@ -457,8 +457,7 @@ func ImportJSONFile(fileName string) (map[string]interface{}, error) {
 		m := make(map[string]interface{})
 		err = json.Unmarshal([]byte(data), &m)
 		if err != nil {
-			GetLogger().Error("ImportJSONFile : Unmarshal :", fileName, " : ", err)
-			return nil, err
+			return testAndConvertJsonType(data)
 		}
 		if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
 			traceMap(m, fileName)
@@ -468,6 +467,30 @@ func ImportJSONFile(fileName string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
+}
+
+func testAndConvertJsonType(data []byte) (map[string]interface{}, error) {
+	var m []interface{}
+	convert := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(data), &m); err == nil {
+		for key, val := range m {
+			keyStr := ""
+			if key > 0 {
+				keyStr = fmt.Sprintf("_%d", key)
+			}
+			switch val.(type) {
+			case string, interface{}:
+				convert["data"+keyStr] = val
+			default:
+				return nil, errors.New("unsupported json structure")
+
+			}
+
+		}
+		return convert, err
+	} else {
+		return convert, err
+	}
 }
 
 func traceMap(mapShow map[string]interface{}, add string) {
