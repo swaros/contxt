@@ -1,0 +1,51 @@
+workspace:
+   project: contxt
+   role: github
+
+task:
+  - id: verify
+    script:
+      - gh auth status
+
+  - id: gh-releases
+    options:
+      invisible: true
+    script:
+       - "#@var GH-RELEASES gh release list"
+
+### module maintain
+{{- range $k, $modul := $.module }}
+  ### case for local module
+  {{- if $modul.local}}
+  - id: check-{{ $modul.modul }}
+    script:
+      - echo "{{ $modul.modul }}"
+    {{- if $modul.version}}
+      - echo "version {{ $modul.version }}"
+    next:
+      - release-verify-{{ $modul.modul }}
+    {{- end}}
+
+    {{- if $modul.version}}
+  - id: release-verify-{{ $modul.modul }}
+    needs:
+      - gh-releases
+    require:
+      system: linux
+    options:
+      ignoreCmdError: true
+    script:
+      - grep module/{{ $modul.modul }}/{{$modul.version}} <<< "${GH-RELEASES}"
+    listener:
+      - trigger:
+          onerror: true
+        action:
+          script:
+            - echo "<f:blue>Create release</> >>>  module/{{ $modul.modul }}/{{$modul.version}} <f:green>create module version by deploy a tag using GH</>"
+            - gh release create module/{{ $modul.modul }}/{{$modul.version}} -p --title "module/{{ $modul.modul }}/{{$modul.version}}" --notes "version tag release for {{ $modul.modul }}"
+            - echo "tag created"
+
+
+    {{- end}}
+  {{- end }}
+{{- end}}

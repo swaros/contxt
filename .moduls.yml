@@ -1,35 +1,54 @@
 module:
   -
     modul: configure
+    local: true
     test:
       timeout: 30s
 
   -
     modul: dirhandle
+    local: true
     test:
       timeout: 30s
 
   -
     modul: systools
+    local: true
     test:
       timeout: 30s
 
   -
     modul: trigger
+    version: "v0.4.0"
+    local: true
     test:
       timeout: 30s
 
   -
     modul: taskrun
+    local: true
     test:
       timeout: 60s
 
   -
     modul: awaitgroup
+    local: true
+    version: "v0.4.0"
     test:
       timeout: 30s
 
   -
     modul: shellcmd
+    local: true
     test:
       timeout: 30s
+
+  -
+    modul: manout
+    local: false
+    path: ${WS0_manout_root}
+
+  -
+    modul: outinject
+    local: false
+    path: ${WS0_outinject_root}

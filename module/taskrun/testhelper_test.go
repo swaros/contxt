@@ -54,12 +54,35 @@ func folderRunner(folder string, t *testing.T, testFunc func(t *testing.T)) erro
 
 }
 
+func eqCheckVarMapValue(keyname, jsonPath, expected string, success, fail, notfound func(result string)) {
+	if result, ok := taskrun.GetJSONPathResult(keyname, jsonPath); ok {
+		if result.Str == expected {
+			success(result.Str)
+		} else {
+			fail(result.Str)
+		}
+	} else {
+		notfound(result.Str)
+	}
+}
+
 // assertVarStrEquals is testing a contxt variable content against the expected value
 func assertVarStrEquals(t *testing.T, keyname, expected string) bool {
 	check := clearStrings(taskrun.GetPH(keyname))
 
 	if check != clearStrings(expected) {
 		t.Error("expected " + expected + " as variable. but got <" + check + ">")
+		return false
+	}
+	return true
+}
+
+// assertVarStrEquals is testing a contxt variable content against the expected value
+func assertVarStrNotEquals(t *testing.T, keyname, unExpected string) bool {
+	check := clearStrings(taskrun.GetPH(keyname))
+
+	if check == clearStrings(unExpected) {
+		t.Error("unexpected [" + unExpected + "] is present ")
 		return false
 	}
 	return true
@@ -86,4 +109,13 @@ func assertCaseLogLastEquals(t *testing.T, caseNr, targetName, expected string) 
 			t.Error("the last executed script should be "+expected+". not ", log)
 		}
 	})
+}
+
+func assertTestFolderVarFn(t *testing.T, folder, targetRun string, fn func()) {
+	if runError := folderRunner("./../../docs/test/"+folder, t, func(t *testing.T) {
+		taskrun.RunTargets(targetRun, false)
+		fn()
+	}); runError != nil {
+		t.Error(runError)
+	}
 }

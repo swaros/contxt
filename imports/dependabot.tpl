@@ -5,6 +5,7 @@
 version: 2
 updates:
 {{- range $k, $deb := $.module }}
+{{- if $deb.local }}
 ### dependencie for /module/{{ $deb.modul }}/
   - package-ecosystem: gomod
     directory: /module/{{ $deb.modul }}/
@@ -12,4 +13,5 @@ updates:
        interval: daily
     assignees:
        - swaros
+{{- end }}
 {{- end }}

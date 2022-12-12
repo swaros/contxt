@@ -1,0 +1,15 @@
+config:
+  imports:
+    - docker-inspect.json json_a
+    - mapped-inspect.json json_b
+
+task:
+  - id: issue82
+    script:
+      - "#@export-to-json json_a IMAGE-INFO"
+
+  - id: echo
+    needs:
+      - issue82
+    script:
+      - echo "${IMAGE-INFO}"

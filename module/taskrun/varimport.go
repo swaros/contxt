@@ -61,6 +61,7 @@ const (
 	setvarMark      = "#@set"
 	setvarInMap     = "#@set-in-map"
 	exportToYaml    = "#@export-to-yaml"
+	exportToJson    = "#@export-to-json"
 	addvarMark      = "#@add"
 	equalsMark      = "#@if-equals"
 	notEqualsMark   = "#@if-not-equals"
@@ -149,7 +150,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						manout.Error("import from json string failed", parts[2], err)
 					}
 				} else {
-					manout.Error("invalid usage", fromJSONMark, " needs 2 arguments. <keyname> <json-source>")
+					manout.Error("invalid usage", fromJSONMark, " needs 2 arguments. <keyname> <json-source-string>")
 				}
 
 			case fromJSONCmdMark:
@@ -222,6 +223,18 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 					ExportVarToFile(varName, fileName)
 				} else {
 					manout.Error("invalid usage", writeVarToFile, " needs 2 arguments at least. <variable> <filename>")
+				}
+			case exportToJson:
+				if len(parts) == 3 {
+					mapKey := parts[1]
+					varName := parts[2]
+					if exists, newStr := GetDataAsJson(mapKey); exists {
+						SetPH(varName, HandlePlaceHolder(newStr))
+					} else {
+						manout.Error("map with key ", mapKey, " not exists")
+					}
+				} else {
+					manout.Error("invalid usage", exportToJson, " needs 2 arguments at least. <map-key> <variable>")
 				}
 			case exportToYaml:
 				if len(parts) == 3 {
@@ -444,8 +457,7 @@ func ImportJSONFile(fileName string) (map[string]interface{}, error) {
 		m := make(map[string]interface{})
 		err = json.Unmarshal([]byte(data), &m)
 		if err != nil {
-			GetLogger().Error("ImportJSONFile : Unmarshal :", fileName, " : ", err)
-			return nil, err
+			return testAndConvertJsonType(data)
 		}
 		if GetLogger().IsLevelEnabled(logrus.TraceLevel) {
 			traceMap(m, fileName)
@@ -455,6 +467,31 @@ func ImportJSONFile(fileName string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
+}
+
+func testAndConvertJsonType(data []byte) (map[string]interface{}, error) {
+	var m []interface{}
+	convert := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(data), &m); err == nil {
+		staticKey := len(m) == 1
+		for key, val := range m {
+			keyStr := "data"
+			if !staticKey {
+				keyStr = fmt.Sprintf("data_%d", key)
+			}
+			switch val.(type) {
+			case string, interface{}:
+				convert[keyStr] = val
+			default:
+				return nil, errors.New("unsupported json structure")
+
+			}
+
+		}
+		return convert, err
+	} else {
+		return convert, err
+	}
 }
 
 func traceMap(mapShow map[string]interface{}, add string) {

@@ -1,0 +1,9 @@
+folders:
+  - path: "."
+{{- range $k, $modul := $.module }}
+{{- if not $modul.local }}
+  - path: "{{$modul.path}}"
+{{- end }}
+{{- end }}
+
+settings: {}
