@@ -156,7 +156,7 @@ func GetDataAsYaml(key string) (bool, string) {
 	return false, ""
 }
 
-// GetDataAsYaml converts the map given by key infto a yaml string
+// GetDataAsJson converts the map given by key infto a yaml string
 func GetDataAsJson(key string) (bool, string) {
 	if found, data := GetData(key); found {
 		if outData, err := json.MarshalIndent(data, "", "  "); err == nil {
