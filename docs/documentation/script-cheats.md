@@ -9,6 +9,7 @@
         - [set](#set)
         - [set-in-map](#set-in-map)
         - [export-to-yaml](#export-to-yaml)
+        - [export-to-json](#export-to-json)
         - [add](#add)
         - [if-equals](#if-equals)
         - [if-not-equals](#if-not-equals)
@@ -68,6 +69,7 @@ task:
 |#@set              |
 |#@set-in-map       |
 |#@export-to-yaml   |
+|#@export-to-json   |
 |#@add              |
 |#@if-equals        |
 |#@if-not-equals    |
@@ -79,25 +81,17 @@ task:
 
 ### import-json
 
-imports a json file what then can be used as variable
+imports a json content what then can be used as variable.
 
-we asume a file named `user-config.json` exists in the same path.
-````json
-{
-  "setup":{
-    "testmsg" : "hello world"
-  }
-}
-````
 
-**arguments**: `map-key-name` `path to json file`
+**arguments**: `map-key-name` `json content`
 
 example
 ````yaml
 task:
   - id: example
     script:
-      - "#@import-json CONFIG user-config.json"
+      - "#@import-json CONFIG {\"setup\":{\"testmsg\" : \"hello world\"}}"
       - echo "${CONFIG:setup.testmsg}"
 
 ````
@@ -108,6 +102,15 @@ task:
 imports a json by an bash command, what then can be used as variable
 
 **arguments**: `map-key-name` `command to execute`
+
+we asume a file named `user-config.json` exists in the same path.
+````json
+{
+  "setup":{
+    "testmsg" : "hello world"
+  }
+}
+````
 
 example
 ````yaml
@@ -185,7 +188,25 @@ task:
     script:
       - "#@import-json CONFIG cat user-config.json" # just to load something
       - "#@export-to-yaml CONFIG CONFIG_YAML"
-      - printf "${CONFIG_YAML}"
+      - echo "${CONFIG_YAML}"
+
+````
+
+### export-to-json
+
+export the content of an existing key-map as json in a variable
+> uses [sjson](https://github.com/tidwall/sjson) annotation
+
+**arguments**: `map-key-name` `variable-name`
+
+example
+````yaml
+task:
+  - id: example
+    script:
+      - "#@import-json CONFIG cat user-config.json" # just to load something
+      - "#@export-to-json CONFIG CONFIG_YAML"
+      - echo "${CONFIG_YAML}"
 
 ````
 
