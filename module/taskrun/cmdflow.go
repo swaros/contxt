@@ -203,11 +203,13 @@ func listenerWatch(script configure.Task, target, logLine string, e error, waitG
 		GetLogger().WithFields(logrus.Fields{
 			"count":    len(script.Listener),
 			"listener": script.Listener,
+			"target":   target,
 		}).Debug("testing Listener")
 
 		for _, listener := range script.Listener {
 			triggerFound, triggerMessage := checkReason(listener.Trigger, logLine, e) // check if a trigger have a match
 			if triggerFound {
+				GetLogger().WithFields(logrus.Fields{"target": target, "reason": triggerMessage}).Debug("Trigger Found")
 				SetPH("RUN."+target+".LOG.HIT", logLine)
 				if script.Options.Displaycmd {
 					CtxOut(manout.MessageCln(manout.ForeCyan, "[trigger]\t", manout.ForeYellow, triggerMessage, manout.Dim, " ", logLine))
@@ -396,7 +398,7 @@ func lineExecuter(
 			CtxOut(manout.MessageCln(manout.ForeYellow, "NOTE!\t", manout.BackLightYellow, manout.ForeDarkGrey, " a script execution was failing. no stopreason is set so execution will continued "))
 			CtxOut(manout.MessageCln("\t", manout.BackLightYellow, manout.ForeDarkGrey, " if this is expected you can ignore this message.                                 "))
 			CtxOut(manout.MessageCln("\t", manout.BackLightYellow, manout.ForeDarkGrey, " but you should handle error cases                                                "))
-			CtxOut("\ttarget :\t", manout.MessageCln(manout.ForeYellow, target))
+			CtxOut("\ttarget :\t", manout.MessageCln(manout.ForeBlue, target))
 			CtxOut("\tcommand:\t", manout.MessageCln(manout.ForeYellow, codeLine))
 
 		} else {
