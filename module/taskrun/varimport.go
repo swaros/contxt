@@ -473,14 +473,15 @@ func testAndConvertJsonType(data []byte) (map[string]interface{}, error) {
 	var m []interface{}
 	convert := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(data), &m); err == nil {
+		staticKey := len(m) == 1
 		for key, val := range m {
-			keyStr := ""
-			if key > 0 {
-				keyStr = fmt.Sprintf("_%d", key)
+			keyStr := "data"
+			if !staticKey {
+				keyStr = fmt.Sprintf("data_%d", key)
 			}
 			switch val.(type) {
 			case string, interface{}:
-				convert["data"+keyStr] = val
+				convert[keyStr] = val
 			default:
 				return nil, errors.New("unsupported json structure")
 

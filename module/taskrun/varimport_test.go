@@ -25,14 +25,73 @@ func TestIssue82(t *testing.T) {
 	}
 
 	if _, ok := data["data"]; !ok {
-		t.Error("could not key one data")
+		t.Error("could not get the key")
 	}
 
+	jsonFileName = "../../docs/test/issue82/mapped-inspect.json"
+	data, jerr = taskrun.ImportJSONFile(jsonFileName)
+	if jerr != nil {
+		t.Error(jerr)
+	}
+
+	if _, ok := data["image"]; !ok {
+		t.Error("could not get the key")
+	}
+}
+
+type testingGsonKey struct {
+	varName  string
+	path     string
+	expected string
 }
 
 func TestIssue82Usage(t *testing.T) {
 	assertTestFolderVarFn(t, "issue82", "issue82", func() {
 		assertVarStrNotEquals(t, "IMAGE-INFO", "")
+
+		var alltests []testingGsonKey = []testingGsonKey{
+			{
+				varName:  "json_b",
+				path:     "image.0.Id",
+				expected: "sha256:14d13f9624cdefd69d648dec8ec436a08dd50004530199ae8f1a2b88c36755d6",
+			},
+			{
+				varName:  "json_b",
+				path:     "image.0.RepoTags.0",
+				expected: "golib-local:latest",
+			},
+			{
+				varName:  "json_a",
+				path:     "data.Id",
+				expected: "sha256:14d13f9624cdefd69d648dec8ec436a08dd50004530199ae8f1a2b88c36755d6",
+			},
+			{
+				varName:  "json_a",
+				path:     "data.Config.WorkingDir",
+				expected: "/usr/src/golibdb",
+			},
+			{
+				varName:  "json_a",
+				path:     "data.Config.Entrypoint.0",
+				expected: "docker-php-entrypoint",
+			},
+		}
+
+		for _, testCase := range alltests {
+
+			eqCheckVarMapValue(
+				testCase.varName,
+				testCase.path,
+				testCase.expected,
+				func(result string) { /* nothing to do ..we found it */ },
+				func(result string) {
+					t.Error("not found expected key: ", testCase.varName, testCase.path, testCase.expected, " -> in -> ", result)
+				},
+				func(result string) { t.Error("the while data on  not exists. check key ", testCase.varName) },
+			)
+
+		}
+
 	})
 }
 

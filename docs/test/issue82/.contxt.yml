@@ -1,6 +1,7 @@
 config:
   imports:
     - docker-inspect.json json_a
+    - mapped-inspect.json json_b
 
 task:
   - id: issue82
