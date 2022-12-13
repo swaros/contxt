@@ -2,6 +2,7 @@ package yamc_test
 
 import (
 	"io/ioutil"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -41,8 +42,13 @@ func assertGjsonValueEquals(ymap *yamc.Yamc, path string, expected any, ifNotEqu
 	}
 }
 
+// LazyAssertGjsonPathEq wraps assertGjsonValueEquals for fast testing values by path.
+// we loosing the context here, becasue any triggered error will have this funtion as source
 func LazyAssertGjsonPathEq(t *testing.T, ymap *yamc.Yamc, path string, expected any) {
 	assertGjsonValueEquals(ymap, path, expected, func(val any) {
+		if reflect.TypeOf(val) != reflect.TypeOf(expected) {
+			t.Error("types not equal. we got ", reflect.TypeOf(val), " we expect ", reflect.TypeOf(expected))
+		}
 		t.Error("expected the value (", expected, ") got [", val, "] instead")
 	}, func(err error) {
 		t.Error(err)
