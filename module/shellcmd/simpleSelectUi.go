@@ -127,7 +127,7 @@ func simpleSelect(title string, selectable []string) selectResult {
 
 	m := simpleSelectModel{list: l}
 
-	if _, err := tea.NewProgram(m).Run(); err != nil {
+	if _, err := tea.NewProgram(m).StartReturningModel(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

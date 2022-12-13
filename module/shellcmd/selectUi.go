@@ -82,7 +82,7 @@ func uIselectItem(title string) selectResult {
 
 	p := tea.NewProgram(listModel, tea.WithAltScreen())
 
-	if _, err := p.Run(); err != nil {
+	if _, err := p.StartReturningModel(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

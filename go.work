@@ -4,7 +4,6 @@ use (
 	./module/awaitgroup
 	./module/configure
 	./module/dirhandle
-	./module/interactive
 	./module/shellcmd
 	./module/systools
 	./module/taskrun

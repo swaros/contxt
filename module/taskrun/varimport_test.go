@@ -24,7 +24,7 @@ func TestIssue82(t *testing.T) {
 		t.Error(jerr)
 	}
 
-	if _, ok := data["data"]; !ok {
+	if _, ok := data["0"]; !ok {
 		t.Error("could not get the key")
 	}
 
