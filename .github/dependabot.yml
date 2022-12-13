@@ -4,6 +4,20 @@
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 version: 2
 updates:
+### dependencie for /module/yacl/
+  - package-ecosystem: gomod
+    directory: /module/yacl/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+### dependencie for /module/yamc/
+  - package-ecosystem: gomod
+    directory: /module/yamc/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
 ### dependencie for /module/configure/
   - package-ecosystem: gomod
     directory: /module/configure/

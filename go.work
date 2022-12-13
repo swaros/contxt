@@ -8,4 +8,6 @@ use (
 	./module/systools
 	./module/taskrun
 	./module/trigger
+	./module/yacl
+	./module/yamc
 )

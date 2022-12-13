@@ -1,5 +1,17 @@
 module:
   -
+    modul: yacl
+    local: true
+    test:
+      timeout: 30s
+
+  -
+    modul: yamc
+    local: true
+    test:
+      timeout: 30s
+
+  -
     modul: configure
     local: true
     test:
