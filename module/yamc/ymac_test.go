@@ -2,6 +2,7 @@ package yamc_test
 
 import (
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/swaros/contxt/module/yamc"
@@ -96,4 +97,139 @@ func TestJsonParse(t *testing.T) {
 	}); err != nil {
 		t.Error(err)
 	}
+}
+
+func Test002(t *testing.T) {
+	if err := helpFileLoad("testdata/test002.json", func(data []byte) {
+		conv := yamc.NewYmac()
+		if err := conv.Parse(yamc.NewJsonReader(), data); err != nil {
+			t.Error(err)
+		} else {
+			if !conv.IsLoaded() {
+				t.Error("isLoaded should be true")
+			}
+			// source data was in form of map[string]interface{}
+			if conv.GetSourceDataType() != yamc.TYPE_STRING_MAP {
+				t.Error("reported type should be a string map")
+
+			}
+			LazyAssertGjsonPathEq(t, conv, "_id", "5973782bdb9a930533b05cb2")
+			LazyAssertGjsonPathEq(t, conv, "isActive", true)
+			LazyAssertGjsonPathEq(t, conv, "age", int64(32))
+			LazyAssertGjsonPathEq(t, conv, "friends.1.id", int64(1))
+			LazyAssertGjsonPathEq(t, conv, "friends.2.name", "Carol Martin")
+		}
+	}); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestOfficialYaml(t *testing.T) {
+	if err := helpFileLoad("testdata/official.yaml", func(data []byte) {
+		conv := yamc.NewYmac()
+		if err := conv.Parse(yamc.NewYamlReader(), data); err != nil {
+			t.Error(err)
+		} else {
+			if !conv.IsLoaded() {
+				t.Error("isLoaded should be true")
+			}
+			// source data was in form of map[string]interface{}
+			if conv.GetSourceDataType() != yamc.TYPE_STRING_MAP {
+				t.Error("reported type should be a string map")
+			}
+
+			LazyAssertGjsonPathEq(t, conv, "YAML", "YAML Ain't Markup Language™")
+			LazyAssertGjsonPathEq(t, conv, "YAML Resources.YAML Specifications.1", "YAML 1.1")
+		}
+	}); err != nil {
+		t.Error(err)
+	}
+}
+
+func Test003Yaml(t *testing.T) {
+	if err := helpFileLoad("testdata/test003.yml", func(data []byte) {
+		conv := yamc.NewYmac()
+		if err := conv.Parse(yamc.NewYamlReader(), data); err != nil {
+			t.Error(err)
+		} else {
+			if !conv.IsLoaded() {
+				t.Error("isLoaded should be true")
+			}
+			// source data was in form of map[string]interface{}
+			if conv.GetSourceDataType() != yamc.TYPE_STRING_MAP {
+				t.Error("reported type should be a string map")
+			}
+
+			LazyAssertGjsonPathEq(t, conv, "name", "Martin D'vloper")
+			LazyAssertGjsonPathEq(t, conv, "foods.2", "Strawberry")
+			LazyAssertGjsonPathEq(t, conv, "languages.perl", "Elite")
+		}
+	}); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestJsonInvalid(t *testing.T) {
+	data := []byte("[{hello}}]")
+	conv := yamc.NewYmac()
+	if err := conv.Parse(yamc.NewJsonReader(), data); err == nil {
+		t.Error("this reading should fail")
+	}
+
+}
+
+func TestYamlInvalid(t *testing.T) {
+	data := []byte("[uhm]-")
+	conv := yamc.NewYmac()
+	if err := conv.Parse(yamc.NewYamlReader(), data); err == nil {
+		t.Error("this reading should fail")
+	}
+
+}
+
+func TestJsonYamlToString(t *testing.T) {
+	data := []byte(`{"master": 45}`)
+	conv := yamc.NewYmac()
+	if err := conv.Parse(yamc.NewJsonReader(), data); err != nil {
+		t.Error("this reading should not fail")
+	} else {
+		if str, err2 := conv.ToString(yamc.NewYamlReader()); err2 != nil {
+			t.Error(err2)
+		} else {
+			// we do not test the string content because of different line endings on windows
+			if str == "" || !strings.Contains(str, "master:") {
+				t.Error("empty string?, or master: key missing?", str)
+			}
+			if _, ok := conv.GetData()["master"]; !ok {
+				t.Error("we should have the master node")
+			}
+		}
+	}
+
+}
+
+func TestYamlToJsonString(t *testing.T) {
+	yaml := `
+hello:
+   - world
+   - you
+`
+	data := []byte(yaml)
+	conv := yamc.NewYmac()
+	if err := conv.Parse(yamc.NewYamlReader(), data); err != nil {
+		t.Error("this reading should not fail")
+	} else {
+		if str, err2 := conv.ToString(yamc.NewJsonReader()); err2 != nil {
+			t.Error(err2)
+		} else {
+			// we do not test the string content because of different line endings on windows
+			if str != `{"hello":["world","you"]}` {
+				t.Error("unexpected string outcome", str)
+			}
+		}
+		if _, ok := conv.GetData()["hello"]; !ok {
+			t.Error("we should have the data node")
+		}
+	}
+
 }
