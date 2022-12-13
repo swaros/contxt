@@ -17,6 +17,8 @@ const (
 type DataReader interface {
 	Unmarshal(in []byte, out interface{}) (err error)
 	Marshal(in interface{}) (out []byte, err error)
+	FileDecode(path string, decodeInterface any) (err error)
+	SupportsExt() []string
 }
 
 type Yamc struct {
