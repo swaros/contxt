@@ -62,17 +62,17 @@ func TestIssue82Usage(t *testing.T) {
 			},
 			{
 				varName:  "json_a",
-				path:     "data.Id",
+				path:     "0.Id",
 				expected: "sha256:14d13f9624cdefd69d648dec8ec436a08dd50004530199ae8f1a2b88c36755d6",
 			},
 			{
 				varName:  "json_a",
-				path:     "data.Config.WorkingDir",
+				path:     "0.Config.WorkingDir",
 				expected: "/usr/src/golibdb",
 			},
 			{
 				varName:  "json_a",
-				path:     "data.Config.Entrypoint.0",
+				path:     "0.Config.Entrypoint.0",
 				expected: "docker-php-entrypoint",
 			},
 		}
