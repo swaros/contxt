@@ -64,6 +64,11 @@ func (y *Yamc) Parse(use DataReader, in []byte) error {
 
 }
 
+func (y *Yamc) SetData(data map[string]interface{}) {
+	y.Reset()
+	y.data = data
+}
+
 // GetData is just the getter for the actual
 // data. this is independend if they are loaded or not
 func (y *Yamc) GetData() map[string]interface{} {

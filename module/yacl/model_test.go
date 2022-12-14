@@ -9,10 +9,12 @@ import (
 )
 
 type configV1 struct {
-	name     string
-	path     string
-	boolflag bool
-	subs     []string
+	/*
+		name     string
+		path     string
+		boolflag bool
+		subs     []string
+	*/
 }
 
 func TestComposePath(t *testing.T) {
