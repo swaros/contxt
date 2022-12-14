@@ -2,10 +2,17 @@ package yacl
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/swaros/contxt/module/yamc"
+)
+
+const (
+	PATH_UNSET  = 0
+	PATH_HOME   = 1
+	PATH_CONFIG = 2
 )
 
 type VersionRealtion struct {
@@ -16,25 +23,36 @@ type VersionRealtion struct {
 }
 
 type ConfigModel struct {
-	setFile     string // sets a specific filename. so this is the only one that will be loaded
-	useHomeDir  bool
-	structure   *any
-	version     VersionRealtion
-	reader      []yamc.DataReader
-	subDirs     []string
-	usedFile    string
-	loadedFiles []string
+	setFile       string // sets a specific filename. so this is the only one that will be loaded
+	useSpecialDir int
+	structure     *any
+	version       VersionRealtion
+	reader        []yamc.DataReader
+	subDirs       []string
+	usedFile      string
+	loadedFiles   []string
 }
 
 func NewConfig(structure any, read ...yamc.DataReader) *ConfigModel {
 	return &ConfigModel{
-		structure: &structure,
-		reader:    read,
+		useSpecialDir: PATH_UNSET,
+		structure:     &structure,
+		reader:        read,
 	}
 }
 
 func (c *ConfigModel) UseHomeDir() *ConfigModel {
-	c.useHomeDir = true
+	c.useSpecialDir = PATH_HOME
+	return c
+}
+
+func (c *ConfigModel) UseConfigDir() *ConfigModel {
+	c.useSpecialDir = PATH_CONFIG
+	return c
+}
+
+func (c *ConfigModel) UseRelativeDir() *ConfigModel {
+	c.useSpecialDir = PATH_UNSET
 	return c
 }
 
@@ -57,10 +75,7 @@ func (c *ConfigModel) SetVersion(prefix string, main, mid, minor int) *ConfigMod
 }
 
 func (c *ConfigModel) Load() error {
-	dir := "."
-	if len(c.subDirs) > 0 {
-		dir += "/" + strings.Join(c.subDirs, "/")
-	}
+	dir := c.GetConfigPath()
 
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -78,6 +93,30 @@ func (c *ConfigModel) Load() error {
 	})
 
 	return err
+}
+
+func (c *ConfigModel) GetConfigPath() string {
+	dir := "."
+
+	switch c.useSpecialDir {
+	case PATH_HOME:
+		if usrDir, err := os.UserHomeDir(); err != nil {
+			panic(err) // if this fails, there is something terrible wrong. a good reason for panic
+		} else {
+			dir = usrDir
+		}
+	case PATH_CONFIG:
+		if usrCfgDir, err := os.UserConfigDir(); err != nil {
+			panic(err) // if this fails, there is something terrible wrong. a good reason for panic
+		} else {
+			dir = usrCfgDir
+		}
+	}
+
+	if len(c.subDirs) > 0 {
+		dir += "/" + strings.Join(c.subDirs, "/")
+	}
+	return filepath.Clean(dir)
 }
 
 func (c *ConfigModel) tryLoad(path, ext string) error {

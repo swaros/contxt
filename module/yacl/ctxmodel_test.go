@@ -32,6 +32,17 @@ func TestContxtObsoleteCfg(t *testing.T) {
 			t.Error("this file should not being used ", contxtCfg.GetLoadedFile())
 		}
 
+		if len(cfg.Paths) != 2 {
+			t.Error("there should be 2 paths stored. but got ", len(cfg.Paths))
+		} else {
+			if cfg.Paths[0] != "C:\\Users\\thoma\\OneDrive\\Dokumente\\code\\projects\\contxt\\contxt" {
+				t.Error("should be not ", cfg.Paths[0])
+			}
+			if cfg.Paths[1] != "C:\\Users\\thoma\\OneDrive\\Dokumente\\code\\projects\\managed-out" {
+				t.Error("should be not ", cfg.Paths[1])
+			}
+		}
+
 	}
 
 }
