@@ -28,7 +28,7 @@ type VersionRealtion struct {
 type ConfigModel struct {
 	setFile          string // sets a specific filename. so this is the only one that will be loaded
 	useSpecialDir    int
-	structure        *any
+	structure        any
 	version          VersionRealtion
 	reader           []yamc.DataReader
 	subDirs          []string
@@ -39,14 +39,13 @@ type ConfigModel struct {
 	noConfigFilesFn  func(errCode int) error
 	fileLoadCallback func(path string, cfg interface{})
 	initFn           func(strct *any)
-	asYamc           *yamc.Yamc
 }
 
 func NewConfig(structure any, read ...yamc.DataReader) *ConfigModel {
 	return &ConfigModel{
 		useSpecialDir: PATH_UNSET,
 		expectNoFiles: false,
-		structure:     &structure,
+		structure:     structure,
 		reader:        read,
 	}
 }
@@ -96,7 +95,7 @@ func (c *ConfigModel) SetVersion(prefix string, main, mid, minor int) *ConfigMod
 }
 func (c *ConfigModel) Empty() *ConfigModel {
 	if c.initFn != nil {
-		c.initFn(c.structure)
+		c.initFn(&c.structure)
 	}
 	return c
 }
@@ -242,12 +241,8 @@ func (c *ConfigModel) verifyPath(path string) (bool, error) {
 }
 
 func (c *ConfigModel) GetAsYmac() (*yamc.Yamc, error) {
-	if c.asYamc == nil {
-		if err := c.createYamc(yamc.NewJsonReader()); err != nil {
-			return nil, err
-		}
-	}
-	return c.asYamc, nil
+
+	return c.CreateYamc(yamc.NewJsonReader())
 }
 
 func (c *ConfigModel) GetValue(dotedPath string) (any, error) {
@@ -259,30 +254,30 @@ func (c *ConfigModel) GetValue(dotedPath string) (any, error) {
 }
 
 func (c *ConfigModel) ToString(reader yamc.DataReader) (string, error) {
-	if ym, err := c.GetAsYmac(); err == nil {
+	if ym, err := c.CreateYamc(reader); err == nil {
 		return ym.ToString(reader)
 	} else {
 		return "", err
 	}
 }
 
-func (c *ConfigModel) createYamc(reader yamc.DataReader) error {
-	c.asYamc = yamc.NewYmac()
+func (c *ConfigModel) CreateYamc(reader yamc.DataReader) (*yamc.Yamc, error) {
+	asYamc := yamc.NewYmac()
 	if data, err := reader.Marshal(c.structure); err != nil {
-		return err
+		return asYamc, err
 	} else {
-		c.asYamc.Parse(reader, data)
+		errParse := asYamc.Parse(reader, data)
+		return asYamc, errParse
 	}
-	return nil
 }
 
 func (c *ConfigModel) tryLoad(path, ext string) error {
 	for _, loader := range c.reader {
 		for _, ex := range loader.SupportsExt() {
 			if strings.EqualFold("."+ex, ext) {
-				if err := loader.FileDecode(path, &c.structure); err == nil {
+				if err := loader.FileDecode(path, c.structure); err == nil {
 					if c.supportMigrate { // migrate the config
-						c.fileLoadCallback(path, &c.structure)
+						c.fileLoadCallback(path, c.structure)
 					}
 					c.usedFile = path
 					c.loadedFiles = append(c.loadedFiles, path)
