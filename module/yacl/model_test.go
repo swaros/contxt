@@ -9,12 +9,10 @@ import (
 )
 
 type configV1 struct {
-	/*
-		name     string
-		path     string
-		boolflag bool
-		subs     []string
-	*/
+	Name     string   `yaml:"name"`
+	Path     string   `yaml:"path"`
+	Boolflag bool     `yaml:"boolflag"`
+	Subs     []string `yaml:"subs"`
 }
 
 func TestComposePath(t *testing.T) {
@@ -54,3 +52,23 @@ func TestComposePath(t *testing.T) {
 	}
 
 }
+
+/* working on this
+func TestPropertieChanges(t *testing.T) {
+	var cfg configV1
+	cfgv1Handl := yacl.NewConfig(&cfg, yamc.NewYamlReader()).SetSubDirs("v1").SetSingleFile("cfgv1.yml")
+
+	if err := cfgv1Handl.Load(); err != nil {
+		t.Error(err)
+	}
+
+	if !cfg.Boolflag {
+		t.Error("boolflag should be true")
+	}
+
+	if cfg.Name != "test" {
+		t.Error("name should be test. got ", cfg.Name)
+	}
+
+}
+*/

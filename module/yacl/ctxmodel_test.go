@@ -52,7 +52,7 @@ func TestMigrateToV2(t *testing.T) {
 		Init(func(strct *any) {
 			cfgV2.Configs = make(map[string]ConfigurationV2)
 
-		}).
+		}, nil).
 		SetSubDirs("tmpfiles").
 		SetSingleFile(tim.Format("2006-01-02_15_04_05_") + "newConfig.yml"). // create a file that should be uniue enough
 		Empty()

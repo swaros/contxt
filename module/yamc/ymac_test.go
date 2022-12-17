@@ -1,8 +1,10 @@
 package yamc_test
 
 import (
-	"io/ioutil"
+	"os"
 	"reflect"
+	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -10,7 +12,8 @@ import (
 )
 
 func helpFileLoad(filename string, dataHdl func(data []byte)) error {
-	if data, err := ioutil.ReadFile(filename); err == nil {
+
+	if data, err := os.ReadFile(filename); err == nil {
 		dataHdl(data)
 	} else {
 		return err
@@ -20,20 +23,8 @@ func helpFileLoad(filename string, dataHdl func(data []byte)) error {
 
 // Assert helper to handle equal check.
 // by using callbacks we still have the line of error in the test output
-func assertGjsonStringEquals(ymap *yamc.Yamc, path string, expected string, ifNotEquals func(val any), ifErr func(error)) {
-	value, err := ymap.GetGjsonString(path)
-	if err != nil {
-		ifErr(err)
-	}
-	if value != expected {
-		ifNotEquals(value)
-	}
-}
-
-// Assert helper to handle equal check.
-// by using callbacks we still have the line of error in the test output
 func assertGjsonValueEquals(ymap *yamc.Yamc, path string, expected any, ifNotEquals func(val any), ifErr func(error)) {
-	value, err := ymap.GetGjsonValue(path)
+	value, err := ymap.FindValue(path)
 	if err != nil {
 		ifErr(err)
 	}
@@ -45,13 +36,16 @@ func assertGjsonValueEquals(ymap *yamc.Yamc, path string, expected any, ifNotEqu
 // LazyAssertGjsonPathEq wraps assertGjsonValueEquals for fast testing values by path.
 // we loosing the context here, becasue any triggered error will have this funtion as source
 func LazyAssertGjsonPathEq(t *testing.T, ymap *yamc.Yamc, path string, expected any) {
+	t.Helper()
 	assertGjsonValueEquals(ymap, path, expected, func(val any) {
 		if reflect.TypeOf(val) != reflect.TypeOf(expected) {
-			t.Error("types not equal. we got ", reflect.TypeOf(val), " we expect ", reflect.TypeOf(expected))
+			_, fnmane, lineNo, _ := runtime.Caller(3)
+			t.Error("ERROR: ", fnmane+":"+strconv.Itoa(lineNo), " types not equal. we got ", reflect.TypeOf(val), " we expect ", reflect.TypeOf(expected))
 		}
 		t.Error("expected the value (", expected, ") got [", val, "] instead")
 	}, func(err error) {
-		t.Error(err)
+		_, fnmane, lineNo, _ := runtime.Caller(3)
+		t.Error("ERROR: ", fnmane+":"+strconv.Itoa(lineNo), err)
 	})
 }
 
@@ -77,27 +71,12 @@ func TestJsonParse(t *testing.T) {
 			if conv.GetSourceDataType() != yamc.TYPE_ARRAY {
 				t.Error("reported type should be array")
 			}
-			// check the first id. not being lazy now, to get at least
-			// once the file and line number if this kinf of test is failing
-			// here we want to have the value as string
-			assertGjsonStringEquals(conv, "0.id", "1", func(val any) {
-				t.Error("string value test. expected is id 1. got [", val, "] instead")
-			}, func(err error) {
-				t.Error(err)
-			})
-			// again not beeing lazy by testing the real value
-			assertGjsonValueEquals(conv, "0.id", int64(1), func(val any) {
-				t.Error("value test. expected is id 1. got [", val, "] instead")
-			}, func(err error) {
-				t.Error(err)
-			})
 
-			// now we are lazy. if oneof these tests fails, we will not point to this line
-			// of code by the output
+			LazyAssertGjsonPathEq(t, conv, "0.id", float64(1))
 			LazyAssertGjsonPathEq(t, conv, "0.first_name", "Jeanette")
 			LazyAssertGjsonPathEq(t, conv, "2.first_name", "Noell")
-			LazyAssertGjsonPathEq(t, conv, "3", `{"email":"wvalek3@vk.com","first_name":"Willard","gender":"Male","id":4,"ip_address":"67.76.188.26","last_name":"Valek"}`)
-			LazyAssertGjsonPathEq(t, conv, "2.id", int64(3))
+			LazyAssertGjsonPathEq(t, conv, "3.email", `wvalek3@vk.com`)
+			LazyAssertGjsonPathEq(t, conv, "2.id", float64(3))
 		}
 
 	}); err != nil {
@@ -121,8 +100,8 @@ func Test002(t *testing.T) {
 			}
 			LazyAssertGjsonPathEq(t, conv, "_id", "5973782bdb9a930533b05cb2")
 			LazyAssertGjsonPathEq(t, conv, "isActive", true)
-			LazyAssertGjsonPathEq(t, conv, "age", int64(32))
-			LazyAssertGjsonPathEq(t, conv, "friends.1.id", int64(1))
+			LazyAssertGjsonPathEq(t, conv, "age", float64(32))
+			LazyAssertGjsonPathEq(t, conv, "friends.1.id", float64(1))
 			LazyAssertGjsonPathEq(t, conv, "friends.2.name", "Carol Martin")
 		}
 	}); err != nil {
@@ -143,6 +122,12 @@ func TestOfficialYaml(t *testing.T) {
 			if conv.GetSourceDataType() != yamc.TYPE_STRING_MAP {
 				t.Error("reported type should be a string map")
 			}
+
+			assertGjsonValueEquals(conv, "YAML", "YAML Ain't Markup Language™", func(val any) {
+				t.Error("value test. got [", val, "] instead of expected")
+			}, func(err error) {
+				t.Error(err)
+			})
 
 			LazyAssertGjsonPathEq(t, conv, "YAML", "YAML Ain't Markup Language™")
 			LazyAssertGjsonPathEq(t, conv, "YAML Resources.YAML Specifications.1", "YAML 1.1")

@@ -11,9 +11,11 @@ import (
 )
 
 const (
-	PATH_UNSET  = 0
-	PATH_HOME   = 1
-	PATH_CONFIG = 2
+	PATH_UNSET            = 0
+	PATH_HOME             = 1
+	PATH_CONFIG           = 2
+	ERROR_PATH_NOT_EXISTS = 101
+	NO_CONFIG_FILES_FOUND = 102
 )
 
 type VersionRealtion struct {
@@ -33,6 +35,8 @@ type ConfigModel struct {
 	usedFile         string
 	loadedFiles      []string
 	supportMigrate   bool
+	expectNoFiles    bool
+	noConfigFilesFn  func(errCode int) error
 	fileLoadCallback func(path string, cfg interface{})
 	initFn           func(strct *any)
 	asYamc           *yamc.Yamc
@@ -41,13 +45,20 @@ type ConfigModel struct {
 func NewConfig(structure any, read ...yamc.DataReader) *ConfigModel {
 	return &ConfigModel{
 		useSpecialDir: PATH_UNSET,
+		expectNoFiles: false,
 		structure:     &structure,
 		reader:        read,
 	}
 }
 
-func (c *ConfigModel) Init(initFn func(strct *any)) *ConfigModel {
+func (c *ConfigModel) Init(initFn func(strct *any), noConfigFn func(errCode int) error) *ConfigModel {
 	c.initFn = initFn
+	c.noConfigFilesFn = noConfigFn
+	return c
+}
+
+func (c *ConfigModel) SetExpectNoConfigFiles() *ConfigModel {
+	c.expectNoFiles = true
 	return c
 }
 
@@ -97,9 +108,38 @@ func (c *ConfigModel) LoadFile(path string) error {
 	return c.tryLoad(filepath.Clean(c.GetConfigPath()+"/"+path), extension)
 }
 
+func (c *ConfigModel) checkDir(path string) error {
+	exists, err := c.verifyPath(path)
+	if exists {
+		return nil
+	}
+	// not exists but also no error. so it is just not existing
+	// thate means we have to call the handler they is reponsible
+	// to handle not existing paths and other things.
+	// if this handler is not exists, we will handle this as an error
+	// but make a hint how to handle expected "not existings directories"
+	if err == nil {
+		if c.noConfigFilesFn != nil {
+			return c.noConfigFilesFn(NO_CONFIG_FILES_FOUND)
+		}
+		return errors.New("the path " + path + " not exists. is this a expected behavior, and/or should somethig being done, create use the Inithandler and react to ERROR_PATH_NOT_EXISTS ")
+	}
+
+	return err // any other error that is different to dir not exists
+}
+
 func (c *ConfigModel) Load() error {
 	c.Empty()
+
+	// do we have loaders?
+	if len(c.reader) == 0 {
+		return errors.New("no loaders assigned. add add least one Reader on NewConfig(&cf, ...)")
+	}
 	dir := c.GetConfigPath()
+
+	if dErr := c.checkDir(dir); dErr != nil {
+		return dErr
+	}
 
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -111,13 +151,21 @@ func (c *ConfigModel) Load() error {
 			if c.setFile == "" || (basename == c.setFile) { // loading a single file
 				return c.tryLoad(path, extension)
 
-			} else { // loading all files and override anything by the last used config
+			} else if c.setFile == "" { // loading all files and override anything by the last used config. but not if we expect a single file is used
 				c.tryLoad(path, extension)
 			}
 		}
 		return nil
 	})
-
+	// no file could be used to load some config. if this is not expected
+	// and there should exists a config, then it also depends on the handler callback return, if we
+	// have a error case
+	if !c.expectNoFiles && err == nil && c.usedFile == "" {
+		if c.noConfigFilesFn != nil {
+			return c.noConfigFilesFn(NO_CONFIG_FILES_FOUND)
+		}
+		return errors.New("at least one Configuration should exists. but found nothing")
+	}
 	return err
 }
 
@@ -182,6 +230,17 @@ func (c *ConfigModel) GetConfigPath() string {
 	return filepath.Clean(dir)
 }
 
+func (c *ConfigModel) verifyPath(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
+}
+
 func (c *ConfigModel) GetAsYmac() (*yamc.Yamc, error) {
 	if c.asYamc == nil {
 		if err := c.createYamc(yamc.NewJsonReader()); err != nil {
@@ -191,9 +250,9 @@ func (c *ConfigModel) GetAsYmac() (*yamc.Yamc, error) {
 	return c.asYamc, nil
 }
 
-func (c *ConfigModel) GetValue(gjsonPath string) (any, error) {
+func (c *ConfigModel) GetValue(dotedPath string) (any, error) {
 	if ym, err := c.GetAsYmac(); err == nil {
-		return ym.GetGjsonValue(gjsonPath)
+		return ym.FindValue(dotedPath)
 	} else {
 		return nil, err
 	}

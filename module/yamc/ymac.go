@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/tidwall/gjson"
 )
@@ -17,7 +18,7 @@ const (
 type DataReader interface {
 	Unmarshal(in []byte, out interface{}) (err error)
 	Marshal(in interface{}) (out []byte, err error)
-	FileDecode(path string, decodeInterface any) (err error)
+	FileDecode(path string, decodeInterface interface{}) (err error)
 	SupportsExt() []string
 }
 
@@ -115,23 +116,10 @@ func (y *Yamc) GetGjsonString(path string) (jsonStr string, err error) {
 
 // GetGjsonString returns the content of the path as json string result
 // or the error while processing the data
-func (y *Yamc) GetGjsonValue(path string) (content any, err error) {
-	if result, err := y.Gjson(path); err == nil {
-		return getGsonResultValue(result), nil
-	} else {
-		return "", err
-	}
-}
+func (y *Yamc) FindValue(path string) (content any, err error) {
 
-func getGsonResultValue(result gjson.Result) any {
-	switch result.Type {
-	case gjson.Number:
-		return result.Int()
-	case gjson.False, gjson.True:
-		return result.Bool()
-	default:
-		return result.String()
-	}
+	return FindChain(y.data, strings.Split(path, ".")...)
+
 }
 
 // testAndConvertJsonType is the Fallback Reader for []interface{}

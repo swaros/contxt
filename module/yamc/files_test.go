@@ -22,8 +22,8 @@ func TestJsonFile(t *testing.T) {
 	} else {
 		LazyAssertGjsonPathEq(t, conv, "_id", "5973782bdb9a930533b05cb2")
 		LazyAssertGjsonPathEq(t, conv, "isActive", true)
-		LazyAssertGjsonPathEq(t, conv, "age", int64(32))
-		LazyAssertGjsonPathEq(t, conv, "friends.1.id", int64(1))
+		LazyAssertGjsonPathEq(t, conv, "age", float64(32))
+		LazyAssertGjsonPathEq(t, conv, "friends.1.id", float64(1))
 		LazyAssertGjsonPathEq(t, conv, "friends.2.name", "Carol Martin")
 	}
 }

@@ -19,7 +19,7 @@ func (j *JsonReader) Marshal(in interface{}) (out []byte, err error) {
 	return json.Marshal(in)
 }
 
-func (j *JsonReader) FileDecode(path string, decodeInterface any) (err error) {
+func (j *JsonReader) FileDecode(path string, decodeInterface interface{}) (err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return err

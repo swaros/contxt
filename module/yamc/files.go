@@ -1,10 +1,10 @@
 package yamc
 
-import "io/ioutil"
+import "os"
 
 // NewYmacByFile loads file content and returns a new Ymac
 func NewYmacByFile(filename string, rdr DataReader) (*Yamc, error) {
-	if data, err := ioutil.ReadFile(filename); err == nil {
+	if data, err := os.ReadFile(filename); err == nil {
 		yetAnohterMapConverter := NewYmac()
 		err := yetAnohterMapConverter.Parse(rdr, data)
 		return yetAnohterMapConverter, err
