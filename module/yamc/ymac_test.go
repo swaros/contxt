@@ -22,8 +22,7 @@ func helpFileLoad(filename string, dataHdl func(data []byte)) error {
 }
 
 // Assert helper to handle equal check.
-// by using callbacks we still have the line of error in the test output
-func assertGjsonValueEquals(ymap *yamc.Yamc, path string, expected any, ifNotEquals func(val any), ifErr func(error)) {
+func CallBackAssertPath(ymap *yamc.Yamc, path string, expected any, ifNotEquals func(val any), ifErr func(error)) {
 	value, err := ymap.FindValue(path)
 	if err != nil {
 		ifErr(err)
@@ -33,11 +32,11 @@ func assertGjsonValueEquals(ymap *yamc.Yamc, path string, expected any, ifNotEqu
 	}
 }
 
-// LazyAssertGjsonPathEq wraps assertGjsonValueEquals for fast testing values by path.
+// LazyAssertPath wraps CallBackAssertPath for fast testing values by path.
 // we loosing the context here, becasue any triggered error will have this funtion as source
-func LazyAssertGjsonPathEq(t *testing.T, ymap *yamc.Yamc, path string, expected any) {
+func LazyAssertPath(t *testing.T, ymap *yamc.Yamc, path string, expected any) {
 	t.Helper()
-	assertGjsonValueEquals(ymap, path, expected, func(val any) {
+	CallBackAssertPath(ymap, path, expected, func(val any) {
 		if reflect.TypeOf(val) != reflect.TypeOf(expected) {
 			_, fnmane, lineNo, _ := runtime.Caller(3)
 			t.Error("ERROR: ", fnmane+":"+strconv.Itoa(lineNo), " types not equal. we got ", reflect.TypeOf(val), " we expect ", reflect.TypeOf(expected))
@@ -72,11 +71,11 @@ func TestJsonParse(t *testing.T) {
 				t.Error("reported type should be array")
 			}
 
-			LazyAssertGjsonPathEq(t, conv, "0.id", float64(1))
-			LazyAssertGjsonPathEq(t, conv, "0.first_name", "Jeanette")
-			LazyAssertGjsonPathEq(t, conv, "2.first_name", "Noell")
-			LazyAssertGjsonPathEq(t, conv, "3.email", `wvalek3@vk.com`)
-			LazyAssertGjsonPathEq(t, conv, "2.id", float64(3))
+			LazyAssertPath(t, conv, "0.id", float64(1))
+			LazyAssertPath(t, conv, "0.first_name", "Jeanette")
+			LazyAssertPath(t, conv, "2.first_name", "Noell")
+			LazyAssertPath(t, conv, "3.email", `wvalek3@vk.com`)
+			LazyAssertPath(t, conv, "2.id", float64(3))
 		}
 
 	}); err != nil {
@@ -98,11 +97,11 @@ func Test002(t *testing.T) {
 				t.Error("reported type should be a string map")
 
 			}
-			LazyAssertGjsonPathEq(t, conv, "_id", "5973782bdb9a930533b05cb2")
-			LazyAssertGjsonPathEq(t, conv, "isActive", true)
-			LazyAssertGjsonPathEq(t, conv, "age", float64(32))
-			LazyAssertGjsonPathEq(t, conv, "friends.1.id", float64(1))
-			LazyAssertGjsonPathEq(t, conv, "friends.2.name", "Carol Martin")
+			LazyAssertPath(t, conv, "_id", "5973782bdb9a930533b05cb2")
+			LazyAssertPath(t, conv, "isActive", true)
+			LazyAssertPath(t, conv, "age", float64(32))
+			LazyAssertPath(t, conv, "friends.1.id", float64(1))
+			LazyAssertPath(t, conv, "friends.2.name", "Carol Martin")
 		}
 	}); err != nil {
 		t.Error(err)
@@ -123,14 +122,14 @@ func TestOfficialYaml(t *testing.T) {
 				t.Error("reported type should be a string map")
 			}
 
-			assertGjsonValueEquals(conv, "YAML", "YAML Ain't Markup Language™", func(val any) {
+			CallBackAssertPath(conv, "YAML", "YAML Ain't Markup Language™", func(val any) {
 				t.Error("value test. got [", val, "] instead of expected")
 			}, func(err error) {
 				t.Error(err)
 			})
 
-			LazyAssertGjsonPathEq(t, conv, "YAML", "YAML Ain't Markup Language™")
-			LazyAssertGjsonPathEq(t, conv, "YAML Resources.YAML Specifications.1", "YAML 1.1")
+			LazyAssertPath(t, conv, "YAML", "YAML Ain't Markup Language™")
+			LazyAssertPath(t, conv, "YAML Resources.YAML Specifications.1", "YAML 1.1")
 		}
 	}); err != nil {
 		t.Error(err)
@@ -151,9 +150,9 @@ func Test003Yaml(t *testing.T) {
 				t.Error("reported type should be a string map")
 			}
 
-			LazyAssertGjsonPathEq(t, conv, "name", "Martin D'vloper")
-			LazyAssertGjsonPathEq(t, conv, "foods.2", "Strawberry")
-			LazyAssertGjsonPathEq(t, conv, "languages.perl", "Elite")
+			LazyAssertPath(t, conv, "name", "Martin D'vloper")
+			LazyAssertPath(t, conv, "foods.2", "Strawberry")
+			LazyAssertPath(t, conv, "languages.perl", "Elite")
 		}
 	}); err != nil {
 		t.Error(err)
