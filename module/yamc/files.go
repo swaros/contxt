@@ -23,7 +23,7 @@ package yamc
 
 import "os"
 
-// NewYmacByFile loads file content and returns a new Ymac
+// NewByFile loads file content and returns a new Ymac
 func NewByFile(filename string, rdr DataReader) (*Yamc, error) {
 	if data, err := os.ReadFile(filename); err == nil {
 		yetAnohterMapConverter := New()
@@ -34,12 +34,12 @@ func NewByFile(filename string, rdr DataReader) (*Yamc, error) {
 	}
 }
 
-// NewYmacByYaml shortcut for reading Yaml File by using NewYmacByFile
+// NewByYaml shortcut for reading Yaml File by using NewYmacByFile
 func NewByYaml(filename string) (*Yamc, error) {
 	return NewByFile(filename, NewYamlReader())
 }
 
-// NewYmacByJson json file loading shortcut
+// NewByJson json file loading shortcut
 func NewByJson(filename string) (*Yamc, error) {
 	return NewByFile(filename, NewJsonReader())
 }
