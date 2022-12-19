@@ -1,7 +1,6 @@
 // Copyright (c) 2022 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,9 +24,9 @@ package yamc
 import "os"
 
 // NewYmacByFile loads file content and returns a new Ymac
-func NewYmacByFile(filename string, rdr DataReader) (*Yamc, error) {
+func NewByFile(filename string, rdr DataReader) (*Yamc, error) {
 	if data, err := os.ReadFile(filename); err == nil {
-		yetAnohterMapConverter := NewYmac()
+		yetAnohterMapConverter := New()
 		err := yetAnohterMapConverter.Parse(rdr, data)
 		return yetAnohterMapConverter, err
 	} else {
@@ -36,11 +35,11 @@ func NewYmacByFile(filename string, rdr DataReader) (*Yamc, error) {
 }
 
 // NewYmacByYaml shortcut for reading Yaml File by using NewYmacByFile
-func NewYmacByYaml(filename string) (*Yamc, error) {
-	return NewYmacByFile(filename, NewYamlReader())
+func NewByYaml(filename string) (*Yamc, error) {
+	return NewByFile(filename, NewYamlReader())
 }
 
 // NewYmacByJson json file loading shortcut
-func NewYmacByJson(filename string) (*Yamc, error) {
-	return NewYmacByFile(filename, NewJsonReader())
+func NewByJson(filename string) (*Yamc, error) {
+	return NewByFile(filename, NewJsonReader())
 }

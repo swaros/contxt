@@ -1,7 +1,6 @@
 // Copyright (c) 2022 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -50,7 +49,7 @@ type Yamc struct {
 	sourceDataType int                    // holds the information about the structure of the source
 }
 
-func NewYmac() *Yamc {
+func New() *Yamc {
 	return &Yamc{
 		loaded:         false,
 		sourceDataType: 0,

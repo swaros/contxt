@@ -56,7 +56,7 @@ func TestJsonParse(t *testing.T) {
 		jsonReader := yamc.NewJsonReader()
 
 		// init yamc
-		conv := yamc.NewYmac()
+		conv := yamc.New()
 
 		// handle the data
 		if err := conv.Parse(jsonReader, data); err != nil {
@@ -85,7 +85,7 @@ func TestJsonParse(t *testing.T) {
 
 func Test002(t *testing.T) {
 	if err := helpFileLoad("testdata/test002.json", func(data []byte) {
-		conv := yamc.NewYmac()
+		conv := yamc.New()
 		if err := conv.Parse(yamc.NewJsonReader(), data); err != nil {
 			t.Error(err)
 		} else {
@@ -110,7 +110,7 @@ func Test002(t *testing.T) {
 
 func TestOfficialYaml(t *testing.T) {
 	if err := helpFileLoad("testdata/official.yaml", func(data []byte) {
-		conv := yamc.NewYmac()
+		conv := yamc.New()
 		if err := conv.Parse(yamc.NewYamlReader(), data); err != nil {
 			t.Error(err)
 		} else {
@@ -138,7 +138,7 @@ func TestOfficialYaml(t *testing.T) {
 
 func Test003Yaml(t *testing.T) {
 	if err := helpFileLoad("testdata/test003.yml", func(data []byte) {
-		conv := yamc.NewYmac()
+		conv := yamc.New()
 		if err := conv.Parse(yamc.NewYamlReader(), data); err != nil {
 			t.Error(err)
 		} else {
@@ -161,7 +161,7 @@ func Test003Yaml(t *testing.T) {
 
 func TestJsonInvalid(t *testing.T) {
 	data := []byte("[{hello}}]")
-	conv := yamc.NewYmac()
+	conv := yamc.New()
 	if err := conv.Parse(yamc.NewJsonReader(), data); err == nil {
 		t.Error("this reading should fail")
 	}
@@ -170,7 +170,7 @@ func TestJsonInvalid(t *testing.T) {
 
 func TestYamlInvalid(t *testing.T) {
 	data := []byte("[uhm]-")
-	conv := yamc.NewYmac()
+	conv := yamc.New()
 	if err := conv.Parse(yamc.NewYamlReader(), data); err == nil {
 		t.Error("this reading should fail")
 	}
@@ -179,7 +179,7 @@ func TestYamlInvalid(t *testing.T) {
 
 func TestJsonYamlToString(t *testing.T) {
 	data := []byte(`{"master": 45}`)
-	conv := yamc.NewYmac()
+	conv := yamc.New()
 	if err := conv.Parse(yamc.NewJsonReader(), data); err != nil {
 		t.Error("this reading should not fail")
 	} else {
@@ -205,7 +205,7 @@ hello:
    - you
 `
 	data := []byte(yaml)
-	conv := yamc.NewYmac()
+	conv := yamc.New()
 	if err := conv.Parse(yamc.NewYamlReader(), data); err != nil {
 		t.Error("this reading should not fail")
 	} else {

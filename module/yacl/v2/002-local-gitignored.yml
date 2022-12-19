@@ -1,0 +1,8 @@
+config:
+  loglevel: DEBUG
+  env:
+    target: development
+  users:
+     - $USER
+     - FakeHost
+  host: 127.0.0.1

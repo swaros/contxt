@@ -1,3 +1,24 @@
+// Copyright (c) 2022 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// # Licensed under the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 package yacl
 
 import (
@@ -5,6 +26,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/swaros/contxt/module/yamc"
@@ -18,35 +40,32 @@ const (
 	NO_CONFIG_FILES_FOUND = 102
 )
 
-type VersionRealtion struct {
-	main   int
-	mid    int
-	min    int
-	prefix string
-}
-
 type ConfigModel struct {
 	setFile          string // sets a specific filename. so this is the only one that will be loaded
 	useSpecialDir    int
 	structure        any
-	version          VersionRealtion
 	reader           []yamc.DataReader
 	subDirs          []string
 	usedFile         string
 	loadedFiles      []string
+	dirBlackList     []string
 	supportMigrate   bool
 	expectNoFiles    bool
 	noConfigFilesFn  func(errCode int) error
 	fileLoadCallback func(path string, cfg interface{})
 	initFn           func(strct *any)
+	allowSubDirs     bool
+	allowDirPattern  string
+	filesPattern     string
 }
 
-func NewConfig(structure any, read ...yamc.DataReader) *ConfigModel {
+func New(structure any, read ...yamc.DataReader) *ConfigModel {
 	return &ConfigModel{
 		useSpecialDir: PATH_UNSET,
 		expectNoFiles: false,
 		structure:     structure,
 		reader:        read,
+		allowSubDirs:  false,
 	}
 }
 
@@ -58,6 +77,11 @@ func (c *ConfigModel) Init(initFn func(strct *any), noConfigFn func(errCode int)
 
 func (c *ConfigModel) SetExpectNoConfigFiles() *ConfigModel {
 	c.expectNoFiles = true
+	return c
+}
+
+func (c *ConfigModel) SetFilePattern(regex string) *ConfigModel {
+	c.filesPattern = regex
 	return c
 }
 
@@ -86,13 +110,28 @@ func (c *ConfigModel) SetSingleFile(filename string) *ConfigModel {
 	return c
 }
 
-func (c *ConfigModel) SetVersion(prefix string, main, mid, minor int) *ConfigModel {
-	c.version.main = main
-	c.version.mid = mid
-	c.version.min = minor
-	c.version.prefix = prefix
+func (c *ConfigModel) AllowSubdirs() *ConfigModel {
+	c.allowSubDirs = true
 	return c
 }
+
+func (c *ConfigModel) AllowSubdirsByRegex(regex string) *ConfigModel {
+	c.allowDirPattern = regex
+	c.allowSubDirs = true
+	return c
+}
+
+func (c *ConfigModel) NoSubdirs() *ConfigModel {
+	c.allowSubDirs = false
+	return c
+}
+
+func (c *ConfigModel) SetFolderBlackList(blackListedDirs []string) *ConfigModel {
+	c.dirBlackList = blackListedDirs
+	c.allowSubDirs = true
+	return c
+}
+
 func (c *ConfigModel) Empty() *ConfigModel {
 	if c.initFn != nil {
 		c.initFn(&c.structure)
@@ -107,24 +146,58 @@ func (c *ConfigModel) LoadFile(path string) error {
 	return c.tryLoad(filepath.Clean(c.GetConfigPath()+"/"+path), extension)
 }
 
-func (c *ConfigModel) checkDir(path string) error {
+func (c *ConfigModel) isBlackListed(path string) bool {
+	cPath := filepath.Clean(path)
+	for _, badDir := range c.dirBlackList {
+		if filepath.Clean(badDir) == cPath {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *ConfigModel) checkDir(path string) (actionREquired bool, dirError error) {
 	exists, err := c.verifyPath(path)
 	if exists {
-		return nil
+		return false, nil // regular "all fine" case. no action required
 	}
-	// not exists but also no error. so it is just not existing
-	// thate means we have to call the handler they is reponsible
+	// not exists but also no error. so it is just not existing.
+	// that means we have to call the handler they is reponsible
 	// to handle not existing paths and other things.
 	// if this handler is not exists, we will handle this as an error
 	// but make a hint how to handle expected "not existings directories"
 	if err == nil {
 		if c.noConfigFilesFn != nil {
-			return c.noConfigFilesFn(NO_CONFIG_FILES_FOUND)
+			return true, c.noConfigFilesFn(ERROR_PATH_NOT_EXISTS)
 		}
-		return errors.New("the path " + path + " not exists. is this a expected behavior, and/or should somethig being done, create use the Inithandler and react to ERROR_PATH_NOT_EXISTS ")
+		return true, errors.New("the path " + path + " not exists. is this a expected behavior, and/or should somethig being done, create use the Inithandler and react to ERROR_PATH_NOT_EXISTS ")
+	}
+	return true, err // any other error that is different to dir not exists
+}
+
+func (c *ConfigModel) dirIsAllowed(path string) bool {
+	// base config path is allways allowed
+	if path == c.GetConfigPath() {
+		return true
 	}
 
-	return err // any other error that is different to dir not exists
+	if c.allowDirPattern != "" {
+		if match, err := regexp.MatchString(c.allowDirPattern, path); err == nil {
+			return match // an error is always false.
+		}
+	}
+	return c.allowSubDirs // if non of the checks have decided, it just depends if we enabled using sub dirs
+}
+
+func (c *ConfigModel) filePattenCheck(path string) bool {
+	if c.filesPattern != "" {
+		if match, err := regexp.MatchString(c.filesPattern, path); err == nil {
+			return match
+		}
+	} else {
+		return true // empty pattern. always true
+	}
+	return false // this can only be reached if the regex was not working
 }
 
 func (c *ConfigModel) Load() error {
@@ -132,12 +205,14 @@ func (c *ConfigModel) Load() error {
 
 	// do we have loaders?
 	if len(c.reader) == 0 {
-		return errors.New("no loaders assigned. add add least one Reader on NewConfig(&cf, ...)")
+		return errors.New("no loaders assigned. add add least one Reader on New(&cf, ...)")
 	}
 	dir := c.GetConfigPath()
 
-	if dErr := c.checkDir(dir); dErr != nil {
+	if action, dErr := c.checkDir(dir); dErr != nil {
 		return dErr
+	} else if action { // action == true means we do not report a error, but the directory can not be used
+		return nil // .. so we get out now
 	}
 
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
@@ -145,14 +220,27 @@ func (c *ConfigModel) Load() error {
 			return err
 		}
 		if !info.IsDir() {
-			var basename = filepath.Base(path)
-			var extension = filepath.Ext(path)
-			if c.setFile == "" || (basename == c.setFile) { // loading a single file
-				return c.tryLoad(path, extension)
+			if c.filePattenCheck(path) {
+				var basename = filepath.Base(path)
+				var extension = filepath.Ext(path)
+				if c.setFile == "" || (basename == c.setFile) { // loading a single file
+					return c.tryLoad(path, extension)
 
-			} else if c.setFile == "" { // loading all files and override anything by the last used config. but not if we expect a single file is used
-				c.tryLoad(path, extension)
+				} else if c.setFile == "" { // loading all files and override anything by the last used config. but not if we expect a single file is used
+					c.tryLoad(path, extension)
+				}
 			}
+		} else {
+			if c.allowSubDirs {
+				if c.isBlackListed(path) || !c.dirIsAllowed(path) {
+					return filepath.SkipDir
+				}
+			} else {
+				if !c.dirIsAllowed(path) {
+					return filepath.SkipDir
+				}
+			}
+
 		}
 		return nil
 	})
@@ -170,12 +258,13 @@ func (c *ConfigModel) Load() error {
 
 func (c *ConfigModel) detectFilename() string {
 	filename := ""
-	if c.usedFile != "" {
+	if c.usedFile != "" { // do we have a file already used?
 		filename = c.usedFile
-	} else if c.setFile != "" {
+
+	} else if c.setFile != "" { // or do we have a file defined?
 		filename = c.setFile
 	}
-	if filename != "" {
+	if filename != "" { // still no filename? then compose it
 		return filepath.Clean(c.GetConfigPath() + "/" + filename)
 	}
 	return filename
@@ -262,7 +351,7 @@ func (c *ConfigModel) ToString(reader yamc.DataReader) (string, error) {
 }
 
 func (c *ConfigModel) CreateYamc(reader yamc.DataReader) (*yamc.Yamc, error) {
-	asYamc := yamc.NewYmac()
+	asYamc := yamc.New()
 	if data, err := reader.Marshal(c.structure); err != nil {
 		return asYamc, err
 	} else {

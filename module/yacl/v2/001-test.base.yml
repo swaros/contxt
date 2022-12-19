@@ -1,0 +1,9 @@
+config:
+  loglevel: ERROR
+  env:
+    target: production
+  users:
+     - root
+  host: project.deploy.com
+  inport: 8089
+  outport: 7001

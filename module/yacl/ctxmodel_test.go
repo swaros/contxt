@@ -48,7 +48,7 @@ func TestMigrateToV2(t *testing.T) {
 
 	tim := time.Now()
 
-	newConfig := yacl.NewConfig(&cfgV2, yamc.NewYamlReader()).
+	newConfig := yacl.New(&cfgV2, yamc.NewYamlReader()).
 		Init(func(strct *any) {
 			cfgV2.Configs = make(map[string]ConfigurationV2)
 
@@ -57,7 +57,7 @@ func TestMigrateToV2(t *testing.T) {
 		SetSingleFile(tim.Format("2006-01-02_15_04_05_") + "newConfig.yml"). // create a file that should be uniue enough
 		Empty()
 
-	contxtCfg := yacl.NewConfig(&cfgV1, yamc.NewJsonReader()).
+	contxtCfg := yacl.New(&cfgV1, yamc.NewJsonReader()).
 		SetSubDirs("testdata").
 		SupportMigrate(func(path string, cfg interface{}) {
 
@@ -149,7 +149,7 @@ func TestMigrateToV2(t *testing.T) {
 func TestContxtObsoleteCfg(t *testing.T) {
 	var cfg Configuration
 
-	contxtCfg := yacl.NewConfig(&cfg, yamc.NewJsonReader()).SetSingleFile("contxt.json").SetSubDirs("testdata")
+	contxtCfg := yacl.New(&cfg, yamc.NewJsonReader()).SetSingleFile("contxt.json").SetSubDirs("testdata")
 
 	if err := contxtCfg.Load(); err != nil {
 		t.Error(err)

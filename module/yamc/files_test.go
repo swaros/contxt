@@ -7,7 +7,7 @@ import (
 )
 
 func TestYamlFile(t *testing.T) {
-	if conv, err := yamc.NewYmacByYaml("testdata/test003.yml"); err != nil {
+	if conv, err := yamc.NewByYaml("testdata/test003.yml"); err != nil {
 		t.Error(err)
 	} else {
 		LazyAssertPath(t, conv, "name", "Martin D'vloper")
@@ -17,7 +17,7 @@ func TestYamlFile(t *testing.T) {
 }
 
 func TestJsonFile(t *testing.T) {
-	if conv, err := yamc.NewYmacByJson("testdata/test002.json"); err != nil {
+	if conv, err := yamc.NewByJson("testdata/test002.json"); err != nil {
 		t.Error(err)
 	} else {
 		LazyAssertPath(t, conv, "_id", "5973782bdb9a930533b05cb2")
