@@ -55,7 +55,7 @@ func TestLoadWithoutLoaders(t *testing.T) {
 func TestComposePath(t *testing.T) {
 	var cfg *configV0
 
-	// relative path just with two subfolders
+	// relative path just with two subfolder
 	cfgv1 := yacl.New(cfg).SetSubDirs("test", "version")
 	path := cfgv1.GetConfigPath()
 	if path != filepath.Clean("test/version") {
@@ -255,9 +255,9 @@ func TestLoadingOverride(t *testing.T) {
 
 }
 
-// in this test the local is not excluded. in real worls
-// this file would not being deployd because config files like them
-// should be gitgnored
+// in this test the local is not excluded. in real worlds
+// this file would not being deployed because config files like them
+// should be gitignored
 func TestLoadingOverrideAnUseEu(t *testing.T) {
 	var cfg chainConfig
 	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
@@ -330,7 +330,7 @@ func TestLoadingOverrideAndUseEuByBlackList(t *testing.T) {
 
 }
 
-// explizit ignoring the local test config by file pattern
+// explicit ignoring the local test config by file pattern
 func TestLoadingOverrideUseUsNoDEv(t *testing.T) {
 	var cfg chainConfig
 	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
@@ -479,7 +479,7 @@ func TestNoConfigFilesByMissingFolder(t *testing.T) {
 	loadErr := chainCfg.Load()
 	if loadErr != nil {
 		if !strings.Contains(loadErr.Error(), "the path v10 not exists.") {
-			t.Error("enexpected error message ", loadErr.Error())
+			t.Error("unexpected error message ", loadErr.Error())
 		}
 
 	}
@@ -507,7 +507,7 @@ func TestNoConfigFilesByMissingFolderFixed(t *testing.T) {
 	}
 }
 
-func TestOneFileNameusage(t *testing.T) {
+func TestOneFileNameUsage(t *testing.T) {
 	var cfg chainConfig
 
 	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).

@@ -42,13 +42,13 @@ const (
 
 type ConfigModel struct {
 	setFile          string                             // sets a specific filename. so this is the only one that will be loaded
-	useSpecialDir    int                                // defines the behavior og the paths used like config, userhome or none a simple path (relative or absolute)
+	useSpecialDir    int                                // defines the behavior og the paths used like config, user home or none a simple path (relative or absolute)
 	structure        any                                // points to the config struct
 	reader           []yamc.DataReader                  // list of used readers
-	subDirs          []string                           // subdiretories reltive to the basedir (defined by useSpecialDir behavior)
+	subDirs          []string                           // subdirectories relative to the basedir (defined by useSpecialDir behavior)
 	usedFile         string                             // the last used configFile that is parsed
 	loadedFiles      []string                           // list of all files they processed
-	dirBlackList     []string                           // a blakist of directorynames thay should be ignored whaile looking for for configurations in sub folders
+	dirBlackList     []string                           // a blacklist of directory names they should be ignored while looking for for configurations in sub folders
 	supportMigrate   bool                               // flag to enable the migration callback
 	expectNoFiles    bool                               // flag to ignore the case, that no configuration files exists. if this is not set, an error will be returned wile Load
 	noConfigFilesFn  func(errCode int) error            // callback that handles issues while loading configuration files. cases are ERROR_PATH_NOT_EXISTS and NO_CONFIG_FILES_FOUND
@@ -70,16 +70,16 @@ func New(structure any, read ...yamc.DataReader) *ConfigModel {
 	}
 }
 
-// Init sets the initialisition Callbacks.
+// Init sets the initialization Callbacks.
 // initFn will be executed to initialize the configuration structure. can be nil
-// noConfigFn is the calback for the cases, the configuration directory is not exists, there are no configurations files found
+// noConfigFn is the callback for the cases, the configuration directory is not exists, there are no configurations files found
 func (c *ConfigModel) Init(initFn func(strct *any), noConfigFn func(errCode int) error) *ConfigModel {
 	c.initFn = initFn
 	c.noConfigFilesFn = noConfigFn
 	return c
 }
 
-// SetExpectNoConfigFiles disbale the behavior, not existing configfiles will be handled as error.
+// SetExpectNoConfigFiles disable the behavior, not existing config files will be handled as error.
 // this also means, it should just ignore this issue. so if this is enabled, it will also not reported
 // to the noConfigFn that might be setup in the Init handler
 func (c *ConfigModel) SetExpectNoConfigFiles() *ConfigModel {
@@ -94,13 +94,13 @@ func (c *ConfigModel) SetFilePattern(regex string) *ConfigModel {
 	return c
 }
 
-// UseHomeDir sets the User Home-dir as entriepoint (basedir)
+// UseHomeDir sets the User Home-dir as entrypoint (basedir)
 func (c *ConfigModel) UseHomeDir() *ConfigModel {
 	c.useSpecialDir = PATH_HOME
 	return c
 }
 
-// UseConfigDir sets the default config dir as entriepoint (basedir)
+// UseConfigDir sets the default config dir as entrypoint (basedir)
 func (c *ConfigModel) UseConfigDir() *ConfigModel {
 	c.useSpecialDir = PATH_CONFIG
 	return c
@@ -114,23 +114,23 @@ func (c *ConfigModel) UseRelativeDir() *ConfigModel {
 }
 
 // add the names of the sub directories starting from the base directory.
-// it will be set as string arguments. add any subirectory separate as argument. do not add "thisdir/nextdir".
+// it will be set as string arguments. add any subdirectory separate as argument. do not add "this-dir/next-dir".
 func (c *ConfigModel) SetSubDirs(dirs ...string) *ConfigModel {
 	c.subDirs = dirs
 	return c
 }
 
 // Limits looking for the configurations to one file (base) name. so do not add any path to filename argument.
-// this is not equal to the usage of LoadFile, because if this is combined with  scanning subdirs, any
+// this is not equal to the usage of LoadFile, because if this is combined with  scanning sub dirs, any
 // configuration with this file basename will be accepted.
 // if you like to load one specific file so use LoadFile instead.
-// if you like more flexible, deening what files should load, define a regex-pattern and use SetFilePattern
+// if you like more flexible, depending what files should load, define a regex-pattern and use SetFilePattern
 func (c *ConfigModel) SetSingleFile(filename string) *ConfigModel {
 	c.setFile = filename
 	return c
 }
 
-// AllowSubdirs enables scanning subirectories to find configuration files
+// AllowSubdirs enables scanning subdirectories to find configuration files
 func (c *ConfigModel) AllowSubdirs() *ConfigModel {
 	c.allowSubDirs = true
 	return c
@@ -143,20 +143,20 @@ func (c *ConfigModel) AllowSubdirsByRegex(regex string) *ConfigModel {
 	return c
 }
 
-// NoSubdirs diables scanning sub folders while looking for configuration files
+// NoSubdirs disables scanning sub folders while looking for configuration files
 func (c *ConfigModel) NoSubdirs() *ConfigModel {
 	c.allowSubDirs = false
 	return c
 }
 
-// SetFolderBlackList defines a simple list of sub direcories, they should being ignored, while looking for configuration files
+// SetFolderBlackList defines a simple list of sub directories, they should being ignored, while looking for configuration files
 func (c *ConfigModel) SetFolderBlackList(blackListedDirs []string) *ConfigModel {
 	c.dirBlackList = blackListedDirs
 	c.allowSubDirs = true
 	return c
 }
 
-// Empty initilize the configuration without any configuration files loading.
+// Empty initialize the configuration without any configuration files loading.
 func (c *ConfigModel) Empty() *ConfigModel {
 	if c.initFn != nil {
 		c.initFn(&c.structure)
@@ -190,21 +190,21 @@ func (c *ConfigModel) checkDir(path string) (actionREquired bool, dirError error
 		return false, nil // regular "all fine" case. no action required
 	}
 	// not exists but also no error. so it is just not existing.
-	// that means we have to call the handler they is reponsible
+	// that means we have to call the handler they is responsible
 	// to handle not existing paths and other things.
 	// if this handler is not exists, we will handle this as an error
-	// but make a hint how to handle expected "not existings directories"
+	// but make a hint how to handle expected "not existing directories"
 	if err == nil {
 		if c.noConfigFilesFn != nil {
 			return true, c.noConfigFilesFn(ERROR_PATH_NOT_EXISTS)
 		}
-		return true, errors.New("the path " + path + " not exists. is this a expected behavior, and/or should somethig being done, create use the Inithandler and react to ERROR_PATH_NOT_EXISTS ")
+		return true, errors.New("the path " + path + " not exists. is this a expected behavior, and/or should something being done, use the Init-Handler and react to ERROR_PATH_NOT_EXISTS ")
 	}
 	return true, err // any other error that is different to dir not exists
 }
 
 func (c *ConfigModel) dirIsAllowed(path string) bool {
-	// base config path is allways allowed
+	// base config path is always allowed
 	if path == c.GetConfigPath() {
 		return true
 	}
@@ -300,7 +300,7 @@ func (c *ConfigModel) detectFilename() string {
 }
 
 // Save is try to write the current configuration on disk.
-// IF we sucessfully loaded content at least from one configuration file, the last one is used
+// IF we successfully loaded content at least from one configuration file, the last one is used
 // IF we have setup a SingleFile and do not have a usage while loading, then this will be used instead.
 // anything else will report an error
 func (c *ConfigModel) Save() error {
@@ -365,9 +365,9 @@ func (c *ConfigModel) verifyPath(path string) (bool, error) {
 }
 
 // GetValue parsing a string with dots, to use any part of them to build
-// a route to a specific entry. This is a verry basic path building, without
+// a route to a specific entry. This is a very basic path building, without
 // any magic. so even a key with dots will be an issue.
-// so the usecase depends on the actual structure.
+// so the use case depends on the actual structure.
 // Also DO NOT USE THIS FOR READING CONFIG VALUES.
 // use the structure itself.
 // this method is a simple helper for verify data while testing (for example)
