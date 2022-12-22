@@ -1,7 +1,7 @@
 # we use the build version for not running in a version conflict, if we do not have the new version installed
 version: "{{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.minor}}"
 
-# define oure workspace
+# define ours workspace
 workspace:
    project: contxt
    role: root
@@ -16,6 +16,8 @@ config:
     - ./imports/coverage.html coverage
     - ./imports/Makefile.tpl makefile
     - ./imports/vscode.workspace.yml vscode-ws
+    - ./imports/go_build.tpl build-action
+    - ./imports/go_test.tpl test-action
   variables:
       include-dev-externals: ""
       configmodul: github.com/swaros/contxt/module/configure
@@ -100,10 +102,17 @@ task:
     script:
     - "#@var-to-file makefile Makefile"
 
+  ## update github actions
+  - id: github-actions-update
+    script:
+      - "#@var-to-file build-action .github/workflows/go.yml"
+      - "#@var-to-file test-action .github/workflows/test.yml"
+
   ## verify the modules
   - id: modules-verify
     runTargets:
       - depandabot
+      - github-actions-update
     needs:
 {{- range $k, $modul := $.module }}
       - verify-modul-{{ $modul.modul }}

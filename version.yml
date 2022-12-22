@@ -3,7 +3,7 @@ release:
   version:
      main: 0
      mid: 5
-     minor: 2
+     minor: 3
 # used version for the build. defines the version check in contxt.yml (ei henne problem)
 # this is the version that is needed to build the release. must be lower then the release
 # (at least once til you run a 'make install-local')
