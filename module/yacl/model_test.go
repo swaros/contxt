@@ -506,3 +506,22 @@ func TestNoConfigFilesByMissingFolderFixed(t *testing.T) {
 		t.Error("we should get the ERROR_PATH_NOT_EXISTS message")
 	}
 }
+
+func TestOneFileNameusage(t *testing.T) {
+	var cfg chainConfig
+
+	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml")
+
+	loadErr := chainCfg.Load()
+	if loadErr != nil {
+		t.Error(loadErr)
+	}
+
+	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
+	if filesAll != "v2/001-test.base.yml, v2/deployEu/001-test.base.yml, v2/deployUs/001-test.base.yml" {
+		t.Error("error on loading the expected files ", filesAll)
+	}
+}

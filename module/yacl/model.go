@@ -41,24 +41,25 @@ const (
 )
 
 type ConfigModel struct {
-	setFile          string // sets a specific filename. so this is the only one that will be loaded
-	useSpecialDir    int
-	structure        any
-	reader           []yamc.DataReader
-	subDirs          []string
-	usedFile         string
-	loadedFiles      []string
-	dirBlackList     []string
-	supportMigrate   bool
-	expectNoFiles    bool
-	noConfigFilesFn  func(errCode int) error
-	fileLoadCallback func(path string, cfg interface{})
-	initFn           func(strct *any)
-	allowSubDirs     bool
-	allowDirPattern  string
-	filesPattern     string
+	setFile          string                             // sets a specific filename. so this is the only one that will be loaded
+	useSpecialDir    int                                // defines the behavior og the paths used like config, userhome or none a simple path (relative or absolute)
+	structure        any                                // points to the config struct
+	reader           []yamc.DataReader                  // list of used readers
+	subDirs          []string                           // subdiretories reltive to the basedir (defined by useSpecialDir behavior)
+	usedFile         string                             // the last used configFile that is parsed
+	loadedFiles      []string                           // list of all files they processed
+	dirBlackList     []string                           // a blakist of directorynames thay should be ignored whaile looking for for configurations in sub folders
+	supportMigrate   bool                               // flag to enable the migration callback
+	expectNoFiles    bool                               // flag to ignore the case, that no configuration files exists. if this is not set, an error will be returned wile Load
+	noConfigFilesFn  func(errCode int) error            // callback that handles issues while loading configuration files. cases are ERROR_PATH_NOT_EXISTS and NO_CONFIG_FILES_FOUND
+	fileLoadCallback func(path string, cfg interface{}) // needs supportMigrate enabled. then this callback will be executed for any configuration that is parsed.
+	initFn           func(strct *any)                   // Init sets a callback that can handle any need to setup the structure with defaults. or create maps ..and so on
+	allowSubDirs     bool                               // flag to enables scanning sub folders while looking for config files
+	allowDirPattern  string                             // regex-pattern to whitelist sub folders while looking for config files
+	filesPattern     string                             // file regex-pattern while looking for config files
 }
 
+// New creates a New yacl ConfigModel with default properties
 func New(structure any, read ...yamc.DataReader) *ConfigModel {
 	return &ConfigModel{
 		useSpecialDir: PATH_UNSET,
@@ -69,69 +70,93 @@ func New(structure any, read ...yamc.DataReader) *ConfigModel {
 	}
 }
 
+// Init sets the initialisition Callbacks.
+// initFn will be executed to initialize the configuration structure. can be nil
+// noConfigFn is the calback for the cases, the configuration directory is not exists, there are no configurations files found
 func (c *ConfigModel) Init(initFn func(strct *any), noConfigFn func(errCode int) error) *ConfigModel {
 	c.initFn = initFn
 	c.noConfigFilesFn = noConfigFn
 	return c
 }
 
+// SetExpectNoConfigFiles disbale the behavior, not existing configfiles will be handled as error.
+// this also means, it should just ignore this issue. so if this is enabled, it will also not reported
+// to the noConfigFn that might be setup in the Init handler
 func (c *ConfigModel) SetExpectNoConfigFiles() *ConfigModel {
 	c.expectNoFiles = true
 	return c
 }
 
+// SetFilePattern defines a regex-pattern for any configuration file
+// any file that is not matching, will be ignored.
 func (c *ConfigModel) SetFilePattern(regex string) *ConfigModel {
 	c.filesPattern = regex
 	return c
 }
 
+// UseHomeDir sets the User Home-dir as entriepoint (basedir)
 func (c *ConfigModel) UseHomeDir() *ConfigModel {
 	c.useSpecialDir = PATH_HOME
 	return c
 }
 
+// UseConfigDir sets the default config dir as entriepoint (basedir)
 func (c *ConfigModel) UseConfigDir() *ConfigModel {
 	c.useSpecialDir = PATH_CONFIG
 	return c
 }
 
+// UseRelativeDir is just defines no special path usage. mostly it means the current folder is used (relative)
+// but depending on the usage of the lib, it can also still a absolute path.
 func (c *ConfigModel) UseRelativeDir() *ConfigModel {
 	c.useSpecialDir = PATH_UNSET
 	return c
 }
 
+// add the names of the sub directories starting from the base directory.
+// it will be set as string arguments. add any subirectory separate as argument. do not add "thisdir/nextdir".
 func (c *ConfigModel) SetSubDirs(dirs ...string) *ConfigModel {
 	c.subDirs = dirs
 	return c
 }
 
+// Limits looking for the configurations to one file (base) name. so do not add any path to filename argument.
+// this is not equal to the usage of LoadFile, because if this is combined with  scanning subdirs, any
+// configuration with this file basename will be accepted.
+// if you like to load one specific file so use LoadFile instead.
+// if you like more flexible, deening what files should load, define a regex-pattern and use SetFilePattern
 func (c *ConfigModel) SetSingleFile(filename string) *ConfigModel {
 	c.setFile = filename
 	return c
 }
 
+// AllowSubdirs enables scanning subirectories to find configuration files
 func (c *ConfigModel) AllowSubdirs() *ConfigModel {
 	c.allowSubDirs = true
 	return c
 }
 
+// AllowSubdirsByRegex same as AllowSubDirs but set a regex pattern to Whitelist folder names
 func (c *ConfigModel) AllowSubdirsByRegex(regex string) *ConfigModel {
 	c.allowDirPattern = regex
 	c.allowSubDirs = true
 	return c
 }
 
+// NoSubdirs diables scanning sub folders while looking for configuration files
 func (c *ConfigModel) NoSubdirs() *ConfigModel {
 	c.allowSubDirs = false
 	return c
 }
 
+// SetFolderBlackList defines a simple list of sub direcories, they should being ignored, while looking for configuration files
 func (c *ConfigModel) SetFolderBlackList(blackListedDirs []string) *ConfigModel {
 	c.dirBlackList = blackListedDirs
 	c.allowSubDirs = true
 	return c
 }
 
+// Empty initilize the configuration without any configuration files loading.
 func (c *ConfigModel) Empty() *ConfigModel {
 	if c.initFn != nil {
 		c.initFn(&c.structure)
@@ -139,6 +164,9 @@ func (c *ConfigModel) Empty() *ConfigModel {
 	return c
 }
 
+// LoadFile loads and parses a single configuration file.
+// this can be called multiple times with different files.
+// the content is merged (no deep copy, so no list merge for example)
 func (c *ConfigModel) LoadFile(path string) error {
 	c.Empty()
 	c.setFile = path
@@ -200,6 +228,7 @@ func (c *ConfigModel) filePattenCheck(path string) bool {
 	return false // this can only be reached if the regex was not working
 }
 
+// Load start loading all configuration files depends the configured behavior.
 func (c *ConfigModel) Load() error {
 	c.Empty()
 
@@ -270,6 +299,10 @@ func (c *ConfigModel) detectFilename() string {
 	return filename
 }
 
+// Save is try to write the current configuration on disk.
+// IF we sucessfully loaded content at least from one configuration file, the last one is used
+// IF we have setup a SingleFile and do not have a usage while loading, then this will be used instead.
+// anything else will report an error
 func (c *ConfigModel) Save() error {
 	if len(c.reader) < 1 {
 		return errors.New("we need at least one DataReader. the fist assigned will be used for write operations")
@@ -294,6 +327,8 @@ func (c *ConfigModel) Save() error {
 	}
 }
 
+// GetConfigPath compose the current used Configuration folder and returns them.
+// anything what can go wrong will end up in a panic
 func (c *ConfigModel) GetConfigPath() string {
 	dir := "."
 
@@ -329,11 +364,13 @@ func (c *ConfigModel) verifyPath(path string) (bool, error) {
 	return false, err
 }
 
-func (c *ConfigModel) GetAsYmac() (*yamc.Yamc, error) {
-
-	return c.CreateYamc(yamc.NewJsonReader())
-}
-
+// GetValue parsing a string with dots, to use any part of them to build
+// a route to a specific entry. This is a verry basic path building, without
+// any magic. so even a key with dots will be an issue.
+// so the usecase depends on the actual structure.
+// Also DO NOT USE THIS FOR READING CONFIG VALUES.
+// use the structure itself.
+// this method is a simple helper for verify data while testing (for example)
 func (c *ConfigModel) GetValue(dotedPath string) (any, error) {
 	if ym, err := c.GetAsYmac(); err == nil {
 		return ym.FindValue(dotedPath)
@@ -342,6 +379,8 @@ func (c *ConfigModel) GetValue(dotedPath string) (any, error) {
 	}
 }
 
+// ToString converts the current configuration into a string, depending the
+// submitted reader.
 func (c *ConfigModel) ToString(reader yamc.DataReader) (string, error) {
 	if ym, err := c.CreateYamc(reader); err == nil {
 		return ym.ToString(reader)
@@ -350,6 +389,14 @@ func (c *ConfigModel) ToString(reader yamc.DataReader) (string, error) {
 	}
 }
 
+// GetAsYmac creates a Yamc map from the configuration. we use Json here as Reader
+func (c *ConfigModel) GetAsYmac() (*yamc.Yamc, error) {
+
+	return c.CreateYamc(yamc.NewJsonReader())
+}
+
+// CreateYamc creates a Yamc container. it has no caching because this is needed only for
+// some content creation, like saving or parsing. so there is no need to keep them.
 func (c *ConfigModel) CreateYamc(reader yamc.DataReader) (*yamc.Yamc, error) {
 	asYamc := yamc.New()
 	if data, err := reader.Marshal(c.structure); err != nil {
@@ -380,10 +427,12 @@ func (c *ConfigModel) tryLoad(path, ext string) error {
 	return nil
 }
 
+// GetLoadedFile returns the used configuration filename
 func (c *ConfigModel) GetLoadedFile() string {
 	return c.usedFile
 }
 
+// GetAllParsedFiles returns all parsed configuration filenames
 func (c *ConfigModel) GetAllParsedFiles() []string {
 	return c.loadedFiles
 }
