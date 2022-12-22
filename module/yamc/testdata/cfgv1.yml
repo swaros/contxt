@@ -1,0 +1,6 @@
+name: test
+path: "root/path"
+boolflag: true
+subs:
+  - first
+  - second

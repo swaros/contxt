@@ -15,7 +15,9 @@ clean:
 
 test:
 {{- range $k, $test := $.module }}
+  {{- if $test.local }}
 	go test  -failfast ./module/{{ $test.modul }}/./...
+  {{- end }}
 {{- end }}
 
 info: build

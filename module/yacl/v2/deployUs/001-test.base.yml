@@ -1,0 +1,3 @@
+config:
+  host: us-east.deploy.com
+  inport: 5001  

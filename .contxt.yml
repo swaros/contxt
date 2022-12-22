@@ -75,7 +75,17 @@ task:
     require:
       system: linux
     script:
-      - find . -type f -print0 | xargs -0 dos2unix
+      - |
+       if ! [ -x "$(command -v dos2unix)" ];
+       then
+         echo ""
+         echo "<b:yellow><f:red> ERROR </>  <f:cyan>dos2unix</> is required"
+         echo ""
+       else         
+         find . -type f -print0 | xargs -0 dos2unix -v
+         git status -s
+       fi
+       
 
   ##### module based task #####
   ##### the definition for modules is stored in .modules.yml
