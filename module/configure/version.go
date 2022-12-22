@@ -41,7 +41,7 @@ var midversion string
 var minversion string
 var operatingSystem string
 
-// GetVersion deleivers the current build version
+// GetVersion delivers the current build version
 func GetVersion() string {
 	var outVersion = ""
 	if mainversion != "" {
