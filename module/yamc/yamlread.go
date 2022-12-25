@@ -1,7 +1,6 @@
 // Copyright (c) 2022 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +22,7 @@
 package yamc
 
 import (
+	"errors"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -47,7 +47,14 @@ func (y *YamlReader) FileDecode(path string, decodeInterface interface{}) (err e
 	if err != nil {
 		return err
 	}
-	return yaml.Unmarshal(file, decodeInterface)
+
+	if !IsPointer(decodeInterface) {
+		return errors.New("decode will work on pointers only")
+
+	}
+	err2 := yaml.Unmarshal(file, decodeInterface)
+
+	return err2
 }
 
 func (y *YamlReader) SupportsExt() []string {

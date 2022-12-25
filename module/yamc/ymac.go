@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/tidwall/gjson"
@@ -167,4 +168,11 @@ func (y *Yamc) testAndConvertJsonType(use DataReader, data []byte) error {
 	} else {
 		return err
 	}
+}
+
+func IsPointer(i interface{}) bool {
+	kindOfi := reflect.ValueOf(i).Kind()
+
+	return (kindOfi == reflect.Ptr)
+
 }

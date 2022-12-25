@@ -24,12 +24,9 @@
 package dirhandle
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/swaros/contxt/module/configure"
 )
 
 // Current returns the current path
@@ -41,28 +38,6 @@ func Current() (string, error) {
 		log.Fatal(err)
 	}
 	return dir, err
-}
-
-// PrintDir prints the all the paths
-func PrintDir(number int) {
-	for index, path := range configure.UsedConfig.Paths {
-		if number == index {
-			fmt.Println(path)
-			return
-		}
-	}
-	fmt.Println(".")
-}
-
-// GetDir returns the path by index
-func GetDir(number int) string {
-	for index, path := range configure.UsedConfig.Paths {
-		if number == index {
-
-			return path
-		}
-	}
-	return "."
 }
 
 // Exists checks if a path exists

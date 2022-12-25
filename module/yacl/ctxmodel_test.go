@@ -53,37 +53,37 @@ func TestMigrateToV2(t *testing.T) {
 			cfgV2.Configs = make(map[string]ConfigurationV2)
 
 		}, nil).
-		SetSubDirs("tmpfiles").
+		SetSubDirs("data", "tmp").
 		SetSingleFile(tim.Format("2006-01-02_15_04_05_") + "newConfig.yml"). // create a file that should be uniue enough
 		Empty()
 
 	contxtCfg := yacl.New(&cfgV1, yamc.NewJsonReader()).
-		SetSubDirs("testdata").
+		SetSubDirs("data", "old").
 		SupportMigrate(func(path string, cfg interface{}) {
 
 			// special configs by there name.
 
 			// this one contains the name of the current used config
-			if filepath.Clean(path) == filepath.Clean("testdata/contxt_current_config.json") {
+			if filepath.Clean(path) == filepath.Clean("data/old/contxt_current_config.json") {
 				cfgV2.CurrentSet = cfgV1.CurrentSet
 				return // just get out. we do not need something else from this file
 			}
 
 			// this one is not needed in any case
-			if filepath.Clean(path) == filepath.Clean("testdata/default_contxt_ws.json") {
+			if filepath.Clean(path) == filepath.Clean("data/old/default_contxt_ws.json") {
 				return // just get out. we do not need something else from this file
 			}
 
 			// here we check for any reported path, if the reference of cfgV1 is currently set to them
 			// so we get the path and we know what the loaded configshould contains
 			// so we check the contxt config
-			if filepath.Clean(path) == filepath.Clean("testdata/contxt.json") {
+			if filepath.Clean(path) == filepath.Clean("data/old/contxt.json") {
 				if cfgV1.CurrentSet != "contxt" {
 					t.Error("expect content is different to", cfgV1.CurrentSet)
 				}
 			}
 			// just to check another one
-			if filepath.Clean(path) == filepath.Clean("testdata/develop.json") {
+			if filepath.Clean(path) == filepath.Clean("data/old/develop.json") {
 				if cfgV1.CurrentSet != "develop" {
 					t.Error("expect content is different to", cfgV1.CurrentSet)
 				}
@@ -119,7 +119,7 @@ func TestMigrateToV2(t *testing.T) {
 
 	// check the new config. depending the migrate function, we should have contxt now
 	if cfgV2.CurrentSet != "contxt" {
-		t.Error("the new config to not get the expected contxt. we got [", cfgV2.CurrentSet, "] instead")
+		t.Error("the new config not get the expected contxt. we got [", cfgV2.CurrentSet, "] instead")
 	}
 
 	// using gjson paths to check the content
@@ -149,12 +149,12 @@ func TestMigrateToV2(t *testing.T) {
 func TestContxtObsoleteCfg(t *testing.T) {
 	var cfg Configuration
 
-	contxtCfg := yacl.New(&cfg, yamc.NewJsonReader()).SetSingleFile("contxt.json").SetSubDirs("testdata")
+	contxtCfg := yacl.New(&cfg, yamc.NewJsonReader()).SetSingleFile("contxt.json").SetSubDirs("data", "old")
 
 	if err := contxtCfg.Load(); err != nil {
 		t.Error(err)
 	} else {
-		if filepath.Clean(contxtCfg.GetLoadedFile()) != filepath.Clean("testdata/contxt.json") {
+		if filepath.Clean(contxtCfg.GetLoadedFile()) != filepath.Clean("data/old/contxt.json") {
 			t.Error("this file should not being used ", contxtCfg.GetLoadedFile())
 		}
 

@@ -1,14 +1,8 @@
 package taskrun_test
 
-import (
-	"testing"
-
-	"github.com/swaros/contxt/module/configure"
-	"github.com/swaros/contxt/module/taskrun"
-)
-
+/*
 func TestCnFind(t *testing.T) {
-	configure.UsedConfig.Paths = []string{
+	configure.CfgV1.UsedV2Config.Paths = []string{
 		"/home/user/project/testing",
 		"/home/user/project/testing/source/backend/server",
 		"/home/user/project/testing/source/backend/server/build",
@@ -108,3 +102,4 @@ func TestDecicePath(t *testing.T) {
 		assertStringEquals(t, decidedPath, ".")
 	}
 }
+*/

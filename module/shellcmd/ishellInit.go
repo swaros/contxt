@@ -59,19 +59,19 @@ func updatePrompt(shell *ishell.Shell) {
 		if width > 15 {
 
 			sizeForInput := width / 2 // half of the screen should be for the left for the input
-			need := sizeForInput + systools.StrLen(configure.UsedConfig.CurrentSet) + bufferSize + systools.StrLen(ctxPromt)
+			need := sizeForInput + systools.StrLen(configure.CfgV1.UsedV2Config.CurrentSet) + bufferSize + systools.StrLen(ctxPromt)
 			if need <= width { // we have size left, so compose the longer version of the prompt
 				sizeLeft := width - (need - 5) // 5 chars buffer
 				dirlabel := ""
 				if sizeLeft > 5 { // at least something usefull shold be displayed. so lets say at least 5 chars
 					dirlabel = systools.StringSubRight(dir, sizeLeft) // cut the path string if needed
 					pathColor := manout.ForeGreen                     // green color by default for the path
-					if !configure.PathMeightPartOfWs(dir) {           // check if we are in the workspace
+					if !configure.CfgV1.PathMeightPartOfWs(dir) {     // check if we are in the workspace
 						pathColor = manout.ForeMagenta // if not, then set color to magenta
 					}
 					dirlabel = pathColor + dirlabel
 				}
-				prompt = manout.Message(manout.ForeBlue, ctxPromt, dirlabel, manout.ForeCyan, " [", configure.UsedConfig.CurrentSet, "] ", manout.ForeLightYellow, ">> ", manout.CleanTag)
+				prompt = manout.Message(manout.ForeBlue, ctxPromt, dirlabel, manout.ForeCyan, " [", configure.CfgV1.UsedV2Config.CurrentSet, "] ", manout.ForeLightYellow, ">> ", manout.CleanTag)
 
 			}
 		}
@@ -92,7 +92,7 @@ func headScreen(shell *ishell.Shell) {
 	manout.Om.Println("welcome to contxt interactive shell")
 	manout.Om.Println("   version: ", configure.GetVersion())
 	manout.Om.Println("  build-no: ", configure.GetBuild())
-	manout.Om.Println(" workspace: ", configure.UsedConfig.CurrentSet)
+	manout.Om.Println(" workspace: ", configure.CfgV1.UsedV2Config.CurrentSet)
 	manout.Om.Println(" ---")
 	manout.Om.Println(`
 	you entered the interactive shell because you run contxt 
@@ -150,7 +150,7 @@ func CreateCnCmd(shell *ishell.Shell) {
 		Help: "change path in workspace",
 		Completer: func(args []string) []string {
 			var paths []string = []string{}
-			configure.PathWorkerNoCd(func(i int, s string) {
+			configure.CfgV1.PathWorkerNoCd(func(i string, s string) {
 				paths = append(paths, fmt.Sprintf("%v", i))
 			})
 			return paths
@@ -159,7 +159,7 @@ func CreateCnCmd(shell *ishell.Shell) {
 			if len(c.Args) > 0 {
 				if path := taskrun.DirFind(c.Args); path != "." {
 					os.Chdir(path)
-					configure.SaveActualPathByPath(path)
+					//configure.CfgV1.SaveActualPathByPath(path)
 					resetShell()
 					updatePrompt(shell)
 				}
@@ -181,22 +181,17 @@ func CreateWsCmd(shell *ishell.Shell) {
 		Aliases: []string{"ws", "workspace"},
 		Help:    "switch workspace for this session",
 		Completer: func(args []string) []string {
-			var ws []string = []string{}
-			configure.WorkSpaces(func(s string) {
-				ws = append(ws, s)
-			})
-			return ws
+
+			return configure.CfgV1.ListWorkSpaces()
 		},
 		Func: func(c *ishell.Context) {
 			if len(c.Args) > 0 {
-				configure.WorkSpaces(func(ws string) {
-					if c.Args[0] == ws {
-						resetShell()
-						configure.ChangeWorkspace(ws, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
-						autoRecoverWs()
-						updatePrompt(shell)
-					}
-				})
+
+				resetShell()
+				configure.CfgV1.ChangeWorkspace(c.Args[0], taskrun.CallBackOldWs, taskrun.CallBackNewWs)
+				autoRecoverWs()
+				updatePrompt(shell)
+
 			} else {
 				if handleWorkSpaces(c) {
 					updatePrompt(shell)

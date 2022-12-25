@@ -12,7 +12,7 @@ var (
 )
 
 // contains all listener they should be executed
-// if we want to exit the app, so some clanup can be executed.
+// if we want to exit the app, so some cleanup can be executed.
 var exitListener map[string]func(int) ExitBehavior = make(map[string]func(int) ExitBehavior)
 
 // adds a callback as listener

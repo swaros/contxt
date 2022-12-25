@@ -6,7 +6,7 @@ const (
 	ErrorInitApp         = 2   // any application error while setting up
 	ErrorWhileLoadCfg    = 3   // any error while loading configuration
 	ErrorOnConfigImport  = 5   // a import could not handled
-	ErrorTemplate        = 6   // template related error. dependig reported issues about version, lint, yaml structure
+	ErrorTemplate        = 6   // template related error. depending reported issues about version, lint, yaml structure
 	ErrorTemplateReading = 7   // errors processing the template
 	ErrorBySystem        = 10  // errors related to the system, like while change dir or reading a file
 	ExitByStopReason     = 101 // ExitByStopReason the process stopped because of a defined reason

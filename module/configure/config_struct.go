@@ -11,6 +11,25 @@ type Configuration struct {
 	PathInfo   map[string]WorkspaceInfo
 }
 
+// new version of the configuration starts here
+type ConfigMetaV2 struct {
+	CurrentSet string                     `yaml:"currentSet"`
+	Configs    map[string]ConfigurationV2 `yaml:"configs"`
+}
+
+type WorkspaceInfoV2 struct {
+	Path    string `yaml:"path"`
+	Project string `yaml:"project"`
+	Role    string `yaml:"role"`
+	Version string `yaml:"version"`
+}
+
+type ConfigurationV2 struct {
+	Name         string                     `yaml:"name"`         // the name of the workspace
+	CurrentIndex string                     `yaml:"currentIndex"` // what of the workspaces are the current used
+	Paths        map[string]WorkspaceInfoV2 `yaml:"paths"`
+}
+
 // CommandLine defines a line of commands that can be executed
 type CommandLine struct {
 	Require            RequireCheck

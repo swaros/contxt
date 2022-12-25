@@ -27,7 +27,6 @@ package taskrun
 
 import (
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -38,7 +37,7 @@ import (
 func DirFindApplyAndSave(args []string) (string, error) {
 	dir := DirFind(args)
 	if dir != "" && dir != "." {
-		return dir, configure.SaveActualPathByPath(dir)
+		return dir, configure.CfgV1.SaveConfiguration()
 	}
 	return dir, nil // just no or the same path reported
 }
@@ -50,21 +49,9 @@ func DirFind(args []string) string {
 	if len(args) < 1 {
 		return "."
 	}
-	// do we have a index number as first argument?
-	if i, err := strconv.Atoi(args[0]); err == nil {
-		// lets see if we have this index in the paths
-		indexPath := "."
-		configure.PathWorkerNoCd(func(index int, path string) {
-			if index == i {
-				indexPath = path
-			}
-		})
-		GetLogger().WithFields(logrus.Fields{"index": i, "path": indexPath}).Debug("Found match by using param as index")
-		return indexPath
-	}
 	paths := []string{}
 
-	configure.PathWorkerNoCd(func(index int, path string) {
+	configure.CfgV1.PathWorkerNoCd(func(index string, path string) {
 		paths = append(paths, path)
 	})
 	if p, ok := DecidePath(args, paths); ok {

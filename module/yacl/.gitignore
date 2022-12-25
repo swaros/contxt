@@ -1,3 +1,7 @@
 tmpfiles/*.yml
 tmpfiles/*.json
 tmpfiles/*.yaml
+
+data/tmp/*.yml
+data/tmp/*.json
+data/tmp/*.yaml

@@ -13,7 +13,7 @@ type configStruct struct {
 	Subs     []string `yaml:"subs"`
 }
 
-func TestYamlDecodecode(t *testing.T) {
+func TestYamlDecode(t *testing.T) {
 	rdr := yamc.NewYamlReader()
 
 	var cfg configStruct
@@ -33,8 +33,22 @@ func TestYamlDecodecode(t *testing.T) {
 		t.Error("name is not root/path")
 	}
 
-	if cfg.Subs[0] != "first" {
+	if len(cfg.Subs) < 1 {
+		t.Error("wrong count of subs")
+	}
+
+	if len(cfg.Subs) > 0 && cfg.Subs[0] != "first" {
 		t.Error("sub 0 is not first")
+	}
+
+}
+
+func TestYamlDecodeError(t *testing.T) {
+	rdr := yamc.NewYamlReader()
+
+	var cfg configStruct
+	if err := rdr.FileDecode("testdata/cfgv1.yml", cfg); err == nil {
+		t.Error("yaml config used without pointer should end in an error")
 	}
 
 }

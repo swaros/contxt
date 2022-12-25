@@ -26,6 +26,7 @@ package taskrun
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -151,10 +152,7 @@ if these task are defined
 			if len(args) != 0 {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
-			targets, found := configure.GetWorkSpacesAsList()
-			if !found {
-				return nil, cobra.ShellCompDirectiveNoFileComp
-			}
+			targets := configure.CfgV1.ListWorkSpaces()
 			return targets, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
@@ -171,7 +169,7 @@ you need to set the name for the workspace`,
 			if workspace == "" {
 				manout.Error("paramater missing", "name is required")
 			} else {
-				configure.ChangeWorkspace(workspace, CallBackOldWs, CallBackNewWs)
+				configure.CfgV1.ChangeWorkspace(workspace, CallBackOldWs, CallBackNewWs)
 			}
 		},
 	}
@@ -185,25 +183,27 @@ you need to set the name for the workspace`,
 			checkDirFlags(cmd, args)
 			defaulttask := true
 			if pathIndex >= 0 {
-				dirhandle.PrintDir(pathIndex)
+				pathStr := configure.CfgV1.GetPathByIndex(strconv.Itoa(pathIndex), ".")
+				fmt.Println(pathStr)
 				defaulttask = false
 			}
 
 			if uselastIndex {
-				GetLogger().WithField("dirIndex", configure.UsedConfig.LastIndex).Debug("current stored index")
-				dirhandle.PrintDir(configure.UsedConfig.LastIndex)
+				GetLogger().WithField("dirIndex", configure.CfgV1.UsedV2Config.CurrentSet).Debug("current stored index")
+				pathStr := configure.CfgV1.GetActivePath(".")
+				fmt.Println(pathStr)
 				defaulttask = false
 			}
 
 			if clearTask {
 				GetLogger().Info("got clear command")
-				configure.ClearPaths()
+				configure.CfgV1.ClearPaths()
 				defaulttask = false
 			}
 
 			if deleteWs != "" {
 				GetLogger().WithField("workspace", deleteWs).Info("got remove workspace option")
-				if err := configure.RemoveWorkspace(deleteWs); err != nil {
+				if err := configure.CfgV1.RemoveWorkspace(deleteWs); err != nil {
 					manout.Error("error while trying to deleting workspace", err)
 					systools.Exit(systools.ErrorBySystem)
 				}
@@ -212,7 +212,7 @@ you need to set the name for the workspace`,
 
 			if setWs != "" {
 				GetLogger().WithField("workspace", setWs).Info("create a new worspace")
-				configure.ChangeWorkspace(setWs, CallBackOldWs, CallBackNewWs)
+				configure.CfgV1.ChangeWorkspace(setWs, CallBackOldWs, CallBackNewWs)
 				defaulttask = false
 			}
 
@@ -227,7 +227,7 @@ you need to set the name for the workspace`,
 		Short: "show assigned paths",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			PrintCnPaths(!showHints)
+			PrintCnPaths()
 		},
 	}
 
@@ -237,7 +237,8 @@ you need to set the name for the workspace`,
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
 			if len(args) < 1 {
-				dirhandle.PrintDir(configure.UsedConfig.LastIndex) // without arguments prinst the last used path
+				pathStr := configure.CfgV1.GetActivePath(".")
+				fmt.Println(pathStr)
 			} else {
 				path, _ := DirFindApplyAndSave(args)
 				fmt.Println(path) // path only as output. so cn can handle it
@@ -250,7 +251,10 @@ you need to set the name for the workspace`,
 		Short: "show assigned paths",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			configure.DisplayWorkSpaces()
+
+			for _, p := range configure.CfgV1.ListWorkSpaces() {
+				fmt.Println(p)
+			}
 		},
 	}
 
@@ -262,8 +266,8 @@ you need to set the name for the workspace`,
 			dir, err := dirhandle.Current()
 			if err == nil {
 				fmt.Println(manout.MessageCln("add ", manout.ForeBlue, dir))
-				configure.AddPath(dir)
-				configure.SaveDefaultConfiguration(true)
+				configure.CfgV1.AddPath(dir)
+				configure.CfgV1.SaveConfiguration()
 			}
 		},
 	}
@@ -276,13 +280,13 @@ you need to set the name for the workspace`,
 			dir, err := dirhandle.Current()
 			if err == nil {
 				fmt.Println(manout.MessageCln("try to remove ", manout.ForeBlue, dir, manout.CleanTag, " from workspace"))
-				removed := configure.RemovePath(dir)
+				removed := configure.CfgV1.RemovePath(dir)
 				if !removed {
 					fmt.Println(manout.MessageCln(manout.ForeRed, "error", manout.CleanTag, " path is not part of the current workspace"))
 					systools.Exit(1)
 				} else {
 					fmt.Println(manout.MessageCln(manout.ForeGreen, "success"))
-					configure.SaveDefaultConfiguration(true)
+					configure.CfgV1.SaveConfiguration()
 				}
 			}
 		},
@@ -469,7 +473,7 @@ you will also see if a unexpected propertie found `,
 				path, err := dirhandle.Current()
 				if err == nil {
 					if runAtAll {
-						configure.PathWorkerNoCd(func(_ int, path string) {
+						configure.CfgV1.PathWorkerNoCd(func(_ string, path string) {
 							GetLogger().WithField("path", path).Info("change dir")
 							os.Chdir(path)
 							runTargets(path, arg)
@@ -534,14 +538,9 @@ func checkRunFlags(cmd *cobra.Command, _ []string) {
 }
 
 func checkDirFlags(cmd *cobra.Command, _ []string) {
-	pindex, err := cmd.Flags().GetInt("index")
-	if err == nil && pindex >= 0 {
-		pathIndex = pindex
-	}
-	GetLogger().WithFields(logrus.Fields{"current": configure.UsedConfig.LastIndex, "index": pindex}).Trace("Index detection")
-	if pindex >= 0 && pindex != configure.UsedConfig.LastIndex {
-		configure.UsedConfig.LastIndex = pindex
-		configure.SaveDefaultConfiguration(true)
+
+	if pindex, err := cmd.Flags().GetString("index"); err == nil {
+		configure.CfgV1.ChangeActivePath(pindex)
 	}
 
 	clearTask, _ = cmd.Flags().GetBool("clear")
@@ -702,40 +701,30 @@ func InitDefaultVars() {
 }
 
 func setWorkspaceVariables() {
-	if err := configure.AllWorkspacesConfig(func(config configure.Configuration, path string) {
-		ParseWorkspaceConfig(config, func(forPath string, info configure.WorkspaceInfo) {
-			setConfigVaribales(info, path, "WS")
-		})
-	}); err != nil {
-		manout.Error("Configuration error", "[", err, "] there is an error in the global configuration files.")
-		systools.Exit(systools.ErrorOnConfigImport)
-	}
+	SetPH("CTX_WS", configure.CfgV1.UsedV2Config.CurrentSet)
+	configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+		for _, ws2 := range cfg.Paths {
+			setConfigVaribales(ws2, "WS")
+		}
+
+	})
 }
 
 // InitWsVariables is setting up variables depending the current found configuration (.contxt.yml)
 func InitWsVariables() {
 	setWorkspaceVariables()
-	if ws, err := CollectWorkspaceInfos(); err == nil {
-		SetPH("CTX_WS", ws.CurrentWs)
-		/*
-			for _, wsInfo := range ws.Paths {
-				setConfigVaribales(wsInfo.Project, wsInfo.Path, "WS")
-			}*/
-	} else {
-		manout.Error("fail loading workspace information ", "we run in a error while we tryed to parse the workspaces.", err)
-		systools.Exit(systools.ErrorTemplateReading)
-	}
 }
 
-func setConfigVaribales(wsInfo configure.WorkspaceInfo, path, varPrefix string) {
+func setConfigVaribales(wsInfo configure.WorkspaceInfoV2, varPrefix string) {
 	if wsInfo.Project != "" && wsInfo.Role != "" {
 		prefix := wsInfo.Project + "_" + wsInfo.Role
-		SetPH(varPrefix+"0_"+prefix, path) // at least XXX0 without any version. this could be overwritten by other checkouts
+		SetPH(varPrefix+"0_"+prefix, wsInfo.Path) // at least XXX0 without any version. this could be overwritten by other checkouts
 		if wsInfo.Version != "" {
 			// if version is set, we use them for avoid conflicts with different checkouts
 			if versionSan, err := systools.CheckForCleanString(wsInfo.Version); err == nil {
 				prefix += "_" + versionSan
-				SetPH(varPrefix+"1_"+prefix, path) // add it to ws1 as prefix for versionized keys
+				// add it to ws1 as prefix for versionized keys
+				SetPH(varPrefix+"1_"+prefix, wsInfo.Path)
 			}
 		}
 	}
@@ -746,12 +735,12 @@ func setConfigVaribales(wsInfo configure.WorkspaceInfo, path, varPrefix string) 
 // currently we have two of them.
 // by running in interactive in ishell, and by running with parameters.
 func MainInit() {
-	ResetVariables()                       // needed because we could run in a shell
-	pathIndex = -1                         // this is the path index used for the current path. -1 means unset
-	initLogger()                           // init the logger. currently there is nothing happens except sometime for local debug
-	InitDefaultVars()                      // init all the default variables first, they are independend from any configuration
-	CopyPlaceHolder2Origin()               // doing this 1/2 to have the current variables already in palce until we parse the config
-	var configErr = configure.InitConfig() // try to initialize current config
+	ResetVariables()                             // needed because we could run in a shell
+	pathIndex = -1                               // this is the path index used for the current path. -1 means unset
+	initLogger()                                 // init the logger. currently there is nothing happens except sometime for local debug
+	InitDefaultVars()                            // init all the default variables first, they are independend from any configuration
+	CopyPlaceHolder2Origin()                     // doing this 1/2 to have the current variables already in palce until we parse the config
+	var configErr = configure.CfgV1.InitConfig() // try to initialize current config
 	if configErr != nil {
 		log.Fatal(configErr)
 	}
@@ -779,7 +768,7 @@ func MainExecute() {
 func CallBackOldWs(oldws string) bool {
 	GetLogger().Info("OLD workspace: ", oldws)
 	// get all paths first
-	configure.PathWorkerNoCd(func(_ int, path string) {
+	configure.CfgV1.PathWorkerNoCd(func(_ string, path string) {
 
 		os.Chdir(path)
 		template, templateFile, exists, _ := GetTemplate()
@@ -808,7 +797,7 @@ func CallBackNewWs(newWs string) {
 	ResetVariables() // reset old variables while change the workspace. (req for shell mode)
 	MainInit()       // initialize the workspace
 	GetLogger().Info("NEW workspace: ", newWs)
-	configure.PathWorker(func(_ int, path string) { // iterate any path
+	configure.CfgV1.PathWorker(func(_ string, path string) { // iterate any path
 		template, templateFile, exists, _ := GetTemplate()
 
 		GetLogger().WithFields(logrus.Fields{
@@ -841,9 +830,9 @@ func doMagicParamOne(param string) bool {
 		return true
 	}
 	// param is a workspace ?
-	configure.WorkSpaces(func(ws string) {
-		if param == ws {
-			configure.ChangeWorkspace(ws, CallBackOldWs, CallBackNewWs)
+	configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+		if param == index {
+			configure.CfgV1.ChangeWorkspace(index, CallBackOldWs, CallBackNewWs)
 			result = true
 		}
 	})
