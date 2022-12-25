@@ -18,15 +18,13 @@ type contxtConfigure struct {
 	UsedV2Config      ConfigMetaV2
 	DefaultV2Yacl     *yacl.ConfigModel
 	migrationRequired bool
-	//UsedV1Config      Configuration
-	//DefaultV1Yacl     yacl.ConfigModel
 }
 
-func NewCfgV2(c *contxtConfigure) {
-	//var cfgV2 ConfigMetaV2
-	c.DefaultV2Yacl = yacl.New(&c.UsedV2Config, yamc.NewJsonReader()).
+func NewCfgV2(c *contxtConfigure) ConfigMetaV2 {
+	var cfgV2 ConfigMetaV2
+	c.DefaultV2Yacl = yacl.New(&cfgV2, yamc.NewYamlReader()).
 		Init(func(strct *any) {
-			c.UsedV2Config.Configs = make(map[string]ConfigurationV2)
+			cfgV2.Configs = make(map[string]ConfigurationV2)
 
 		}, func(errCode int) error {
 			c.migrationRequired = true // set flag that we may have to migrate from v1 to v2
@@ -40,14 +38,7 @@ func NewCfgV2(c *contxtConfigure) {
 		}).
 		UseConfigDir().
 		SetSubDirs("contxt").
-		SetSingleFile("contxtv2.json")
-
-}
-
-func NewContxtConfig() *contxtConfigure {
-	var cfgV1 Configuration
-	c := &contxtConfigure{}
-	NewCfgV2(c)
+		SetSingleFile("contxtv2.yml")
 
 	if err := c.DefaultV2Yacl.Load(); err != nil {
 		// errors depending not existing folders and files should already be handled without reporting as error
@@ -55,15 +46,21 @@ func NewContxtConfig() *contxtConfigure {
 		panic("error while reading configuration " + err.Error())
 
 	}
+	return cfgV2
+}
+
+func NewContxtConfig() *contxtConfigure {
+	var cfgV1 Configuration
+	var cfgV2 ConfigMetaV2
+	c := &contxtConfigure{}
+	cfgV2 = NewCfgV2(c)
+	c.UsedV2Config = cfgV2
 	// if migration is required
 	if c.migrationRequired {
 		contxtCfg := yacl.New(&cfgV1, yamc.NewJsonReader()).
 			UseHomeDir().
 			SetSubDirs(".contxt").
 			SupportMigrate(func(path string, cfg interface{}) {
-
-				// special configs by there name.
-
 				// this one contains the name of the current used config
 				if strings.Contains(filepath.Clean(path), "contxt_current_config.json") {
 					c.UsedV2Config.CurrentSet = cfgV1.CurrentSet
@@ -135,6 +132,7 @@ func (c *contxtConfigure) doCurrentConfigChange(worker func(cfg *ConfigurationV2
 	c.doConfigChange(c.UsedV2Config.CurrentSet, worker)
 }
 
+// ClearPaths removes all paths
 func (c *contxtConfigure) ClearPaths() {
 	c.doCurrentConfigChange(func(cfg *ConfigurationV2) {
 		cfg.Paths = make(map[string]WorkspaceInfoV2)

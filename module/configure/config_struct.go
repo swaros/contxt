@@ -13,21 +13,21 @@ type Configuration struct {
 
 // new version of the configuration starts here
 type ConfigMetaV2 struct {
-	CurrentSet string                     `yaml:"currentSet"`
-	Configs    map[string]ConfigurationV2 `yaml:"configs"`
+	CurrentSet string                     `yaml:"CurrentSet"`
+	Configs    map[string]ConfigurationV2 `yaml:"Configs"`
 }
 
 type WorkspaceInfoV2 struct {
-	Path    string `yaml:"path"`
-	Project string `yaml:"project"`
-	Role    string `yaml:"role"`
-	Version string `yaml:"version"`
+	Path    string `yaml:"Path"`
+	Project string `yaml:"Project"`
+	Role    string `yaml:"Role"`
+	Version string `yaml:"Version"`
 }
 
 type ConfigurationV2 struct {
-	Name         string                     `yaml:"name"`         // the name of the workspace
-	CurrentIndex string                     `yaml:"currentIndex"` // what of the workspaces are the current used
-	Paths        map[string]WorkspaceInfoV2 `yaml:"paths"`
+	Name         string                     `yaml:"Name"`         // the name of the workspace
+	CurrentIndex string                     `yaml:"CurrentIndex"` // what of the workspaces are the current used
+	Paths        map[string]WorkspaceInfoV2 `yaml:"Paths"`
 }
 
 // CommandLine defines a line of commands that can be executed
