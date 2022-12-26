@@ -293,7 +293,7 @@ func (c *ConfigModel) detectFilename() string {
 	} else if c.setFile != "" { // or do we have a file defined?
 		filename = c.setFile
 	}
-	if filename != "" { // still no filename? then compose it
+	if filename == "" { // still no filename? then compose it
 		return filepath.Clean(c.GetConfigPath() + "/" + filename)
 	}
 	return filename

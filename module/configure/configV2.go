@@ -12,22 +12,29 @@ import (
 	"github.com/swaros/contxt/module/yamc"
 )
 
-var CfgV1 *contxtConfigure = NewContxtConfig()
+var (
+	CfgV1           *contxtConfigure = NewContxtConfig()
+	USE_SPECIAL_DIR                  = true
+	CONTEXT_DIR                      = "contxt"
+	CONTXT_FILE                      = "contxtv2.yml"
+	CFG             ConfigMetaV2     = ConfigMetaV2{}
+)
 
 type contxtConfigure struct {
-	UsedV2Config      ConfigMetaV2
+	UsedV2Config      *ConfigMetaV2
 	DefaultV2Yacl     *yacl.ConfigModel
 	migrationRequired bool
 }
 
-func NewCfgV2(c *contxtConfigure) ConfigMetaV2 {
-	var cfgV2 ConfigMetaV2
-	c.DefaultV2Yacl = yacl.New(&cfgV2, yamc.NewYamlReader()).
+func NewCfgV2(c *contxtConfigure) {
+	c.DefaultV2Yacl = yacl.New(&CFG, yamc.NewYamlReader()).
 		Init(func(strct *any) {
-			cfgV2.Configs = make(map[string]ConfigurationV2)
+			CFG.Configs = make(map[string]ConfigurationV2)
 
 		}, func(errCode int) error {
-			c.migrationRequired = true // set flag that we may have to migrate from v1 to v2
+			// set flag that we may have to migrate from v1 to v2
+			c.migrationRequired = true
+			// if the target folder not exists, we will create them and print a message about this
 			if errCode == yacl.ERROR_PATH_NOT_EXISTS {
 				fmt.Println("configuration path not exists ", c.DefaultV2Yacl.GetConfigPath(), " try to create them")
 				if err := os.MkdirAll(c.DefaultV2Yacl.GetConfigPath(), os.ModePerm); err != nil {
@@ -36,29 +43,31 @@ func NewCfgV2(c *contxtConfigure) ConfigMetaV2 {
 			}
 			return nil
 		}).
-		UseConfigDir().
-		SetSubDirs("contxt").
-		SetSingleFile("contxtv2.yml")
+		SetSubDirs(CONTEXT_DIR).
+		SetSingleFile(CONTXT_FILE)
+	// we can use this for testing to point to a relative path
+	if USE_SPECIAL_DIR {
+		c.DefaultV2Yacl.UseConfigDir()
+	}
 
 	if err := c.DefaultV2Yacl.Load(); err != nil {
 		// errors depending not existing folders and files should already be handled without reporting as error
-		// so this is something else
+		// so this is something else and a reason for panic
 		panic("error while reading configuration " + err.Error())
 
 	}
-	return cfgV2
+	c.UsedV2Config = &CFG
 }
 
 func NewContxtConfig() *contxtConfigure {
 	var cfgV1 Configuration
-	var cfgV2 ConfigMetaV2
+	//var cfgV2 ConfigMetaV2
 	c := &contxtConfigure{}
-	cfgV2 = NewCfgV2(c)
-	c.UsedV2Config = cfgV2
+	NewCfgV2(c)
+
 	// if migration is required
 	if c.migrationRequired {
 		contxtCfg := yacl.New(&cfgV1, yamc.NewJsonReader()).
-			UseHomeDir().
 			SetSubDirs(".contxt").
 			SupportMigrate(func(path string, cfg interface{}) {
 				// this one contains the name of the current used config
@@ -92,7 +101,9 @@ func NewContxtConfig() *contxtConfigure {
 				}
 				c.UsedV2Config.Configs[cfgV1.CurrentSet] = cfgEntrie
 			})
-
+		if USE_SPECIAL_DIR {
+			contxtCfg.UseConfigDir()
+		}
 		contxtCfg.Load()                                      // process the obsolet configs.
 		contxtCfg.SetSingleFile("contxt_current_config.json") // after reading all files, we want to use this file  for any write operation
 
@@ -108,19 +119,20 @@ func (c *contxtConfigure) InitConfig() error {
 	return nil
 }
 
-// helper function to get a config by the name
-func (c *contxtConfigure) getConfig(name string) (*ConfigurationV2, bool) {
+// getConfig helper function to get a config by the name
+func (c *contxtConfigure) getConfig(name string) (ConfigurationV2, bool) {
 	if cfg, ok := c.UsedV2Config.Configs[name]; ok {
-		return &cfg, true
+		return cfg, true
 	}
-	return &ConfigurationV2{}, false
+	return ConfigurationV2{}, false
 }
 
-func (c *contxtConfigure) getCurrentConfig() (*ConfigurationV2, bool) {
+// getCurrentConfig helper function
+func (c *contxtConfigure) getCurrentConfig() (ConfigurationV2, bool) {
 	return c.getConfig(c.UsedV2Config.CurrentSet)
 }
 
-// helper funtion to change a name config
+// helper funtion to change a named config
 func (c *contxtConfigure) doConfigChange(name string, worker func(cfg *ConfigurationV2)) {
 	if cfg, ok := c.UsedV2Config.Configs[name]; ok {
 		worker(&cfg)
@@ -136,14 +148,12 @@ func (c *contxtConfigure) doCurrentConfigChange(worker func(cfg *ConfigurationV2
 func (c *contxtConfigure) ClearPaths() {
 	c.doCurrentConfigChange(func(cfg *ConfigurationV2) {
 		cfg.Paths = make(map[string]WorkspaceInfoV2)
+		c.updateCurrentConfig(*cfg)
 	})
 	c.DefaultV2Yacl.Save()
 }
 
-func (c *contxtConfigure) CheckSetup() error {
-	return nil
-}
-
+// ListWorkSpaces returns all workspaces
 func (c *contxtConfigure) ListWorkSpaces() []string {
 	ws := []string{}
 	for indx := range c.UsedV2Config.Configs {
@@ -152,19 +162,25 @@ func (c *contxtConfigure) ListWorkSpaces() []string {
 	return ws
 }
 
+// ExecOnWorkSpaces callback on any workspace. as argument for the callback you get the name and the configuration
 func (c *contxtConfigure) ExecOnWorkSpaces(callFn func(index string, cfg ConfigurationV2)) {
 	for i, c := range c.UsedV2Config.Configs {
 		callFn(i, c)
 	}
 }
 
+// ChangeWorkspace changes the current workspace and executes callbacks for the current workspace
+// and afterwards for the new one.
+// the configuration willbe save
 func (c *contxtConfigure) ChangeWorkspace(workspace string, oldspace func(string) bool, newspace func(string)) error {
 	// triggers execution of checking old Workspace
 	canChange := oldspace(c.UsedV2Config.CurrentSet)
 	if canChange {
 		// change set name and save
 		c.UsedV2Config.CurrentSet = workspace
-		c.DefaultV2Yacl.Save()
+		if err := c.DefaultV2Yacl.Save(); err != nil {
+			return err
+		}
 		newspace(workspace) // execute any assigned newspace callback
 		return nil
 	} else {
@@ -172,6 +188,7 @@ func (c *contxtConfigure) ChangeWorkspace(workspace string, oldspace func(string
 	}
 }
 
+// RemoveWorkspace a workspace from the configuration
 func (c *contxtConfigure) RemoveWorkspace(name string) error {
 	if name == c.UsedV2Config.CurrentSet {
 		return errors.New("can not remove current workspace")
@@ -268,14 +285,25 @@ func (c *contxtConfigure) GetActivePath(fallback string) string {
 	return fallback
 }
 
+func (c *contxtConfigure) updateCurrentConfig(updated ConfigurationV2) error {
+	// weird lint
+	if cfgElement, ok := c.UsedV2Config.Configs[c.UsedV2Config.CurrentSet]; ok && cfgElement.CurrentIndex != "" {
+		cfgElement = updated
+		c.UsedV2Config.Configs[c.UsedV2Config.CurrentSet] = cfgElement
+		return nil
+	} else {
+		return errors.New("error change config on entry " + c.UsedV2Config.CurrentSet)
+	}
+}
+
 func (c *contxtConfigure) ChangeActivePath(index string) error {
 	cfg, found := c.getCurrentConfig()
 	if !found {
-		return errors.New("could not change the index. error while getting the configuration")
+		return errors.New("could not change the index. error while reading the configuration")
 	}
 	if _, ok := cfg.Paths[index]; ok {
 		cfg.CurrentIndex = index
-		return nil
+		return c.updateCurrentConfig(cfg)
 	} else {
 		return errors.New("could not change the index. this index " + index + " not exists")
 	}
@@ -292,7 +320,7 @@ func (c *contxtConfigure) AddPath(path string) error {
 	}
 	if newIndex, err := c.getAutoInc(10); err == nil {
 		cfg.Paths[newIndex] = WorkspaceInfoV2{Path: path}
-		return nil
+		return c.updateCurrentConfig(cfg)
 	} else {
 		return err
 	}
@@ -353,7 +381,7 @@ func (c *contxtConfigure) PathExists(pathSearch string) bool {
 	}
 
 	for _, path := range cfg.Paths {
-		if pathSearch == path.Path {
+		if filepath.Clean(pathSearch) == filepath.Clean(path.Path) {
 			return true
 		}
 	}

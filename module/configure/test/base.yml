@@ -29,7 +29,7 @@ Configs:
         Role: ""
         Version: ""
   fixed-line-mout:
-    CurrentIndex: ""
+    CurrentIndex: "0"
     Name: fixed-line-mout
     Paths:
       "0":
@@ -38,7 +38,7 @@ Configs:
         Role: ""
         Version: ""
   lima:
-    CurrentIndex: ""
+    CurrentIndex: "0"
     Name: lima
     Paths:
       "0":

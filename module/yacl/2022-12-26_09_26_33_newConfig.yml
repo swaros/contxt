@@ -1,0 +1,52 @@
+Configs:
+    contxt:
+        Name: contxt
+        Paths:
+            "0":
+                Path: C:\Users\thoma\OneDrive\Dokumente\code\projects\contxt\contxt
+                Project: ""
+                Role: ""
+                Version: ""
+            "1":
+                Path: C:\Users\thoma\OneDrive\Dokumente\code\projects\managed-out
+                Project: ""
+                Role: ""
+                Version: ""
+    develop:
+        Name: develop
+        Paths:
+            "0":
+                Path: C:\Users\thoma\development
+                Project: ""
+                Role: ""
+                Version: ""
+    golang:
+        Name: golang
+        Paths:
+            "0":
+                Path: C:\Users\thoma\OneDrive\Dokumente\code\projects\pweb\goquery
+                Project: ""
+                Role: ""
+                Version: ""
+            "1":
+                Path: C:\Users\thoma\OneDrive\Dokumente\code\projects\pweb\goquery\build\angular
+                Project: ""
+                Role: ""
+                Version: ""
+    golib-database:
+        Name: golib-database
+        Paths:
+            "0":
+                Path: C:\Users\thoma\OneDrive\Dokumente\code\projects\golib-database
+                Project: ""
+                Role: ""
+                Version: ""
+    markup-string:
+        Name: markup-string
+        Paths:
+            "0":
+                Path: C:\Users\thoma\OneDrive\Dokumente\code\projects\markup-string
+                Project: ""
+                Role: ""
+                Version: ""
+CurrentSet: contxt
