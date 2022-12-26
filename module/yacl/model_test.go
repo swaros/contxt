@@ -236,7 +236,7 @@ func TestLoadingOverride(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "data/v2/001-test.base.yml, data/v2/002-local-gitignored.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/002-local-gitignored.yml") {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 
@@ -271,7 +271,7 @@ func TestLoadingOverrideAnUseEu(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "data/v2/001-test.base.yml, data/v2/002-local-gitignored.yml, data/v2/deployEu/001-test.base.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/002-local-gitignored.yml, data/v2/deployEu/001-test.base.yml") {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 
@@ -307,7 +307,7 @@ func TestLoadingOverrideAndUseEuByBlackList(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "data/v2/001-test.base.yml, data/v2/002-local-gitignored.yml, data/v2/deployEu/001-test.base.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/002-local-gitignored.yml, data/v2/deployEu/001-test.base.yml") {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 
@@ -345,7 +345,7 @@ func TestLoadingOverrideUseUsNoDEv(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "data/v2/001-test.base.yml, data/v2/deployUs/001-test.base.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/deployUs/001-test.base.yml") {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 
@@ -386,7 +386,7 @@ func TestLoadingOverrideUseUsByChainLoad(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "data/v2/001-test.base.yml, data/v2/deployUs/001-test.base.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/deployUs/001-test.base.yml") {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 
@@ -521,7 +521,7 @@ func TestOneFileNameUsage(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "data/v2/001-test.base.yml, data/v2/deployEu/001-test.base.yml, data/v2/deployUs/001-test.base.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/deployEu/001-test.base.yml, data/v2/deployUs/001-test.base.yml") {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 }

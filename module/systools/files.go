@@ -5,6 +5,13 @@ import (
 	"path/filepath"
 )
 
+func pathCompare(left, right string) bool {
+	l := filepath.FromSlash(left)
+	r := filepath.FromSlash(right)
+
+	return l == r
+}
+
 func CopyFile(source, target string) error {
 	r, err := os.Open(filepath.Clean(source))
 	if err != nil {

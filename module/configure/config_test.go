@@ -3,6 +3,7 @@ package configure_test
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -26,6 +27,13 @@ func prepareTempConfigFileFromBase(target string) error {
 	configure.CONTEXT_DIR = "test/temp"
 	configure.CONTXT_FILE = target
 	return nil
+}
+
+func pathCompare(left, right string) bool {
+	l := filepath.FromSlash(left)
+	r := filepath.FromSlash(right)
+
+	return l == r
 }
 
 func lazyHelperFindConfigEntry(t *testing.T, conMd *yacl.ConfigModel, expectContains string) bool {
@@ -122,7 +130,8 @@ func TestLoadWorkspaceData(t *testing.T) {
 	configure.CONTXT_FILE = "case1.yml"
 
 	conf := configure.NewContxtConfig()
-	if conf.DefaultV2Yacl.GetLoadedFile() != "test/case1.yml" {
+
+	if !pathCompare(conf.DefaultV2Yacl.GetLoadedFile(), "test/case1.yml") {
 		t.Error("load the wrong file. check test setup", conf.DefaultV2Yacl.GetLoadedFile())
 	}
 
@@ -143,7 +152,7 @@ func TestLoadWorkspaceData(t *testing.T) {
 	}
 
 	path := conf.GetActivePath(".")
-	if path != "/home/deep/development/markup-string" {
+	if !pathCompare(path, "/home/deep/development/markup-string") {
 		t.Error("unexpected path [", path, "]")
 	}
 
@@ -157,7 +166,7 @@ func TestLoadWorkspaceData(t *testing.T) {
 		t.Error("this should work")
 	} else {
 		path := conf.GetActivePath(".")
-		if path != "/home/deep/development/contxt" {
+		if !pathCompare(path, "/home/deep/development/contxt") {
 			t.Error("unexpected path [", path, "]")
 		}
 	}
@@ -169,7 +178,7 @@ func TestChangeWorksSpace(t *testing.T) {
 		t.Error(err)
 	}
 	conf := configure.NewContxtConfig()
-	if conf.DefaultV2Yacl.GetLoadedFile() != "test/temp/case002.yml" {
+	if !pathCompare(conf.DefaultV2Yacl.GetLoadedFile(), "test/temp/case002.yml") {
 		t.Error("load the wrong file. check test setup", conf.DefaultV2Yacl.GetLoadedFile())
 	}
 
