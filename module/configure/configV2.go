@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/yacl"
 	"github.com/swaros/contxt/module/yamc"
 )
@@ -201,6 +202,31 @@ func (c *contxtConfigure) RemoveWorkspace(name string) error {
 	return nil
 }
 
+// HaveWorkSpace checks if the workspace exists
+func (c *contxtConfigure) HaveWorkSpace(name string) bool {
+	_, found := c.getConfig(name)
+	return found
+}
+
+func (c *contxtConfigure) AddWorkSpace(name string, oldspace func(string) bool, newspace func(string)) error {
+	clearname, nErr := systools.CheckForCleanString(name)
+	if nErr != nil {
+		return nErr
+	}
+
+	// if we have a cleared string that is not equal to the submitted, then we do not continue
+	if name != clearname {
+		return errors.New("the workspace name [" + name + "] is invalid")
+	}
+
+	if c.HaveWorkSpace(name) {
+		return errors.New("the workspace" + clearname + " already exists")
+	}
+
+	c.UsedV2Config.Configs[clearname] = ConfigurationV2{Paths: map[string]WorkspaceInfoV2{}}
+	return c.ChangeWorkspace(clearname, oldspace, newspace)
+}
+
 func (c *contxtConfigure) PathWorker(callbackInDirectory func(string, string), callbackBackToOrigin func(origin string)) error {
 	// checking current directory. store it for going back later
 	if current, err := os.Getwd(); err != nil {
@@ -286,8 +312,8 @@ func (c *contxtConfigure) GetActivePath(fallback string) string {
 }
 
 func (c *contxtConfigure) updateCurrentConfig(updated ConfigurationV2) error {
-	// weird lint
-	if cfgElement, ok := c.UsedV2Config.Configs[c.UsedV2Config.CurrentSet]; ok && cfgElement.CurrentIndex != "" {
+	// weird lint. it did not see the usage of cfgElement in body, so i added a useless check of the current index
+	if cfgElement, ok := c.UsedV2Config.Configs[c.UsedV2Config.CurrentSet]; ok && cfgElement.CurrentIndex != "fake-because-of-weird-lint" {
 		cfgElement = updated
 		c.UsedV2Config.Configs[c.UsedV2Config.CurrentSet] = cfgElement
 		return nil
@@ -319,7 +345,12 @@ func (c *contxtConfigure) AddPath(path string) error {
 		return errors.New("error on reading current configuration")
 	}
 	if newIndex, err := c.getAutoInc(10); err == nil {
+		autoSet := (len(cfg.Paths) == 0)
 		cfg.Paths[newIndex] = WorkspaceInfoV2{Path: path}
+		// if this is the fist path, then we also set this as used index
+		if autoSet {
+			cfg.CurrentIndex = newIndex
+		}
 		return c.updateCurrentConfig(cfg)
 	} else {
 		return err

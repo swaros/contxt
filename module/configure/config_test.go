@@ -278,16 +278,54 @@ func TestChangeWorksSpace(t *testing.T) {
 			if err := conf.RemoveWorkspace("lima"); err != nil {
 				t.Error("removing the lima workspace should work now")
 			} else {
+				if conf.HaveWorkSpace("lima") {
+					t.Error("lima should no longer exists")
+				}
 				// check if lima is in the config. should not be the case
 				lazyHelperFindNotConfigEntry(t, conf.DefaultV2Yacl, "lima:")
 				// save the config and check again
 				conf.SaveConfiguration()
 				// lima should also removed from config file
 				lazyHelperFindFileHaveNoContent(t, conf.DefaultV2Yacl.GetLoadedFile(), "lima:")
+
 			}
 		}
 	}
 
-	// testing adding a new workspace
+	// ---- testing adding a new workspace ------
 
+	// did we handle invalid chars?
+	if err := conf.AddWorkSpace("this shouldnot valid {} :", func(s string) bool { return true }, func(s string) {}); err == nil {
+		t.Error("this should not work because of the weird naming")
+	} else {
+		if !strings.Contains(err.Error(), "string contains not accepted chars") {
+			t.Error("unexpected error message:", err)
+		}
+	}
+
+	// some other chars, that will be translated, should also not accepted
+	if err := conf.AddWorkSpace("slashes/also/not/allowed", func(s string) bool { return true }, func(s string) {}); err == nil {
+		t.Error("this should not work because of the weird naming")
+	} else {
+		if !strings.Contains(err.Error(), "is invalid") {
+			t.Error("unexpected error message:", err)
+		}
+	}
+
+	if err := conf.AddWorkSpace("test-space", func(s string) bool { return true }, func(s string) {}); err != nil {
+		t.Error(err)
+	} else {
+		// check config file and config entries
+		lazyHelperFindFileContent(t, conf.DefaultV2Yacl.GetLoadedFile(), "test-space:", "CurrentSet: test-space")
+		lazyHelperFindConfigEntry(t, conf.DefaultV2Yacl, `"test-space":{"CurrentIndex":"","Name":"","Paths":{}}`)
+
+		// add a path
+		if err := conf.AddPath("/home/deep/development/pathNo1"); err != nil {
+			t.Error(err)
+		} else {
+			conf.SaveConfiguration()
+			lazyHelperFindConfigEntry(t, conf.DefaultV2Yacl,
+				`"test-space":{"CurrentIndex":"0","Name":"","Paths":{"0":{"Path":"/home/deep/development/pathNo1","Project":"","Role":"","Version":""}}}`)
+		}
+	}
 }
