@@ -1,7 +1,6 @@
 // Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +24,7 @@ package taskrun
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
+
 	"os"
 	"os/exec"
 	"strings"
@@ -202,7 +201,7 @@ func WriteTemplate() {
     script:
       - echo "hello world"
 `
-	err := ioutil.WriteFile(path, []byte(demoContent), 0644)
+	err := os.WriteFile(path, []byte(demoContent), 0644)
 	if err != nil {
 		fmt.Println(err)
 	}
