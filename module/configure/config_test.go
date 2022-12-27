@@ -26,6 +26,7 @@ func prepareTempConfigFileFromBase(target string) error {
 	configure.USE_SPECIAL_DIR = false
 	configure.CONTEXT_DIR = "test/temp"
 	configure.CONTXT_FILE = target
+	configure.MIGRATION_ENABLED = false
 	return nil
 }
 
@@ -128,6 +129,7 @@ func TestLoadWorkspaceData(t *testing.T) {
 	configure.USE_SPECIAL_DIR = false
 	configure.CONTEXT_DIR = "test"
 	configure.CONTXT_FILE = "case1.yml"
+	configure.MIGRATION_ENABLED = false
 
 	conf := configure.NewContxtConfig()
 

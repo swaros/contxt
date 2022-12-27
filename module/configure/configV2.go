@@ -14,11 +14,12 @@ import (
 )
 
 var (
-	CfgV1           *contxtConfigure = NewContxtConfig()
-	USE_SPECIAL_DIR                  = true
-	CONTEXT_DIR                      = "contxt"
-	CONTXT_FILE                      = "contxtv2.yml"
-	CFG             ConfigMetaV2     = ConfigMetaV2{}
+	CfgV1             *contxtConfigure = NewContxtConfig()
+	USE_SPECIAL_DIR                    = true
+	CONTEXT_DIR                        = "contxt"
+	CONTXT_FILE                        = "contxtv2.yml"
+	CFG               ConfigMetaV2     = ConfigMetaV2{}
+	MIGRATION_ENABLED                  = true
 )
 
 type contxtConfigure struct {
@@ -67,7 +68,7 @@ func NewContxtConfig() *contxtConfigure {
 	NewCfgV2(c)
 
 	// if migration is required
-	if c.migrationRequired {
+	if MIGRATION_ENABLED && c.migrationRequired {
 		contxtCfg := yacl.New(&cfgV1, yamc.NewJsonReader()).
 			SetSubDirs(".contxt").
 			SupportMigrate(func(path string, cfg interface{}) {
