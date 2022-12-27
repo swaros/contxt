@@ -1,7 +1,6 @@
 // Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +24,7 @@ package taskrun
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -355,7 +354,7 @@ func takeCareAboutRepo(pathTouse string, config configure.GitVersionInfo) config
 
 func writeGitConfig(path string, config configure.GitVersionInfo) error {
 	b, _ := json.MarshalIndent(config, "", " ")
-	if err := ioutil.WriteFile(path, b, 0644); err != nil {
+	if err := os.WriteFile(path, b, 0644); err != nil {
 		GetLogger().Error("can not create file ", path, " ", err)
 		return err
 	}

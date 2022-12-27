@@ -1,7 +1,6 @@
 // Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +23,7 @@ package taskrun
 
 import (
 	"errors"
-	"io/ioutil"
+
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -60,7 +59,7 @@ func CreateImport(path string, pathToAdd string) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(pathToFile, []byte(res), 0644)
+	err = os.WriteFile(pathToFile, []byte(res), 0644)
 	if err != nil {
 		return err
 	}

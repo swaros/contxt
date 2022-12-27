@@ -3,7 +3,6 @@ package configure_test
 import (
 	"errors"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -30,13 +29,7 @@ func prepareTempConfigFileFromBase(target string) error {
 	return nil
 }
 
-func pathCompare(left, right string) bool {
-	l := filepath.FromSlash(left)
-	r := filepath.FromSlash(right)
-
-	return l == r
-}
-
+// lazyHelperFindConfigEntry is a helper function to find a string in the config
 func lazyHelperFindConfigEntry(t *testing.T, conMd *yacl.ConfigModel, expectContains string) bool {
 	t.Helper()
 	if err := helperFindConfigEntry(conMd, expectContains); err != nil {
@@ -48,6 +41,7 @@ func lazyHelperFindConfigEntry(t *testing.T, conMd *yacl.ConfigModel, expectCont
 	}
 }
 
+// lazyHelperFindNotConfigEntry is a helper function to find a string in the config
 func lazyHelperFindNotConfigEntry(t *testing.T, conMd *yacl.ConfigModel, expectContains string) bool {
 	if err := helperFindConfigEntry(conMd, expectContains); err == nil {
 		_, fnmane, lineNo, _ := runtime.Caller(1)
@@ -133,7 +127,7 @@ func TestLoadWorkspaceData(t *testing.T) {
 
 	conf := configure.NewContxtConfig()
 
-	if !pathCompare(conf.DefaultV2Yacl.GetLoadedFile(), "test/case1.yml") {
+	if !systools.PathCompare(conf.DefaultV2Yacl.GetLoadedFile(), "test/case1.yml") {
 		t.Error("load the wrong file. check test setup", conf.DefaultV2Yacl.GetLoadedFile())
 	}
 
@@ -154,7 +148,7 @@ func TestLoadWorkspaceData(t *testing.T) {
 	}
 
 	path := conf.GetActivePath(".")
-	if !pathCompare(path, "/home/deep/development/markup-string") {
+	if !systools.PathCompare(path, "/home/deep/development/markup-string") {
 		t.Error("unexpected path [", path, "]")
 	}
 
@@ -168,19 +162,22 @@ func TestLoadWorkspaceData(t *testing.T) {
 		t.Error("this should work")
 	} else {
 		path := conf.GetActivePath(".")
-		if !pathCompare(path, "/home/deep/development/contxt") {
+		if !systools.PathCompare(path, "/home/deep/development/contxt") {
 			t.Error("unexpected path [", path, "]")
 		}
 	}
 }
 
+// Big test they have depends on some actions they will test, and needed
+// for the next test step.
+// so one function for many testcases
 func TestChangeWorksSpace(t *testing.T) {
 
 	if err := prepareTempConfigFileFromBase("case002.yml"); err != nil {
 		t.Error(err)
 	}
 	conf := configure.NewContxtConfig()
-	if !pathCompare(conf.DefaultV2Yacl.GetLoadedFile(), "test/temp/case002.yml") {
+	if !systools.PathCompare(conf.DefaultV2Yacl.GetLoadedFile(), "test/temp/case002.yml") {
 		t.Error("load the wrong file. check test setup", conf.DefaultV2Yacl.GetLoadedFile())
 	}
 
@@ -337,6 +334,32 @@ func TestChangeWorksSpace(t *testing.T) {
 			conf.SaveConfiguration()
 			lazyHelperFindConfigEntry(t, conf.DefaultV2Yacl,
 				`"test-space":{"CurrentIndex":"0","Name":"","Paths":{"0":{"Path":"/home/deep/development/pathNo1","Project":"","Role":"","Version":""}}}`)
+
+			if err := conf.AddPath("/home/deep/development/pathNo1/subfolder"); err != nil {
+				t.Error(err)
+			}
+			if err := conf.AddPath("/home/deep/development/pathNo1/other/folder"); err != nil {
+				t.Error(err)
+			}
+			lazyHelperFindConfigEntry(t, conf.DefaultV2Yacl,
+				`"test-space":{"CurrentIndex":"0","Name":"","Paths":{"0":{"Path":"/home/deep/development/pathNo1","Project":"","Role":"","Version":""},"1":{"Path":"/home/deep/development/pathNo1/subfolder","Project":"","Role":"","Version":""},"2":{"Path":"/home/deep/development/pathNo1/other/folder","Project":"","Role":"","Version":""}}}`)
+
+			if !conf.PathMeightPartOfWs("/home/deep/development/pathNo1/something") {
+				t.Error("this path should being accepted as part of the workspace")
+			}
+
+			if conf.PathMeightPartOfWs("/home/deep/development/different/place") {
+				t.Error("this path should NOT being accepted as part of the workspace")
+			}
+			conf.SaveConfiguration()
+
+			if err := conf.PathWorker(func(s1, s2 string) {}, func(origin string) {}); err == nil {
+				t.Error("the stored paths should not exists. so an error should happen (or do we have the folders now?")
+			} else {
+				if !strings.Contains(err.Error(), "no such file or directory") {
+					t.Error("unexpected error message")
+				}
+			}
 		}
 	}
 }

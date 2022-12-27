@@ -1,7 +1,6 @@
 // Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +24,6 @@ package taskrun
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 
 	"os"
 	"os/user"
@@ -75,7 +73,7 @@ func FishCompletionUpdate(cmd *cobra.Command) {
 func WriteFileIfNotExists(filename, content string) (int, error) {
 	funcExists, funcErr := dirhandle.Exists(filename)
 	if funcErr == nil && !funcExists {
-		ioutil.WriteFile(filename, []byte(content), 0644)
+		os.WriteFile(filename, []byte(content), 0644)
 		return 0, nil
 	} else if funcExists {
 		return 1, nil
@@ -111,14 +109,14 @@ end`
 
 		funcExists, funcErr := dirhandle.Exists(usrDir + "/.config/fish/functions/ctx.fish")
 		if funcErr == nil && !funcExists {
-			ioutil.WriteFile(usrDir+"/.config/fish/functions/ctx.fish", []byte(fishFunc), 0644)
+			os.WriteFile(usrDir+"/.config/fish/functions/ctx.fish", []byte(fishFunc), 0644)
 		} else if funcExists {
 			fmt.Println("ctx function already exists. did not change that")
 		}
 
 		funcExists, funcErr = dirhandle.Exists(usrDir + "/.config/fish/functions/cn.fish")
 		if funcErr == nil && !funcExists {
-			ioutil.WriteFile(usrDir+"/.config/fish/functions/cn.fish", []byte(cnFunc), 0644)
+			os.WriteFile(usrDir+"/.config/fish/functions/cn.fish", []byte(cnFunc), 0644)
 		} else if funcExists {
 			fmt.Println("cn function already exists. did not change that")
 		}
@@ -253,7 +251,7 @@ func updateExistingFile(filename, content, doNotContain string) (bool, string) {
 	ok, errDh := dirhandle.Exists(filename)
 	errmsg := ""
 	if errDh == nil && ok {
-		byteCnt, err := ioutil.ReadFile(filename)
+		byteCnt, err := os.ReadFile(filename)
 		if err != nil {
 			return false, "file not readable " + filename
 		}

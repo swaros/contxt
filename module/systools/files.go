@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 )
 
-func pathCompare(left, right string) bool {
+func PathCompare(left, right string) bool {
 	l := filepath.FromSlash(left)
 	r := filepath.FromSlash(right)
 
