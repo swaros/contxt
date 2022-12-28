@@ -356,8 +356,8 @@ func TestChangeWorksSpace(t *testing.T) {
 			if err := conf.PathWorker(func(s1, s2 string) {}, func(origin string) {}); err == nil {
 				t.Error("the stored paths should not exists. so an error should happen (or do we have the folders now?")
 			} else {
-				if !strings.Contains(err.Error(), "no such file or directory") {
-					t.Error("unexpected error message")
+				if !strings.Contains(err.Error(), "no such file or directory") && !strings.Contains(err.Error(), "The system cannot find the path") {
+					t.Error("unexpected error message", err)
 				}
 			}
 		}
