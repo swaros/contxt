@@ -2,11 +2,13 @@ package configure_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/systools"
@@ -362,4 +364,122 @@ func TestChangeWorksSpace(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestCtxWorkFlow(t *testing.T) {
+	// setup the temp folder for the test
+	rendomTimeBasedName := fmt.Sprintf("test-%d", time.Now().UnixNano())
+	configure.USE_SPECIAL_DIR = false
+	configure.CONTEXT_DIR = "test/temp/fake-context"
+	configure.CONTXT_FILE = rendomTimeBasedName + "fake_contxt.yml"
+	configure.MIGRATION_ENABLED = false
+
+	err := os.MkdirAll(configure.CONTEXT_DIR, 0777)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(configure.CONTEXT_DIR)
+
+	// create some dirs
+	createTestDirs := []string{"project1", "project2", "project3", "project4"}
+	createDirsInProject := []string{"role1", "role2", "role3", "role4"}
+
+	for _, project := range createTestDirs {
+		for _, role := range createDirsInProject {
+			err = os.MkdirAll(configure.CONTEXT_DIR+"/"+project+"/"+role, 0777)
+			if err != nil {
+				t.Error(err)
+			}
+		}
+	}
+
+	// init the config
+	conf := configure.NewContxtConfig()
+	// add the projects
+	for id, project := range createTestDirs {
+		strId := strconv.Itoa(id)
+		if cerr := conf.AddWorkSpace("project_"+strId, func(s string) bool { return true }, func(s string) {}); cerr != nil {
+			t.Error(cerr)
+		} else {
+			// add the paths
+			for _, role := range createDirsInProject {
+				if err := conf.AddPath(configure.CONTEXT_DIR + "/" + project + "/" + role); err != nil {
+					t.Error(err)
+				}
+			}
+		}
+	}
+	if cerr := conf.SaveConfiguration(); cerr != nil {
+		t.Error(cerr)
+	}
+
+	// change the workspace initial to project_0
+	berr := conf.ChangeWorkspace("project_0", func(s1 string) bool {
+		return true
+	}, func(origin string) {
+		if origin != "project_0" {
+			t.Error("unexpected workspace", origin)
+		}
+	})
+	if berr != nil {
+		t.Error(berr)
+	}
+	// change the workspace to project_4 from project_0
+	berr = conf.ChangeWorkspace("project_3", func(s1 string) bool {
+		if s1 != "project_0" {
+			t.Error("unexpected workspace", s1)
+		}
+		return true
+	}, func(origin string) {
+		if origin != "project_3" {
+			t.Error("unexpected workspace", origin)
+		}
+	})
+	if berr != nil {
+		t.Error(berr)
+	}
+
+	// change the workspace to project_4 from project_3 that should fail
+	// because the project_4 does not exists
+	berr = conf.ChangeWorkspace("project_4", func(s1 string) bool {
+		if s1 != "project_3" {
+			t.Error("unexpected workspace", s1)
+		}
+		return true
+	}, func(origin string) {
+		if origin != "project_4" {
+			t.Error("unexpected workspace", origin)
+		}
+	})
+	if berr == nil {
+		t.Error("this should fail")
+	}
+	// change the workspace to project_4 from project_3 that should fail
+	// and we still should be in project_3
+	if conf.CurrentWorkspace() != "project_3" {
+		t.Error("unexpected workspace", conf.CurrentWorkspace())
+	}
+
+	cerr := conf.PathWorker(func(s1, s2 string) {
+		if !strings.Contains(s1, "0") && !strings.Contains(s1, "1") && !strings.Contains(s1, "2") && !strings.Contains(s1, "3") && !strings.Contains(s1, "4") {
+			t.Error("unexpected index", s1)
+		}
+
+		if !strings.Contains(s2, "role1") && !strings.Contains(s2, "role2") && !strings.Contains(s2, "role3") && !strings.Contains(s2, "role4") {
+			t.Error("unexpected path", s2)
+		}
+	}, func(origin string) {
+		if currentPath, merr := os.Getwd(); merr != nil {
+			t.Error(merr)
+		} else {
+
+			if currentPath != origin {
+				t.Error("unexpected path", origin)
+			}
+		}
+	})
+	if cerr != nil {
+		t.Error(cerr)
+	}
+
 }

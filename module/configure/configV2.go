@@ -171,6 +171,11 @@ func (c *contxtConfigure) ExecOnWorkSpaces(callFn func(index string, cfg Configu
 	}
 }
 
+// CurrentWorkspace returns the name of the current workspace
+func (c *contxtConfigure) CurrentWorkspace() string {
+	return c.UsedV2Config.CurrentSet
+}
+
 // ChangeWorkspace changes the current workspace and executes callbacks for the current workspace
 // and afterwards for the new one.
 // the configuration willbe save
@@ -178,6 +183,11 @@ func (c *contxtConfigure) ChangeWorkspace(workspace string, oldspace func(string
 	// triggers execution of checking old Workspace
 	canChange := oldspace(c.UsedV2Config.CurrentSet)
 	if canChange {
+		_, exists := c.getConfig(workspace)
+		if !exists {
+			return errors.New("workspace does not exists")
+		}
+
 		// change set name and save
 		c.UsedV2Config.CurrentSet = workspace
 		if err := c.DefaultV2Yacl.Save(); err != nil {
@@ -221,7 +231,7 @@ func (c *contxtConfigure) AddWorkSpace(name string, oldspace func(string) bool, 
 	}
 
 	if c.HaveWorkSpace(name) {
-		return errors.New("the workspace" + clearname + " already exists")
+		return errors.New("the workspace [" + clearname + "] already exists")
 	}
 
 	c.UsedV2Config.Configs[clearname] = ConfigurationV2{Paths: map[string]WorkspaceInfoV2{}}
@@ -247,6 +257,10 @@ func (c *contxtConfigure) PathWorker(callbackInDirectory func(string, string), c
 			if err := os.Chdir(path.Path); err == nil {
 				callbackInDirectory(index, path.Path)
 			} else {
+				return err
+			}
+
+			if err := os.Chdir(current); err != nil {
 				return err
 			}
 		}

@@ -1,2 +1,3 @@
 test/temp/*.yml
 test/temp/*.json
+test/temp/fake-*
