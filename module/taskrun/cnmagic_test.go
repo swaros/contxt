@@ -11,23 +11,6 @@ import (
 	"github.com/swaros/contxt/module/taskrun"
 )
 
-/*
-func TestCnFind(t *testing.T) {
-	configure.CfgV1.UsedV2Config.Paths = []string{
-		"/home/user/project/testing",
-		"/home/user/project/testing/source/backend/server",
-		"/home/user/project/testing/source/backend/server/build",
-		"/home/user/project/testing/source/frontend/website",
-		"/home/user/project/testing/source/frontend/website/build",
-		"/home/user/project/testing/source/toolset/someelse/build",
-	}
-
-	assertStringEquals(t, taskrun.DirFind([]string{"0"}), "/home/user/project/testing")
-	assertStringEquals(t, taskrun.DirFind([]string{"1"}), "/home/user/project/testing/source/backend/server")
-	assertStringEquals(t, taskrun.DirFind([]string{"web", "build"}), "/home/user/project/testing/source/frontend/website/build")
-	assertStringEquals(t, taskrun.DirFind([]string{"serv", "build"}), "/home/user/project/testing/source/backend/server/build")
-}
-
 func TestDecicePath(t *testing.T) {
 	paths := []string{
 		"/home/user/project/testing",
@@ -113,7 +96,6 @@ func TestDecicePath(t *testing.T) {
 		assertStringEquals(t, decidedPath, ".")
 	}
 }
-*/
 
 func TestCnHandle(t *testing.T) {
 	// setup the temp folder for the test
@@ -204,4 +186,13 @@ func TestCnHandle(t *testing.T) {
 		t.Error("DirFind failed. got: " + check)
 	}
 
+	check = taskrun.DirFind([]string{"build"})
+	if check != "temp/project1/toolset/assets/build" { // the path should used where the search word should stay at least in the path
+		t.Error("DirFind failed. got: " + check)
+	}
+
+	check = taskrun.DirFind([]string{"back", "build"})
+	if check != "temp/project1/backend/build" { // backend/build is the only one they matches to the search words
+		t.Error("DirFind failed. got: " + check)
+	}
 }

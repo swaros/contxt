@@ -88,7 +88,6 @@ func assertVarStrNotEquals(t *testing.T, keyname, unExpected string) bool {
 	return true
 }
 
-/*
 func assertStringEquals(t *testing.T, actual, expected string) bool {
 	check := clearStrings(actual)
 
@@ -98,7 +97,6 @@ func assertStringEquals(t *testing.T, actual, expected string) bool {
 	}
 	return true
 }
-*/
 
 // assertCaseLogLastEquals tests for a case (docs/tests/case<nr>) if the last output
 // is equasl to the expected.
