@@ -104,7 +104,7 @@ func NewContxtConfig() *contxtConfigure {
 				c.UsedV2Config.Configs[cfgV1.CurrentSet] = cfgEntrie
 			})
 		if USE_SPECIAL_DIR {
-			contxtCfg.UseConfigDir()
+			contxtCfg.UseHomeDir()
 		}
 		contxtCfg.Load()                                      // process the obsolet configs.
 		contxtCfg.SetSingleFile("contxt_current_config.json") // after reading all files, we want to use this file  for any write operation
@@ -299,6 +299,20 @@ func (c *contxtConfigure) SaveConfiguration() error {
 // it do not checks if this exists
 func (c *contxtConfigure) GetConfigPath(fileName string) (string, error) {
 	return c.DefaultV2Yacl.GetConfigPath(), nil
+}
+
+// SetCurrentPathIndex sets the current path index
+func (c *contxtConfigure) SetCurrentPathIndex(index string) error {
+	cfg, found := c.getCurrentConfig()
+	if !found {
+		return errors.New("error while getting the current configuration")
+	}
+	if _, ok := cfg.Paths[index]; ok {
+		cfg.CurrentIndex = index
+		c.updateCurrentConfig(cfg)
+		return nil
+	}
+	return errors.New("index does not exists")
 }
 
 // returns the path by a given index

@@ -195,4 +195,9 @@ func TestCnHandle(t *testing.T) {
 	if check != "temp/project1/backend/build" { // backend/build is the only one they matches to the search words
 		t.Error("DirFind failed. got: " + check)
 	}
+
+	check = taskrun.DirFind([]string{"2"})
+	if check != "temp/project1/role3" { // backend/build is the only one they matches to the search words
+		t.Error("DirFind failed. got: " + check)
+	}
 }

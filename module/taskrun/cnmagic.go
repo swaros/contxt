@@ -26,6 +26,7 @@
 package taskrun
 
 import (
+	"errors"
 	"sort"
 	"strings"
 
@@ -37,9 +38,27 @@ import (
 func DirFindApplyAndSave(args []string) (string, error) {
 	dir := DirFind(args)
 	if dir != "" && dir != "." {
+		index, ok := FindIndexByPath(dir)
+		if !ok {
+			return dir, errors.New("path not found in configuration")
+		}
+		if err := configure.CfgV1.SetCurrentPathIndex(index); err != nil {
+			return dir, err
+		}
 		return dir, configure.CfgV1.SaveConfiguration()
 	}
 	return dir, nil // just no or the same path reported
+}
+
+func FindIndexByPath(path string) (index string, ok bool) {
+	indexFound := ""
+	configure.CfgV1.PathWorkerNoCd(func(index string, p string) {
+		if p == path {
+			ok = true
+			indexFound = index
+		}
+	})
+	return indexFound, ok
 }
 
 // DirFind returns the best matching part of depending the arguments, what of the stored paths
@@ -49,11 +68,20 @@ func DirFind(args []string) string {
 	if len(args) < 1 {
 		return "."
 	}
+
 	paths := []string{}
+	indexMatchMap := map[string]string{}
 
 	configure.CfgV1.PathWorkerNoCd(func(index string, path string) {
 		paths = append(paths, path)
+		indexMatchMap[index] = path
 	})
+
+	if iPath, ok := indexMatchMap[args[0]]; ok {
+		GetLogger().WithFields(logrus.Fields{"path": iPath}).Debug("Found match by index")
+		return iPath
+	}
+
 	if p, ok := DecidePath(args, paths); ok {
 		GetLogger().WithFields(logrus.Fields{"path": p}).Debug("Found match by comparing strings")
 		return p

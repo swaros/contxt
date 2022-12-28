@@ -23,13 +23,13 @@
             "args": ["shared","list"]
         },
         {
-            "name": "Interactive",
+            "name": "dir find 1",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/cmd/cmd-tview/main.go",
+            "program": "${workspaceFolder}/cmd/cmd-contxt/main.go",
             "env": {},
-            "args": ["interactive"]
+            "args": ["dir","find","1"]
         },
         {
             "name": "Launch shared update",
