@@ -251,9 +251,10 @@ task:
 
   - id: test-coverage
     require:
-      system: linux
+      notExists:
+        - docs/test/coverage/
     script:
-      - mkdir -p ./docs/test/coverage/
+      - mkdir ./docs/test/coverage/
 
   - id: test-coverage
     script:
@@ -274,12 +275,28 @@ task:
 
   - id: test-coverage
     require:
-      system: linux
       exists:
         - docs/coverage.html
     script:
       - echo "try to open default browser with report ${CTX_PWD}"
+      - echo "if this is not working, you can find the report here"
+      - echo "file://${CTX_PWD}/docs/coverage.html"
+
+  - id: test-coverage
+    require:
+      system: linux
+      exists:
+        - docs/coverage.html
+    script:
       - xdg-open file://${CTX_PWD}/docs/coverage.html
+
+  - id: test-coverage
+    require:
+      system: windows
+      exists:
+        - docs/coverage.html
+    script:
+      - Start-Process file://${CTX_PWD}/docs/coverage.html
 
 #### same as test but running async
 #### it is just faster
@@ -295,8 +312,10 @@ task:
     {{- if $test.local}}
   - id: atest-{{ $test.modul }}
     options:
-      displaycmd: true
+      displaycmd: false
+      panelsize: 25
     script:
+      - echo "start async testing modul {{ $test.modul }}"
       - go test -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...
     {{- end }}
     {{- end }}
