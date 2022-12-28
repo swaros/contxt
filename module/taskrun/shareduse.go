@@ -38,6 +38,16 @@ import (
 
 var config_file string = "version.conf"
 
+// GetSharedPath returns the full path to the shared repository
+func GetSharedPath(sharedName string) (string, error) {
+	fileName := systools.SanitizeFilename(sharedName, true) // make sure we have an valid filename
+	if path, err := os.UserHomeDir(); err != nil {          // get the user home dir
+		return "", err
+	} else {
+		return filepath.FromSlash(path + "/.contxt/shared/" + fileName), nil // add the filename. sharedDir have the pathSeperator
+	}
+}
+
 // CheckOrCreateUseConfig get a usecase like swaros/ctx-git and checks
 // if a local copy of them exists.
 // if they not exists it creates the local directoy and uses git to
@@ -46,9 +56,9 @@ var config_file string = "version.conf"
 // and stores the current hashes
 func CheckOrCreateUseConfig(externalUseCase string) (string, error) {
 	GetLogger().WithField("usage", externalUseCase).Info("trying to solve usecase")
-	path := ""                                                  // just as default
-	sharedPath, err := configure.GetSharedPath(externalUseCase) // get the main path for shared content
-	if err == nil && sharedPath != "" {                         // no error and not an empty path
+	path := ""                                        // just as default
+	sharedPath, err := GetSharedPath(externalUseCase) // get the main path for shared content
+	if err == nil && sharedPath != "" {               // no error and not an empty path
 		isThere, dirError := dirhandle.Exists(sharedPath) // do we have the main shared directory?
 		GetLogger().WithFields(logrus.Fields{"path": sharedPath, "exists": isThere, "err": dirError}).Info("using shared contxt tasks")
 		if dirError != nil { // this is NOT related to not exists. it is an error while checking if the path exists
@@ -125,7 +135,7 @@ func UpdateUseCase(fullPath string) {
 
 func ListUseCases(fullPath bool) ([]string, error) {
 	var sharedDirs []string
-	sharedPath, perr := configure.GetSharedPath("")
+	sharedPath, perr := GetSharedPath("")
 	if perr == nil {
 		errWalk := filepath.Walk(sharedPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
