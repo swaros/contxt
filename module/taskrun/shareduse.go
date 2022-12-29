@@ -48,6 +48,15 @@ func GetSharedPath(sharedName string) (string, error) {
 	}
 }
 
+// GetContxtBasePath returns the full path to the contxt base directory
+func GetContxtBasePath() (string, error) {
+	if path, err := os.UserHomeDir(); err != nil { // get the user home dir
+		return "", err
+	} else {
+		return filepath.FromSlash(path + "/.contxt/"), nil
+	}
+}
+
 // CheckOrCreateUseConfig get a usecase like swaros/ctx-git and checks
 // if a local copy of them exists.
 // if they not exists it creates the local directoy and uses git to

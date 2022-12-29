@@ -276,6 +276,10 @@ function ctx() {
 }
 
 func PwrShellUpdate(cmd *cobra.Command) {
+	forceProfile, _ := cmd.Flags().GetBool("create-profile")
+	if forceProfile {
+		PwrShellForceCreateProfile()
+	}
 	PwrShellUser()
 	PwrShellCompletionUpdate(cmd)
 }
@@ -285,6 +289,9 @@ func PwrShellUser() {
 ### begin contxt pwrshrc
 function cn($path) {
 	Set-Location $(contxt dir find $path)
+}
+function ctx {
+	& contxt $args
 }
 ### end of contxt pwrshrc
 `
@@ -323,16 +330,59 @@ func FindPwrShellProfile() (bool, string) {
 	return false, pwrshProfile
 }
 
+func PwrShellForceCreateProfile() {
+	if !PwrShellTestProfile() {
+		PwrShellExec(PWRSHELL_CMD_PROFILE_CREATE)
+	}
+}
+
 func PwrShellCompletionUpdate(cmd *cobra.Command) {
+	if !PwrShellTestProfile() {
+		manout.Error("missing powershell profile", "could not find expected powershell profile")
+		manout.Om.Println("you can create a profile by running 'New-Item -Type File -Path $PROFILE -Force'")
+		return
+	}
 	ok, profile := FindPwrShellProfile()
 	if ok {
 		cmpltn := new(bytes.Buffer)
 		cmd.Root().GenPowerShellCompletion(cmpltn)
 		origin := cmpltn.String()
-		ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
-		systools.WriteFileIfNotExists(profile+".contxt.ps1", origin)
-		systools.WriteFileIfNotExists(profile+".ctx.ps1", ctxCmpltn)
+		if ctxBasePath, err := GetContxtBasePath(); err == nil {
+			ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
+
+			ctxPowerShellPath := ctxBasePath + "/powershell"
+			if exists, err := systools.Exists(ctxPowerShellPath); err != nil || !exists {
+				if err := os.MkdirAll(ctxPowerShellPath, 0755); err != nil {
+					manout.Error("error", "could not create the contxt base path")
+					return
+				}
+			}
+			systools.WriteFileIfNotExists(ctxPowerShellPath+"/contxt.ps1", origin)
+			systools.WriteFileIfNotExists(ctxPowerShellPath+"/ctx.ps1", ctxCmpltn)
+
+			profileAdd := `
+### begin contxt powershell profile
+. "` + ctxPowerShellPath + `/contxt.ps1"
+. "` + ctxPowerShellPath + `/ctx.ps1"
+### end of contxt powershell profile
+`
+
+			fine, errmsg := updateExistingFile(profile, profileAdd, "### begin contxt powershell profile")
+			if !fine {
+				manout.Error("powershell profile update failed", errmsg)
+			} else {
+				manout.MessageCln(manout.ForeGreen, "success", manout.CleanTag, "  ", manout.ForeCyan, " ")
+			}
+
+		} else {
+			manout.Error("error", "could not find the contxt base path")
+		}
 	} else {
 		manout.Error("could not find a writable path for powershell completion")
 	}
+}
+
+func PwrShellTestProfile() bool {
+	foundBool := PwrShellExec(PWRSHELL_CMD_TEST_PROFILE)
+	return strings.ToLower(foundBool) == "true"
 }

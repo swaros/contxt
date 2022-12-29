@@ -612,6 +612,7 @@ func initCobra() {
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(gotoCmd)
 
+	installPwrShell.Flags().Bool("create-profile", false, "create a profile for powershell if not exists already")
 	installCmd.AddCommand(installBashRc)
 	installCmd.AddCommand(installFish)
 	installCmd.AddCommand(installZsh)
