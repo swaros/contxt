@@ -448,6 +448,17 @@ you will also see if a unexpected propertie found `,
 		},
 	}
 
+	installPwrShell = &cobra.Command{
+		Use:   "powershell",
+		Short: "create powershell shell functions",
+		Long: `create needed powershell functions and auto completion for powershell.
+		for powershell the ctx shortcut is not aviable right now.
+		`,
+		Run: func(cmd *cobra.Command, _ []string) {
+			PwrShellUpdate(cmd)
+		},
+	}
+
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "run a target in contxt.yml task file",
@@ -604,6 +615,7 @@ func initCobra() {
 	installCmd.AddCommand(installBashRc)
 	installCmd.AddCommand(installFish)
 	installCmd.AddCommand(installZsh)
+	installCmd.AddCommand(installPwrShell)
 	rootCmd.AddCommand(installCmd)
 
 	workspaceCmd.Flags().String("name", "", "set the name for the workspace. REQUIRED")

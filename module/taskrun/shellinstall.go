@@ -32,8 +32,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
 )
+
+// here we have all the functions to install the shell completion and
+// function files for the shell
+
+var pwrShellPathCache string = "" // cache the path to the powershell profile
 
 func UserDirectory() (string, error) {
 	usr, err := user.Current()
@@ -43,11 +49,45 @@ func UserDirectory() (string, error) {
 	return usr.HomeDir, err
 }
 
+func updateExistingFile(filename, content, doNotContain string) (bool, string) {
+	ok, errDh := dirhandle.Exists(filename)
+	errmsg := ""
+	if errDh == nil && ok {
+		byteCnt, err := os.ReadFile(filename)
+		if err != nil {
+			return false, "file not readable " + filename
+		}
+		strContent := string(byteCnt)
+		if strings.Contains(strContent, doNotContain) {
+			return false, "it seems file is already updated. it contains: " + doNotContain
+		} else {
+			file, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0644)
+			if err != nil {
+				log.Println(err)
+				return false, "error while opening file " + filename
+			}
+			defer file.Close()
+			if _, err := file.WriteString(content); err != nil {
+				log.Fatal(err)
+				return false, "error adding content to file " + filename
+			}
+			return true, ""
+		}
+
+	} else {
+		errmsg = "file update error: file not exists " + filename
+	}
+	return false, errmsg
+}
+
+// FishFunctionUpdate updates the fish function file
+// and adds code completion for the fish shell
 func FishUpdate(cmd *cobra.Command) {
 	FishFunctionUpdate()
 	FishCompletionUpdate(cmd)
 }
 
+// FishCompletionUpdate updates the fish completion file
 func FishCompletionUpdate(cmd *cobra.Command) {
 	usrDir, err := UserDirectory()
 	if err == nil && usrDir != "" {
@@ -65,20 +105,8 @@ func FishCompletionUpdate(cmd *cobra.Command) {
 
 	origin := cmpltn.String()
 	ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
-	WriteFileIfNotExists(usrDir+"/.config/fish/completions/contxt.fish", origin)
-	WriteFileIfNotExists(usrDir+"/.config/fish/completions/ctx.fish", ctxCmpltn)
-
-}
-
-func WriteFileIfNotExists(filename, content string) (int, error) {
-	funcExists, funcErr := dirhandle.Exists(filename)
-	if funcErr == nil && !funcExists {
-		os.WriteFile(filename, []byte(content), 0644)
-		return 0, nil
-	} else if funcExists {
-		return 1, nil
-	}
-	return 2, funcErr
+	systools.WriteFileIfNotExists(usrDir+"/.config/fish/completions/contxt.fish", origin)
+	systools.WriteFileIfNotExists(usrDir+"/.config/fish/completions/ctx.fish", ctxCmpltn)
 
 }
 
@@ -206,8 +234,8 @@ func updateZshFunctions(cmd *cobra.Command) {
 		origin := cmpltn.String()
 		ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
 
-		WriteFileIfNotExists(contxtPath, origin)
-		WriteFileIfNotExists(ctxPath, ctxCmpltn)
+		systools.WriteFileIfNotExists(contxtPath, origin)
+		systools.WriteFileIfNotExists(ctxPath, ctxCmpltn)
 	} else {
 		manout.Error("could not find a writable path for zsh functions in fpath")
 	}
@@ -247,33 +275,64 @@ function ctx() {
 
 }
 
-func updateExistingFile(filename, content, doNotContain string) (bool, string) {
-	ok, errDh := dirhandle.Exists(filename)
-	errmsg := ""
-	if errDh == nil && ok {
-		byteCnt, err := os.ReadFile(filename)
-		if err != nil {
-			return false, "file not readable " + filename
-		}
-		strContent := string(byteCnt)
-		if strings.Contains(strContent, doNotContain) {
-			return false, "it seems file is already updated. it contains: " + doNotContain
-		} else {
-			file, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0644)
-			if err != nil {
-				log.Println(err)
-				return false, "error while opening file " + filename
-			}
-			defer file.Close()
-			if _, err := file.WriteString(content); err != nil {
-				log.Fatal(err)
-				return false, "error adding content to file " + filename
-			}
-			return true, ""
-		}
+func PwrShellUpdate(cmd *cobra.Command) {
+	PwrShellUser()
+	PwrShellCompletionUpdate(cmd)
+}
 
+func PwrShellUser() {
+	pwrshrcAdd := `
+### begin contxt pwrshrc
+function cn($path) {
+	Set-Location $(contxt dir find $path)
+}
+### end of contxt pwrshrc
+`
+	if found, pwrshProfile := FindPwrShellProfile(); found {
+		fine, errmsg := updateExistingFile(pwrshProfile, pwrshrcAdd, "### begin contxt pwrshrc")
+		if !fine {
+			manout.Error("pwrshrc update failed", errmsg)
+		} else {
+			fmt.Println(manout.MessageCln(manout.ForeGreen, "success", manout.CleanTag, "  ", manout.ForeCyan, " "))
+		}
 	} else {
-		errmsg = "file update error: file not exists " + filename
+		manout.Error("missing pwrshrc", "could not find expected powershell profile")
 	}
-	return false, errmsg
+}
+
+func FindPwrShellProfile() (bool, string) {
+	if pwrShellPathCache != "" {
+		return true, pwrShellPathCache
+	}
+	pwrshProfile := os.Getenv("PROFILE")
+	// retry by using powershell as host
+	if pwrshProfile == "" {
+		pwrshProfile = PwrShellExec(PWRSHELL_CMD_PROFILE)
+	}
+	if pwrshProfile != "" {
+		fileStats, err := os.Stat(pwrshProfile)
+		if err == nil {
+
+			permissions := fileStats.Mode().Perm()
+			if permissions&0b110000000 == 0b110000000 {
+				pwrShellPathCache = pwrshProfile
+				return true, pwrshProfile
+			}
+		}
+	}
+	return false, pwrshProfile
+}
+
+func PwrShellCompletionUpdate(cmd *cobra.Command) {
+	ok, profile := FindPwrShellProfile()
+	if ok {
+		cmpltn := new(bytes.Buffer)
+		cmd.Root().GenPowerShellCompletion(cmpltn)
+		origin := cmpltn.String()
+		ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
+		systools.WriteFileIfNotExists(profile+".contxt.ps1", origin)
+		systools.WriteFileIfNotExists(profile+".ctx.ps1", ctxCmpltn)
+	} else {
+		manout.Error("could not find a writable path for powershell completion")
+	}
 }
