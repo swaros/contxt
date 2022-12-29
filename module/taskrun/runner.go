@@ -142,6 +142,7 @@ all defined onEnter and onLeave task will be executed
 if these task are defined
 `,
 		Run: func(_ *cobra.Command, args []string) {
+			FindWorkspaceInfoByTemplate() // this is parsing all templates in all workspaces and updates the project Infos
 			if len(args) > 0 {
 				for _, arg := range args {
 					doMagicParamOne(arg)
@@ -268,6 +269,7 @@ you need to set the name for the workspace`,
 				fmt.Println(manout.MessageCln("add ", manout.ForeBlue, dir))
 				configure.CfgV1.AddPath(dir)
 				configure.CfgV1.SaveConfiguration()
+				FindWorkspaceInfoByTemplate() // this is parsing all templates in all workspaces and updates the project Infos
 			}
 		},
 	}
@@ -681,15 +683,7 @@ func InitDefaultVars() {
 		} else {
 			// if not forced already we try to figure out, by oure own, if the powershell is able to support ANSII
 			// this is since version 7 the case
-			cmd := "$PSVersionTable.PSVersion.Major"    // powershell cmd to get actual version
-			cmdArg := []string{"-nologo", "-noprofile"} // these the arguments for powrshell
-			version := ""
-			ExecuteScriptLine(GetDefaultCmd(), cmdArg, cmd, func(s string, e error) bool {
-				version = s
-				return true
-			}, func(p *os.Process) {
-
-			})
+			version := PwrShellExec(PWRSHELL_CMD_VERSION)
 			SetPH("CTX_PS_VERSION", version) // also setup varibale to have the PS version in place
 			if version >= "7" {
 				manout.ColorEnabled = true // enable colors if we have powershell equals or greater then 7
@@ -740,6 +734,42 @@ func setConfigVaribales(wsInfo configure.WorkspaceInfoV2, varPrefix string) {
 				SetPH(varPrefix+"1_"+prefix, wsInfo.Path)
 			}
 		}
+	}
+}
+
+// FindWorkspaceInfoByTemplate is searching for a template file and if found, it will set the project and role
+// from the template file to the workspace info
+// this is only done if the workspace info is not set yet
+// this is automatically done on each workspace, if the workspace is not set yet
+// but only on the command switch and 'dir add'
+func FindWorkspaceInfoByTemplate() {
+	if currentPath, err := os.Getwd(); err != nil {
+		CtxOut("Error while reading current directory", err)
+		systools.Exit(systools.ErrorBySystem)
+	} else {
+		haveUpdate := false
+		configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+			for pathIndex, ws2 := range cfg.Paths {
+				if err := os.Chdir(ws2.Path); err == nil && ws2.Project == "" && ws2.Role == "" {
+					template, _, found, err := GetTemplate()
+					if found && err == nil {
+						if template.Workspace.Project != "" && template.Workspace.Role != "" {
+							ws2.Project = template.Workspace.Project
+							ws2.Role = template.Workspace.Role
+							cfg.Paths[pathIndex] = ws2
+							CtxOut("Found template for workspace ", index, " and set project and role to ", ws2.Project, ":", ws2.Role)
+							configure.CfgV1.UpdateCurrentConfig(cfg)
+							haveUpdate = true
+						}
+					}
+				}
+			}
+
+		})
+		if haveUpdate {
+			configure.CfgV1.SaveConfiguration()
+		}
+		os.Chdir(currentPath)
 	}
 }
 

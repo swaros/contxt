@@ -135,10 +135,12 @@ func CreateDefaultComands(shell *ishell.Shell) {
 	})
 
 	shell.AddCmd(&ishell.Cmd{
-		Name: "test",
-		Help: "testing ui",
+		Name: "rescan",
+		Help: "rescan the workspaces for project and roles updates",
 		Func: func(c *ishell.Context) {
-			simpleSelect("test selection", []string{"test1", "test2"})
+			manout.Om.Println("rescaning workspace...")
+			taskrun.FindWorkspaceInfoByTemplate()
+			manout.Om.Println("done")
 		},
 	})
 

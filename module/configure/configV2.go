@@ -138,22 +138,22 @@ func (c *contxtConfigure) getCurrentConfig() (ConfigurationV2, bool) {
 }
 
 // helper funtion to change a named config
-func (c *contxtConfigure) doConfigChange(name string, worker func(cfg *ConfigurationV2)) {
+func (c *contxtConfigure) DoConfigChange(name string, worker func(cfg *ConfigurationV2)) {
 	if cfg, ok := c.UsedV2Config.Configs[name]; ok {
 		worker(&cfg)
 	}
 }
 
 // helper function to change the current used config
-func (c *contxtConfigure) doCurrentConfigChange(worker func(cfg *ConfigurationV2)) {
-	c.doConfigChange(c.UsedV2Config.CurrentSet, worker)
+func (c *contxtConfigure) DoCurrentConfigChange(worker func(cfg *ConfigurationV2)) {
+	c.DoConfigChange(c.UsedV2Config.CurrentSet, worker)
 }
 
 // ClearPaths removes all paths
 func (c *contxtConfigure) ClearPaths() {
-	c.doCurrentConfigChange(func(cfg *ConfigurationV2) {
+	c.DoCurrentConfigChange(func(cfg *ConfigurationV2) {
 		cfg.Paths = make(map[string]WorkspaceInfoV2)
-		c.updateCurrentConfig(*cfg)
+		c.UpdateCurrentConfig(*cfg)
 	})
 	c.DefaultV2Yacl.Save()
 }
@@ -312,7 +312,7 @@ func (c *contxtConfigure) SetCurrentPathIndex(index string) error {
 	}
 	if _, ok := cfg.Paths[index]; ok {
 		cfg.CurrentIndex = index
-		c.updateCurrentConfig(cfg)
+		c.UpdateCurrentConfig(cfg)
 		return nil
 	}
 	return errors.New("index does not exists")
@@ -343,7 +343,7 @@ func (c *contxtConfigure) GetActivePath(fallback string) string {
 	return fallback
 }
 
-func (c *contxtConfigure) updateCurrentConfig(updated ConfigurationV2) error {
+func (c *contxtConfigure) UpdateCurrentConfig(updated ConfigurationV2) error {
 	// weird lint. it did not see the usage of cfgElement in body, so i added a useless check of the current index
 	if cfgElement, ok := c.UsedV2Config.Configs[c.UsedV2Config.CurrentSet]; ok && cfgElement.CurrentIndex != "fake-because-of-weird-lint" {
 		cfgElement = updated
@@ -361,7 +361,7 @@ func (c *contxtConfigure) ChangeActivePath(index string) error {
 	}
 	if _, ok := cfg.Paths[index]; ok {
 		cfg.CurrentIndex = index
-		return c.updateCurrentConfig(cfg)
+		return c.UpdateCurrentConfig(cfg)
 	} else {
 		return errors.New("could not change the index. this index " + index + " not exists")
 	}
@@ -383,7 +383,7 @@ func (c *contxtConfigure) AddPath(path string) error {
 		if autoSet {
 			cfg.CurrentIndex = newIndex
 		}
-		return c.updateCurrentConfig(cfg)
+		return c.UpdateCurrentConfig(cfg)
 	} else {
 		return err
 	}
