@@ -68,6 +68,8 @@ func NewContxtConfig() *contxtConfigure {
 	NewCfgV2(c)
 
 	// if migration is required
+	// this is the case if the new configuration file not exists
+	// and the global migration flag is set
 	if MIGRATION_ENABLED && c.migrationRequired {
 		contxtCfg := yacl.New(&cfgV1, yamc.NewJsonReader()).
 			SetSubDirs(".contxt").
@@ -75,13 +77,12 @@ func NewContxtConfig() *contxtConfigure {
 				// this one contains the name of the current used config
 				if strings.Contains(filepath.Clean(path), "contxt_current_config.json") {
 					c.UsedV2Config.CurrentSet = cfgV1.CurrentSet
-					//c.UsedV1Config = cfgV1
 					return // just get out. we do not need something else from this file
 				}
 
 				// this one contains the name of the current used config
 				if strings.Contains(filepath.Clean(path), "default_contxt_ws.json") {
-					return // just get out. we do not need something else from this file
+					return // just get out. we ignore the whole configuation
 				}
 
 				// here we have the logic to convert the configuration
@@ -96,6 +97,8 @@ func NewContxtConfig() *contxtConfigure {
 					keyStr := fmt.Sprintf("%d", index)
 					cfgEntrie.Paths[keyStr] = cfgPaths
 				}
+				// we need to set the current index
+				cfgEntrie.CurrentIndex = strconv.Itoa(cfgV1.LastIndex)
 				// we make this already in the Init func
 				if c.UsedV2Config.Configs == nil {
 					fmt.Println("wtf. this should be initalized already")
