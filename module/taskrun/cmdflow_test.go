@@ -557,8 +557,8 @@ func TestJsonExec(t *testing.T) {
 		if !found {
 			t.Error("expected to find JSON data")
 		} else {
-			if _, ok := json["image"]; !ok {
-				t.Error("expected to find image in JSON data")
+			if _, ok := json["0"]; !ok {
+				t.Error("expected to find key 0 in JSON data")
 			}
 		}
 
