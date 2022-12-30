@@ -180,7 +180,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						err := AddJSON(keyname, returnValue)
 						if err != nil {
 							GetLogger().WithField("error-on-parsing-string", returnValue).Debug("result of command")
-							manout.Error("import from json string failed", err, ' ', returnValue)
+							manout.Error("import from json string failed", err, ' ', systools.StringSubLeft(returnValue, 75))
 						}
 					}
 				} else {
