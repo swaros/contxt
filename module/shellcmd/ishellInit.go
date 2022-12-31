@@ -139,7 +139,13 @@ func CreateDefaultComands(shell *ishell.Shell) {
 		Help: "rescan the workspaces for project and roles updates",
 		Func: func(c *ishell.Context) {
 			manout.Om.Println("rescaning workspace...")
-			taskrun.FindWorkspaceInfoByTemplate()
+			taskrun.FindWorkspaceInfoByTemplate(func(ws string, cnt int, update bool, info configure.WorkspaceInfoV2) {
+				if update {
+					taskrun.CtxOut(ws, " ", manout.ForeDarkGrey, info.Path, manout.ForeGreen, "updated")
+				} else {
+					taskrun.CtxOut(ws, " ", manout.ForeDarkGrey, info.Path, manout.ForeYellow, "ignored. nothing to do.")
+				}
+			})
 			manout.Om.Println("done")
 		},
 	})

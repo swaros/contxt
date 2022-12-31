@@ -142,7 +142,7 @@ all defined onEnter and onLeave task will be executed
 if these task are defined
 `,
 		Run: func(_ *cobra.Command, args []string) {
-			FindWorkspaceInfoByTemplate() // this is parsing all templates in all workspaces and updates the project Infos
+			FindWorkspaceInfoByTemplate(nil)
 			if len(args) > 0 {
 				for _, arg := range args {
 					doMagicParamOne(arg)
@@ -160,21 +160,121 @@ if these task are defined
 
 	workspaceCmd = &cobra.Command{
 		Use:   "workspace",
-		Short: "create new workspace if not exists, and use them",
-		Long: `create a new workspace if not exists.
-if the workspace is exists, we will just use them.
-you need to set the name for the workspace`,
+		Short: "manage workspaces",
+		Long: `create a new workspace 'ctx workspace new <name>'. 
+Remove a workspace 'ctx workspace rm <name>'.
+list all workspaces 'ctx workspace list'.
+scan for new projects in the workspace 'ctx workspace scan'`,
+	}
+
+	wsNewCmd = &cobra.Command{
+		Use:   "new",
+		Short: "create a new workspace",
+		Long: `
+create a new workspace.
+this will trigger any onLeave task defined in the workspace
+and also onEnter task defined in the new workspace
+`,
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			workspace, _ := cmd.Flags().GetString("name")
-			if workspace == "" {
-				manout.Error("paramater missing", "name is required")
+			if len(args) > 0 {
+				if err := configure.CfgV1.AddWorkSpace(args[0], CallBackOldWs, CallBackNewWs); err != nil {
+					fmt.Println(err)
+				} else {
+					CtxOut("workspace created ", args[0])
+				}
+
 			} else {
-				configure.CfgV1.ChangeWorkspace(workspace, CallBackOldWs, CallBackNewWs)
+				fmt.Println("no workspace name given")
 			}
 		},
 	}
 
+	wsRmCmd = &cobra.Command{
+		Use:   "rm",
+		Short: "remove a workspace by given name",
+		Long: `
+remove a workspace.
+this will trigger any onLeave task defined in the workspace
+and also onEnter task defined in the new workspace
+`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			if len(args) > 0 {
+				if err := configure.CfgV1.RemoveWorkspace(args[0]); err != nil {
+					manout.Error("error while trying to remove workspace", err)
+					systools.Exit(systools.ErrorBySystem)
+				} else {
+					if err := configure.CfgV1.SaveConfiguration(); err != nil {
+						manout.Error("error while trying to save configuration", err)
+						systools.Exit(systools.ErrorBySystem)
+					}
+					CtxOut("workspace removed ", args[0])
+				}
+			} else {
+				fmt.Println("no workspace name given")
+			}
+		},
+		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			targets := configure.CfgV1.ListWorkSpaces()
+			return targets, cobra.ShellCompDirectiveNoFileComp
+		},
+	}
+
+	wsListCmd = &cobra.Command{
+		Use:   "list",
+		Short: "list all workspaces",
+		Long:  "list all workspaces",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			workspacesList := configure.CfgV1.ListWorkSpaces()
+			for _, ws := range workspacesList {
+				fmt.Println(ws)
+			}
+		},
+	}
+
+	wsScanCmd = &cobra.Command{
+		Use:   "scan",
+		Short: "scan for new projects in the workspace",
+		Long:  "scan for new projects in the workspace",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			all, updated := FindWorkspaceInfoByTemplate(func(ws string, cnt int, update bool, info configure.WorkspaceInfoV2) {
+				if update {
+					CtxOut(manout.ForeBlue, ws, " ", manout.ForeDarkGrey, " ", info.Path, manout.ForeGreen, "\tupdated")
+				} else {
+					CtxOut(manout.ForeBlue, ws, " ", manout.ForeDarkGrey, " ", info.Path, manout.ForeYellow, "\tignored. nothing to do.")
+				}
+			})
+			CtxOut("found ", all, " projects and updated ", updated, " projects")
+
+		},
+	}
+
+	wsUseCmd = &cobra.Command{
+		Use:   "use",
+		Short: "use a workspace",
+		Long: `use a workspace. this is then the new active workspace
+this will trigger any onLeave task defined in the workspace
+and also onEnter task defined in the new workspace
+`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			if len(args) > 0 {
+				if err := configure.CfgV1.ChangeWorkspace(args[0], CallBackOldWs, CallBackNewWs); err != nil {
+					fmt.Println(err)
+				} else {
+					CtxOut("workspace used ", args[0])
+				}
+			} else {
+				fmt.Println("no workspace name given")
+			}
+		},
+	}
 	dirCmd = &cobra.Command{
 		Use:   "dir",
 		Short: "handle workspaces and assigned paths",
@@ -206,6 +306,10 @@ you need to set the name for the workspace`,
 				GetLogger().WithField("workspace", deleteWs).Info("got remove workspace option")
 				if err := configure.CfgV1.RemoveWorkspace(deleteWs); err != nil {
 					manout.Error("error while trying to deleting workspace", err)
+					systools.Exit(systools.ErrorBySystem)
+				}
+				if err := configure.CfgV1.SaveConfiguration(); err != nil {
+					manout.Error("error while trying to save configuration", err)
 					systools.Exit(systools.ErrorBySystem)
 				}
 				defaulttask = false
@@ -269,7 +373,7 @@ you need to set the name for the workspace`,
 				fmt.Println(manout.MessageCln("add ", manout.ForeBlue, dir))
 				configure.CfgV1.AddPath(dir)
 				configure.CfgV1.SaveConfiguration()
-				FindWorkspaceInfoByTemplate() // this is parsing all templates in all workspaces and updates the project Infos
+				FindWorkspaceInfoByTemplate(nil) // this is parsing all templates in all workspaces and updates the project Infos
 			}
 		},
 	}
@@ -621,7 +725,7 @@ func initCobra() {
 	installCmd.AddCommand(installPwrShell)
 	rootCmd.AddCommand(installCmd)
 
-	workspaceCmd.Flags().String("name", "", "set the name for the workspace. REQUIRED")
+	workspaceCmd.AddCommand(wsNewCmd, wsRmCmd, wsListCmd, wsScanCmd, wsUseCmd)
 	rootCmd.AddCommand(workspaceCmd)
 
 	sharedCmd.AddCommand(sharedListCmd)
@@ -742,13 +846,16 @@ func setConfigVaribales(wsInfo configure.WorkspaceInfoV2, varPrefix string) {
 // this is only done if the workspace info is not set yet
 // this is automatically done on each workspace, if the workspace is not set yet
 // but only on the command switch and 'dir add'
-func FindWorkspaceInfoByTemplate() {
+func FindWorkspaceInfoByTemplate(updateFn func(workspace string, cnt int, update bool, info configure.WorkspaceInfoV2)) (allCount int, updatedCount int) {
+	wsCount := 0
+	wsUpdated := 0
 	if currentPath, err := os.Getwd(); err != nil {
 		CtxOut("Error while reading current directory", err)
 		systools.Exit(systools.ErrorBySystem)
 	} else {
 		haveUpdate := false
 		configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+			wsCount++
 			for pathIndex, ws2 := range cfg.Paths {
 				if err := os.Chdir(ws2.Path); err == nil && ws2.Project == "" && ws2.Role == "" {
 					template, _, found, err := GetTemplate()
@@ -760,6 +867,14 @@ func FindWorkspaceInfoByTemplate() {
 							CtxOut("Found template for workspace ", index, " and set project and role to ", ws2.Project, ":", ws2.Role)
 							configure.CfgV1.UpdateCurrentConfig(cfg)
 							haveUpdate = true
+							wsUpdated++
+							if updateFn != nil {
+								updateFn(index, wsCount, true, ws2)
+							}
+						}
+					} else {
+						if updateFn != nil {
+							updateFn(index, wsCount, false, ws2)
 						}
 					}
 				}
@@ -771,6 +886,7 @@ func FindWorkspaceInfoByTemplate() {
 		}
 		os.Chdir(currentPath)
 	}
+	return wsCount, wsUpdated
 }
 
 // MainInit initilaize the Application.

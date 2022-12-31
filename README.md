@@ -34,11 +34,14 @@ for **zsh** use `contxt install zsh`. the functions **ctx** and **cn** will be c
 for **fish** use `contxt install fish`.  the functions **ctx** and **cn** will be created in the default function directory `~/.config/fish/functions`
 
 ### windows
-currently the windows version is *work in progess* depending the shell integration. so there is currently no *package deployment* and also no
-function mapping. the windows version can be downloaded as a binary, but any integration have to be done manually.
+currently the windows version is *work in progess* depending the **shell integration**. but it have close the same behavior like the linux versions, **except** the contxt mapping as **ctx** function. it have currently an issue depending automatically change the dir on a switch command. so you need execute the `cn` command afterwards, to change into the working dir.
 
 
-#### powershell 7 support
+#### powershell 
+
+run `contxt install powershell`. this will create the `cn`and `ctx`functions in the current profile. if you not have an profile for the current User in the current workspace, then you need to add the flag `--create-profile` if contxt should create them.
+
+
 the default supported shell on windows is `powershell`. 
 if you have **powershell 7** installed, you can set these as default shell as environment variable. `$env:CTX_DEFAULT_CMD = "pwsh"`
 
@@ -51,10 +54,13 @@ ansii support is disabled as long the default powershell version is lower then 7
 
 ## workspaces
 
-Workspaces are a set of directories they can be on different places. Any path can have different task they can be executed automatically if you enter or leava a workspace. this allows you to setup different needs depending on the workspace.
+ - Workspaces are a set of directories they can be on different places. 
+ - Any path can have different task they can be executed automatically if you enter or leava a workspace. this allows you to setup different needs depending on the workspace.
+ - any path in a workspace can have a different project and role setting, that can be used as variables in **contxt tasks**, so this
+ tasks can handle sub projects on different machines, where services, projects (and so on) exists on different paths.
 
 
-### usage
+### using workspaces and navigato to them
 
 after executing the **shell integration** steps, you should use `ctx` instead of `contxt`
 
@@ -67,21 +73,23 @@ but **ctx**, as a shell function, is able to change the current directory.
 
 ![image](https://user-images.githubusercontent.com/5437750/178095493-ee07317c-c74d-407b-9cd9-7a793ccfb458.png)
 
+> **note**: on windows the `ctx switch` is currently not change the directory. you need run `cn` afterwards.
 
 ### context navigate (cn)
 
 for navigation use the `cn` command to change paths depending on the current workspace.
 
-`cn` will change the directory to the last used path in this workspace.
+`cn` *without arguments*, will change the directory to the last used path in this workspace.
 
-`cn website` will change to the last matching path in the workspace, that contains the word *website*
+`cn website` will change to the last matching path in the workspace, that contains the word *website*. if you have multiple paths in the workspace, that contains *website*, the path is used, they have the word *webste* more on the right side as others, to get the obvious needed path.
 
-`cn 2` will change to the third stored path. *(because it starts at 0 for the first stored path)*
+`cn 2` will change to the path depending the ndex.
+the index is created in order of the path was stored added. 
 
-`cn website php frontend` similar to `cn website` but if no *website* can be found on any of the assigned paths, *pah* and afterwards *frontend* will be used to find a matching path
+`cn website build` similar to `cn website` but it looks also if the path *build* is in the path. so you can be more specific.
 
 #### create a new workspace
-`ctx dir -w mywork` will create a new workspace named *mywork*. if mywork already exists the workspace will be entered only.
+`ctx workspace new mywork` will create a new workspace named *mywork*. 
 
 ##### add path to current workspace
 `ctx dir add` adds the current directory to the workspace. so you have to got to the directory first they needs to
@@ -94,7 +102,7 @@ be added to the workspace.
 `ctx dir -paths` prints all assigned paths. any path have index.
 
 ##### list existing workspaces
-`ctx dir list` prints all workspaces you have.
+`ctx workspace list` prints all workspaces you have.
 
 ##### entering workspace
 
