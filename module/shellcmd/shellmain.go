@@ -14,7 +14,10 @@ import (
 	"github.com/swaros/manout"
 )
 
-var runCmdAdded = false
+var (
+	runCmdAdded = false
+	forceExit   = false
+)
 
 func RunIShell() {
 	if !systools.IsStdOutTerminal() {
@@ -32,9 +35,13 @@ func RunIShell() {
 	updatePrompt(shell)
 	CreateCnCmd(shell)
 	CreateDebugLevelCmd(shell)
+	CreateMenuCommands(shell)
 	// do not let the application stops by an error case in execution
 	systools.AddExitListener("iShell", func(code int) systools.ExitBehavior {
 		shell.Println("ERROR while execution. reported exit code ", code)
+		if forceExit {
+			return systools.Continue // do not interrupt the exit if the forceExit is set
+		}
 		return systools.Interrupt
 	})
 	shell.Run()
@@ -110,6 +117,7 @@ func headScreen(shell *ishell.Shell) {
 // - lint
 // - version
 func CreateDefaultComands(shell *ishell.Shell) {
+
 	shell.AddCmd(&ishell.Cmd{
 		Name: "lint",
 		Help: "checks the current .contxt.yml",
@@ -141,9 +149,9 @@ func CreateDefaultComands(shell *ishell.Shell) {
 			manout.Om.Println("rescaning workspace...")
 			taskrun.FindWorkspaceInfoByTemplate(func(ws string, cnt int, update bool, info configure.WorkspaceInfoV2) {
 				if update {
-					taskrun.CtxOut(ws, " ", manout.ForeDarkGrey, info.Path, manout.ForeGreen, "updated")
+					taskrun.CtxOut(ws, " ", manout.ForeDarkGrey, info.Path, manout.ForeGreen, " updated")
 				} else {
-					taskrun.CtxOut(ws, " ", manout.ForeDarkGrey, info.Path, manout.ForeYellow, "ignored. nothing to do.")
+					taskrun.CtxOut(ws, " ", manout.ForeDarkGrey, info.Path, manout.ForeYellow, " ignored. nothing to do.")
 				}
 			})
 			manout.Om.Println("done")
@@ -179,6 +187,72 @@ func CreateCnCmd(shell *ishell.Shell) {
 			}
 		},
 	})
+}
+
+func CreateMenuCommands(shell *ishell.Shell) {
+	shell.AddCmd(&ishell.Cmd{
+		Name:    "menu",
+		Help:    "show the menu",
+		Aliases: []string{"ui"},
+		Func: func(c *ishell.Context) {
+
+			for {
+				AddItemToSelect(selectItem{title: "Workspace", desc: "change the active workspace"})
+				AddItemToSelect(selectItem{title: "Contxt Navigation", desc: "change the active path in the current workspace [" + configure.CfgV1.UsedV2Config.CurrentSet + "]"})
+
+				AddItemToSelect(selectItem{title: "Show Variables", desc: "display the current variables"})
+				if ok, err := systools.Exists("./.contxt.yml"); ok && err == nil {
+					AddItemToSelect(selectItem{title: "verify .contxt.yml", desc: "display the current variables"})
+					AddItemToSelect(selectItem{title: "Run Task", desc: "runs task in the current path (if exists)"})
+				}
+
+				AddItemToSelect(selectItem{title: "close", desc: "close the menu and go back to shell"})
+				AddItemToSelect(selectItem{title: "exit", desc: "exit contxt"})
+				menuOption := uIselectItem("Contxt Main menu @" + configure.CfgV1.UsedV2Config.CurrentSet)
+				switch menuOption.item.title {
+				case "Workspace":
+					handleWorkSpaces(c)
+				case "Contxt Navigation":
+					handleContexNavigation(c)
+				case "Run Task":
+					handleRunCmds(c)
+					WaitForResponse()
+				case "verify .contxt.yml":
+					if w, _, err := systools.GetStdOutTermSize(); err == nil {
+						taskrun.LintOut(w/2, w/2, false, false)
+					} else {
+						taskrun.LintOut(50, 50, false, false)
+					}
+					WaitForResponse()
+
+				case "Show Variables":
+					taskrun.GetPlaceHoldersFnc(func(phKey, phValue string) {
+						manout.Om.Println(manout.Message(manout.ForeCyan, phKey, ":", manout.ForeYellow, phValue))
+					})
+					WaitForResponse()
+				case "close":
+					manout.Om.Println("closing menu")
+					return
+				case "exit":
+					manout.Om.Println("closing menu")
+					forceExit = true
+					systools.Exit(0)
+
+					return
+				default:
+					manout.Om.Println("closing menu")
+					return
+				}
+
+			}
+		},
+	})
+}
+
+func WaitForResponse() {
+	taskrun.CtxOut("<f:white>   ------------------------")
+	taskrun.CtxOut("</>press <f:yellow>enter</> to continue")
+	fmt.Scanln()
 }
 
 // CreateWsCmd command to switch the workspaces

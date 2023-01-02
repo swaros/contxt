@@ -117,9 +117,9 @@ func simpleSelect(title string, selectable []string) selectResult {
 	}
 	w, h, _ := systools.GetStdOutTermSize()
 
-	l := list.New(items, itemDelegate{}, w, h/2)
+	l := list.New(items, itemDelegate{}, w, h-2)
 	l.Title = title
-	l.SetShowStatusBar(false)
+	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(false)
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
@@ -127,7 +127,7 @@ func simpleSelect(title string, selectable []string) selectResult {
 
 	m := simpleSelectModel{list: l}
 
-	if _, err := tea.NewProgram(m).StartReturningModel(); err != nil {
+	if _, err := tea.NewProgram(m, tea.WithAltScreen()).StartReturningModel(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
