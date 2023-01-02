@@ -9,7 +9,17 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var docStyle = lipgloss.NewStyle().Margin(1, 2)
+var (
+	docStyle = lipgloss.NewStyle().Margin(1, 2)
+
+	menuTitleStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#25A065")).Bold(true).
+			Padding(0, 1)
+
+	selectionTitleStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#ccccFF")).Bold(true).
+				Padding(0, 1)
+)
 
 type selectItem struct {
 	title, desc string
@@ -69,7 +79,7 @@ func AddItemToSelect(item selectItem) {
 	items = append(items, item)
 }
 
-func uIselectItem(title string) selectResult {
+func uIselectItem(title string, asMenu bool) selectResult {
 	displayItems := []list.Item{}
 	selected.isSelected = false
 
@@ -79,6 +89,11 @@ func uIselectItem(title string) selectResult {
 
 	listModel := selectUiModel{list: list.New(displayItems, list.NewDefaultDelegate(), 0, 0)}
 	listModel.list.Title = title
+	if asMenu {
+		listModel.list.Styles.Title = menuTitleStyle
+	} else {
+		listModel.list.Styles.Title = selectionTitleStyle
+	}
 
 	p := tea.NewProgram(listModel, tea.WithAltScreen())
 

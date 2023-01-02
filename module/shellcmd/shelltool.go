@@ -2,6 +2,7 @@ package shellcmd
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/abiosoft/ishell"
 	"github.com/swaros/contxt/module/configure"
@@ -30,9 +31,14 @@ func resetShell() {
 // handleWorkSpaces display a list of workspace to select one.
 // it returns true, if the workspace is switched
 func handleWorkSpaces(c *ishell.Context) bool {
-	var ws []string = configure.CfgV1.ListWorkSpaces()
+	//var ws []string = configure.CfgV1.ListWorkSpaces()
 	// adds workspaces to the list by callback iterator
-	selectedWs := simpleSelect("workspaces", ws)
+
+	configure.CfgV1.ExecOnWorkSpaces(func(wsName string, ws configure.ConfigurationV2) {
+		AddItemToSelect(selectItem{title: wsName, desc: strconv.Itoa(len(ws.Paths)) + " stored paths"})
+	})
+
+	selectedWs := uIselectItem("Select Workspace ...", false)
 	if selectedWs.isSelected {
 		c.Println("change to workspace: ", selectedWs.item.title)
 		configure.CfgV1.ChangeWorkspace(selectedWs.item.title, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
@@ -47,7 +53,7 @@ func handleContexNavigation(c *ishell.Context) bool {
 		AddItemToSelect(selectItem{title: path, desc: index})
 	})
 
-	selectedCn := uIselectItem("choose path in " + configure.CfgV1.UsedV2Config.CurrentSet)
+	selectedCn := uIselectItem("choose path in "+configure.CfgV1.UsedV2Config.CurrentSet, false)
 	if selectedCn.isSelected {
 		if err := os.Chdir(selectedCn.item.title); err != nil {
 			manout.Om.Print(manout.ForeRed, "Error while trying to enter path", manout.CleanTag, err)
