@@ -15,8 +15,13 @@ import (
 )
 
 var (
-	logOutStyle = lipgloss.NewStyle().Margin(0, 0)
-	menuStyle   = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, true, true, true).
+	// the style for the right side (log) of the screen
+	leftOutputStyle = lipgloss.NewStyle().Margin(0, 0).
+			Border(lipgloss.NormalBorder(), true, true, true, true).
+			BorderForeground(lipgloss.Color("#333333"))
+
+	// the style for the left side (menu) of the screen
+	menuStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, true, true, true).
 			BorderForeground(lipgloss.Color("#333333"))
 
 	selectedMenuItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("214"))
@@ -181,10 +186,16 @@ func (m RundCmd) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case tea.WindowSizeMsg:
-		h, v := menuStyle.GetFrameSize()
-		m.menu.SetSize(msg.Width-h, msg.Height-v)
-		//lh, lw := logOutStyle.GetFrameSize()
-		//m.log.SetSize(msg.Width-lh, msg.Height-lw)
+		h, v := menuStyle.GetFrameSize()          // get the frame additional needed space for the menu
+		m.menu.SetSize(msg.Width-h, msg.Height-v) // update the menu size
+		lh, lv := leftOutputStyle.GetFrameSize()  // get the frame additional needed space for the log-container
+		m.log.Add(fmt.Sprintf("Window size changed to %v x %v  menu is %v", msg.Width, msg.Height, lipgloss.Width(m.menu.View())))
+
+		rightSpaceWidth := msg.Width - (h + lh + lipgloss.Width(m.menu.View()))
+		leftOutputStyle.Width(rightSpaceWidth)
+		leftOutputStyle.Height(msg.Height - lv)
+
+		m.log.SetSize(rightSpaceWidth-5, msg.Height-lv-5)
 
 	}
 
@@ -197,7 +208,7 @@ func (m RundCmd) View() string {
 	return lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		menuStyle.Render(m.menu.View()),
-		logOutStyle.Render(m.log.View()),
+		leftOutputStyle.Render(m.log.View()),
 	)
 
 }
@@ -249,7 +260,7 @@ func (m RundCmd) registerEvent(p *tea.Program) {
 			for _, line := range any {
 				switch line := line.(type) {
 				case taskrun.EventTaskStatus:
-					msg := fmt.Sprintf(" ++++ %s +++ ", line.Target)
+					msg := fmt.Sprintf(" >>> update from %s ", line.Target)
 					m.log.Add(msg)
 					p.Send(updateMsg{content: msg, origin: line})
 				}
@@ -262,12 +273,13 @@ func (m RundCmd) registerEvent(p *tea.Program) {
 }
 
 func (m RundCmd) Run() (tea.Model, error) {
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseAllMotion())
 	m.registerEvent(p)
 	taskrun.PreHook = func(msg ...interface{}) bool {
 		return true
 	}
 	model, err := p.StartReturningModel()
+
 	taskrun.PreHook = nil
 	if err != nil {
 		return nil, err

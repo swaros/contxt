@@ -17,8 +17,8 @@ type LogOutput struct {
 }
 
 var (
-	logStyle = lipgloss.NewStyle().
-			Margin(1, 2).
+	logOutputStyle = lipgloss.NewStyle().
+			Margin(0, 0, 0, 0).
 			Align(lipgloss.Left).
 			Border(lipgloss.NormalBorder(), true, true, true, true).
 			Background(lipgloss.Color("#222222")).
@@ -45,8 +45,8 @@ func NewAutoSizeLogOutput() *LogOutput {
 		h = 24
 		asize = false
 	}
-	logStyle = logStyle.MaxHeight(h - 2).MaxWidth(w / 2)
-	logStyle.Width(w / 2)
+	//logOutputStyle = logOutputStyle.MaxHeight(h - 2).MaxWidth(w / 2)
+	//logOutputStyle.Width(w / 2)
 	maxRows := 100 + 4
 	return &LogOutput{
 		maxEntries: maxRows,
@@ -88,12 +88,16 @@ func (l *LogOutput) View() string {
 			outPut += rowStyle.Inline(true).MaxWidth(l.maxWith).Render(str) + "\n"
 		}
 	}
-	return logStyle.Render(outPut)
+	return logOutputStyle.Render(outPut)
 }
 
 func (l *LogOutput) SetSize(maxWidth, maxRowsShown int) {
 	l.max = maxRowsShown
 	l.maxWith = maxWidth
+
+	//logOutputStyle = logOutputStyle.MaxHeight(maxRowsShown + 2).MaxWidth(maxWidth + 2)
+	logOutputStyle.Width(maxWidth)
+	logOutputStyle.Height(maxRowsShown)
 
 }
 

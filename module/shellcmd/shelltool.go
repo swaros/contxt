@@ -99,8 +99,8 @@ func handleContexNavigation(c *ishell.Context) bool {
 			manout.ForeLightGrey,
 			selectedCn.item.desc,
 			manout.CleanTag)
-		UiLogger.Add(msg)
-		c.Println("path changed to " + selectedCn.item.title)
+		UiLogger.Add("path changed to " + selectedCn.item.title)
+		taskrun.CtxOut(msg)
 		return true
 	}
 	return false
