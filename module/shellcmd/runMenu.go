@@ -3,6 +3,7 @@ package shellcmd
 import (
 	"fmt"
 	"io"
+	"math"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -22,14 +23,17 @@ var (
 	wasRunningStyle       = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("64"))
 	isRunningStyle        = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("219"))
 	regularItemStyle      = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("240"))
+	errorStyle            = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("196"))
 )
 
 type CmdMenuItem struct {
-	Name     string
-	Running  bool
-	Selected bool
-	RunCount int
-	Blocked  bool
+	Name        string
+	Running     bool
+	Selected    bool
+	RunCount    int
+	UpdateCount int
+	Blocked     bool
+	HaveError   bool
 }
 
 type RundCmd struct {
@@ -61,16 +65,28 @@ func (d RunMenuDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 		return
 	}
 
-	str := fmt.Sprintf("  %s [%v] (%v)", i.Name, i.RunCount, i.Running)
+	//qstr := fmt.Sprintf("  %s [%v] (%v)", i.Name, i.UpdateCount, i.Running)
+	str := fmt.Sprintf("  %s", i.Name)
 
-	//fn := itemStyle.Render
 	// actual selected item
 	selected := m.Index() == index
 	prefix := "  "
 	mStyle := regularItemStyle
 
+	if selected { // must be in front of other checks to get at least the selected style once for any item that did nothing
+		mStyle = selectedMenuItemStyle.Copy()
+	}
+
 	if i.Running {
 		mStyle = isRunningStyle.Copy()
+		prefix = "[]"
+		if i.Running && i.UpdateCount > 0 {
+
+			progressLine := []string{"⠷", "⠾", "⠦", "⠿", "⠹", "⠸", "⠼", "⠴"}
+			modulo := math.Mod(float64(i.UpdateCount), float64(len(progressLine)))
+			prefix = progressLine[int(modulo)] + " "
+
+		}
 	}
 
 	if i.RunCount > 0 && !i.Running {
@@ -78,7 +94,9 @@ func (d RunMenuDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 	}
 
 	if selected {
-		prefix = "->"
+		if !i.Running && prefix != "[]" {
+			prefix = "->"
+		}
 		mStyle = mStyle.Copy().Bold(true)
 	}
 
@@ -86,23 +104,12 @@ func (d RunMenuDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 		prefix = "[]"
 	}
 
+	if i.HaveError {
+		mStyle = errorStyle.Copy()
+	}
+
 	fmt.Fprint(w, mStyle.Render(prefix+str))
-	/*
-		if index == m.Index() {
-			fn = func(s string) string {
-				return selectedMenuItemStyle.Render("->" + s)
-			}
-		} else if i.RunCount > 0 && !i.Running {
-			fn = func(s string) string {
-				return wasRunningStyle.Render("--" + s)
-			}
-		} else if i.Running {
-			fn = func(s string) string {
-				return isRunningStyle.Render(".." + s)
-			}
-		}
-	*/
-	//fmt.Fprint(w, fn(str))
+
 }
 
 func NewRunMenu(targets []string, log LogOutput) RundCmd {
@@ -161,6 +168,17 @@ func (m RundCmd) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case taskrun.EventScriptLine:
 			m.log.Update(msg.content)
+			// update menuitem if running
+			if itm, found := m.findItemByName(ctxmsg.Target); found {
+				m.updateMenuItem(itm)
+			}
+			// update error status
+			if ctxmsg.Error != nil {
+				if itm, found := m.findItemByName(ctxmsg.Target); found {
+					itm.HaveError = true
+					m.updateMenuItem(itm)
+				}
+			}
 		}
 	case tea.WindowSizeMsg:
 		h, v := menuStyle.GetFrameSize()
@@ -199,6 +217,10 @@ func (m RundCmd) updateMenuItem(item CmdMenuItem) {
 	for itmIndex, itm := range m.menu.Items() {
 		if i, ok := itm.(CmdMenuItem); ok {
 			if i.Name == item.Name {
+				item.UpdateCount++
+				if item.UpdateCount > 1000 {
+					item.UpdateCount = 1
+				}
 				updMsg := m.menu.SetItem(itmIndex, item)
 				m.menu.Update(updMsg)
 			}

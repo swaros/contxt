@@ -60,6 +60,7 @@ type EventTaskStatus struct {
 	RunCount int
 	Error    error
 	ExitCode int
+	Pid      int
 }
 
 // SharedFolderExecuter runs shared .contxt.yml files directly without merging them into
@@ -437,10 +438,37 @@ func lineExecuter(
 			if script.Options.Displaycmd {
 				CtxOut(LabelFY("pid"), ValF(process.Pid))
 			}
+			taskUpdate := createOrGetExecuteEvent(EventTaskStatusUpdate)
+			event := EventTaskStatus{
+				Target:   target,
+				Running:  true,
+				Finished: false,
+				Error:    nil,
+				Pid:      process.Pid,
+			}
+			if taskUpdate != nil {
+				taskUpdate.SetArguments(event)
+				taskUpdate.Send()
+			}
+
 		})
 	if execErr != nil {
 		if script.Options.Displaycmd {
 			CtxOut(LabelErrF("exec error"), ValF(execErr))
+		}
+
+		// send errors as event too
+		execEvent := createOrGetExecuteEvent(EventAllLines)
+		if execEvent != nil {
+			event := EventScriptLine{
+				Target: target,
+				Line:   execErr.Error(),
+				Error:  execErr,
+			}
+			execEvent.SetArguments(event)
+			trigger.UpdateEvents()
+			execEvent.Send()
+
 		}
 	}
 	// check execution codes
@@ -467,7 +495,7 @@ func lineExecuter(
 			CtxOut("\t you may disable a hard exit on error by setting ignoreCmdError: true")
 			CtxOut("\t if you do so, a Note will remind you, that a error is happend in this case.")
 			CtxOut()
-			GetLogger().Error("runtime error:", execErr, "exit", realExitCode)
+			//GetLogger().Error("runtime error:", execErr, "exit", realExitCode)
 			systools.Exit(realExitCode)
 			// returns the error code
 			return systools.ExitCmdError, true

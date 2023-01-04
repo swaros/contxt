@@ -40,7 +40,7 @@ func RunIShell() {
 	// do not let the application stops by an error case in execution
 	systools.AddExitListener("iShell", func(code int) systools.ExitBehavior {
 		if code != 0 {
-			shell.Println("ERROR while execution. reported exit code ", code)
+			taskrun.CtxOut("ERROR while execution. reported exit code ", code)
 		}
 		if forceExit {
 			return systools.Continue // do not interrupt the exit if the forceExit is set
