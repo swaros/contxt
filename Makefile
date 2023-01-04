@@ -1,7 +1,7 @@
 build: test	build-no-test
 
 build-no-test:
-	go build -ldflags "-X github.com/swaros/contxt/module/configure.minversion=2 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20221213.125547" -o ./bin/contxt cmd/cmd-contxt/main.go
+	go build -ldflags "-X github.com/swaros/contxt/module/configure.minversion=3 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20230103.105810" -o ./bin/contxt cmd/cmd-contxt/main.go
 
 install-local: build
 	./bin/contxt run install-local
@@ -14,6 +14,8 @@ clean:
 	rm -rf ./dist
 
 test:
+	go test  -failfast ./module/yacl/./...
+	go test  -failfast ./module/yamc/./...
 	go test  -failfast ./module/configure/./...
 	go test  -failfast ./module/dirhandle/./...
 	go test  -failfast ./module/systools/./...

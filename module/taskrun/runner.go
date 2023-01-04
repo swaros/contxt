@@ -952,6 +952,14 @@ func CallBackOldWs(oldws string) bool {
 	return true
 }
 
+func GetColorEnabled() bool {
+	return showColors
+}
+
+func SetColorEnabled(enabled bool) {
+	showColors = enabled
+}
+
 func CallBackNewWs(newWs string) {
 	ResetVariables() // reset old variables while change the workspace. (req for shell mode)
 	MainInit()       // initialize the workspace

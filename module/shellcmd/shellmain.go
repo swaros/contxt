@@ -201,66 +201,6 @@ func CreateMenuCommands(shell *ishell.Shell) {
 	})
 }
 
-func mainMenu(c *ishell.Context) {
-
-	for {
-		AddItemToSelect(selectItem{title: "Workspace", desc: "change the active workspace"})
-		AddItemToSelect(selectItem{title: "Contxt Navigation", desc: "change the active path in the current workspace [" + configure.CfgV1.UsedV2Config.CurrentSet + "]"})
-
-		AddItemToSelect(selectItem{title: "Show Variables", desc: "display the current variables"})
-		if ok, err := systools.Exists("./.contxt.yml"); ok && err == nil {
-			AddItemToSelect(selectItem{title: "verify .contxt.yml", desc: "display the current variables"})
-			AddItemToSelect(selectItem{title: "Run Task", desc: "runs task in the current path (if exists)"})
-		}
-
-		AddItemToSelect(selectItem{title: "close", desc: "close the menu and go back to shell"})
-		AddItemToSelect(selectItem{title: "exit", desc: "exit contxt"})
-		menuOption := uIselectItem("Contxt Main menu @"+configure.CfgV1.UsedV2Config.CurrentSet, true)
-		switch menuOption.item.title {
-		case "Workspace":
-			handleWorkSpaces(c)
-		case "Contxt Navigation":
-			handleContexNavigation(c)
-		case "Run Task":
-			handleRunCmds(c)
-			WaitForResponse()
-		case "verify .contxt.yml":
-			if w, _, err := systools.GetStdOutTermSize(); err == nil {
-				taskrun.LintOut(w/2, w/2, false, false)
-			} else {
-				taskrun.LintOut(50, 50, false, false)
-			}
-			WaitForResponse()
-
-		case "Show Variables":
-			taskrun.GetPlaceHoldersFnc(func(phKey, phValue string) {
-				manout.Om.Println(manout.Message(manout.ForeCyan, phKey, ":", manout.ForeYellow, phValue))
-			})
-			WaitForResponse()
-		case "close":
-			manout.Om.Println("closing menu")
-			return
-		case "exit":
-			manout.Om.Println("closing menu...and application")
-			forceExit = true
-			manout.Om.Println("bye bye...")
-			systools.Exit(0)
-
-			return
-		default:
-			manout.Om.Println("closing menu")
-			return
-		}
-
-	}
-}
-
-func WaitForResponse() {
-	taskrun.CtxOut("<f:white>   ------------------------")
-	taskrun.CtxOut("</>press <f:yellow>enter</> to continue")
-	fmt.Scanln()
-}
-
 // CreateWsCmd command to switch the workspaces
 func CreateWsCmd(shell *ishell.Shell) {
 

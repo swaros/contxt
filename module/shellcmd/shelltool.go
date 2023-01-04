@@ -7,6 +7,7 @@ import (
 	"github.com/abiosoft/ishell"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/taskrun"
 	"github.com/swaros/manout"
 )
@@ -14,6 +15,10 @@ import (
 func autoRecoverWs() {
 	// TODO: old config is gone
 }
+
+var (
+	UiLogger LogOutput = *NewAutoSizeLogOutput()
+)
 
 func inWs() bool {
 	dir, err := dirhandle.Current()
@@ -41,9 +46,35 @@ func handleWorkSpaces(c *ishell.Context) bool {
 	selectedWs := uIselectItem("Select Workspace ...", false)
 	if selectedWs.isSelected {
 		c.Println("change to workspace: ", selectedWs.item.title)
+		UiLogger.Add("change to workspace: " + selectedWs.item.title)
 		configure.CfgV1.ChangeWorkspace(selectedWs.item.title, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
 		return true
 	}
+	return false
+}
+
+func handleCreateWorkspace(c *ishell.Context) bool {
+	wsName := ""
+	if len(c.Args) > 0 {
+		wsName = c.Args[0]
+	} else {
+		wsName, _ = TextInput("Enter Workspace Name", "new workspace name", 128, 25)
+	}
+	wsName, _ = systools.CheckForCleanString(wsName)
+	UiLogger.Add("try to create workspace: (" + wsName + ")")
+
+	if wsName != "" {
+		if err := configure.CfgV1.AddWorkSpace(wsName, taskrun.CallBackOldWs, taskrun.CallBackNewWs); err != nil {
+			manout.Om.Println(manout.ForeRed, "Error while trying to create workspace", manout.CleanTag, err)
+			UiLogger.Add("error:" + err.Error())
+			return false
+		}
+		c.Println("workspace created: ", wsName)
+		UiLogger.Add("success  (" + wsName + ") created")
+		return true
+	}
+	manout.Om.Println(manout.ForeRed, "Error while trying to create workspace ", manout.CleanTag, " no name given")
+	UiLogger.Add("error: empty workspace name")
 	return false
 }
 
@@ -57,17 +88,19 @@ func handleContexNavigation(c *ishell.Context) bool {
 	if selectedCn.isSelected {
 		if err := os.Chdir(selectedCn.item.title); err != nil {
 			manout.Om.Print(manout.ForeRed, "Error while trying to enter path", manout.CleanTag, err)
+			UiLogger.Add("Error while trying to enter path" + err.Error())
 			return false
 		}
-		c.Println(
-			manout.MessageCln(
-				manout.ForeBlue,
-				"... path changed ",
-				manout.CleanTag,
-				selectedCn.item.title, " ",
-				manout.ForeLightGrey,
-				selectedCn.item.desc,
-				manout.CleanTag))
+		msg := manout.MessageCln(
+			manout.ForeBlue,
+			"... path changed ",
+			manout.CleanTag,
+			selectedCn.item.title, " ",
+			manout.ForeLightGrey,
+			selectedCn.item.desc,
+			manout.CleanTag)
+		UiLogger.Add(msg)
+		c.Println("path changed to " + selectedCn.item.title)
 		return true
 	}
 	return false

@@ -3,6 +3,7 @@ package systools
 import (
 	"errors"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -39,4 +40,22 @@ func CheckForCleanString(s string) (cleanString string, err error) {
 		return s, nil
 	}
 	return "", errors.New("string contains not accepted chars ")
+}
+
+func PrintableChars(str string) string {
+	var result []rune
+	for _, r := range str {
+		if r > 31 && r < 127 {
+			result = append(result, r)
+		}
+	}
+	return string(result)
+}
+
+func PrintableCharsByUnquote(str string) string {
+	s2, err := strconv.Unquote(`"` + str + `"`)
+	if err != nil {
+		panic(err)
+	}
+	return s2
 }

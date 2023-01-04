@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/swaros/contxt/module/systools"
 )
 
 var (
@@ -26,7 +27,8 @@ type selectItem struct {
 }
 
 var (
-	items []selectItem
+	items      []selectItem
+	logPointer LogOutput
 )
 
 func (i selectItem) Title() string       { return i.title }
@@ -35,6 +37,7 @@ func (i selectItem) FilterValue() string { return i.title }
 
 type selectUiModel struct {
 	list list.Model
+	log  LogOutput
 }
 
 func (m selectUiModel) Init() tea.Cmd {
@@ -68,7 +71,7 @@ func (m selectUiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m selectUiModel) View() string {
-	return docStyle.Render(m.list.View())
+	return lipgloss.JoinHorizontal(lipgloss.Top, docStyle.Render(m.list.View()), m.log.View())
 }
 
 func ClearSelectItems() {
@@ -79,6 +82,10 @@ func AddItemToSelect(item selectItem) {
 	items = append(items, item)
 }
 
+func ApplyLogOut(log LogOutput) {
+	logPointer = log
+}
+
 func uIselectItem(title string, asMenu bool) selectResult {
 	displayItems := []list.Item{}
 	selected.isSelected = false
@@ -86,8 +93,9 @@ func uIselectItem(title string, asMenu bool) selectResult {
 	for _, itm := range items {
 		displayItems = append(displayItems, itm)
 	}
-
-	listModel := selectUiModel{list: list.New(displayItems, list.NewDefaultDelegate(), 0, 0)}
+	w, h, _ := systools.GetStdOutTermSize()
+	listModel := selectUiModel{list: list.New(displayItems, list.NewDefaultDelegate(), w/2, h-3)}
+	listModel.log = logPointer
 	listModel.list.Title = title
 	if asMenu {
 		listModel.list.Styles.Title = menuTitleStyle
