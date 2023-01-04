@@ -3,7 +3,6 @@ package shellcmd
 import (
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -18,25 +17,30 @@ var (
 	logOutStyle = lipgloss.NewStyle().Margin(0, 0)
 	menuStyle   = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, true, true, true).
 			BorderForeground(lipgloss.Color("#333333"))
+
+	selectedMenuItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("214"))
+	wasRunningStyle       = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("64"))
+	isRunningStyle        = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("219"))
+	regularItemStyle      = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("240"))
 )
 
 type CmdMenuItem struct {
 	Name     string
 	Running  bool
 	Selected bool
+	RunCount int
+	Blocked  bool
 }
 
 type RundCmd struct {
 	targets []string
 	menu    list.Model
 	log     *LogOutput
-	spinner spinner.Model
 }
 
 type updateMsg struct {
-	duration time.Duration
-	content  string
-	origin   any
+	content string
+	origin  any
 }
 
 // model functions for the runMenu
@@ -57,16 +61,48 @@ func (d RunMenuDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 		return
 	}
 
-	str := fmt.Sprintf("  %s", i.Name)
+	str := fmt.Sprintf("  %s [%v] (%v)", i.Name, i.RunCount, i.Running)
 
-	fn := itemStyle.Render
-	if index == m.Index() {
-		fn = func(s string) string {
-			return selectedItemStyle.Render(">>" + s)
-		}
+	//fn := itemStyle.Render
+	// actual selected item
+	selected := m.Index() == index
+	prefix := "  "
+	mStyle := regularItemStyle
+
+	if i.Running {
+		mStyle = isRunningStyle.Copy()
 	}
 
-	fmt.Fprint(w, fn(str))
+	if i.RunCount > 0 && !i.Running {
+		mStyle = wasRunningStyle.Copy()
+	}
+
+	if selected {
+		prefix = "->"
+		mStyle = mStyle.Copy().Bold(true)
+	}
+
+	if i.Blocked {
+		prefix = "[]"
+	}
+
+	fmt.Fprint(w, mStyle.Render(prefix+str))
+	/*
+		if index == m.Index() {
+			fn = func(s string) string {
+				return selectedMenuItemStyle.Render("->" + s)
+			}
+		} else if i.RunCount > 0 && !i.Running {
+			fn = func(s string) string {
+				return wasRunningStyle.Render("--" + s)
+			}
+		} else if i.Running {
+			fn = func(s string) string {
+				return isRunningStyle.Render(".." + s)
+			}
+		}
+	*/
+	//fmt.Fprint(w, fn(str))
 }
 
 func NewRunMenu(targets []string, log LogOutput) RundCmd {
@@ -80,12 +116,11 @@ func NewRunMenu(targets []string, log LogOutput) RundCmd {
 
 	menuList := list.NewModel(displayItems, RunMenuDelegate{}, 0, 0)
 	menuList.Title = "Select a target to run"
-	spin := spinner.New()
+
 	return RundCmd{
 		targets: targets,
 		menu:    menuList,
 		log:     &log,
-		spinner: spin,
 	}
 }
 
@@ -104,9 +139,10 @@ func (m RundCmd) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if itm := m.menu.SelectedItem(); itm != nil {
 				if i, ok := itm.(CmdMenuItem); ok {
 					i.Selected = !i.Selected
-					if !i.Running {
-						i.Running = true
+					if !i.Running && !i.Blocked {
+						i.Blocked = true // to prevent 'double' runs by keypresses. will be removed by the taskrun.EventTaskStatus
 						go taskrun.RunTargets(i.Name, true)
+						m.updateMenuItem(i)
 					}
 				}
 
@@ -114,18 +150,24 @@ func (m RundCmd) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case updateMsg:
-		m.log.Update(msg.content)
-		m.spinner.Tick()
-		m.spinner, _ = m.spinner.Update(msg)
+		switch ctxmsg := msg.origin.(type) {
+		case taskrun.EventTaskStatus:
+			if itm, found := m.findItemByName(ctxmsg.Target); found {
+				itm.RunCount = ctxmsg.RunCount
+				itm.Running = ctxmsg.Running
+				itm.Blocked = false
+				m.updateMenuItem(itm)
+			}
 
+		case taskrun.EventScriptLine:
+			m.log.Update(msg.content)
+		}
 	case tea.WindowSizeMsg:
 		h, v := menuStyle.GetFrameSize()
 		m.menu.SetSize(msg.Width-h, msg.Height-v)
 		//lh, lw := logOutStyle.GetFrameSize()
 		//m.log.SetSize(msg.Width-lh, msg.Height-lw)
 
-	case spinner.TickMsg:
-		m.spinner, _ = m.spinner.Update(msg)
 	}
 
 	var cmd tea.Cmd
@@ -142,6 +184,28 @@ func (m RundCmd) View() string {
 
 }
 
+func (m RundCmd) findItemByName(name string) (CmdMenuItem, bool) {
+	for _, itm := range m.menu.Items() {
+		if i, ok := itm.(CmdMenuItem); ok {
+			if i.Name == name {
+				return i, true
+			}
+		}
+	}
+	return CmdMenuItem{}, false
+}
+
+func (m RundCmd) updateMenuItem(item CmdMenuItem) {
+	for itmIndex, itm := range m.menu.Items() {
+		if i, ok := itm.(CmdMenuItem); ok {
+			if i.Name == item.Name {
+				updMsg := m.menu.SetItem(itmIndex, item)
+				m.menu.Update(updMsg)
+			}
+		}
+	}
+}
+
 func (m RundCmd) registerEvent(p *tea.Program) {
 	exechandler := trigger.NewListener("runListener", func(any ...interface{}) {
 		if len(any) > 0 {
@@ -150,7 +214,7 @@ func (m RundCmd) registerEvent(p *tea.Program) {
 				case taskrun.EventScriptLine:
 					msg := fmt.Sprintf("[%s]:%s", line.Target, line.Line)
 					m.log.Add(msg)
-					p.Send(updateMsg{content: msg, duration: time.Duration(50 * time.Millisecond)})
+					p.Send(updateMsg{content: msg, origin: line})
 				}
 			}
 		}
@@ -165,7 +229,7 @@ func (m RundCmd) registerEvent(p *tea.Program) {
 				case taskrun.EventTaskStatus:
 					msg := fmt.Sprintf(" ++++ %s +++ ", line.Target)
 					m.log.Add(msg)
-					p.Send(updateMsg{content: msg, duration: time.Duration(50 * time.Millisecond)})
+					p.Send(updateMsg{content: msg, origin: line})
 				}
 			}
 		}
