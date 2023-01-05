@@ -55,3 +55,7 @@ func (t *targetExecuter) checkRequirements(require configure.Require) (bool, str
 	}
 	return false, ""
 }
+
+func (t *targetExecuter) GetWatch() *Watchman {
+	return t.watch
+}

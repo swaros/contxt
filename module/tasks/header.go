@@ -6,7 +6,6 @@ import (
 )
 
 const (
-	CodeLine              = "codeLine"
 	Target                = "target"
 	Arguments             = "arguments"
 	Script                = "script"
@@ -26,7 +25,6 @@ type targetExecuter struct {
 	script        configure.Task
 	runCfg        configure.RunConfig
 	stopReason    configure.Trigger
-	codeLine      string
 	mainCmd       string
 	mainCmdArgs   []string
 	phHandler     PlaceHolder
@@ -38,34 +36,39 @@ type targetExecuter struct {
 	watch         *Watchman
 }
 
-func New(target string,
-	arguments map[string]string,
-	script configure.Task,
-	runCfg configure.RunConfig,
-	stopReason configure.Trigger,
-	codeLine string,
-	mainCmd string,
-	mainCmdArgs []string,
-	placeholderHandler PlaceHolder,
-	outputHandler func(msg ...interface{}),
-	reasonCheck func(checkReason configure.Trigger, output string, e error) (bool, string),
-	requirementCheck func(require configure.Require) (bool, string),
-) *targetExecuter {
-	return &targetExecuter{
-		target:        target,
-		arguments:     arguments,
-		script:        script,
-		runCfg:        runCfg,
-		stopReason:    stopReason,
-		codeLine:      codeLine,
-		mainCmd:       mainCmd,
-		mainCmdArgs:   mainCmdArgs,
-		phHandler:     placeholderHandler,
-		outputHandler: outputHandler,
-		reasonCheck:   reasonCheck,
-		checkReqs:     requirementCheck,
-		watch:         NewWatchman(),
+func New(target string, arguments map[string]string, any ...interface{}) *targetExecuter {
+
+	t := &targetExecuter{
+		target:    target,
+		arguments: arguments,
 	}
+
+	for i := 0; i < len(any); i++ {
+		switch any[i].(type) {
+		case configure.Task:
+			t.script = any[i].(configure.Task)
+		case configure.RunConfig:
+			t.runCfg = any[i].(configure.RunConfig)
+		case configure.Trigger:
+			t.stopReason = any[i].(configure.Trigger)
+		case PlaceHolder:
+			t.phHandler = any[i].(PlaceHolder)
+		case func(msg ...interface{}):
+			t.outputHandler = any[i].(func(msg ...interface{}))
+		case func(checkReason configure.Trigger, output string, e error) (bool, string):
+			t.reasonCheck = any[i].(func(checkReason configure.Trigger, output string, e error) (bool, string))
+		case func(require configure.Require) (bool, string):
+			t.checkReqs = any[i].(func(require configure.Require) (bool, string))
+		case DataMapHandler:
+			t.dataHandler = any[i].(DataMapHandler)
+		case *Watchman:
+			t.watch = any[i].(*Watchman)
+		}
+	}
+	if t.watch == nil {
+		t.watch = NewWatchman()
+	}
+	return t
 }
 
 func (t *targetExecuter) CopyToTarget(target string) *targetExecuter {
@@ -75,7 +78,6 @@ func (t *targetExecuter) CopyToTarget(target string) *targetExecuter {
 		t.script,
 		t.runCfg,
 		t.stopReason,
-		t.codeLine,
 		t.mainCmd,
 		t.mainCmdArgs,
 		t.phHandler,
@@ -116,8 +118,6 @@ func (t *targetExecuter) SetProperty(property string, value interface{}) *target
 		t.runCfg = value.(configure.RunConfig)
 	case StopReason:
 		t.stopReason = value.(configure.Trigger)
-	case CodeLine:
-		t.codeLine = value.(string)
 	case MainCmd:
 		t.mainCmd = value.(string)
 	case MainCmdArgs:

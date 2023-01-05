@@ -14,10 +14,10 @@ import (
 	"github.com/swaros/manout"
 )
 
-func (t *targetExecuter) lineExecuter() (int, bool) {
-	replacedLine := t.codeLine
+func (t *targetExecuter) lineExecuter(codeLine string) (int, bool) {
+	replacedLine := codeLine
 	if t.phHandler != nil {
-		replacedLine = t.phHandler.HandlePlaceHolderWithScope(t.codeLine, t.arguments) // placeholders
+		replacedLine = t.phHandler.HandlePlaceHolderWithScope(codeLine, t.arguments) // placeholders
 	}
 	if t.outputHandler != nil && t.script.Options.Displaycmd {
 		t.outputHandler("cmd", t.target, replacedLine) // output the command
@@ -85,19 +85,21 @@ func (t *targetExecuter) lineExecuter() (int, bool) {
 			t.out(manout.MessageCln("\t", manout.BackLightYellow, manout.ForeDarkGrey, " if this is expected you can ignore this message.                                 "))
 			t.out(manout.MessageCln("\t", manout.BackLightYellow, manout.ForeDarkGrey, " but you should handle error cases                                                "))
 			t.out("\ttarget :\t", manout.MessageCln(manout.ForeBlue, t.target))
-			t.out("\tcommand:\t", manout.MessageCln(manout.ForeYellow, t.codeLine))
+			t.out("\tcommand:\t", manout.MessageCln(manout.ForeYellow, codeLine))
 
 		} else {
 			errMsg := " = exit code from command: "
-			lastMessage := manout.MessageCln(manout.BackRed, manout.ForeYellow, realExitCode, manout.CleanTag, manout.ForeLightRed, errMsg, manout.ForeWhite, t.codeLine)
+			lastMessage := manout.MessageCln(manout.BackRed, manout.ForeYellow, realExitCode, manout.CleanTag, manout.ForeLightRed, errMsg, manout.ForeWhite, codeLine)
 			t.out("\t Exit ", lastMessage)
 			t.out()
 			t.out("\t check the command. if this command can fail you may fit the execution rules. see options:")
 			t.out("\t you may disable a hard exit on error by setting ignoreCmdError: true")
 			t.out("\t if you do so, a Note will remind you, that a error is happend in this case.")
 			t.out()
-			//GetLogger().Error("runtime error:", execErr, "exit", realExitCode)
-			systools.Exit(realExitCode)
+			t.getLogger().WithFields(logrus.Fields{"processCode": realExitCode, "error": execErr}).Error("task exection error")
+
+			//systools.Exit(realExitCode) // origin behavior
+
 			// returns the error code
 			return systools.ExitCmdError, true
 		}
@@ -171,8 +173,7 @@ func (t *targetExecuter) listenerWatch(logLine string, e error) {
 						}).Debug("TRIGGER SCRIPT ACTION")
 						subRun := t.CopyToTarget(t.target)
 						subRun.SetArgs(dummyArgs)
-						subRun.SetProperty("codeLine", triggerScript)
-						subRun.lineExecuter()
+						subRun.lineExecuter(triggerScript)
 
 					}
 
@@ -218,7 +219,7 @@ func (t *targetExecuter) listenerWatch(logLine string, e error) {
 					// also the target is triggered by an specific log entriy, it makes
 					// sence to stop the execution of the parent, til this target is executed
 					t.out("running target ", manout.ForeCyan, actionDef.Target, manout.ForeLightCyan, " trigger action")
-					t.executeTemplate(false, t.runCfg, actionDef.Target, scopeVars)
+					t.executeTemplate(false, actionDef.Target, scopeVars)
 
 				}
 				if !someReactionTriggered {
