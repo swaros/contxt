@@ -1,9 +1,8 @@
-package taskrun
+package ctxout
 
 import (
 	"fmt"
 
-	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
 )
 
@@ -40,14 +39,6 @@ func CtxOut(msg ...interface{}) {
 			if chk.(CtxOutCtrl).IgnoreCase { // if we have found this flag set to true, it means ignore the message
 				return
 			}
-		case CtxTargetOut:
-			labelStr := ""
-			if ctrl.Alternative != "" {
-				labelStr = systools.LabelPrint(ctrl.Alternative, 1)
-			} else {
-				labelStr = systools.LabelPrintWithArg(systools.PadStringToR(ctrl.Target, ctrl.PanelSize), ctrl.ForeCol, ctrl.BackCol, 1)
-			}
-			newMsh = append(newMsh, labelStr)
 		case CtxOutLabel:
 			colmsg := manout.Message(ctrl.FColor, ctrl.Message) + " "
 			newMsh = append(newMsh, colmsg)

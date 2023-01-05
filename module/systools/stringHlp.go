@@ -2,6 +2,7 @@ package systools
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -58,4 +59,72 @@ func PrintableCharsByUnquote(str string) string {
 		panic(err)
 	}
 	return s2
+}
+
+func SplitArgs(cmdList []string, prefix string, arghandler func(string, map[string]string)) []string {
+	var cleared []string
+	var args map[string]string = make(map[string]string)
+
+	for _, value := range cmdList {
+		argArr := strings.Split(value, " ")
+		cleared = append(cleared, argArr[0])
+		if len(argArr) > 1 {
+			for index, v := range argArr {
+				args[fmt.Sprintf("%s%v", prefix, index)] = v
+			}
+			arghandler(argArr[0], args)
+		}
+	}
+	return cleared
+}
+
+func StringSplitArgs(argLine string, prefix string) (string, map[string]string) {
+	var args map[string]string = make(map[string]string)
+	argArr := strings.Split(argLine, " ")
+	for index, v := range argArr {
+		args[fmt.Sprintf("%s%v", prefix, index)] = v
+	}
+	return argArr[0], args
+}
+
+func GetArgQuotedEntries(oristr string) ([]string, bool) {
+	var result []string
+	found := false
+	re := regexp.MustCompile(`'[^']+'`)
+	newStrs := re.FindAllString(oristr, -1)
+	for _, s := range newStrs {
+		found = true
+		result = append(result, s)
+
+	}
+	return result, found
+}
+
+func SplitQuoted(oristr string, sep string) []string {
+	var result []string
+	var placeHolder map[string]string = make(map[string]string)
+
+	found := false
+	re := regexp.MustCompile(`'[^']+'`)
+	newStrs := re.FindAllString(oristr, -1)
+	i := 0
+	for _, s := range newStrs {
+		pl := "[$" + strconv.Itoa(i) + "]"
+		placeHolder[pl] = strings.ReplaceAll(s, `'`, "")
+		oristr = strings.Replace(oristr, s, pl, 1)
+		found = true
+		i++
+	}
+	result = strings.Split(oristr, sep)
+	if !found {
+		return result
+	}
+
+	for index, val := range result {
+		if orgStr, fnd := placeHolder[val]; fnd {
+			result[index] = orgStr
+		}
+	}
+
+	return result
 }

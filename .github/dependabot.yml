@@ -46,6 +46,13 @@ updates:
        interval: daily
     assignees:
        - swaros
+### dependencie for /module/ctxout/
+  - package-ecosystem: gomod
+    directory: /module/ctxout/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
 ### dependencie for /module/taskrun/
   - package-ecosystem: gomod
     directory: /module/taskrun/
@@ -63,6 +70,13 @@ updates:
 ### dependencie for /module/shellcmd/
   - package-ecosystem: gomod
     directory: /module/shellcmd/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+### dependencie for /module/tasks/
+  - package-ecosystem: gomod
+    directory: /module/tasks/
     schedule:
        interval: daily
     assignees:

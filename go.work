@@ -3,10 +3,12 @@ go 1.18
 use (
 	./module/awaitgroup
 	./module/configure
+	./module/ctxout
 	./module/dirhandle
 	./module/shellcmd
 	./module/systools
 	./module/taskrun
+	./module/tasks
 	./module/trigger
 	./module/yacl
 	./module/yamc

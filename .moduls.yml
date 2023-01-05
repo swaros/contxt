@@ -37,6 +37,12 @@ module:
       timeout: 30s
 
   -
+    modul: ctxout
+    local: true
+    test:
+      timeout: 30s
+
+  -
     modul: taskrun
     local: true
     test:
@@ -51,6 +57,12 @@ module:
 
   -
     modul: shellcmd
+    local: true
+    test:
+      timeout: 30s
+
+  -
+    modul: tasks
     local: true
     test:
       timeout: 30s
