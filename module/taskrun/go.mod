@@ -11,7 +11,7 @@ require (
 	github.com/swaros/contxt/module/systools v0.0.0-20221206091003-553c703b0561
 	github.com/swaros/manout v0.2.0
 	github.com/tidwall/sjson v1.2.5
-	golang.org/x/term v0.3.0
+	golang.org/x/term v0.4.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -45,6 +45,6 @@ require (
 	github.com/rivo/tview v0.0.0-20221117065207-09f052e6ca98
 	github.com/spf13/cobra v1.6.1
 	github.com/tidwall/gjson v1.14.4
-	golang.org/x/sys v0.3.0 // indirect
+	golang.org/x/sys v0.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
