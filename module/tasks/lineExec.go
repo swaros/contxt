@@ -14,44 +14,44 @@ import (
 	"github.com/swaros/manout"
 )
 
-func (t *targetExecuter) lineExecuter(codeLine string) (int, bool) {
+func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Task) (int, bool) {
 	replacedLine := codeLine
 	if t.phHandler != nil {
 		replacedLine = t.phHandler.HandlePlaceHolderWithScope(codeLine, t.arguments) // placeholders
 	}
-	t.out(MsgTarget(t.target), MsgCommand(replacedLine)) // output the command
-	t.setPh("RUN."+t.target+".CMD.LAST", replacedLine)   // set or overwrite the last script command for the target
-	t.setPh("RUN.SCRIPT_LINE", replacedLine)             // set or overwrite the last script command for the target
+	t.out(MsgTarget(currentTask.ID), MsgCommand(replacedLine)) // output the command
+	t.setPh("RUN."+currentTask.ID+".CMD.LAST", replacedLine)   // set or overwrite the last script command for the target
+	t.setPh("RUN.SCRIPT_LINE", replacedLine)                   // set or overwrite the last script command for the target
 
 	// here we execute the current script line
 	execCode, realExitCode, execErr := t.ExecuteScriptLine(replacedLine,
 		func(logLine string, err error) bool { // callback for any logline
-			t.setPh("RUN."+t.target+".LOG.LAST", logLine) // set or overwrite the last script output for the target
-			if t.script.Listener != nil {                 // do we have listener?
-				t.listenerWatch(logLine, err) // listener handler
+			t.setPh("RUN."+currentTask.ID+".LOG.LAST", logLine) // set or overwrite the last script output for the target
+			if currentTask.Listener != nil {                    // do we have listener?
+				t.listenerWatch(logLine, err, &currentTask) // listener handler
 			}
 
 			// The whole output can be ignored by configuration
 			// if this is not enabled then we handle all these here
-			if !t.script.Options.Hideout {
+			if !currentTask.Options.Hideout {
 
 				//outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2) // hardcoded format for the logoutput iteself
 				outStr := manout.MessageCln(logLine)
-				if t.script.Options.Stickcursor { // optional set back the cursor to the beginning
+				if currentTask.Options.Stickcursor { // optional set back the cursor to the beginning
 					//fmt.Print("\033[G\033[K") // done by escape codes
 					t.out(MsgStickCursor(true)) // trigger the stick cursor
 				}
 
-				t.out(MsgExecOutput(outStr))      // prints the codeline
-				if t.script.Options.Stickcursor { // cursor stick handling
+				t.out(MsgExecOutput(outStr))         // prints the codeline
+				if currentTask.Options.Stickcursor { // cursor stick handling
 					//fmt.Print("\033[A")
 					t.out(MsgStickCursor(false)) // trigger the stick cursor after output
 				}
 			}
 
-			stopReasonFound, message := t.checkReason(t.stopReason, logLine, err) // do we found a defined reason to stop execution
+			stopReasonFound, message := t.checkReason(currentTask.Stopreasons, logLine, err) // do we found a defined reason to stop execution
 			if stopReasonFound {
-				if t.script.Options.Displaycmd {
+				if currentTask.Options.Displaycmd {
 					t.out(MsgType("stopreason"), MsgReason(message))
 				}
 				return false
@@ -61,14 +61,14 @@ func (t *targetExecuter) lineExecuter(codeLine string) (int, bool) {
 			pidStr := fmt.Sprintf("%d", process.Pid) // we use them as info for the user only
 			t.setPh("RUN.PID", pidStr)
 			t.setPh("RUN."+t.target+".PID", pidStr)
-			if t.script.Options.Displaycmd {
+			if currentTask.Options.Displaycmd {
 				t.out(MsgProcess("pid"), MsgPid(process.Pid))
 			}
 		})
 
 	// check execution codes from the executer
 	if execErr != nil {
-		if t.script.Options.Displaycmd {
+		if currentTask.Options.Displaycmd {
 			t.out("exec error", MsgError(execErr))
 		}
 
@@ -78,8 +78,8 @@ func (t *targetExecuter) lineExecuter(codeLine string) (int, bool) {
 	case systools.ExitByStopReason:
 		return systools.ExitByStopReason, true
 	case systools.ExitCmdError:
-		if t.script.Options.IgnoreCmdError {
-			if t.script.Stopreasons.Onerror {
+		if currentTask.Options.IgnoreCmdError {
+			if currentTask.Stopreasons.Onerror {
 				return systools.ExitByStopReason, true
 			}
 			t.out(manout.MessageCln(manout.ForeYellow, "NOTE!\t", manout.BackLightYellow, manout.ForeDarkGrey, " a script execution was failing. no stopreason is set so execution will continued "))
@@ -162,14 +162,14 @@ func (t *targetExecuter) ExecuteScriptLine(command string, callback func(string,
 	return systools.ExitOk, 0, err
 }
 
-func (t *targetExecuter) listenerWatch(logLine string, e error) {
-	if t.script.Listener != nil {
+func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *configure.Task) {
+	if currentTask.Listener != nil {
 
-		for _, listener := range t.script.Listener {
+		for _, listener := range currentTask.Listener {
 			triggerFound, triggerMessage := t.checkReason(listener.Trigger, logLine, e) // check if a trigger have a match
 			if triggerFound {
 				t.setPh("RUN."+t.target+".LOG.HIT", logLine)
-				if t.script.Options.Displaycmd {
+				if currentTask.Options.Displaycmd {
 					t.out(manout.MessageCln(manout.ForeCyan, "[trigger]\t", manout.ForeYellow, triggerMessage, manout.Dim, " ", logLine))
 				}
 
@@ -185,7 +185,7 @@ func (t *targetExecuter) listenerWatch(logLine string, e error) {
 						}).Debug("TRIGGER SCRIPT ACTION")
 						subRun := t.CopyToTarget(t.target)
 						subRun.SetArgs(dummyArgs)
-						subRun.lineExecuter(triggerScript)
+						subRun.lineExecuter(triggerScript, *currentTask)
 
 					}
 
@@ -197,7 +197,7 @@ func (t *targetExecuter) listenerWatch(logLine string, e error) {
 						"target": actionDef.Target,
 					}).Debug("TRIGGER ACTION")
 
-					if t.script.Options.Displaycmd {
+					if currentTask.Options.Displaycmd {
 						t.out(manout.MessageCln(manout.ForeCyan, "[trigger]\t ", manout.ForeGreen, "target:", manout.ForeLightGreen, actionDef.Target))
 					}
 

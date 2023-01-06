@@ -30,9 +30,7 @@ var (
 type targetExecuter struct {
 	target          string
 	arguments       map[string]string
-	script          configure.Task
 	runCfg          configure.RunConfig
-	stopReason      configure.Trigger
 	mainCmd         string
 	mainCmdArgs     []string
 	phHandler       PlaceHolder
@@ -60,12 +58,10 @@ func New(target string, arguments map[string]string, any ...interface{}) *target
 
 	for i := 0; i < len(any); i++ {
 		switch any[i].(type) {
-		case configure.Task:
-			t.script = any[i].(configure.Task)
+
 		case configure.RunConfig:
 			t.runCfg = any[i].(configure.RunConfig)
-		case configure.Trigger:
-			t.stopReason = any[i].(configure.Trigger)
+
 		case PlaceHolder:
 			t.phHandler = any[i].(PlaceHolder)
 		case func(msg ...interface{}):
@@ -112,21 +108,14 @@ func (t *targetExecuter) reInitialize() {
 		t.watch = NewWatchman()
 	}
 	// assign the Tasks to the targetExecuter
-	if len(t.runCfg.Task) > 0 {
-		for _, task := range t.runCfg.Task {
-			t.script = task
-			t.stopReason = task.Stopreasons
-		}
-	}
+
 }
 
 func (t *targetExecuter) CopyToTarget(target string) *targetExecuter {
 	copy := New(
 		target,
 		t.arguments,
-		t.script,
 		t.runCfg,
-		t.stopReason,
 		t.mainCmd,
 		t.mainCmdArgs,
 		t.phHandler,
@@ -166,12 +155,8 @@ func (t *targetExecuter) SetProperty(property string, value interface{}) *target
 		t.target = value.(string)
 	case Arguments:
 		t.arguments = value.(map[string]string)
-	case Script:
-		t.script = value.(configure.Task)
 	case RunCfg:
 		t.runCfg = value.(configure.RunConfig)
-	case StopReason:
-		t.stopReason = value.(configure.Trigger)
 	case MainCmd:
 		t.mainCmd = value.(string)
 	case MainCmdArgs:

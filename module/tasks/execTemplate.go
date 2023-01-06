@@ -264,7 +264,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			// 'now' listener
 			if len(script.Script) < 1 {
 				t.getLogger().Debug("no script lines defined. run listener anyway")
-				t.listenerWatch("", nil)
+				t.listenerWatch("", nil, &script)
 				// workaround til the async runnig is refactored
 				// now we need to give the subtask time to run and update the waitgroup
 				duration := time.Second
@@ -274,7 +274,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			// preparing codelines by execute second level commands
 			// that can affect the whole script
 			abort, returnCode, _ = t.TryParse(script.Script, func(codeLine string) (bool, int) {
-				lineAbort, lineExitCode := t.lineExecuter(codeLine)
+				lineAbort, lineExitCode := t.lineExecuter(codeLine, script)
 				return lineExitCode, lineAbort
 			})
 			if abort {
