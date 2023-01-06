@@ -19,12 +19,14 @@ type taskListExec struct {
 	config   configure.RunConfig
 	watch    *Watchman
 	subTasks map[string]*targetExecuter
+	args     []interface{}
 }
 
-func NewTaskListExec(config configure.RunConfig) *taskListExec {
+func NewTaskListExec(config configure.RunConfig, adds ...interface{}) *taskListExec {
 	return &taskListExec{
 		config: config,
 		watch:  NewWatchman(),
+		args:   adds,
 	}
 }
 
@@ -38,6 +40,29 @@ func (e *taskListExec) RunTargetWithVars(target string, scopeVars map[string]str
 	return tExec.executeTemplate(async, target, scopeVars)
 }
 
+func (e *taskListExec) GetTask(target string) *targetExecuter {
+	if e.subTasks == nil {
+		e.subTasks = make(map[string]*targetExecuter)
+		return nil
+	}
+	if tExec, found := e.subTasks[target]; found {
+		return tExec
+	}
+	return nil
+}
+
+func (e *taskListExec) GetWatch() *Watchman {
+	return e.watch
+}
+
+/*
+	func (e *taskListExec) SetTask(tExec *targetExecuter) {
+		if e.subTasks == nil {
+			e.subTasks = make(map[string]*targetExecuter)
+		}
+		e.subTasks[tExec.target] = tExec
+	}
+*/
 func (e *taskListExec) findOrCreateTask(target string, scopeVars map[string]string) *targetExecuter {
 	if e.subTasks == nil {
 		e.subTasks = make(map[string]*targetExecuter)
@@ -46,7 +71,8 @@ func (e *taskListExec) findOrCreateTask(target string, scopeVars map[string]stri
 	if !found {
 		for _, task := range e.config.Task {
 			if task.ID == target {
-				tExec = New(target, scopeVars, task, e.config, e.watch)
+				e.args = append(e.args, e.config) // add the config to the args
+				tExec = New(target, scopeVars, e.args...)
 				e.subTasks[target] = tExec
 			}
 		}
@@ -252,7 +278,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 				return lineExitCode, lineAbort
 			})
 			if abort {
-				t.getLogger().Debug("abort reason found ")
+				t.getLogger().Debug("abort reason found, or execution failed")
 			}
 
 			// waitin until the any target that runns also is done
@@ -286,9 +312,6 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			return systools.ExitByNoTargetExists
 		}
 
-		t.getLogger().WithFields(logrus.Fields{
-			"target": target,
-		}).Info("executeTemplate. target do not contains tasks")
 		if !targetExecuted {
 			return systools.ExitByNothingToDo
 		}

@@ -19,21 +19,36 @@ const (
 	DataMapHandl          = "dataMapHandler"
 )
 
+type MainCmdSetter interface {
+	GetMainCmd() (string, []string)
+}
+
+var (
+	emptyMainCmdSetter MainCmdSetter = emptyCmd{}
+)
+
 type targetExecuter struct {
-	target        string
-	arguments     map[string]string
-	script        configure.Task
-	runCfg        configure.RunConfig
-	stopReason    configure.Trigger
-	mainCmd       string
-	mainCmdArgs   []string
-	phHandler     PlaceHolder
-	outputHandler func(msg ...interface{})
-	reasonCheck   func(checkReason configure.Trigger, output string, e error) (bool, string)
-	checkReqs     func(require configure.Require) (bool, string)
-	Logger        *logrus.Logger
-	dataHandler   DataMapHandler
-	watch         *Watchman
+	target          string
+	arguments       map[string]string
+	script          configure.Task
+	runCfg          configure.RunConfig
+	stopReason      configure.Trigger
+	mainCmd         string
+	mainCmdArgs     []string
+	phHandler       PlaceHolder
+	outputHandler   func(msg ...interface{})
+	reasonCheck     func(checkReason configure.Trigger, output string, e error) (bool, string)
+	checkReqs       func(require configure.Require) (bool, string)
+	Logger          *logrus.Logger
+	dataHandler     DataMapHandler
+	watch           *Watchman
+	commandFallback MainCmdSetter
+}
+
+type emptyCmd struct{}
+
+func (e emptyCmd) GetMainCmd() (string, []string) {
+	return "", []string{}
 }
 
 func New(target string, arguments map[string]string, any ...interface{}) *targetExecuter {
@@ -63,12 +78,46 @@ func New(target string, arguments map[string]string, any ...interface{}) *target
 			t.dataHandler = any[i].(DataMapHandler)
 		case *Watchman:
 			t.watch = any[i].(*Watchman)
+		case MainCmdSetter:
+			t.commandFallback = any[i].(MainCmdSetter)
+		default:
+			panic("Invalid type passed to New")
 		}
 	}
+
+	t.reInitialize()
+	return t
+}
+
+func (t *targetExecuter) SetMainCmd(mainCmd string, args ...string) *targetExecuter {
+	t.mainCmd = mainCmd
+	t.mainCmdArgs = args
+	return t
+}
+
+// reInitialize is used to reinitialize the targetExecuter
+// so it assigns the required fields depending the given arguments
+// and also make sure, any required field is set
+// if they can have a default value.
+func (t *targetExecuter) reInitialize() {
+	// this just returns the emptyCmd struct
+	// so we can use it as a fallback
+	// but will not usable so we have to warn the user
+	if t.commandFallback == nil {
+		t.commandFallback = emptyMainCmdSetter
+		t.getLogger().Warn("No MainCmdSetter provided, using empty fallback")
+	}
+	// if no task watcher is set, we create a new one
 	if t.watch == nil {
 		t.watch = NewWatchman()
 	}
-	return t
+	// assign the Tasks to the targetExecuter
+	if len(t.runCfg.Task) > 0 {
+		for _, task := range t.runCfg.Task {
+			t.script = task
+			t.stopReason = task.Stopreasons
+		}
+	}
 }
 
 func (t *targetExecuter) CopyToTarget(target string) *targetExecuter {
@@ -97,6 +146,11 @@ func (t *targetExecuter) SetLogger(logger *logrus.Logger) *targetExecuter {
 
 func (t *targetExecuter) SetDataHandler(handler DataMapHandler) *targetExecuter {
 	t.dataHandler = handler
+	return t
+}
+
+func (t *targetExecuter) SetPlaceholderHandler(handler PlaceHolder) *targetExecuter {
+	t.phHandler = handler
 	return t
 }
 

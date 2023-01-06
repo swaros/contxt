@@ -2,6 +2,7 @@ package ctxout
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/swaros/manout"
 )
@@ -49,6 +50,26 @@ func CtxOut(msg ...interface{}) {
 	}
 	msg = newMsh
 	fmt.Println(manout.MessageCln(msg...))
+}
+
+func ToString(msg ...interface{}) string {
+	var newMsh []string
+	for _, chk := range msg {
+		switch ctrl := chk.(type) {
+		case CtxOutCtrl:
+			if chk.(CtxOutCtrl).IgnoreCase { // if we have found this flag set to true, it means ignore the message
+				return ""
+			}
+		case CtxOutLabel:
+
+			newMsh = append(newMsh, ToString(ctrl.Message))
+		case string:
+			newMsh = append(newMsh, chk.(string))
+		default:
+			newMsh = append(newMsh, fmt.Sprintf("%v", chk))
+		}
+	}
+	return strings.Join(newMsh, " ")
 }
 
 func ValF(val interface{}) CtxOutLabel {

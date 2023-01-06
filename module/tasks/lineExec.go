@@ -19,12 +19,9 @@ func (t *targetExecuter) lineExecuter(codeLine string) (int, bool) {
 	if t.phHandler != nil {
 		replacedLine = t.phHandler.HandlePlaceHolderWithScope(codeLine, t.arguments) // placeholders
 	}
-	if t.outputHandler != nil && t.script.Options.Displaycmd {
-		t.outputHandler("cmd", t.target, replacedLine) // output the command
-	}
-
-	t.setPh("RUN."+t.target+".CMD.LAST", replacedLine) // set or overwrite the last script command for the target
-	t.setPh("RUN.SCRIPT_LINE", replacedLine)           // set or overwrite the last script command for the target
+	t.out(MsgTarget(t.target), MsgCommand(replacedLine)) // output the command
+	t.setPh("RUN."+t.target+".CMD.LAST", replacedLine)   // set or overwrite the last script command for the target
+	t.setPh("RUN.SCRIPT_LINE", replacedLine)             // set or overwrite the last script command for the target
 
 	// here we execute the current script line
 	execCode, realExitCode, execErr := t.ExecuteScriptLine(replacedLine,
@@ -41,19 +38,21 @@ func (t *targetExecuter) lineExecuter(codeLine string) (int, bool) {
 				//outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2) // hardcoded format for the logoutput iteself
 				outStr := manout.MessageCln(logLine)
 				if t.script.Options.Stickcursor { // optional set back the cursor to the beginning
-					fmt.Print("\033[G\033[K") // done by escape codes
+					//fmt.Print("\033[G\033[K") // done by escape codes
+					t.out(MsgStickCursor(true)) // trigger the stick cursor
 				}
 
-				t.out(outStr)                     // prints the codeline
+				t.out(MsgExecOutput(outStr))      // prints the codeline
 				if t.script.Options.Stickcursor { // cursor stick handling
-					fmt.Print("\033[A")
+					//fmt.Print("\033[A")
+					t.out(MsgStickCursor(false)) // trigger the stick cursor after output
 				}
 			}
 
 			stopReasonFound, message := t.checkReason(t.stopReason, logLine, err) // do we found a defined reason to stop execution
 			if stopReasonFound {
 				if t.script.Options.Displaycmd {
-					t.out("stop-reason", message)
+					t.out(MsgType("stopreason"), MsgReason(message))
 				}
 				return false
 			}
@@ -63,12 +62,14 @@ func (t *targetExecuter) lineExecuter(codeLine string) (int, bool) {
 			t.setPh("RUN.PID", pidStr)
 			t.setPh("RUN."+t.target+".PID", pidStr)
 			if t.script.Options.Displaycmd {
-				t.out("pid", process.Pid)
+				t.out(MsgProcess("pid"), MsgPid(process.Pid))
 			}
 		})
+
+	// check execution codes from the executer
 	if execErr != nil {
 		if t.script.Options.Displaycmd {
-			t.out("exec error", execErr)
+			t.out("exec error", MsgError(execErr))
 		}
 
 	}
@@ -109,10 +110,21 @@ func (t *targetExecuter) lineExecuter(codeLine string) (int, bool) {
 	return systools.ExitNoCode, true
 }
 
-func (t *targetExecuter) ExecuteScriptLine(command string, callback func(string, error) bool, startInfo func(*os.Process)) (int, int, error) {
+func (t *targetExecuter) getCmd() (string, []string) {
+	defaultCmd, defaultArgs := t.commandFallback.GetMainCmd()
+	if t.mainCmd != "" {
+		defaultCmd = t.mainCmd
+	}
+	if len(t.mainCmdArgs) > 0 {
+		defaultArgs = t.mainCmdArgs
+	}
+	return defaultCmd, defaultArgs
+}
 
-	cmdArg := append(t.mainCmdArgs, command)
-	cmd := exec.Command(t.mainCmd, cmdArg...)
+func (t *targetExecuter) ExecuteScriptLine(command string, callback func(string, error) bool, startInfo func(*os.Process)) (int, int, error) {
+	dCmd, dCmdArgs := t.getCmd()
+	cmdArg := append(dCmdArgs, command)
+	cmd := exec.Command(dCmd, cmdArg...)
 	stdoutPipe, _ := cmd.StdoutPipe()
 	cmd.Stderr = cmd.Stdout
 

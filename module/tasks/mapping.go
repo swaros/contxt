@@ -53,7 +53,7 @@ func (t *targetExecuter) checkRequirements(require configure.Require) (bool, str
 	if t.checkReqs != nil {
 		return t.checkReqs(require)
 	}
-	return false, ""
+	return false, "no requirement check handler set"
 }
 
 func (t *targetExecuter) GetWatch() *Watchman {

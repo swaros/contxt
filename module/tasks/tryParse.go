@@ -16,7 +16,6 @@ type DataMapHandler interface {
 	GetDataAsJson(key string) (bool, string)
 	AddJSON(key, jsonString string) error
 	SetJSONValueByPath(key, path, value string) error
-	ExportVarToFile(variable string, filename string) error
 	GetDataAsYaml(key string) (bool, string)
 }
 
@@ -200,7 +199,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				if len(parts) == 3 {
 					varName := parts[1]
 					fileName := parts[2]
-					t.dataHandler.ExportVarToFile(varName, fileName)
+					t.phHandler.ExportVarToFile(varName, fileName)
 				} else {
 					manout.Error("invalid usage", writeVarToFile, " needs 2 arguments at least. <variable> <filename>")
 				}
