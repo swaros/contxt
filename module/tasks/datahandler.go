@@ -9,6 +9,8 @@ import (
 	"github.com/tidwall/sjson"
 )
 
+// DefaultDataHandler is the default implementation of the DataHandler interface
+// It uses the yamc package to store and retrieve data
 type DefaultDataHandler struct {
 	yamcHndl *yamc.Yamc
 }

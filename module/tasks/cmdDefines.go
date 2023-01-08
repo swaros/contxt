@@ -7,11 +7,15 @@ import (
 
 var (
 	// ShellCmd is the command to execute shell commands
+	// It is set to the default value for the current OS
+	// If you want to use a different shell, you can change this value
+	// before calling any of the tasks
 	ShellCmd shellCmd = shellCmd{}
 )
 
 type shellCmd struct{}
 
+// GetMainCmd returns the main command and the arguments to use
 func (s shellCmd) GetMainCmd() (string, []string) {
 	lwr := strings.ToLower(runtime.GOOS)
 
