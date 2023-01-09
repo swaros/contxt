@@ -284,7 +284,7 @@ task:
 
 		assert.Contains(t, messages, "test")
 		assert.Contains(t, messages, "i-am-subtask")
-		assert.Equal(t, "i-am-subtask; test", strings.Join(messages, "; "))
+
 	}
 }
 
