@@ -50,14 +50,14 @@ type Yamc struct {
 	dataInterface  map[string]interface{} // holds the data after parse and will then be used to store the data in the sync.Map
 	loaded         bool                   // is true if we at least tried to get data and got no error (can still be empty)
 	sourceDataType int                    // holds the information about the structure of the source
-	mu             sync.Mutex
+	mu             sync.Mutex             // mutex for the data
 }
 
+// New returns a new Yamc instance
 func New() *Yamc {
 	return &Yamc{
 		loaded:         false,
 		sourceDataType: 0,
-		//data:           make(map[string]interface{}),
 	}
 }
 
@@ -85,19 +85,22 @@ func (y *Yamc) Parse(use DataReader, in []byte) error {
 		return y.testAndConvertJsonType(use, in)
 	} else {
 		y.sourceDataType = TYPE_STRING_MAP
-		y.updateSyncMap(y.dataInterface)
-		y.dataInterface = make(map[string]interface{}) // reset
+		y.updateSyncMap(y.dataInterface)               // update the sync.Map
+		y.dataInterface = make(map[string]interface{}) // reset because we don't need it anymore
 		y.loaded = true
 		return nil
 	}
 }
 
+// updateSyncMap is just a helper to update the sync.Map
+// it is used in Parse and ParseFile
 func (y *Yamc) updateSyncMap(data map[string]interface{}) {
 	for k, v := range data {
 		y.data.Store(k, v)
 	}
 }
 
+// mapFromSyncMap is just a helper to get the data from the sync.Map
 func (y *Yamc) mapFromSyncMap() map[string]interface{} {
 	data := make(map[string]interface{})
 	y.data.Range(func(key, value interface{}) bool {
@@ -107,6 +110,7 @@ func (y *Yamc) mapFromSyncMap() map[string]interface{} {
 	return data
 }
 
+// deleteAllData removes all data from the sync.Map
 func (y *Yamc) deleteAllData() {
 	y.data.Range(func(key, value interface{}) bool {
 		y.data.Delete(key)
@@ -114,31 +118,41 @@ func (y *Yamc) deleteAllData() {
 	})
 }
 
+// setData reset current data and set new data
+// by apply the map[string]interface{} to the sync.Map
 func (y *Yamc) SetData(data map[string]interface{}) {
-	y.Reset()
+	//y.Reset()
 	y.updateSyncMap(data)
 }
 
+// Store is just a wrapper for the sync.Map Store function
 func (y *Yamc) Store(key string, data interface{}) {
 	y.data.Store(key, data)
 }
 
+// Get is just a wrapper for the sync.Map Load function
 func (y *Yamc) Get(key string) (interface{}, bool) {
 	return y.data.Load(key)
 }
 
+// GetOrSet is just a wrapper for the sync.Map LoadOrStore function
 func (y *Yamc) GetOrSet(key string, data interface{}) (interface{}, bool) {
 	return y.data.LoadOrStore(key, data)
 }
 
+// Delete is just a wrapper for the sync.Map Delete function
 func (y *Yamc) Delete(key string) {
 	y.data.Delete(key)
 }
 
+// Range is just a wrapper for the sync.Map Range function
 func (y *Yamc) Range(f func(key, value interface{}) bool) {
 	y.data.Range(f)
 }
 
+// Update is just a wrapper for the sync.Map Load and Store function
+// it is a helper to update the data in the sync.Map
+// and lock the sync.Map for the time of the update
 func (y *Yamc) Update(key string, f func(value interface{}) interface{}) bool {
 	y.mu.Lock()
 	defer y.mu.Unlock()
@@ -227,6 +241,7 @@ func (y *Yamc) testAndConvertJsonType(use DataReader, data []byte) error {
 	}
 }
 
+// IsPointer checks if the given interface is a pointer
 func IsPointer(i interface{}) bool {
 	kindOfi := reflect.ValueOf(i).Kind()
 
