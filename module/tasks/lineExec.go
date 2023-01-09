@@ -52,7 +52,7 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 			stopReasonFound, message := t.checkReason(currentTask.Stopreasons, logLine, err) // do we found a defined reason to stop execution
 			if stopReasonFound {
 				if currentTask.Options.Displaycmd {
-					t.out(MsgType("stopreason"), MsgReason(message))
+					t.out(MsgType("stopreason"), MsgReason(message), MsgProcess("aborted"))
 				}
 				return false
 			}
@@ -62,7 +62,7 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 			t.setPh("RUN.PID", pidStr)
 			t.setPh("RUN."+t.target+".PID", pidStr)
 			if currentTask.Options.Displaycmd {
-				t.out(MsgProcess("pid"), MsgPid(process.Pid))
+				t.out(MsgPid(process.Pid), MsgProcess("started"))
 			}
 		})
 

@@ -26,9 +26,9 @@ import "os"
 // NewByFile loads file content and returns a new Ymac
 func NewByFile(filename string, rdr DataReader) (*Yamc, error) {
 	if data, err := os.ReadFile(filename); err == nil {
-		yetAnohterMapConverter := New()
-		err := yetAnohterMapConverter.Parse(rdr, data)
-		return yetAnohterMapConverter, err
+		yetMc := New()
+		err := yetMc.Parse(rdr, data)
+		return yetMc, err
 	} else {
 		return &Yamc{}, err
 	}

@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/tidwall/gjson"
 )
@@ -45,16 +46,18 @@ type DataReader interface {
 }
 
 type Yamc struct {
-	data           map[string]interface{} // holds the data after parse
+	data           sync.Map               // holds the data after parse
+	dataInterface  map[string]interface{} // holds the data after parse and will then be used to store the data in the sync.Map
 	loaded         bool                   // is true if we at least tried to get data and got no error (can still be empty)
 	sourceDataType int                    // holds the information about the structure of the source
+	mu             sync.Mutex
 }
 
 func New() *Yamc {
 	return &Yamc{
 		loaded:         false,
 		sourceDataType: 0,
-		data:           make(map[string]interface{}),
+		//data:           make(map[string]interface{}),
 	}
 }
 
@@ -78,30 +81,84 @@ func (y *Yamc) IsLoaded() bool {
 // it fallback to read []interface{} and convert them.
 func (y *Yamc) Parse(use DataReader, in []byte) error {
 	y.Reset()
-	if err := use.Unmarshal([]byte(in), &y.data); err != nil {
+	if err := use.Unmarshal([]byte(in), &y.dataInterface); err != nil {
 		return y.testAndConvertJsonType(use, in)
+	} else {
+		y.sourceDataType = TYPE_STRING_MAP
+		y.updateSyncMap(y.dataInterface)
+		y.dataInterface = make(map[string]interface{}) // reset
+		y.loaded = true
+		return nil
 	}
-	y.sourceDataType = TYPE_STRING_MAP
-	y.loaded = true
-	return nil
+}
 
+func (y *Yamc) updateSyncMap(data map[string]interface{}) {
+	for k, v := range data {
+		y.data.Store(k, v)
+	}
+}
+
+func (y *Yamc) mapFromSyncMap() map[string]interface{} {
+	data := make(map[string]interface{})
+	y.data.Range(func(key, value interface{}) bool {
+		data[key.(string)] = value
+		return true
+	})
+	return data
+}
+
+func (y *Yamc) deleteAllData() {
+	y.data.Range(func(key, value interface{}) bool {
+		y.data.Delete(key)
+		return true
+	})
 }
 
 func (y *Yamc) SetData(data map[string]interface{}) {
 	y.Reset()
-	y.data = data
+	y.updateSyncMap(data)
+}
+
+func (y *Yamc) Store(key string, data interface{}) {
+	y.data.Store(key, data)
+}
+
+func (y *Yamc) Get(key string) (interface{}, bool) {
+	return y.data.Load(key)
+}
+
+func (y *Yamc) GetOrSet(key string, data interface{}) (interface{}, bool) {
+	return y.data.LoadOrStore(key, data)
+}
+
+func (y *Yamc) Delete(key string) {
+	y.data.Delete(key)
+}
+
+func (y *Yamc) Range(f func(key, value interface{}) bool) {
+	y.data.Range(f)
+}
+
+func (y *Yamc) Update(key string, f func(value interface{}) interface{}) bool {
+	y.mu.Lock()
+	defer y.mu.Unlock()
+	val, ok := y.data.Load(key)
+	if ok {
+		y.data.Store(key, f(val))
+	}
+	return ok
 }
 
 // GetData is just the getter for the actual
 // data. this is independend if they are loaded or not
 func (y *Yamc) GetData() map[string]interface{} {
-	return y.data
+	return y.mapFromSyncMap()
 }
 
 // ToString uses the reader to create the string output of the
 // data content
 func (y *Yamc) ToString(use DataReader) (str string, err error) {
-	if byteData, err := use.Marshal(y.data); err != nil {
+	if byteData, err := use.Marshal(y.mapFromSyncMap()); err != nil {
 		return "", err
 	} else {
 		return string(byteData), nil
@@ -111,7 +168,7 @@ func (y *Yamc) ToString(use DataReader) (str string, err error) {
 // Resets the whole Ymac
 func (y *Yamc) Reset() {
 	y.loaded = false
-	y.data = make(map[string]interface{})
+	y.deleteAllData()
 	y.sourceDataType = UNSET
 }
 
@@ -119,7 +176,7 @@ func (y *Yamc) Reset() {
 // the error while using Marshall the data into json
 // what can be used by gson
 func (y *Yamc) Gjson(path string) (gjson.Result, error) {
-	jsonData, err := json.Marshal(y.data)
+	jsonData, err := json.Marshal(y.GetData())
 	if err == nil {
 		return gjson.Get(string(jsonData), path), nil
 	}
@@ -140,7 +197,7 @@ func (y *Yamc) GetGjsonString(path string) (jsonStr string, err error) {
 // or the error while processing the data
 func (y *Yamc) FindValue(path string) (content any, err error) {
 
-	return FindChain(y.data, strings.Split(path, ".")...)
+	return FindChain(y.mapFromSyncMap(), strings.Split(path, ".")...)
 
 }
 
@@ -156,7 +213,7 @@ func (y *Yamc) testAndConvertJsonType(use DataReader, data []byte) error {
 			keyStr := fmt.Sprintf("%d", key)
 			switch val.(type) {
 			case string, interface{}:
-				y.data[keyStr] = val
+				y.Store(keyStr, val)
 			default:
 				y.loaded = false
 				return errors.New("unsupported json structure")

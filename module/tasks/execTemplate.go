@@ -15,32 +15,32 @@ import (
 	"github.com/swaros/manout"
 )
 
-type taskListExec struct {
+type TaskListExec struct {
 	config   configure.RunConfig
 	watch    *Watchman
 	subTasks map[string]*targetExecuter
 	args     []interface{}
 }
 
-func NewTaskListExec(config configure.RunConfig, adds ...interface{}) *taskListExec {
-	return &taskListExec{
+func NewTaskListExec(config configure.RunConfig, adds ...interface{}) *TaskListExec {
+	return &TaskListExec{
 		config: config,
 		watch:  NewWatchman(),
 		args:   adds,
 	}
 }
 
-func (e *taskListExec) RunTarget(target string, async bool) int {
+func (e *TaskListExec) RunTarget(target string, async bool) int {
 	scopeVars := make(map[string]string)
 	return e.RunTargetWithVars(target, scopeVars, async)
 }
 
-func (e *taskListExec) RunTargetWithVars(target string, scopeVars map[string]string, async bool) int {
+func (e *TaskListExec) RunTargetWithVars(target string, scopeVars map[string]string, async bool) int {
 	tExec := e.findOrCreateTask(target, scopeVars)
 	return tExec.executeTemplate(async, target, scopeVars)
 }
 
-func (e *taskListExec) GetTask(target string) *targetExecuter {
+func (e *TaskListExec) GetTask(target string) *targetExecuter {
 	if e.subTasks == nil {
 		e.subTasks = make(map[string]*targetExecuter)
 		return nil
@@ -51,7 +51,7 @@ func (e *taskListExec) GetTask(target string) *targetExecuter {
 	return nil
 }
 
-func (e *taskListExec) GetWatch() *Watchman {
+func (e *TaskListExec) GetWatch() *Watchman {
 	return e.watch
 }
 
@@ -63,7 +63,7 @@ func (e *taskListExec) GetWatch() *Watchman {
 		e.subTasks[tExec.target] = tExec
 	}
 */
-func (e *taskListExec) findOrCreateTask(target string, scopeVars map[string]string) *targetExecuter {
+func (e *TaskListExec) findOrCreateTask(target string, scopeVars map[string]string) *targetExecuter {
 	if e.subTasks == nil {
 		e.subTasks = make(map[string]*targetExecuter)
 	}

@@ -37,11 +37,13 @@ func CallBackAssertPath(ymap *yamc.Yamc, path string, expected any, ifNotEquals 
 func LazyAssertPath(t *testing.T, ymap *yamc.Yamc, path string, expected any) {
 	t.Helper()
 	CallBackAssertPath(ymap, path, expected, func(val any) {
+		_, fnmane, lineNo, _ := runtime.Caller(3)
+		errmsgWithLine := "ERROR: " + fnmane + ":" + strconv.Itoa(lineNo)
 		if reflect.TypeOf(val) != reflect.TypeOf(expected) {
-			_, fnmane, lineNo, _ := runtime.Caller(3)
+
 			t.Error("ERROR: ", fnmane+":"+strconv.Itoa(lineNo), " types not equal. we got ", reflect.TypeOf(val), " we expect ", reflect.TypeOf(expected))
 		}
-		t.Error("expected the value (", expected, ") got [", val, "] instead")
+		t.Error(errmsgWithLine, "expected the value (", expected, ") got [", val, "] instead")
 	}, func(err error) {
 		_, fnmane, lineNo, _ := runtime.Caller(3)
 		t.Error("ERROR: ", fnmane+":"+strconv.Itoa(lineNo), err)

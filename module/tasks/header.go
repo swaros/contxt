@@ -64,6 +64,14 @@ func New(target string, arguments map[string]string, any ...interface{}) *target
 
 		case PlaceHolder:
 			t.phHandler = any[i].(PlaceHolder)
+			// check if if any[i] also implements the DataMapHandler interface
+			// if so, and we do not have a data handler set yet
+			// we set it to the one from the PlaceHolder
+			if t.dataHandler == nil {
+				if dm, ok := any[i].(DataMapHandler); ok {
+					t.dataHandler = dm
+				}
+			}
 		case func(msg ...interface{}):
 			t.outputHandler = any[i].(func(msg ...interface{}))
 		case func(checkReason configure.Trigger, output string, e error) (bool, string):
@@ -72,6 +80,14 @@ func New(target string, arguments map[string]string, any ...interface{}) *target
 			t.checkReqs = any[i].(func(require configure.Require) (bool, string))
 		case DataMapHandler:
 			t.dataHandler = any[i].(DataMapHandler)
+			// check if if any[i] also implements the PlaceHolder interface
+			// if so, and we do not have a placeholder handler set yet
+			// we set it to the one from the DataMapHandler
+			if t.phHandler == nil {
+				if ph, ok := any[i].(PlaceHolder); ok {
+					t.phHandler = ph
+				}
+			}
 		case *Watchman:
 			t.watch = any[i].(*Watchman)
 		case MainCmdSetter:

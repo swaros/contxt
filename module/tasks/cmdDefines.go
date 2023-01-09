@@ -20,19 +20,19 @@ func (s shellCmd) GetMainCmd() (string, []string) {
 	lwr := strings.ToLower(runtime.GOOS)
 
 	switch lwr {
-	case "darwin":
+	case "darwin": // macos
 		return "bash", []string{"-c"}
-	case "freebsd":
+	case "freebsd": // freebsd
 		return "bash", []string{"-c"}
-	case "netbsd":
+	case "netbsd": // netbsd
 		return "bash", []string{"-c"}
-	case "openbsd":
+	case "openbsd": // openbsd
 		return "bash", []string{"-c"}
-	case "plan9":
+	case "plan9": // plan9
 		return "rc", []string{}
-	case "solaris":
+	case "solaris": // solaris
 		return "bash", []string{"-c"}
-	case "windows":
+	case "windows": // windows
 		return "powershell", []string{"-nologo", "-noprofile"}
 
 	}
