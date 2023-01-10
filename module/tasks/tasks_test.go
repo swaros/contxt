@@ -392,8 +392,8 @@ task:
 		)
 
 		// execute the task and check the output
-		code := tasksMain.RunTarget("test", false) // we run the task
-		if code != 0 {                             // we expect a code 0
+		code := tasksMain.RunTarget("test", true) // we run the task in async mode
+		if code != 0 {                            // we expect a code 0
 			t.Errorf("Expected code 0, got %d", code)
 		}
 
@@ -459,13 +459,13 @@ task:
 		)
 
 		// execute the task and check the output
-		code := tasksMain.RunTarget("test", false) // we run the task
-		if code != 0 {                             // we expect a code 0
+		code := tasksMain.RunTarget("test", true) // we run the task async
+		if code != 0 {                            // we expect a code 0
 			t.Errorf("Expected code 0, got %d", code)
 		}
 
-		code = tasksMain.RunTarget("test", false) // we run the task again
-		if code != 0 {                            // we still expect a code 0
+		code = tasksMain.RunTarget("test", true) // we run the task again async
+		if code != 0 {                           // we still expect a code 0
 			t.Errorf("Expected code 0, got %d", code)
 		}
 
@@ -488,7 +488,7 @@ config:
 task:
   - id: test
     script:
-      - echo {test}
+      - echo ${test}
 `
 	var runCfg configure.RunConfig = configure.RunConfig{}
 
@@ -539,8 +539,8 @@ config:
 task:
   - id: test
     script:
-      - echo {test}
-      - echo first-{second}
+      - echo ${test}
+      - echo first-${second}
     next:
       - testAddVar
 
@@ -548,15 +548,15 @@ task:
     variables:
         test: "variable2"
     script:
-      - echo check-{test} 
-      - echo second-{second} 
+      - echo check-${test} 
+      - echo second-${second} 
 `
 	messages := []string{}
 	if taskMain, err := createRuntimeByYamlString(source, &messages); err != nil {
 		t.Errorf("Error parsing yaml: %v", err)
 	} else {
-		code := taskMain.RunTarget("test", false) // we run the task
-		if code != 0 {                            // we expect a code 0
+		code := taskMain.RunTarget("test", true) // we run the task
+		if code != 0 {                           // we expect a code 0
 			t.Errorf("Expected code 0, got %d", code)
 		}
 
@@ -567,4 +567,32 @@ task:
 
 	}
 
+}
+
+func TestTryParse(t *testing.T) {
+	source := `
+config:
+    variables:
+        default_1: "variable"
+        default_2: "second"
+task:
+  - id: test
+    script:
+      - "#@set default_1 rewrite"
+      - echo ${default_1}
+      - "#@var default_2 echo new-world"
+      - echo ${default_2}
+`
+	messages := []string{}
+	if taskMain, err := createRuntimeByYamlString(source, &messages); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("test", true) // we run the task
+		if code != 0 {                           // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+
+	}
+	assert.Contains(t, messages, "rewrite")
+	assert.Contains(t, messages, "new-world")
 }

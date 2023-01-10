@@ -187,3 +187,53 @@ subs:
 		t.Error("this should not work")
 	}
 }
+
+func TestYamlImportFully(t *testing.T) {
+	cdh := tasks.NewCombinedDataHandler()
+	addErr := cdh.AddYaml("key1", `name: Martin D'vloper2
+foods:
+- Apple
+- Orange
+- Strawberry
+languages:
+  perl: Hmmm
+  python: Overrated
+  ruby: Elite
+`)
+	if addErr != nil {
+		t.Error(addErr)
+	}
+
+	if value, found := cdh.GetJSONPathResult("key1", "languages.python"); !found {
+		t.Error("key1 not found")
+	} else if value.Str != "Overrated" {
+		t.Error("key1 value not correct")
+	}
+
+	shouldBeOverrated := cdh.HandlePlaceHolder("${key1:languages.python} is this: a problem?${key1:languages.perl}")
+	assert.Equal(t, "Overrated is this: a problem?Hmmm", shouldBeOverrated)
+
+	shouldBeOverrated = cdh.HandlePlaceHolder("we will say ${key1:languages.python} ... and also ${key1:languages.perl} is overrated")
+	assert.Equal(t, "we will say Overrated ... and also Hmmm is overrated", shouldBeOverrated)
+
+	testIter := make(map[string]string)
+	testIter["${key1:languages.python}"] = "Overrated"
+	testIter["${key1:languages.perl}"] = "Hmmm"
+	testIter["${key1:languages.ruby}"] = "Elite"
+	testIter["{}is this: a problem?}{"] = "{}is this: a problem?}{"
+	testIter["${}is this: a problem?}${"] = "${}is this: a problem?}${"
+	testIter["${key1:languages.python} is this: a problem?${key1:languages.perl}"] = "Overrated is this: a problem?Hmmm"
+	testIter["we will say ${key1:languages.python} ... and also ${key1:languages.perl} is overrated"] = "we will say Overrated ... and also Hmmm is overrated"
+	testIter[" >>> ${key1:something.wrong} <<< "] = " >>> ${key1:something.wrong} <<< "
+	testIter[" >>> ${keyX:languages.python} <<< "] = " >>> ${keyX:languages.python} <<< "
+	testIter[" >>> ${key1:languages.python} <<< "] = " >>> Overrated <<< "
+	testIter[" >>> ${key1:} <<< "] = " >>> ${key1:} <<< "
+	testIter[" >>> ${key1} <<< "] = " >>> ${key1} <<< "
+	testIter[" >>> ${:} <<< "] = " >>> ${:} <<< "
+	testIter[" >>> ${0:} <<< "] = " >>> ${0:} <<< "
+
+	for key, value := range testIter {
+		assert.Equal(t, value, cdh.HandlePlaceHolder(key), "failed by testing key: "+key)
+	}
+
+}

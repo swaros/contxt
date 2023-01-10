@@ -19,7 +19,6 @@ func createRuntimeByYamlString(yamlString string, messages *[]string) (*tasks.Ta
 			for _, m := range msg {
 				switch mt := m.(type) {
 				case tasks.MsgExecOutput: // this will be the output of the command
-					//messages = append(messages, string(mt))
 					*messages = append(*messages, string(mt))
 				}
 			}

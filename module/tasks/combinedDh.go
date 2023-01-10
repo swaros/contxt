@@ -27,7 +27,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/yamc"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -36,16 +35,20 @@ import (
 // CombinedDh is a data handler that combines the functionality of the Placeholder Handler and the Datahandler
 // It uses the Yamc library to store and retrieve data
 type CombinedDh struct {
-	yamcHndl map[string]*yamc.Yamc // these are the data handlers for the different data set by key
-	yamcRoot *yamc.Yamc            // these is used for plain string based placeholders
-	brackets string                // the brackets used for the placeholders
+	yamcHndl           map[string]*yamc.Yamc // these are the data handlers for the different data set by key
+	yamcRoot           *yamc.Yamc            // these is used for plain string based placeholders
+	openBracket        string                // the brackets used for the placeholders as opening bracket
+	closeBracket       string                // the brackets used for the placeholders as closing bracket
+	inBracketSeperator string                // the seperator used to get the key for map placeholders
 }
 
 func NewCombinedDataHandler() *CombinedDh {
 	dh := &CombinedDh{
-		yamcHndl: make(map[string]*yamc.Yamc),
-		yamcRoot: yamc.New(),
-		brackets: "{}",
+		yamcHndl:           make(map[string]*yamc.Yamc), // we use a map for the different data sets
+		yamcRoot:           yamc.New(),                  // we use the root yamc for plain string based placeholders
+		openBracket:        "${",                        // this is the opening bracket for the placeholders
+		closeBracket:       "}",                         // this is the closing bracket for the placeholders
+		inBracketSeperator: ":",                         // this is the seperator for the key in the brackets
 	}
 	return dh
 }
@@ -200,6 +203,8 @@ func (d *CombinedDh) GetPH(key string) string {
 
 }
 
+// GetPHExists returns the value of the placeholder
+// and a boolean if the placeholder exists
 func (d *CombinedDh) GetPHExists(key string) (string, bool) {
 	if val, found := d.yamcRoot.Get(key); !found {
 		return "", false
@@ -208,6 +213,7 @@ func (d *CombinedDh) GetPHExists(key string) (string, bool) {
 	}
 }
 
+// GetPlaceHoldersFnc iterates over all placeholders and calls the inspectFunc
 func (d *CombinedDh) GetPlaceHoldersFnc(inspectFunc func(phKey string, phValue string)) {
 	d.yamcRoot.Range(func(key interface{}, value interface{}) bool {
 		if strValue, ok := value.(string); ok {
@@ -219,28 +225,113 @@ func (d *CombinedDh) GetPlaceHoldersFnc(inspectFunc func(phKey string, phValue s
 	})
 }
 
+// findSeparatorBetweenBrackets finds the separator between brackets
+// it returns the left and right part of the separator
+// and the end point of the separator
+// this is used to find the separator between brackets, what means that this placeholder
+// is used to get a value from a map
+func (d *CombinedDh) findSeparatorBetweenBrackets(line string, start int) (leftFromSep, rightFromSep string, endPoint int, found bool) {
+	line = line[start:]
+	leftFromSep = ""
+	rightFromSep = ""
+	endPoint = -1
+	found = false
+	preventLongLIne := strings.Contains(line, string(d.openBracket))
+	preventLongLIne = preventLongLIne && strings.Contains(line, string(d.closeBracket))
+	preventLongLIne = preventLongLIne && strings.Contains(line, string(d.inBracketSeperator))
+	if preventLongLIne {
+		startMarker := strings.Index(line, string(d.openBracket))
+		endMarker := strings.Index(line, string(d.closeBracket))
+		if startMarker < endMarker {
+			sepMarker := strings.Index(line[startMarker:], string(d.inBracketSeperator))
+			if sepMarker > 0 {
+				sepMarker += startMarker
+			}
+			if sepMarker > startMarker && sepMarker < endMarker {
+				leftFromSep = line[startMarker+len(d.openBracket) : sepMarker]
+				rightFromSep = line[sepMarker+1 : endMarker]
+				found = true
+				endPoint = endMarker + len(d.closeBracket)
+			}
+		}
+	}
+	return
+}
+
+// handleMapPlaceHolder handles the map place holder
+// e.g. ${map:myMapKey:myMapPath}
+// it will replace the placeholder with the value of the map
+// if the map does not exist, it will return the original line
+func (d *CombinedDh) handleMapPlaceHolder(line string) string {
+	start := 0
+	maxTry := 100 // prevent endless loop. also defines the max amount of nested brackets
+	for {
+		maxTry--
+		if maxTry < 0 {
+			return line
+		}
+		leftFromSep, rightFromSep, rstart, found := d.findSeparatorBetweenBrackets(line, start)
+		start = rstart
+		if found {
+			if d.ifKeyExists(leftFromSep) {
+				ymc := d.getYamcByKey(leftFromSep)
+				if newVal, err := ymc.GetGjsonString(rightFromSep); err == nil && newVal != "" {
+					line = d.replaceByMapVar(line, leftFromSep, rightFromSep, newVal)
+					start = 0 // reset start offset after we found something that changes the line
+				}
+			}
+		} else {
+			return line
+		}
+	}
+}
+
+// replaceAllByBrackets replaces all placeholders in the line
+// e.g. ${myKey} will be replaced with the value of myKey
+// if the key does not exist, it will return the original line
 func (d *CombinedDh) replaceAllByBrackets(line string) string {
 	d.GetPlaceHoldersFnc(func(phKey string, phValue string) {
 		line = d.replaceByVar(line, phKey, phValue)
 	})
+
+	line = d.handleMapPlaceHolder(line)
+
 	return line
 }
 
+// replaceByVar replaces the placeholder with the value
+// e.g. ${myKey} will be replaced with the value of myKey
+// if the key does not exist, it will return the original line
 func (d *CombinedDh) replaceByVar(line, phKey, replace string) string {
-	if systools.StrLen(d.brackets) != 2 {
-		panic("brackets must be 2 chars")
-	}
-	return strings.ReplaceAll(line, string(d.brackets[0])+phKey+string(d.brackets[1]), replace)
+	return strings.ReplaceAll(line, string(d.openBracket)+phKey+string(d.closeBracket), replace)
 }
 
+// replaceByMapVar replaces the placeholder with the value
+// e.g. ${map:myMapKey:myMapPath} will be replaced with the value of myMapPath
+// if the key does not exist, it will return the original line
+func (d *CombinedDh) replaceByMapVar(line, id, phKey, replace string) string {
+	keyStr := string(d.openBracket) + id + string(d.inBracketSeperator) + phKey
+	return strings.ReplaceAll(line, keyStr+string(d.closeBracket), replace)
+}
+
+// HandlePlaceHolder handles the placeholders in the line
+// e.g. ${myKey} will be replaced with the value of myKey
+// if the key does not exist, it will return the original line
+// it will also handle the map placeholders
+// e.g. ${map:myMapKey:myMapPath}
+// it will replace the placeholder with the value of the map
+// if the map does not exist, it will return the original line
 func (d *CombinedDh) HandlePlaceHolder(line string) string {
 	return d.HandlePlaceHolderWithScope(line, make(map[string]string))
 }
 
+// HandlePlaceHolderWithScope handles the placeholders in the line
+// e.g. ${myKey} will be replaced with the value of myKey
+// if the key does not exist, it will return the original line
+// it will also handle the map placeholders
+// e.g. ${map:myMapKey:myMapPath}
+// in addition it will replace the placeholders with the values from the scopeVars
 func (d *CombinedDh) HandlePlaceHolderWithScope(line string, scopeVars map[string]string) string {
-	if systools.StrLen(d.brackets) != 2 {
-		return line
-	}
 	line = d.replaceAllByBrackets(line)
 	for key, value := range scopeVars {
 		line = d.replaceByVar(line, key, value)
@@ -248,6 +339,7 @@ func (d *CombinedDh) HandlePlaceHolderWithScope(line string, scopeVars map[strin
 	return line
 }
 
+// ClearAll clears all the data
 func (d *CombinedDh) ClearAll() {
 	d.yamcRoot.Reset()
 }
