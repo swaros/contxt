@@ -1,6 +1,7 @@
 package tasks_test
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/swaros/contxt/module/configure"
@@ -69,4 +70,22 @@ func assertPositionInSliceBefore(t *testing.T, slice []string, substr string, be
 	if substrIndex >= beforeIndex {
 		t.Errorf("expected %q to be before %q, but it was not", substr, before)
 	}
+}
+
+func helpsRunAsync(runCount int, runinngs []string, testDoSome func(name string, cnt int) bool) bool {
+	var wg sync.WaitGroup
+	allFine := true
+	doInc := func(name string, n int) {
+		for i := 0; i < n; i++ {
+			allFine = allFine && testDoSome(name, i)
+		}
+		wg.Done()
+	}
+
+	wg.Add(len(runinngs))
+	for _, name := range runinngs {
+		go doInc(name, runCount)
+	}
+	wg.Wait()
+	return allFine
 }

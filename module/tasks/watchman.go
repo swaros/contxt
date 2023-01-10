@@ -1,3 +1,24 @@
+// Copyright (c) 2023 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// # Licensed under the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 package tasks
 
 import "sync"
@@ -5,6 +26,7 @@ import "sync"
 type Watchman struct {
 	// contains filtered or unexported fields
 	watchTaskList sync.Map
+	mu            sync.Mutex
 }
 
 // TaskDef holds information about running
@@ -36,17 +58,21 @@ func (w *Watchman) getTask(target string) (TaskDef, bool) {
 
 }
 
-func (w *Watchman) incTaskCount(target string) int {
+func (w *Watchman) IncTaskCount(target string) int {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	taskInfo, _ := w.getTask(target)
+	taskInfo.started = true
 	taskInfo.count++
 	w.watchTaskList.Store(target, taskInfo)
 	return taskInfo.count
 }
 
-func (w *Watchman) incTaskDoneCount(target string) bool {
+func (w *Watchman) IncTaskDoneCount(target string) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	taskInfo, exists := w.getTask(target)
 	if !exists {
-
 		return false
 	}
 	taskInfo.doneCount++
@@ -80,6 +106,34 @@ func (w *Watchman) TaskRunning(target string) bool {
 func (w *Watchman) TaskRunsAtLeast(target string, atLeast int) bool {
 	if info, found := w.watchTaskList.Load(target); found {
 		return info.(TaskDef).count >= atLeast
+	}
+	return false
+}
+
+func (w *Watchman) GetTaskCount(target string) int {
+	if info, found := w.watchTaskList.Load(target); found {
+		return info.(TaskDef).count
+	}
+	return 0
+}
+
+func (w *Watchman) GetTaskDoneCount(target string) int {
+	if info, found := w.watchTaskList.Load(target); found {
+		return info.(TaskDef).doneCount
+	}
+	return 0
+}
+
+func (w *Watchman) GetTaskDone(target string) bool {
+	if info, found := w.watchTaskList.Load(target); found {
+		return info.(TaskDef).done
+	}
+	return false
+}
+
+func (w *Watchman) GetTaskStarted(target string) bool {
+	if info, found := w.watchTaskList.Load(target); found {
+		return info.(TaskDef).started
 	}
 	return false
 }
