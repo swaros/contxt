@@ -1,42 +1,46 @@
 package tasks_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
 )
+
+func TestFitDatahandlerInterface(t *testing.T) {
+	fn := func(chk1 tasks.DataMapHandler, chk2 tasks.PlaceHolder) {}
+
+	fn(tasks.NewCombinedDataHandler(), tasks.NewCombinedDataHandler())
+}
 
 // TestCombinedDh tests the CombinedDataHandler
 func TestCombinedDhBaseFunction(t *testing.T) {
 
 	cdh := tasks.NewCombinedDataHandler()
 
-	cdh.AddData("key1", "a", "value1")
-	cdh.AddData("key2", "a", "value2")
-	cdh.AddData("key3", "a", "value3")
+	// create map[string]interface{} for testing
+	testMap := make(map[string]interface{})
+	testMap["key1"] = "value1"
+	testMap["key2"] = "value2"
+	testMap["key3"] = "value3"
 
-	if data, have := cdh.GetDataSub("key1", "a"); !have {
-		t.Error("key1 not found")
-	} else if data != "value1" {
-		t.Error("key1 value not correct. got ", data, " expected value1")
+	if _, found := cdh.GetData("key1"); found {
+		t.Error("key1 should not be present")
 	}
 
-	if data, have := cdh.GetDataSub("key2", "a"); !have {
-		t.Error("key2 not found")
-	} else if data != "value2" {
-		t.Error("key2 value not correct. got ", data, " expected value2")
+	cdh.AddData("key1", testMap)
+	if key1Data, found := cdh.GetData("key1"); !found {
+		t.Error("key1 not found in data")
+	} else if key1Data == nil {
+		t.Error("key1 data not found")
+	} else {
+		if key1Data["key1"] != "value1" {
+			t.Error("key1 value not correct")
+		}
 	}
 
-	if data, have := cdh.GetDataSub("key3", "a"); !have {
-		t.Error("key3 not found")
-	} else if data != "value3" {
-		t.Error("key3 value not correct. got ", data, " expected value3")
-	}
-
-	if _, have := cdh.GetDataSub("key4", "a"); have {
-		t.Error("key4 found")
-	}
 }
 
 // Test GsonPathResult
@@ -59,7 +63,7 @@ func TestGsonPathResult(t *testing.T) {
 		t.Error("key1 value not correct")
 	}
 
-	if ok, jsonStr := cdh.GetDataAsJson("key1"); !ok {
+	if jsonStr, ok := cdh.GetDataAsJson("key1"); !ok {
 		t.Error("key1 not found")
 	} else {
 		assert.JSONEq(t,
@@ -85,8 +89,101 @@ func TestGsonPathResult(t *testing.T) {
 	}
 
 	// failtest for using GetDataAsJson
-	if have, _ := cdh.GetDataAsJson("key20"); have {
+	if _, have := cdh.GetDataAsJson("key20"); have {
 		t.Error("key20 found")
 	}
 
+	// test for using GetDataAsYaml
+	if _, have := cdh.GetDataAsYaml("key20"); have {
+		t.Error("key20 found")
+	}
+
+	// test for using GetDataAsYaml
+	if ymlstr, have := cdh.GetDataAsYaml("key1"); !have {
+		t.Error("key1 not found")
+	} else {
+		assert.YAMLEq(t, `name: Martin D'vloper2
+foods:
+- Apple
+- Orange
+- Strawberry
+languages:
+  perl: Elite
+  python: Elite
+  ruby: Elite
+`, ymlstr, "yaml string from key1 value not correct")
+
+	}
+
+}
+
+func TestYamlImport(t *testing.T) {
+	cdh := tasks.NewCombinedDataHandler()
+	addErr := cdh.AddYaml("key1", `name: Martin D'vloper2
+foods:
+- Apple
+- Orange
+- Strawberry
+languages:
+  perl: Elite
+  python: Elite
+  ruby: Elite
+`)
+	if addErr != nil {
+		t.Error(addErr)
+	}
+
+	if value, found := cdh.GetJSONPathResult("key1", "languages.python"); !found {
+		t.Error("key1 not found")
+	} else if value.Str != "Elite" {
+		t.Error("key1 value not correct")
+	}
+}
+
+func TestYamlImport2(t *testing.T) {
+
+	yamlFile := `
+name: test
+path: "root/path"
+boolflag: true
+subs:
+  - first
+  - second`
+
+	// create temp dir
+	os.MkdirAll("temp", 0777)
+	defer os.RemoveAll("temp")
+	systools.WriteFileIfNotExists("temp/test.yaml", yamlFile)
+
+	cdh := tasks.NewCombinedDataHandler()
+	if err := cdh.ImportDataFromYAMLFile("imported", "temp/test.yaml"); err != nil {
+		t.Error(err)
+	} else {
+		if value, found := cdh.GetJSONPathResult("imported", "name"); !found {
+			t.Error("imported not found")
+		} else if value.Str != "test" {
+			t.Error("imported value not correct")
+		}
+	}
+}
+
+func TestYamlImportInvalidYaml(t *testing.T) {
+
+	yamlFile := `
+name: test
+   path: "root/path"
+boolflag: :: true
+subs:
+  - first
+  - second`
+
+	// create temp dir
+	os.MkdirAll("temp", 0777)
+	defer os.RemoveAll("temp")
+	systools.WriteFileIfNotExists("temp/test2.yaml", yamlFile)
+
+	cdh := tasks.NewCombinedDataHandler()
+	if err := cdh.ImportDataFromYAMLFile("fail", "temp/test2.yaml"); err == nil {
+		t.Error("this should not work")
+	}
 }

@@ -28,18 +28,18 @@ func (d *DefaultDataHandler) GetJSONPathResult(key, path string) (gjson.Result, 
 	return gjson.Result{}, false
 }
 
-func (d *DefaultDataHandler) GetDataAsJson(key string) (bool, string) {
+func (d *DefaultDataHandler) GetDataAsJson(key string) (string, bool) {
 	if data, err := d.yamcHndl.ToString(yamc.NewJsonReader()); err == nil {
-		return true, data
+		return data, true
 	}
-	return false, ""
+	return "", false
 }
 
-func (d *DefaultDataHandler) GetDataAsYaml(key string) (bool, string) {
+func (d *DefaultDataHandler) GetDataAsYaml(key string) (string, bool) {
 	if data, err := d.yamcHndl.ToString(yamc.NewYamlReader()); err == nil {
-		return true, data
+		return data, true
 	}
-	return false, ""
+	return "", false
 }
 
 func (d *DefaultDataHandler) AddJSON(key, jsonString string) error {

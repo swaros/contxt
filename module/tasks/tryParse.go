@@ -11,14 +11,6 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-type DataMapHandler interface {
-	GetJSONPathResult(key, path string) (gjson.Result, bool)
-	GetDataAsJson(key string) (bool, string)
-	AddJSON(key, jsonString string) error
-	SetJSONValueByPath(key, path, value string) error
-	GetDataAsYaml(key string) (bool, string)
-}
-
 const (
 	inlineCmdSep    = " "
 	startMark       = "#@"
@@ -207,7 +199,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				if len(parts) == 3 {
 					mapKey := parts[1]
 					varName := parts[2]
-					if exists, newStr := t.dataHandler.GetDataAsJson(mapKey); exists {
+					if newStr, exists := t.dataHandler.GetDataAsJson(mapKey); exists {
 						t.phHandler.SetPH(varName, t.phHandler.HandlePlaceHolder(newStr))
 					} else {
 						manout.Error("map with key ", mapKey, " not exists")
@@ -219,7 +211,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				if len(parts) == 3 {
 					mapKey := parts[1]
 					varName := parts[2]
-					if exists, newStr := t.dataHandler.GetDataAsYaml(mapKey); exists {
+					if newStr, exists := t.dataHandler.GetDataAsYaml(mapKey); exists {
 						t.phHandler.SetPH(varName, t.phHandler.HandlePlaceHolder(newStr))
 					} else {
 						manout.Error("map with key ", mapKey, " not exists")

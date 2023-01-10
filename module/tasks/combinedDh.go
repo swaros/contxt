@@ -83,23 +83,23 @@ func (d *CombinedDh) GetJSONPathResult(key, path string) (gjson.Result, bool) {
 
 // GetDataAsJson returns the data as json string
 // if the key is not present it returns an empty string
-func (d *CombinedDh) GetDataAsJson(key string) (bool, string) {
+func (d *CombinedDh) GetDataAsJson(key string) (string, bool) {
 	if !d.ifKeyExists(key) {
-		return false, ""
+		return "", false
 	}
-	if data, err := d.getYamcByKey(key).ToString(yamc.NewJsonReader()); err == nil {
-		return true, data
-	}
-	return false, ""
+	data, err := d.getYamcByKey(key).ToString(yamc.NewJsonReader())
+	return data, (err == nil)
 }
 
 // GetDataAsYaml returns the data as yaml string
 // if the key is not present it returns an empty string
-func (d *CombinedDh) GetDataAsYaml(key string) (bool, string) {
-	if data, err := d.getYamcByKey(key).ToString(yamc.NewYamlReader()); err == nil {
-		return true, data
+func (d *CombinedDh) GetDataAsYaml(key string) (string, bool) {
+	if !d.ifKeyExists(key) {
+		return "", false
 	}
-	return false, ""
+	data, err := d.getYamcByKey(key).ToString(yamc.NewYamlReader())
+	return data, (err == nil)
+
 }
 
 // AddJSON adds data by parsing a json string
@@ -107,6 +107,16 @@ func (d *CombinedDh) GetDataAsYaml(key string) (bool, string) {
 func (d *CombinedDh) AddJSON(key, jsonString string) error {
 	ymc := d.getYamcByKey(key)
 	if err := ymc.Parse(yamc.NewJsonReader(), []byte(jsonString)); err != nil {
+		return err
+	}
+	return nil
+}
+
+// AddJSON adds data by parsing a json string
+// and store them with the given key
+func (d *CombinedDh) AddYaml(key, yamlString string) error {
+	ymc := d.getYamcByKey(key)
+	if err := ymc.Parse(yamc.NewYamlReader(), []byte(yamlString)); err != nil {
 		return err
 	}
 	return nil
@@ -143,32 +153,15 @@ func (d *CombinedDh) ImportDataFromYAMLFile(key string, filename string) error {
 	return nil
 }
 
-func (d *CombinedDh) AddData(key string, subkey string, data interface{}) {
-	ymc := d.getYamcByKey(key)
-	dataStored := ymc.GetData()
-	if dataStored == nil {
-		dataStored = make(map[string]interface{})
-	}
-	dataStored[subkey] = data
-	ymc.SetData(dataStored)
+func (d *CombinedDh) AddData(key string, data map[string]interface{}) {
+	d.getYamcByKey(key).SetData(data)
 }
 
-func (d *CombinedDh) GetData(key string) (interface{}, bool) {
-	data := d.getYamcByKey(key).GetData()
-	if data != nil {
-		return data, true
+func (d *CombinedDh) GetData(key string) (map[string]interface{}, bool) {
+	if !d.ifKeyExists(key) {
+		return nil, false
 	}
-	return nil, false
-}
-
-func (d *CombinedDh) GetDataSub(key, subKey string) (interface{}, bool) {
-	data := d.getYamcByKey(key).GetData()
-	if data != nil {
-		if subData, ok := data[subKey]; ok {
-			return subData, true
-		}
-	}
-	return nil, false
+	return d.getYamcByKey(key).GetData(), true
 }
 
 func (d *CombinedDh) GetYamc() *yamc.Yamc {
