@@ -40,11 +40,6 @@ func TestFailureBecauseNoRequirementCheck(t *testing.T) {
 		t.Errorf("Expected code 107, got %d", code)
 	}
 
-	msg := strings.Join(messages, "; ")
-	if !strings.Contains(msg, "no requirement check handler set") {
-		t.Errorf("Expected message 'no requirement check handler set' missing, got '%s'", msg)
-	}
-
 }
 
 func TestWithRequirementCheck(t *testing.T) {

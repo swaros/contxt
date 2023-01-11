@@ -32,6 +32,12 @@ type MsgReason string
 
 // MsgType is the type of the message
 type MsgType string
+
+// MsgInfo is the info that is just some additional context
+type MsgInfo string
+
+// MsgNumber is some numeric value
+type MsgNumber int
 type MsgArgs []string
 
 // MsgProcess is the process id that is running

@@ -30,7 +30,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/awaitgroup"
 	"github.com/swaros/contxt/module/configure"
-	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
@@ -91,14 +90,6 @@ func (e *TaskListExec) GetWatch() *Watchman {
 	return e.watch
 }
 
-/*
-	func (e *taskListExec) SetTask(tExec *targetExecuter) {
-		if e.subTasks == nil {
-			e.subTasks = make(map[string]*targetExecuter)
-		}
-		e.subTasks[tExec.target] = tExec
-	}
-*/
 func (e *TaskListExec) findOrCreateTask(target string, scopeVars map[string]string) *targetExecuter {
 	if e.subTasks == nil {
 		e.subTasks = make(map[string]*targetExecuter)
@@ -195,10 +186,10 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			targetFound = true
 
 			//stopReason := script.Stopreasons
-
-			var messageCmdCtrl TaskOutCtrl = TaskOutCtrl{ // define a controll hook, depending on the display comand option
-				IgnoreCase: !script.Options.Displaycmd, // we ignore the message, as long the display command is NOT set
-			}
+			/*
+				var messageCmdCtrl TaskOutCtrl = TaskOutCtrl{ // define a controll hook, depending on the display comand option
+					IgnoreCase: !script.Options.Displaycmd, // we ignore the message, as long the display command is NOT set
+				}*/
 
 			// check requirements
 			canRun, message := t.checkRequirements(script.Requires)
@@ -208,7 +199,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 					"reason": message,
 				}).Info("executeTemplate IGNORE because requirements not matching")
 				if script.Options.Displaycmd {
-					ctxout.CtxOut(messageCmdCtrl, ctxout.LabelFY("require"), ctxout.ValF(message), ctxout.InfoF("Task-Block "), curTIndex+1, " of ", len(taskList), " skipped")
+					t.out(MsgTarget(target), MsgType("requirement-check-failed"), MsgNumber(curTIndex+1), MsgInfo(message))
 				}
 				// ---- return ExitByRequirement
 				continue
@@ -250,18 +241,17 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			// any need can have his own needs they needs to
 			// be executed
 			if len(script.Needs) > 0 {
-
-				ctxout.CtxOut(messageCmdCtrl, ctxout.LabelFY("target"), ctxout.ValF(target), ctxout.InfoF("require"), ctxout.ValF(len(script.Needs)), ctxout.InfoF("needs. async?"), ctxout.ValF(runAsync))
+				t.out(MsgTarget(target), MsgType("needs_required"), MsgArgs(script.Needs))
 				t.getLogger().WithField("needs", script.Needs).Debug("Needs for the script")
 				if runAsync {
 					var needExecs []awaitgroup.FutureStack
 					for _, needTarget := range script.Needs {
 						if t.watch.TaskRunsAtLeast(needTarget, 1) {
-							ctxout.CtxOut(messageCmdCtrl, ctxout.LabelFY("need check"), ctxout.ValF(target), ctxout.InfoRed("already executed"), ctxout.ValF(needTarget))
+							t.out(MsgTarget(target), MsgType("needs_ignored"))
 							t.getLogger().Debug("need already handled " + needTarget)
 						} else {
 							t.getLogger().Debug("need name should be added " + needTarget)
-							ctxout.CtxOut(messageCmdCtrl, ctxout.LabelFY("need check"), ctxout.ValF(target), ctxout.InfoF("executing"), ctxout.ValF(needTarget))
+							t.out(MsgTarget(target), MsgType("needs_exec"), MsgInfo(needTarget))
 							needExecs = append(needExecs, awaitgroup.FutureStack{
 								AwaitFunc: func(ctx context.Context) interface{} {
 									argNeed := ctx.Value(awaitgroup.CtxKey{}).(string)
@@ -280,13 +270,14 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 					for _, needTarget := range script.Needs {
 						if t.watch.TaskRunsAtLeast(needTarget, 1) { // do not run needs the already runs
 							t.getLogger().Debug("need already handled " + needTarget)
+							t.out(MsgTarget(target), MsgType("needs_ignored"))
 						} else {
 							_, argmap := systools.StringSplitArgs(needTarget, "arg")
 							t.executeTemplate(false, needTarget, argmap)
 						}
 					}
 				}
-				ctxout.CtxOut(ctxout.LabelFY("target"), ctxout.ValF(target), ctxout.InfoF("needs done"))
+				t.out(MsgTarget(target), MsgType("needs_done"))
 			}
 
 			// targets that should be started as well
@@ -323,9 +314,9 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 
 			// waitin until the any target that runns also is done
 			if len(runTargetfutures) > 0 {
-				ctxout.CtxOut(messageCmdCtrl, ctxout.LabelFY("wait targets"), "waiting until beside running targets are done")
-				trgtRes := awaitgroup.WaitAtGroup(runTargetfutures)
-				ctxout.CtxOut(messageCmdCtrl, ctxout.LabelFY("wait targets"), "waiting done", trgtRes)
+				t.out(MsgTarget(target), MsgType("wait_targets"), MsgArgs(script.RunTargets))
+				awaitgroup.WaitAtGroup(runTargetfutures)
+				t.out(MsgTarget(target), MsgType("wait_targets_done"))
 			}
 			// next are tarets they runs afterwards the regular
 			// script os done
@@ -335,8 +326,8 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			}).Debug("executeTemplate next definition")
 
 			nextfutures := t.generateFuturesByTargetListAndExec(script.Next, t.runCfg)
-			nextRes := awaitgroup.WaitAtGroup(nextfutures)
-			ctxout.CtxOut(messageCmdCtrl, ctxout.LabelFY("wait next"), "waiting done", nextRes)
+			awaitgroup.WaitAtGroup(nextfutures)
+			t.out(MsgTarget(target), MsgType("wait_next_done"))
 
 			//return returnCode
 			// back to old dir if workpace usage was set
@@ -347,7 +338,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 		}
 		// we have at least none of the possible task executed.
 		if !targetFound {
-			ctxout.CtxOut(manout.MessageCln(manout.ForeYellow, "target not defined or matching any requirement: ", manout.ForeWhite, target))
+			t.out(MsgTarget(target), MsgType("not_found"))
 			t.getLogger().Error("Target can not be found: ", target)
 			return systools.ExitByNoTargetExists
 		}
@@ -377,6 +368,6 @@ func (t *targetExecuter) generateFuturesByTargetListAndExec(RunTargets []string,
 			Argument: needTarget})
 
 	}
-	ctxout.CtxOut(ctxout.LabelFY("async targets"), ctxout.InfoF("count"), len(runTargetExecs), ctxout.InfoF(" targets"))
+	t.out(MsgType("target-async-group-created"), MsgArgs(RunTargets))
 	return awaitgroup.ExecFutureGroup(runTargetExecs)
 }
