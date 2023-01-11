@@ -225,3 +225,48 @@ hello:
 	}
 
 }
+
+func TestGjson(t *testing.T) {
+	data := []byte(`{"name":{"first":"Tom","last":"Anderson"},"age":37,"children":["Sara","Alex","Jack"],"fav.movie":"Deer Hunter","friends":[{"first":"Dale","last":"Murphy","age":44},{"first":"Roger","last":"Craig","age":68},{"first":"Jane","last":"Murphy","age":47}]}`)
+	conv := yamc.New()
+	if err := conv.Parse(yamc.NewJsonReader(), data); err != nil {
+		t.Error("this reading should not fail")
+	} else {
+		if found, err := conv.Gjson("friends.2.last"); err != nil {
+			t.Error(err)
+		} else {
+			if found.Str != "Murphy" {
+				t.Error("unexpected value", found)
+			}
+		}
+
+		// same test as above but with using GetGsonString
+		if found, err := conv.GetGjsonString("friends.2.last"); err != nil {
+			t.Error(err)
+		} else {
+			if found != "Murphy" {
+				t.Error("unexpected value", found)
+			}
+		}
+
+		// test for non existing path
+		if found, err := conv.Gjson("friends.2.last2"); err != nil {
+			t.Error(err)
+		} else {
+			if found.Exists() {
+				t.Error("unexpected value", found)
+			}
+		}
+
+		// test for non existing path by using GetGsonString
+		if found, err := conv.GetGjsonString("friends.2.last2"); err != nil {
+			t.Error(err)
+		} else {
+			if found != "" {
+				t.Error("unexpected value", found)
+			}
+		}
+
+	}
+
+}

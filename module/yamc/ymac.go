@@ -136,6 +136,7 @@ func (y *Yamc) Get(key string) (interface{}, bool) {
 }
 
 // GetOrSet is just a wrapper for the sync.Map LoadOrStore function
+// The bool result is true if the value was loaded, false if stored.
 func (y *Yamc) GetOrSet(key string, data interface{}) (interface{}, bool) {
 	return y.data.LoadOrStore(key, data)
 }
