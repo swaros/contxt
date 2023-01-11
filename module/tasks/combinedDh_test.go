@@ -2,6 +2,7 @@ package tasks_test
 
 import (
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -115,6 +116,11 @@ languages:
 
 	}
 
+	// testing errorcases for cdh.SetJSONValueByPath
+	if err := cdh.SetJSONValueByPath("notThere", "this.is.not.exists", "whatever"); err == nil {
+		t.Error("error expected")
+	}
+
 }
 
 func TestYamlImport(t *testing.T) {
@@ -195,6 +201,7 @@ foods:
 - Apple
 - Orange
 - Strawberry
+endless: "${key1:endless}"
 languages:
   perl: Hmmm
   python: Overrated
@@ -231,9 +238,130 @@ languages:
 	testIter[" >>> ${key1} <<< "] = " >>> ${key1} <<< "
 	testIter[" >>> ${:} <<< "] = " >>> ${:} <<< "
 	testIter[" >>> ${0:} <<< "] = " >>> ${0:} <<< "
-
+	testIter[" >>> ${key1:foods.0} <<< "] = " >>> Apple <<< "
+	testIter[" >>> ${key1:foods.1} <<< "] = " >>> Orange <<< "
+	testIter[" >>> ${key1:foods.2} <<< "] = " >>> Strawberry <<< "
+	testIter[" >>> ${key1:foods.3} <<< "] = " >>> ${key1:foods.3} <<< "
+	testIter[" >>> ${key1:endless} <<< "] = " >>> ${key1:endless} <<< "
 	for key, value := range testIter {
 		assert.Equal(t, value, cdh.HandlePlaceHolder(key), "failed by testing key: "+key)
 	}
 
+}
+
+func TestExportVarToFile(t *testing.T) {
+	cdh := tasks.NewCombinedDataHandler()
+	cdh.SetPH("name", "Martin D'vloper2")
+	cdh.SetPH("dancers", "caruso, baryshnikov, nureyev")
+
+	if val, exists := cdh.GetPHExists("name"); !exists || val != "Martin D'vloper2" {
+		t.Error("name not found")
+	}
+
+	if val, exists := cdh.GetPHExists("dancers"); !exists || val != "caruso, baryshnikov, nureyev" {
+		t.Error("dancers not found")
+	}
+
+	if val, exists := cdh.GetPHExists("notexisting"); exists || val != "" {
+		t.Error("notexisting should not exist")
+	}
+
+	os.Mkdir("temp", 0777)
+	defer os.RemoveAll("temp")
+	cdh.ExportVarToFile("name", "temp/test.json")
+	cdh.ExportVarToFile("dancers", "temp/test.yaml")
+	if exists, err := systools.Exists("temp/test.json"); err != nil || !exists {
+		t.Error("file not exported")
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	if exists, err := systools.Exists("temp/test.yaml"); err != nil || !exists {
+		t.Error("file not exported")
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	if err := cdh.ExportVarToFile("notexisting", "temp/test.json"); err == nil {
+		t.Error("this should not work")
+	}
+}
+
+func TestAppend(t *testing.T) {
+	cdh := tasks.NewCombinedDataHandler()
+	cdh.SetPH("name", "Martin D'vloper2")
+	cdh.SetPH("dancers", "caruso, baryshnikov, nureyev")
+
+	if val, exists := cdh.GetPHExists("name"); !exists || val != "Martin D'vloper2" {
+		t.Error("name not found")
+	}
+
+	if val, exists := cdh.GetPHExists("dancers"); !exists || val != "caruso, baryshnikov, nureyev" {
+		t.Error("dancers not found")
+	}
+
+	if val, exists := cdh.GetPHExists("notexisting"); exists || val != "" {
+		t.Error("notexisting should not exist")
+	}
+
+	cdh.AppendToPH("name", " is my name")
+	cdh.AppendToPH("dancers", ", nijinsky")
+
+	if val, exists := cdh.GetPHExists("name"); !exists || val != "Martin D'vloper2 is my name" {
+		t.Error("name not found")
+	}
+
+	if val, exists := cdh.GetPHExists("dancers"); !exists || val != "caruso, baryshnikov, nureyev, nijinsky" {
+		t.Error("dancers not found")
+	}
+
+	if val, exists := cdh.GetPHExists("notexisting"); exists || val != "" {
+		t.Error("notexisting should not exist")
+	}
+}
+
+func TestAppendTpPhWithAsync(t *testing.T) {
+	cdh := tasks.NewCombinedDataHandler()
+	cdh.SetPH("name", "Martin D'vloper2")
+	cdh.SetPH("dancers", "caruso, baryshnikov, nureyev")
+
+	if val, exists := cdh.GetPHExists("name"); !exists || val != "Martin D'vloper2" {
+		t.Error("name not found")
+	}
+
+	if val, exists := cdh.GetPHExists("dancers"); !exists || val != "caruso, baryshnikov, nureyev" {
+		t.Error("dancers not found")
+	}
+
+	if val, exists := cdh.GetPHExists("notexisting"); exists || val != "" {
+		t.Error("notexisting should not exist")
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cdh.AppendToPH("name", " is my name")
+		cdh.AppendToPH("dancers", ", nijinsky")
+		wg.Done()
+	}()
+	wg.Add(1)
+	go func() {
+		cdh.AppendToPH("name", " is my name")
+		cdh.AppendToPH("dancers", ", nijinsky")
+		wg.Done()
+	}()
+	wg.Wait()
+
+	if val, exists := cdh.GetPHExists("name"); !exists || val != "Martin D'vloper2 is my name is my name" {
+		t.Error("name not found")
+	}
+
+	if val, exists := cdh.GetPHExists("dancers"); !exists || val != "caruso, baryshnikov, nureyev, nijinsky, nijinsky" {
+		t.Error("dancers not found in ", val)
+	}
+
+	if val, exists := cdh.GetPHExists("notexisting"); exists || val != "" {
+		t.Error("notexisting should not exist")
+	}
 }

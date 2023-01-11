@@ -109,25 +109,23 @@ func (d *CombinedDh) GetDataAsYaml(key string) (string, bool) {
 // and store them with the given key
 func (d *CombinedDh) AddJSON(key, jsonString string) error {
 	ymc := d.getYamcByKey(key)
-	if err := ymc.Parse(yamc.NewJsonReader(), []byte(jsonString)); err != nil {
-		return err
-	}
-	return nil
+	return ymc.Parse(yamc.NewJsonReader(), []byte(jsonString))
+
 }
 
 // AddJSON adds data by parsing a json string
 // and store them with the given key
 func (d *CombinedDh) AddYaml(key, yamlString string) error {
 	ymc := d.getYamcByKey(key)
-	if err := ymc.Parse(yamc.NewYamlReader(), []byte(yamlString)); err != nil {
-		return err
-	}
-	return nil
+	return ymc.Parse(yamc.NewYamlReader(), []byte(yamlString))
 }
 
 // SetJSONValueByPath sets a value by a json path using
 // the sjson library
 func (d *CombinedDh) SetJSONValueByPath(key, path, value string) error {
+	if !d.ifKeyExists(key) {
+		return errors.New("key " + key + " does not exist")
+	}
 	ymc := d.getYamcByKey(key)
 	data := ymc.GetData()
 	if data != nil {
