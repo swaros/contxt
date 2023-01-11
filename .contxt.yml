@@ -316,7 +316,7 @@ task:
       panelsize: 25
     script:
       - echo "start async testing modul {{ $test.modul }}"
-      - go test -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...
+      - go test -count=1 -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...
     {{- end }}
     {{- end }}
 
