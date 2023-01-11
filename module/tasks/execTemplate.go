@@ -51,6 +51,21 @@ func NewTaskListExec(config configure.RunConfig, adds ...interface{}) *TaskListE
 	}
 }
 
+func NewStdTaskListExec(config configure.RunConfig, adds ...interface{}) *TaskListExec {
+	dmc := NewCombinedDataHandler()
+	req := NewDefaultRequires(dmc, logrus.New())
+	if adds == nil {
+		adds = make([]interface{}, 0)
+	}
+	adds = append(adds, dmc, req)
+
+	return &TaskListExec{
+		config: config,
+		watch:  NewWatchman(),
+		args:   adds,
+	}
+}
+
 func (e *TaskListExec) RunTarget(target string, async bool) int {
 	scopeVars := make(map[string]string)
 	return e.RunTargetWithVars(target, scopeVars, async)
@@ -300,6 +315,10 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			})
 			if abort {
 				t.getLogger().Debug("abort reason found, or execution failed")
+				// if we have a return code, we need to return it
+				if returnCode == systools.ErrorCheatMacros {
+					return returnCode
+				}
 			}
 
 			// waitin until the any target that runns also is done

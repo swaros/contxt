@@ -8,6 +8,7 @@ const (
 	ErrorOnConfigImport  = 5   // a import could not handled
 	ErrorTemplate        = 6   // template related error. depending reported issues about version, lint, yaml structure
 	ErrorTemplateReading = 7   // errors processing the template
+	ErrorCheatMacros     = 8   // errors processing the cheat macros
 	ErrorBySystem        = 10  // errors related to the system, like while change dir or reading a file
 	ExitByStopReason     = 101 // ExitByStopReason the process stopped because of a defined reason
 	ExitNoCode           = 102 // ExitNoCode means there was no code associated

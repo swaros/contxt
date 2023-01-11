@@ -1,6 +1,7 @@
 package tasks_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -78,13 +79,12 @@ func TestWithRequirementCheck(t *testing.T) {
 	runCfg.Task = []configure.Task{testTask} // we add the task to the task list
 
 	// we create a task list with the task and the requirement check handler
-	tasksMain := tasks.NewTaskListExec(
+	tasksMain := tasks.NewStdTaskListExec(
 		runCfg,
 		tasks.NewDefaultDataHandler(),
 		tasks.NewDefaultPhHandler(),
 		outHandler,
 		tasks.ShellCmd,
-		func(require configure.Require) (bool, string) { return true, "" },
 	)
 
 	// execute the task and check the output
@@ -148,13 +148,12 @@ func TestMultipleTask(t *testing.T) {
 	runCfg.Task = append(runCfg.Task, testTaskToIgnore) // we add the task to the task list that should being executed
 
 	// we create a task list with the task and the requirement check handler
-	tasksMain := tasks.NewTaskListExec(
+	tasksMain := tasks.NewStdTaskListExec(
 		runCfg,
 		tasks.NewDefaultDataHandler(),
 		tasks.NewDefaultPhHandler(),
 		outHandler,
 		tasks.ShellCmd,
-		func(require configure.Require) (bool, string) { return true, "" },
 	)
 
 	// execute the task and check the output
@@ -212,13 +211,12 @@ task:
 		}
 
 	}
-	tasksMain := tasks.NewTaskListExec(
+	tasksMain := tasks.NewStdTaskListExec(
 		runCfg,
 		tasks.NewDefaultDataHandler(),
 		tasks.NewDefaultPhHandler(),
 		outHandler,
 		tasks.ShellCmd,
-		func(require configure.Require) (bool, string) { return true, "" },
 	)
 
 	// execute the task and check the output
@@ -267,13 +265,12 @@ task:
 			}
 
 		}
-		tasksMain := tasks.NewTaskListExec(
+		tasksMain := tasks.NewStdTaskListExec(
 			runCfg,
 			tasks.NewDefaultDataHandler(),
 			tasks.NewDefaultPhHandler(),
 			outHandler,
 			tasks.ShellCmd,
-			func(require configure.Require) (bool, string) { return true, "" },
 		)
 
 		// execute the task and check the output
@@ -322,13 +319,12 @@ task:
 			}
 
 		}
-		tasksMain := tasks.NewTaskListExec(
+		tasksMain := tasks.NewStdTaskListExec(
 			runCfg,
 			tasks.NewDefaultDataHandler(),
 			tasks.NewDefaultPhHandler(),
 			outHandler,
 			tasks.ShellCmd,
-			func(require configure.Require) (bool, string) { return true, "" },
 		)
 
 		// execute the task and check the output
@@ -382,15 +378,13 @@ task:
 			}
 
 		}
-		tasksMain := tasks.NewTaskListExec(
+		tasksMain := tasks.NewStdTaskListExec(
 			runCfg,
 			tasks.NewDefaultDataHandler(),
 			tasks.NewDefaultPhHandler(),
 			outHandler,
 			tasks.ShellCmd,
-			func(require configure.Require) (bool, string) { return true, "" },
 		)
-
 		// execute the task and check the output
 		code := tasksMain.RunTarget("test", true) // we run the task in async mode
 		if code != 0 {                            // we expect a code 0
@@ -449,13 +443,10 @@ task:
 			}
 
 		}
-		tasksMain := tasks.NewTaskListExec(
+		tasksMain := tasks.NewStdTaskListExec(
 			runCfg,
-			tasks.NewDefaultDataHandler(),
-			tasks.NewDefaultPhHandler(),
 			outHandler,
 			tasks.ShellCmd,
-			func(require configure.Require) (bool, string) { return true, "" },
 		)
 
 		// execute the task and check the output
@@ -513,12 +504,10 @@ task:
 
 		}
 
-		tasksMain := tasks.NewTaskListExec(
+		tasksMain := tasks.NewStdTaskListExec(
 			runCfg,
-			tasks.NewCombinedDataHandler(),
 			outHandler,
 			tasks.ShellCmd,
-			func(require configure.Require) (bool, string) { return true, "" },
 		)
 		code := tasksMain.RunTarget("test", false) // we run the task
 		if code != 0 {                             // we expect a code 0
@@ -595,4 +584,179 @@ task:
 	}
 	assert.Contains(t, messages, "rewrite")
 	assert.Contains(t, messages, "new-world")
+}
+
+func TestCheats(t *testing.T) {
+	source := `
+config:
+    variables:
+        default_1: "variable"
+        default_2: "second"
+        count: "5"
+task:
+  - id: test
+    require:
+        variables:
+            default_1: "variable"
+            default_2: "second"
+    script:
+        - echo ${default_1}
+        - echo ${default_2}
+    
+  - id: testCount1
+    require:
+        variables:
+            count: ">4"
+    script:
+        - echo result_1_${count}
+
+  - id: testCount2
+    require:
+        variables:
+            count: "<6"
+    script:
+        - echo result_2_${count}
+
+  - id: testCount2
+    require:
+        variables:
+            count: "!6"
+    script:
+      - echo result_3_${count}
+
+
+  - id: testCount2
+    require:
+        variables:
+            count: "=7"
+    script:
+        - echo should_not_be_shown
+
+  - id: testCount2
+    require:
+        variables:
+            count: "*"
+    script:
+      - echo result_4_${count}
+    next:
+      - testVarRewrite
+  - id: testVarRewrite
+    script:
+        - "#@set default_1 rewrite"
+        - echo new_default_1_${default_1}
+
+  - id: testSomeCheatMacros
+    variables:
+       json_content: '{"key1": "value1", "key2": "value2"}'
+    needs:
+        - testVarRewrite
+    script:
+        - "#@var default_2 echo new-world"
+        - echo new_default_2_${default_2}
+        - echo just_to_be_sure_${default_1}
+        - "#@if-equals default_1 variable"
+        - echo "default_1 is variable"
+        - "#@end"
+        - "#@if-equals rewrite rewrite"
+        - echo "default_1 is rewrite"
+        - "#@end"
+        - echo default2_recheck_${default_2}
+        - "#@if-equals ${default_2} new-world"
+        - echo "default_2 is new-world"
+        - "#@end"
+        - "#@if-equals ${default_2} !new-world"
+        - echo "we should not see this message No1"
+        - "#@end"
+        - "#@if-not-equals ${default_2} new-world"
+        - echo "we should not see this message No2"
+        - "#@end"
+        - "#@import-json JSON-CONTENT '${json_content}'" 
+        - echo "key1 is ${JSON-CONTENT:key1}" 
+        - "#@import-json JSON-CONTENT-2 ${json_content}" 
+        - echo "key1 is again ${JSON-CONTENT-2:key1}" 
+`
+	messages := []string{}
+	if taskMain, err := createRuntimeByYamlString(source, &messages); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("test", true) // we run the task
+		if code != 0 {                           // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+
+		assert.Contains(t, messages, "variable")
+		assert.Contains(t, messages, "second")
+
+		// testing count requires
+		code = taskMain.RunTarget("testCount1", true) // we run the task to testing count requires
+		if code != 0 {                                // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+		assert.Contains(t, messages, "result_1_5")
+
+		// here we test a whole chain of tasks
+		// we expect that the variable will be rewritten
+		code = taskMain.RunTarget("testCount2", true) // we run the task to testing count requires
+		if code != 0 {                                // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+		assert.Contains(t, messages, "result_2_5")
+		assert.Contains(t, messages, "result_3_5")
+		assert.Contains(t, messages, "result_4_5")
+		assert.Contains(t, messages, "new_default_1_rewrite")
+		assert.NotContains(t, messages, "should_not_be_shown")
+
+		code = taskMain.RunTarget("testSomeCheatMacros", true) // we run the task to testing count requires
+		if code != 0 {                                         // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+		assert.Contains(t, messages, "new_default_2_new-world")
+		assert.Contains(t, messages, "just_to_be_sure_rewrite")
+		assert.NotContains(t, messages, "default_1 is variable")
+		assert.Contains(t, messages, "default_1 is rewrite")
+		assert.Contains(t, messages, "default2_recheck_new-world")
+		assert.Contains(t, messages, "default_2 is new-world")
+		assert.NotContains(t, messages, "we should not see this message No1")
+		assert.NotContains(t, messages, "we should not see this message No2")
+		assert.Contains(t, messages, "key1 is value1")
+		assert.Contains(t, messages, "key1 is again value1")
+	}
+
+}
+
+func TestTryParseCheatsWithErrors(t *testing.T) {
+	// testing the errorcases of the cheats
+	source := `
+config:
+    variables:
+        default_1: "variable"
+        default_2: "second"
+        count: "5"
+task:
+  - id: test
+    script:
+      - "#@if-equals default_1"
+
+  - id: failure_1
+    script:
+      - "#@if-equals default_1 variable"
+      - "#@if-equals b a" 
+`
+	messages := []string{}
+	errorMsg := []error{}
+	if taskMain, err := createRuntimeByYamlStringWithErrors(source, &messages, &errorMsg); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("test", true) // we run the task
+		if code != 8 {                           // we expect a code 0
+			t.Errorf("Expected code 8, got %d", code)
+		}
+		assert.Contains(t, errorMsg, errors.New("invalid usage #@if-equals need: str1 str2"))
+
+		code = taskMain.RunTarget("failure_1", true) // we run the task
+		if code != 8 {                               // we expect a code 0
+			t.Errorf("Expected code 8, got %d", code)
+		}
+		assert.Contains(t, errorMsg, errors.New("invalid usage #@if-equals can not be used in another if"))
+	}
 }

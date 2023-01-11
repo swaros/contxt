@@ -64,15 +64,15 @@ func (t *targetExecuter) getPh(input string) string {
 }
 
 func (t *targetExecuter) checkReason(reason configure.Trigger, output string, e error) (bool, string) {
-	if t.reasonCheck != nil {
-		return t.reasonCheck(reason, output, e)
+	if t.requireHandler != nil {
+		return t.requireHandler.CheckReason(reason, output, e)
 	}
 	return false, ""
 }
 
 func (t *targetExecuter) checkRequirements(require configure.Require) (bool, string) {
-	if t.checkReqs != nil {
-		return t.checkReqs(require)
+	if t.requireHandler != nil {
+		return t.requireHandler.CheckRequirements(require)
 	}
 	return false, "no requirement check handler set"
 }

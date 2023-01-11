@@ -4,12 +4,21 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/tasks"
 	"gopkg.in/yaml.v2"
 )
 
 func createRuntimeByYamlString(yamlString string, messages *[]string) (*tasks.TaskListExec, error) {
+	return createRuntimeByYamlStringWithAllMsg(yamlString, messages, nil)
+}
+
+func createRuntimeByYamlStringWithErrors(yamlString string, messages *[]string, errors *[]error) (*tasks.TaskListExec, error) {
+	return createRuntimeByYamlStringWithAllMsg(yamlString, messages, errors)
+}
+
+func createRuntimeByYamlStringWithAllMsg(yamlString string, messages *[]string, errors *[]error) (*tasks.TaskListExec, error) {
 	var runCfg configure.RunConfig = configure.RunConfig{}
 
 	if err := yaml.Unmarshal([]byte(yamlString), &runCfg); err != nil {
@@ -20,17 +29,24 @@ func createRuntimeByYamlString(yamlString string, messages *[]string) (*tasks.Ta
 				switch mt := m.(type) {
 				case tasks.MsgExecOutput: // this will be the output of the command
 					*messages = append(*messages, string(mt))
+				case tasks.MsgError: // this will be the error of the command
+					if errors != nil {
+						*errors = append(*errors, mt)
+					}
 				}
 			}
 
 		}
 
+		dmc := tasks.NewCombinedDataHandler()
+		req := tasks.NewDefaultRequires(dmc, logrus.New())
+
 		return tasks.NewTaskListExec(
 			runCfg,
-			tasks.NewCombinedDataHandler(),
+			dmc,
 			outHandler,
 			tasks.ShellCmd,
-			func(require configure.Require) (bool, string) { return true, "" },
+			req,
 		), err
 	}
 }

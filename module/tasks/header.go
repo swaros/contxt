@@ -22,6 +22,8 @@
 package tasks
 
 import (
+	"fmt"
+
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 )
@@ -56,8 +58,7 @@ type targetExecuter struct {
 	mainCmdArgs     []string
 	phHandler       PlaceHolder
 	outputHandler   func(msg ...interface{})
-	reasonCheck     func(checkReason configure.Trigger, output string, e error) (bool, string)
-	checkReqs       func(require configure.Require) (bool, string)
+	requireHandler  Requires
 	Logger          *logrus.Logger
 	dataHandler     DataMapHandler
 	watch           *Watchman
@@ -95,10 +96,8 @@ func New(target string, arguments map[string]string, any ...interface{}) *target
 			}
 		case func(msg ...interface{}):
 			t.outputHandler = any[i].(func(msg ...interface{}))
-		case func(checkReason configure.Trigger, output string, e error) (bool, string):
-			t.reasonCheck = any[i].(func(checkReason configure.Trigger, output string, e error) (bool, string))
-		case func(require configure.Require) (bool, string):
-			t.checkReqs = any[i].(func(require configure.Require) (bool, string))
+		case Requires:
+			t.requireHandler = any[i].(Requires)
 		case DataMapHandler:
 			t.dataHandler = any[i].(DataMapHandler)
 			// check if if any[i] also implements the PlaceHolder interface
@@ -114,7 +113,12 @@ func New(target string, arguments map[string]string, any ...interface{}) *target
 		case MainCmdSetter:
 			t.commandFallback = any[i].(MainCmdSetter)
 		default:
-			panic("Invalid type passed to New")
+			// print out the type of the given argument
+			// so we can see what is wrong
+			// and panic
+			// so we can see the error
+			// and fix it
+			panic(fmt.Sprintf("Invalid type passed to New: %T", any[i]))
 		}
 	}
 
@@ -157,11 +161,12 @@ func (t *targetExecuter) CopyToTarget(target string) *targetExecuter {
 		t.mainCmdArgs,
 		t.phHandler,
 		t.outputHandler,
-		t.reasonCheck,
-		t.checkReqs,
+		t.requireHandler,
+		t.dataHandler,
+		t.watch,
+		t.commandFallback,
 	)
-	copy.watch = t.watch
-	copy.dataHandler = t.dataHandler
+
 	return copy
 }
 
