@@ -56,13 +56,6 @@ func (t *targetExecuter) setPh(name, value string) {
 	}
 }
 
-func (t *targetExecuter) getPh(input string) string {
-	if t.phHandler != nil {
-		return t.phHandler.GetPH(input)
-	}
-	return input
-}
-
 func (t *targetExecuter) checkReason(reason configure.Trigger, output string, e error) (bool, string) {
 	if t.requireHandler != nil {
 		return t.requireHandler.CheckReason(reason, output, e)

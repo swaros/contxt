@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -103,23 +102,12 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 			if currentTask.Stopreasons.Onerror {
 				return systools.ExitByStopReason, true
 			}
-			t.out(manout.MessageCln(manout.ForeYellow, "NOTE!\t", manout.BackLightYellow, manout.ForeDarkGrey, " a script execution was failing. no stopreason is set so execution will continued "))
-			t.out(manout.MessageCln("\t", manout.BackLightYellow, manout.ForeDarkGrey, " if this is expected you can ignore this message.                                 "))
-			t.out(manout.MessageCln("\t", manout.BackLightYellow, manout.ForeDarkGrey, " but you should handle error cases                                                "))
-			t.out("\ttarget :\t", manout.MessageCln(manout.ForeBlue, t.target))
-			t.out("\tcommand:\t", manout.MessageCln(manout.ForeYellow, codeLine))
+			t.out(MsgTarget(t.target), MsgReason("execution-error-ignored"), MsgNumber(realExitCode), MsgProcess("ignored"), MsgError(execErr), MsgCommand(codeLine))
 
 		} else {
-			errMsg := " = exit code from command: "
-			lastMessage := manout.MessageCln(manout.BackRed, manout.ForeYellow, realExitCode, manout.CleanTag, manout.ForeLightRed, errMsg, manout.ForeWhite, codeLine)
-			t.out("\t Exit ", lastMessage)
-			t.out()
-			t.out("\t check the command. if this command can fail you may fit the execution rules. see options:")
-			t.out("\t you may disable a hard exit on error by setting ignoreCmdError: true")
-			t.out("\t if you do so, a Note will remind you, that a error is happend in this case.")
-			t.out()
 			t.getLogger().WithFields(logrus.Fields{"processCode": realExitCode, "error": execErr}).Error("task exection error")
 
+			t.out(MsgTarget(t.target), MsgReason("execution-error"), MsgNumber(realExitCode), MsgProcess("aborted"), MsgError(execErr), MsgCommand(codeLine))
 			//systools.Exit(realExitCode) // origin behavior
 
 			// returns the error code
@@ -191,7 +179,7 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 			if triggerFound {
 				t.setPh("RUN."+t.target+".LOG.HIT", logLine)
 				if currentTask.Options.Displaycmd {
-					t.out(manout.MessageCln(manout.ForeCyan, "[trigger]\t", manout.ForeYellow, triggerMessage, manout.Dim, " ", logLine))
+					t.out(MsgType("run-trigger-sricpt-line"), MsgCommand(logLine))
 				}
 
 				someReactionTriggered := false                 // did this trigger something? used as flag
@@ -207,7 +195,6 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 						subRun := t.CopyToTarget(t.target)
 						subRun.SetArgs(dummyArgs)
 						subRun.lineExecuter(triggerScript, *currentTask)
-
 					}
 
 				}
@@ -222,25 +209,11 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 						t.out(manout.MessageCln(manout.ForeCyan, "[trigger]\t ", manout.ForeGreen, "target:", manout.ForeLightGreen, actionDef.Target))
 					}
 
-					// TODO: check if this is stille neded, or somehow usefull
-					hitKeyCnt := "RUN.LISTENER." + actionDef.Target + ".HIT.CNT"
-					lastCnt := t.getPh(hitKeyCnt)
-					if lastCnt == "" {
-						t.setPh(hitKeyCnt, "1")
-					} else {
-						iCnt, err := strconv.Atoi(lastCnt)
-						if err != nil {
-							t.getLogger().Fatal("fail converting trigger count")
-						}
-						iCnt++
-						t.setPh(hitKeyCnt, strconv.Itoa(iCnt))
-					}
-
 					t.getLogger().WithFields(logrus.Fields{
-						"trigger":   triggerMessage,
-						"target":    actionDef.Target,
-						"hitKeyCnt": hitKeyCnt,
+						"trigger": triggerMessage,
+						"target":  actionDef.Target,
 					}).Info("TRIGGER Called")
+
 					var scopeVars map[string]string = make(map[string]string)
 
 					t.getLogger().WithFields(logrus.Fields{
@@ -251,7 +224,7 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 					// try to run this target too async.
 					// also the target is triggered by an specific log entriy, it makes
 					// sence to stop the execution of the parent, til this target is executed
-					t.out("running target ", manout.ForeCyan, actionDef.Target, manout.ForeLightCyan, " trigger action")
+					t.out(MsgType("running-trigger-target"), MsgInfo(actionDef.Target))
 					t.executeTemplate(false, actionDef.Target, scopeVars)
 
 				}
