@@ -735,23 +735,65 @@ task:
   - id: failure_1
     script:
       - "#@if-equals default_1 variable"
-      - "#@if-equals b a" 
+      - "#@if-equals b a"
+  - id: failure_2
+    script:
+        - "#@if-not-equals default_1"
+  - id: failure_3
+    script:
+        - "#@if-equals default_1 variable"
+        - "#@if-not-equals default_1 variable"
+  - id: failure_4
+    script:
+        - "#@import-json"
+  - id: failure_5
+    script:
+        - "#@import-json JSON-DDD {this-is-not-json hello world"
+  - id: failure_6
+    script:
+        - "#@import-json-exec FAILTEST echo {this-is-not-json hello world"
 `
 	messages := []string{}
 	errorMsg := []error{}
 	if taskMain, err := createRuntimeByYamlStringWithErrors(source, &messages, &errorMsg); err != nil {
 		t.Errorf("Error parsing yaml: %v", err)
 	} else {
-		code := taskMain.RunTarget("test", true) // we run the task
-		if code != 8 {                           // we expect a code 0
-			t.Errorf("Expected code 8, got %d", code)
-		}
-		assert.Contains(t, errorMsg, errors.New("invalid usage #@if-equals need: str1 str2"))
 
-		code = taskMain.RunTarget("failure_1", true) // we run the task
-		if code != 8 {                               // we expect a code 0
-			t.Errorf("Expected code 8, got %d", code)
+		type TestRuns struct {
+			target        string
+			expectedCode  int
+			expectedError string
 		}
-		assert.Contains(t, errorMsg, errors.New("invalid usage #@if-equals can not be used in another if"))
+
+		testRuns := []TestRuns{
+			{target: "test", expectedCode: 8, expectedError: "invalid usage #@if-equals need: str1 str2"},
+			{target: "failure_1", expectedCode: 8, expectedError: "invalid usage #@if-equals can not be used in another if"},
+			{target: "failure_2", expectedCode: 8, expectedError: "invalid usage #@if-not-equals need: str1 str2"},
+			{target: "failure_3", expectedCode: 8, expectedError: "invalid usage #@if-not-equals can not be used in another if"},
+			{target: "failure_4", expectedCode: 8, expectedError: "invalid usage #@import-json needs 2 arguments. <keyname> <json-source-string>"},
+			{target: "failure_5", expectedCode: 8, expectedError: "error while parsing json: invalid character 't' looking for beginning of object key string"},
+			{target: "failure_6", expectedCode: 8, expectedError: "error while parsing json: invalid character 't' looking for beginning of object key string"},
+		}
+
+		for i, testRun := range testRuns {
+			// reset the messages and error messages
+			messages = []string{}
+			errorMsg = []error{}
+
+			code := taskMain.RunTarget(testRun.target, true) // we run the task
+			if code != testRun.expectedCode {                // we expect a code 0
+				t.Errorf("Expected code %d, got %d", testRun.expectedCode, code)
+			}
+			assert.Contains(
+				t,
+				errorMsg,
+				errors.New(testRun.expectedError),
+				"Error message not found for target %s in round %v  -> %v",
+				testRun.target,
+				i,
+				errorMsg,
+			)
+		}
+
 	}
 }

@@ -127,11 +127,11 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 						ifState = leftEq != rightEq
 						t.getLogger().WithFields(logrus.Fields{"condition": ifState, "left": leftEq, "right": rightEq}).Debug(notEqualsMark)
 					} else {
-						t.out(MsgError(errors.New("invalid usage " + equalsMark + " need: str1 str2")))
+						t.out(MsgError(errors.New("invalid usage " + notEqualsMark + " need: str1 str2")))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + equalsMark + " can not be used in another if")))
+					t.out(MsgError(errors.New("invalid usage " + notEqualsMark + " can not be used in another if")))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 
@@ -149,7 +149,8 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				if len(parts) >= 3 {
 					err := t.dataHandler.AddJSON(parts[1], strings.Join(parts[2:], ""))
 					if err != nil {
-						t.out(MsgError(err))
+						t.out(MsgError(errors.New("error while parsing json: " + err.Error())))
+						return true, systools.ErrorCheatMacros, parsedScript
 					}
 				} else {
 					t.out(MsgError(errors.New("invalid usage " + fromJSONMark + " needs 2 arguments. <keyname> <json-source-string>")))
@@ -182,7 +183,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 						err := t.dataHandler.AddJSON(keyname, returnValue)
 						if err != nil {
 							t.getLogger().WithField("error-on-parsing-string", returnValue).Debug("result of command")
-							t.out(MsgError(err))
+							t.out(MsgError(errors.New("error while parsing json: " + err.Error())))
 							return true, systools.ErrorCheatMacros, parsedScript
 						}
 					}

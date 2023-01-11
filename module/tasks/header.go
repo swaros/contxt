@@ -28,20 +28,6 @@ import (
 	"github.com/swaros/contxt/module/configure"
 )
 
-const (
-	Target                = "target"
-	Arguments             = "arguments"
-	Script                = "script"
-	RunCfg                = "runCfg"
-	StopReason            = "stopReason"
-	MainCmd               = "mainCmd"
-	MainCmdArgs           = "mainCmdArgs"
-	PlaceholderHandler    = "placeholderHandler"
-	PlaceholderSetHandler = "placeholderSetHandler"
-	OutputHandler         = "outputHandler"
-	DataMapHandl          = "dataMapHandler"
-)
-
 type MainCmdSetter interface {
 	GetMainCmd() (string, []string)
 }
@@ -187,30 +173,5 @@ func (t *targetExecuter) SetPlaceholderHandler(handler PlaceHolder) *targetExecu
 
 func (t *targetExecuter) SetWatchman(watch *Watchman) *targetExecuter {
 	t.watch = watch
-	return t
-}
-
-// Create Setter for any Property from the targetExecuter
-func (t *targetExecuter) SetProperty(property string, value interface{}) *targetExecuter {
-	switch property {
-	case Target:
-		t.target = value.(string)
-	case Arguments:
-		t.arguments = value.(map[string]string)
-	case RunCfg:
-		t.runCfg = value.(configure.RunConfig)
-	case MainCmd:
-		t.mainCmd = value.(string)
-	case MainCmdArgs:
-		t.mainCmdArgs = value.([]string)
-	case PlaceholderHandler:
-		t.phHandler = value.(PlaceHolder)
-	case OutputHandler:
-		t.outputHandler = value.(func(msg ...interface{}))
-	case DataMapHandl:
-		t.dataHandler = value.(DataMapHandler)
-	default:
-		panic("Unknown Property: " + property)
-	}
 	return t
 }
