@@ -2,6 +2,7 @@ package tasks_test
 
 import (
 	"errors"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -752,6 +753,50 @@ task:
   - id: failure_6
     script:
         - "#@import-json-exec FAILTEST echo {this-is-not-json hello world"
+  - id: failure_7
+    script:
+        - "#@import-json-exec FAILTEST2"
+  - id: failure_8
+    script:
+        - "#@import-json-exec FAILTEST3 invalidcmd blub"
+  - id: failure_9
+    script:
+        - "#@add"
+  - id: failure_10
+    script:    
+        - "#@set"
+  - id: failure_11
+    script:
+        - "#@set-in-map"
+  - id: failure_12 
+    script:
+        - "#@set-in-map notexists key value"
+  - id: failure_13
+    script:
+        - "#@var-to-file test key"
+  - id: failure_14
+    script:
+        - "#@var-to-file test"
+  - id: failure_15
+    script:
+        - "#@export-to-json"
+  - id: failure_16 
+    script:
+        - "#@export-to-json notexists some"
+  - id: failure_17
+    script:
+        - "#@export-to-yaml"
+  - id: failure_18
+    script:
+        - "#@export-to-yaml notexists some"
+  - id: failure_19
+    script:
+        - "#@var checkx notexistscmd"
+  - id: failure_20
+    script:
+        - "#@var"
+
+
 `
 	messages := []string{}
 	errorMsg := []error{}
@@ -763,6 +808,7 @@ task:
 			target        string
 			expectedCode  int
 			expectedError string
+			linuxOnly     bool
 		}
 
 		testRuns := []TestRuns{
@@ -772,27 +818,44 @@ task:
 			{target: "failure_3", expectedCode: 8, expectedError: "invalid usage #@if-not-equals can not be used in another if"},
 			{target: "failure_4", expectedCode: 8, expectedError: "invalid usage #@import-json needs 2 arguments. <keyname> <json-source-string>"},
 			{target: "failure_5", expectedCode: 8, expectedError: "error while parsing json: invalid character 't' looking for beginning of object key string"},
-			{target: "failure_6", expectedCode: 8, expectedError: "error while parsing json: invalid character 't' looking for beginning of object key string"},
+			{target: "failure_6", expectedCode: 8, expectedError: "error while parsing json: invalid character 't' looking for beginning of object key string", linuxOnly: true},
+			{target: "failure_7", expectedCode: 8, expectedError: "invalid usage #@import-json-exec needs 2 arguments at least. <keyname> <bash-command>"},
+			{target: "failure_8", expectedCode: 8, expectedError: "error while executing command: exit status 127", linuxOnly: true},
+			{target: "failure_9", expectedCode: 8, expectedError: "invalid usage #@add needs 2 arguments at least. <keyname> <value>"},
+			{target: "failure_10", expectedCode: 8, expectedError: "invalid usage #@set needs 2 arguments at least. <keyname> <value>"},
+			{target: "failure_11", expectedCode: 8, expectedError: "invalid usage #@set-in-map needs 3 arguments at least. <mapName> <json.path> <value>"},
+			{target: "failure_12", expectedCode: 8, expectedError: "error while setting value in map: the key [notexists] does not exists"},
+			{target: "failure_13", expectedCode: 8, expectedError: "error while writing variable to file: variable test can not be used for export to file. not exists or empty"},
+			{target: "failure_14", expectedCode: 8, expectedError: "invalid usage #@var-to-file needs 2 arguments at least. <variable> <filename>"},
+			{target: "failure_15", expectedCode: 8, expectedError: "invalid usage #@export-to-json needs 2 arguments at least. <map-key> <variable>"},
+			{target: "failure_16", expectedCode: 8, expectedError: "map with key notexists not exists"},
+			{target: "failure_17", expectedCode: 8, expectedError: "invalid usage #@export-to-yaml needs 2 arguments at least. <map-key> <variable>"},
+			{target: "failure_18", expectedCode: 8, expectedError: "map with key notexists not exists"},
+			{target: "failure_19", expectedCode: 8, expectedError: "error while executing command: exit status 127", linuxOnly: true},
+			{target: "failure_20", expectedCode: 8, expectedError: "invalid usage #@var needs 2 arguments at least. <varibale-name> <bash-command>", linuxOnly: true},
 		}
 
 		for i, testRun := range testRuns {
-			// reset the messages and error messages
-			messages = []string{}
-			errorMsg = []error{}
 
-			code := taskMain.RunTarget(testRun.target, true) // we run the task
-			if code != testRun.expectedCode {                // we expect a code 0
-				t.Errorf("Expected code %d, got %d", testRun.expectedCode, code)
+			if (testRun.linuxOnly && runtime.GOOS == "linux") || !testRun.linuxOnly {
+				// reset the messages and error messages
+				messages = []string{}
+				errorMsg = []error{}
+
+				code := taskMain.RunTarget(testRun.target, true) // we run the task
+				if code != testRun.expectedCode {                // we expect a code 0
+					t.Errorf("Expected code %d, got %d", testRun.expectedCode, code)
+				}
+				assert.Contains(
+					t,
+					errorMsg,
+					errors.New(testRun.expectedError),
+					"Error message not found for target %s in round %v  -> %v",
+					testRun.target,
+					i,
+					errorMsg,
+				)
 			}
-			assert.Contains(
-				t,
-				errorMsg,
-				errors.New(testRun.expectedError),
-				"Error message not found for target %s in round %v  -> %v",
-				testRun.target,
-				i,
-				errorMsg,
-			)
 		}
 
 	}

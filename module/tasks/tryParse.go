@@ -178,6 +178,8 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 							"process-exit": realExitCode,
 							"key":          keyname,
 							"cmd":          restSlice}).Error("execute for import-json-exec failed")
+						t.out(MsgError(errors.New("error while executing command: " + execErr.Error())))
+						return true, systools.ErrorCheatMacros, parsedScript
 					} else {
 
 						err := t.dataHandler.AddJSON(keyname, returnValue)
@@ -218,7 +220,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					path := parts[2]
 					setValue := strings.Join(parts[3:], " ")
 					if err := t.dataHandler.SetJSONValueByPath(mapName, path, setValue); err != nil {
-						t.out(MsgError(err))
+						t.out(MsgError(errors.New("error while setting value in map: " + err.Error())))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 				} else {
@@ -229,7 +231,10 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				if len(parts) == 3 {
 					varName := parts[1]
 					fileName := parts[2]
-					t.phHandler.ExportVarToFile(varName, fileName)
+					if err := t.phHandler.ExportVarToFile(varName, fileName); err != nil {
+						t.out(MsgError(errors.New("error while writing variable to file: " + err.Error())))
+						return true, systools.ErrorCheatMacros, parsedScript
+					}
 				} else {
 					t.out(MsgError(errors.New("invalid usage " + writeVarToFile + " needs 2 arguments at least. <variable> <filename>")))
 					return true, systools.ErrorCheatMacros, parsedScript
@@ -286,7 +291,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 							"returnCode": cmdCode,
 							"error":      errorFromCm.Error,
 						}).Error("subcommand failed.")
-						t.out(MsgError(errorFromCm))
+						t.out(MsgError(errors.New("error while executing command: " + errorFromCm.Error())))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 

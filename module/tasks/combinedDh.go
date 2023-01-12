@@ -124,7 +124,7 @@ func (d *CombinedDh) AddYaml(key, yamlString string) error {
 // the sjson library
 func (d *CombinedDh) SetJSONValueByPath(key, path, value string) error {
 	if !d.ifKeyExists(key) {
-		return errors.New("key " + key + " does not exist")
+		return errors.New("the key [" + key + "] does not exists")
 	}
 	ymc := d.getYamcByKey(key)
 	data := ymc.GetData()
