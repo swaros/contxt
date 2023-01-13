@@ -5,6 +5,7 @@ use (
 	./module/configure
 	./module/ctxout
 	./module/dirhandle
+	./module/linehack
 	./module/shellcmd
 	./module/systools
 	./module/taskrun

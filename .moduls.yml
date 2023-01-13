@@ -37,6 +37,12 @@ module:
       timeout: 30s
 
   -
+    modul: linehack    
+    local: true
+    test:
+      timeout: 30s
+
+  -
     modul: ctxout
     local: true
     test:
