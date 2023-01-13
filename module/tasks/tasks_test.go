@@ -669,7 +669,9 @@ task:
         - "#@import-json JSON-CONTENT '${json_content}'" 
         - echo "key1 is ${JSON-CONTENT:key1}" 
         - "#@import-json JSON-CONTENT-2 ${json_content}" 
-        - echo "key1 is again ${JSON-CONTENT-2:key1}" 
+        - echo "key1 is again ${JSON-CONTENT-2:key1}"
+        - "#@add default_1 +++"
+        - echo "after add value ${default_1}" 
 `
 	messages := []string{}
 	if taskMain, err := createRuntimeByYamlString(source, &messages); err != nil {
@@ -716,6 +718,7 @@ task:
 		assert.NotContains(t, messages, "we should not see this message No2")
 		assert.Contains(t, messages, "key1 is value1")
 		assert.Contains(t, messages, "key1 is again value1")
+		assert.Contains(t, messages, "after add value rewrite+++")
 	}
 
 }
@@ -795,6 +798,9 @@ task:
   - id: failure_20
     script:
         - "#@var"
+  - id: failure_21
+    script:
+        - "#@add nonextsting something"
 
 
 `
@@ -833,6 +839,7 @@ task:
 			{target: "failure_18", expectedCode: 8, expectedError: "map with key notexists not exists"},
 			{target: "failure_19", expectedCode: 8, expectedError: "error while executing command: exit status 127", linuxOnly: true},
 			{target: "failure_20", expectedCode: 8, expectedError: "invalid usage #@var needs 2 arguments at least. <varibale-name> <bash-command>", linuxOnly: true},
+			{target: "failure_21", expectedCode: 8, expectedError: "variable must exists for add #@add nonextsting"},
 		}
 
 		for i, testRun := range testRuns {
