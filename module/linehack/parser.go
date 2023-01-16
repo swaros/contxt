@@ -10,14 +10,18 @@ import (
 )
 
 type Parser struct {
-	PrintByFmt      bool
-	trashTokenCount int
-	trashTokenTrace []string
-	source          map[int]tokenSelfProvider
+	PrintByFmt        bool
+	trashTokenCount   int
+	trashTokenTrace   []string
+	source            map[int]tokenSelfProvider
+	stringVariables   map[string]string
+	variableRequester func(string) (interface{}, error) // is is the functen that is asking for a variable value by name
 }
 
 func NewParser() *Parser {
-	return &Parser{}
+	return &Parser{
+		stringVariables: make(map[string]string),
+	}
 }
 
 func (p *Parser) Parse(line string) {
@@ -26,9 +30,6 @@ func (p *Parser) Parse(line string) {
 	p.Println("------------------")
 	p.printDegugTokenMap(p.source)
 
-	p.iteratemapInKeyorder(p.source, func(pos int, token tokenSelfProvider) {
-		p.printDegugToken(token)
-	})
 }
 
 func (p *Parser) Execute(line string) error {
@@ -36,7 +37,240 @@ func (p *Parser) Execute(line string) error {
 	if p.trashTokenCount > 0 {
 		return fmt.Errorf("found %d trash tokens: %s", p.trashTokenCount, strings.Join(p.trashTokenTrace, ", "))
 	}
+	if err := p.runSource(); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (p *Parser) SetVariableRequester(requester func(string) (interface{}, error)) {
+	p.variableRequester = requester
+}
+
+func (p *Parser) getVariableValue(name string) (interface{}, error) {
+	if p.variableRequester != nil {
+		return p.variableRequester(name)
+	}
+	return nil, fmt.Errorf("variable requester is not set")
+}
+
+func (p *Parser) runSource() error {
+	var runErr error
+	p.iteratemapInKeyorder(p.source, func(pos int, token tokenSelfProvider) {
+		p.printDegugToken(token)
+
+		switch tkn := token.(type) {
+		// the if token is found, we need to find the brackets
+		// and the tokens between them
+		case *If:
+			p.Println("if", tkn)
+
+			left := p.createPatternToken("(")
+			right := p.createPatternToken(")")
+
+			if start, end, err := p.findBetweenTokens(tkn.Pos+1, left, right); err != nil {
+				runErr = err
+				return
+			} else {
+				if result, err := p.checkConditional(start, end); err != nil {
+					runErr = err
+					return
+				} else {
+					p.Println("result", result)
+				}
+			}
+		}
+
+	})
+	return runErr
+}
+
+// createPatternToken creates a new token from a string.
+// tokens of this kind is only used to find other tokens
+// with the same type in the source map
+func (p *Parser) createPatternToken(value string) scanToken {
+	return p.createScanToken(value, -1)
+}
+
+func (p *Parser) checkConditional(start int, end int) (bool, error) {
+	tokens := p.getTokensInBetween(start, end)
+	boolResult := true   // default is true. so we have to find a false condition to make it false
+	inComparing := false // set the comaring state, that tells us, we found a variable of function to be checked
+	var comparingElements []tokenSelfProvider
+	for _, token := range tokens {
+		switch tkn := token.(type) {
+		case *tBool:
+			boolResult = boolResult && tkn.Value
+		case *tPrefixedVariable, *tVariable, *tEqual, *tNotEqual, *tString, *tLess, *tLessOrEqual, *tGreater, *tGreaterOrEqual, *tOr, *tAnd, *tNot:
+			if inComparing {
+			} else {
+				inComparing = true
+			}
+			comparingElements = append(comparingElements, tkn)
+		default:
+			return false, fmt.Errorf("unexpected token in condition Check %s", reflect.TypeOf(token))
+		}
+	}
+	if inComparing {
+		splitted := p.splitConditionByAndOr(comparingElements)
+		for _, group := range splitted {
+			if result, err := p.checkConditionGroup(group); err != nil {
+				return false, err
+			} else {
+				boolResult = boolResult && result
+			}
+		}
+	}
+	return boolResult, nil
+}
+
+func (p *Parser) splitConditionByAndOr(tokens []tokenSelfProvider) [][]tokenSelfProvider {
+	var groups [][]tokenSelfProvider
+	var group []tokenSelfProvider
+	for _, token := range tokens {
+		switch token.(type) {
+		case *tAnd, *tOr:
+			groups = append(groups, group)
+			group = []tokenSelfProvider{}
+		default:
+			group = append(group, token)
+		}
+	}
+	groups = append(groups, group)
+	return groups
+}
+
+func (p *Parser) checkConditionGroup(tokens []tokenSelfProvider) (bool, error) {
+	var boolResult bool
+	var first interface{}
+	var second interface{}
+	var comparedBy interface{}
+	hitCnt := 0
+	for _, token := range tokens {
+		switch tkn := token.(type) {
+		case *tBool:
+			boolResult = boolResult && tkn.Value
+			hitCnt++
+		case *tPrefixedVariable:
+			if value, err := p.getVariableValue(tkn.Value); err != nil {
+				return false, err
+			} else {
+				if hitCnt == 0 {
+					first = value
+				} else {
+					second = value
+				}
+			}
+			hitCnt++
+
+		case *tVariable:
+			if hitCnt == 0 {
+				first = p.stringVariables[tkn.Value]
+			} else {
+				second = p.stringVariables[tkn.Value]
+			}
+			hitCnt++
+
+		case *tString:
+			if hitCnt == 0 {
+				first = p.stringVariables[tkn.Value]
+			} else {
+				second = p.stringVariables[tkn.Value]
+			}
+			hitCnt++
+
+		case *tEqual, *tNotEqual, *tLess, *tLessOrEqual, *tGreater, *tGreaterOrEqual, *tNot:
+			if first == nil {
+				return false, fmt.Errorf("variable to check is nil")
+			}
+			// any check can only on the second place
+			if hitCnt != 1 {
+				return false, fmt.Errorf("unexpected token %s", reflect.TypeOf(token))
+			}
+			comparedBy = tkn
+			hitCnt++
+		}
+	}
+
+	if hitCnt < 3 {
+		return false, fmt.Errorf("not enough tokens to check condition")
+	}
+
+	if hitCnt > 3 {
+		return false, fmt.Errorf("too many tokens to check condition")
+	}
+
+	switch comparedBy.(type) {
+	case *tEqual:
+		boolResult = boolResult && (first == second)
+	case *tNotEqual:
+		boolResult = boolResult && (first != second)
+	case *tLess:
+		boolResult = boolResult && (first.(int) < second.(int))
+	case *tLessOrEqual:
+		boolResult = boolResult && (first.(int) <= second.(int))
+	case *tGreater:
+		boolResult = boolResult && (first.(int) > second.(int))
+	case *tGreaterOrEqual:
+		boolResult = boolResult && (first.(int) >= second.(int))
+	case *tNot:
+		boolResult = boolResult && !first.(bool)
+	}
+
+	return boolResult, nil
+}
+
+func (p *Parser) getTokensInBetween(start int, end int) []tokenSelfProvider {
+	var tokens []tokenSelfProvider
+	p.iteratemapInKeyorder(p.source, func(pos int, token tokenSelfProvider) {
+		if pos > start && pos < end {
+			tokens = append(tokens, token)
+		}
+	})
+	return tokens
+}
+
+func (p *Parser) findBetweenTokens(startPos int, startToken scanToken, endToken scanToken) (int, int, error) {
+	var start int
+	var end int
+	var layer int
+	var err error
+	p.iteratemapInKeyorder(p.source, func(pos int, token tokenSelfProvider) {
+		if pos < startPos {
+			return
+		} else {
+			// no start token found til now
+			// so we increase the layer and set the start position
+			// the layer tells us how many brackets we have to find
+			// before we can stop
+			if start == 0 && token.itsMe(startToken) {
+				layer++
+				start = pos
+				return // we found the start token, so we MUST stop before we increase the layer again
+			}
+			// increase the layer if we found a start token
+			// and decrease the layer if we found an end token
+			if layer > 0 {
+				if token.itsMe(startToken) {
+					layer++
+				}
+				if token.itsMe(endToken) {
+					layer--
+				}
+			}
+
+			// we found the start token and the end token
+			// so we can stop
+			// we have to check if the layer is 0, because we can have
+			// nested brackets
+			if layer == 0 && token.itsMe(endToken) && start != 0 && end == 0 {
+				end = pos
+				return
+			}
+		}
+
+	})
+	return start, end, err
 }
 
 func (p *Parser) Print(i ...interface{}) {

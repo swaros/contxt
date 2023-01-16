@@ -14,6 +14,11 @@ func TestParse(t *testing.T) {
 
 func TestExecute(t *testing.T) {
 	parser := linehack.NewParser()
+
+	parser.SetVariableRequester(func(name string) (interface{}, error) {
+		return "test", nil
+	})
+
 	parser.PrintByFmt = true
 	err := parser.Execute(`if ($testvar == "test" || $testvar < "check") then {set output = "test"; print "hello"} else { print "world"}`)
 	if err != nil {
