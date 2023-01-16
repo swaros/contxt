@@ -28,10 +28,6 @@ import (
 	"github.com/swaros/contxt/module/configure"
 )
 
-type MainCmdSetter interface {
-	GetMainCmd() (string, []string)
-}
-
 var (
 	emptyMainCmdSetter MainCmdSetter = emptyCmd{}
 )
@@ -53,7 +49,7 @@ type targetExecuter struct {
 
 type emptyCmd struct{}
 
-func (e emptyCmd) GetMainCmd() (string, []string) {
+func (e emptyCmd) GetMainCmd(cfg configure.Options) (string, []string) {
 	return "", []string{}
 }
 
@@ -143,8 +139,6 @@ func (t *targetExecuter) CopyToTarget(target string) *targetExecuter {
 		target,
 		t.arguments,
 		t.runCfg,
-		t.mainCmd,
-		t.mainCmdArgs,
 		t.phHandler,
 		t.outputHandler,
 		t.requireHandler,

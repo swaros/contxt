@@ -72,6 +72,9 @@ func (e *TaskListExec) RunTarget(target string, async bool) int {
 
 func (e *TaskListExec) RunTargetWithVars(target string, scopeVars map[string]string, async bool) int {
 	tExec := e.findOrCreateTask(target, scopeVars)
+	if tExec == nil {
+		return systools.ExitByNoTargetExists
+	}
 	return tExec.executeTemplate(async, target, scopeVars)
 }
 
@@ -108,6 +111,12 @@ func (e *TaskListExec) findOrCreateTask(target string, scopeVars map[string]stri
 }
 
 func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars map[string]string) int {
+	if t == nil {
+		panic("targetExecuter is nil. This should not happen. init it with New()")
+	}
+	if t.watch == nil {
+		panic("watch is nil. This should not happen. init it with NewWatchman()")
+	}
 
 	// check if task is already running
 	// this check depends on the target name.
@@ -199,7 +208,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 					"reason": message,
 				}).Info("executeTemplate IGNORE because requirements not matching")
 				if script.Options.Displaycmd {
-					t.out(MsgTarget(target), MsgType("requirement-check-failed"), MsgNumber(curTIndex+1), MsgInfo(message))
+					t.out(MsgTarget{Target: target, Context: "requirement-check-failed", Info: message}, MsgNumber(curTIndex+1))
 				}
 				// ---- return ExitByRequirement
 				continue
@@ -241,17 +250,17 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			// any need can have his own needs they needs to
 			// be executed
 			if len(script.Needs) > 0 {
-				t.out(MsgTarget(target), MsgType("needs_required"), MsgArgs(script.Needs))
+				t.out(MsgTarget{Target: target, Context: "needs_required", Info: strings.Join(script.Needs, ",")}, MsgArgs(script.Needs))
 				t.getLogger().WithField("needs", script.Needs).Debug("Needs for the script")
 				if runAsync {
 					var needExecs []awaitgroup.FutureStack
 					for _, needTarget := range script.Needs {
 						if t.watch.TaskRunsAtLeast(needTarget, 1) {
-							t.out(MsgTarget(target), MsgType("needs_ignored"))
+							t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
 							t.getLogger().Debug("need already handled " + needTarget)
 						} else {
 							t.getLogger().Debug("need name should be added " + needTarget)
-							t.out(MsgTarget(target), MsgType("needs_exec"), MsgInfo(needTarget))
+							t.out(MsgTarget{Target: target, Context: "needs_execute", Info: needTarget})
 							needExecs = append(needExecs, awaitgroup.FutureStack{
 								AwaitFunc: func(ctx context.Context) interface{} {
 									argNeed := ctx.Value(awaitgroup.CtxKey{}).(string)
@@ -270,14 +279,15 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 					for _, needTarget := range script.Needs {
 						if t.watch.TaskRunsAtLeast(needTarget, 1) { // do not run needs the already runs
 							t.getLogger().Debug("need already handled " + needTarget)
-							t.out(MsgTarget(target), MsgType("needs_ignored"))
+							t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
 						} else {
 							_, argmap := systools.StringSplitArgs(needTarget, "arg")
 							t.executeTemplate(false, needTarget, argmap)
 						}
 					}
 				}
-				t.out(MsgTarget(target), MsgType("needs_done"))
+
+				t.out(MsgTarget{Target: target, Context: "needs_done", Info: strings.Join(script.Needs, ",")}, MsgArgs(script.Needs))
 			}
 
 			// targets that should be started as well
@@ -314,9 +324,9 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 
 			// waitin until the any target that runns also is done
 			if len(runTargetfutures) > 0 {
-				t.out(MsgTarget(target), MsgType("wait_targets"), MsgArgs(script.RunTargets))
+				t.out(MsgTarget{Target: target, Context: "wait_for_targets", Info: strings.Join(script.RunTargets, ",")}, MsgArgs(script.RunTargets))
 				awaitgroup.WaitAtGroup(runTargetfutures)
-				t.out(MsgTarget(target), MsgType("wait_targets_done"))
+				t.out(MsgTarget{Target: target, Context: "wait_targets_done"})
 			}
 			// next are tarets they runs afterwards the regular
 			// script os done
@@ -327,7 +337,8 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 
 			nextfutures := t.generateFuturesByTargetListAndExec(script.Next, t.runCfg)
 			awaitgroup.WaitAtGroup(nextfutures)
-			t.out(MsgTarget(target), MsgType("wait_next_done"))
+
+			t.out(MsgTarget{Target: target, Context: "wait_next_done"})
 
 			//return returnCode
 			// back to old dir if workpace usage was set
@@ -338,7 +349,8 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 		}
 		// we have at least none of the possible task executed.
 		if !targetFound {
-			t.out(MsgTarget(target), MsgType("not_found"))
+			//t.out(MsgTarget(target), MsgType("not_found"))
+			t.out(MsgTarget{Target: target, Context: "not_found"})
 			t.getLogger().Error("Target can not be found: ", target)
 			return systools.ExitByNoTargetExists
 		}

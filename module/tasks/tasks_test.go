@@ -2,6 +2,7 @@ package tasks_test
 
 import (
 	"errors"
+	"fmt"
 	"runtime"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
 	"gopkg.in/yaml.v2"
 )
@@ -866,4 +868,337 @@ task:
 		}
 
 	}
+}
+
+func TestTriggerExecution(t *testing.T) {
+	source := `
+version: "1"
+task:
+  - id: base
+    script:
+      - echo "triggered"
+    listener:
+      - trigger: 
+          onoutContains: 
+            - triggered
+        action:
+            script: 
+              - echo "reaction"
+
+
+`
+	messages := []string{}
+	errorMsg := []error{}
+	if taskMain, err := createRuntimeByYamlStringWithErrors(source, &messages, &errorMsg); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("base", true) // we run the task
+		if code != 0 {                           // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+		assert.Contains(t, messages, "triggered", "triggered not found in messages")
+		assert.Contains(t, messages, "reaction", "reaction not found in messages")
+	}
+}
+
+func TestTriggerExecutionWithTarget(t *testing.T) {
+	source := `
+version: "1"
+task:
+  - id: subTarget
+    script:
+        - echo "reaction"
+  - id: base
+    script:
+      - echo "triggered"
+    listener:
+      - trigger: 
+          onoutContains: 
+            - triggered
+        action:
+            target: subTarget
+              
+`
+	messages := []string{}
+	errorMsg := []error{}
+	if taskMain, err := createRuntimeByYamlStringWithErrors(source, &messages, &errorMsg); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("base", true) // we run the task
+		if code != 0 {                           // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+		assert.Contains(t, messages, "triggered", "triggered not found in messages")
+		assert.Contains(t, messages, "reaction", "reaction not found in messages")
+	}
+}
+
+func assertErrormsgContains(t *testing.T, expected string, actual []error) {
+	t.Helper()
+	for _, msg := range actual {
+		if strings.Contains(msg.Error(), expected) {
+			return
+		}
+	}
+	formsg := []string{}
+	for _, msg := range actual {
+		formsg = append(formsg, msg.Error())
+	}
+	_, file, line, _ := runtime.Caller(1)
+	label := fmt.Sprintf("%s:%d", file, line)
+	t.Errorf(label+"Error message not found: %s in [%s]", expected, strings.Join(formsg, ", "))
+}
+
+func TestTriggerError(t *testing.T) {
+	source := `
+version: "1"
+task:
+  - id: subTarget
+    script:
+        - some-not-working-command
+  - id: base
+    script:
+      - echo "triggered"
+    listener:
+      - trigger: 
+          onoutContains: 
+            - triggered
+        action:
+            target: subTarget
+              
+`
+	messages := []string{}
+	errorMsg := []error{}
+	if taskMain, err := createRuntimeByYamlStringWithErrors(source, &messages, &errorMsg); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("base", true) // we run the task
+		if code != 0 {                           // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+		assert.Contains(t, messages, "triggered", "triggered not found in messages")
+		assertErrormsgContains(t, "some-not-working-command fails with error: exit status 127", errorMsg)
+
+	}
+}
+
+func TestTriggerErrorIgnored(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on windows")
+	}
+	source := `
+version: "1"
+task:
+  - id: subTarget
+    options:
+      ignoreCmdError:  true
+    script:
+        - echo "blub" | grep "la" # this will fail
+  - id: base
+    
+    script:
+      - echo "triggered"
+    listener:
+      - trigger: 
+          onoutContains: 
+            - triggered
+        action:
+            target: subTarget
+              
+`
+	messages := []string{}
+	errorMsg := []error{}
+	if taskMain, err := createRuntimeByYamlStringWithErrors(source, &messages, &errorMsg); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("base", true) // we run the task
+		if code != 0 {                           // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+		assert.Contains(t, messages, "triggered", "triggered not found in messages")
+		assertErrormsgContains(t, "exit status 1", errorMsg)
+
+	}
+}
+
+func TestRunError2(t *testing.T) {
+	source := `
+version: "1"
+task:
+  - id: base
+    script:
+      - me-is-already-not-working
+`
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("base", true) // we run the task
+		if code != systools.ExitCmdError {       // we expect a error code similar to 103
+			t.Errorf("Expected code 103, got %d", code)
+		}
+		assertErrormsgContains(t, "me-is-already-not-working fails with error: exit status 127", errorMsg)
+
+	}
+}
+
+func TestTriggerExecutionStopReason(t *testing.T) {
+	source := `
+version: "1"
+task:
+  - id: base
+    script:
+      - echo "start-loop"
+      - while true; do echo "loop"; sleep 1; done      
+    stopreasons:
+        onoutContains:
+         - loop         
+              
+`
+	if runtime.GOOS == "windows" { // we skip this test on windows, because the stopreasons are not working on windows depending on the shell while loop
+		t.Skip("Skip on windows")
+	}
+	messages := []string{}
+	errorMsg := []error{}
+	if taskMain, err := createRuntimeByYamlStringWithErrors(source, &messages, &errorMsg); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("base", true) // we run the task
+		if code != systools.ExitByStopReason {   // we expect the run is aborted by stopreason
+			t.Errorf("Expected code 101, got %d", code)
+		}
+		assert.Contains(t, messages, "start-loop", "start-loop not found in messages")
+		assert.NotContains(t, messages, "loop", "loop not found in messages") // the trigger source itself should not be in the output
+	}
+}
+
+func TestTriggerInSomeCombinations(t *testing.T) {
+	source := `
+version: "1"
+task:
+    - id: subTarget
+      options:
+        displaycmd: true
+      script:
+        - echo "reaction"
+    - id: base1
+      options:
+        displaycmd: true
+      script:
+          - echo "triggered_base1"
+      listener:
+        - trigger:
+            onoutContains:
+              - triggered
+          action:
+            target: subTarget
+    - id: base2
+      script:
+        - echo "triggered_base2"
+      listener:
+        - trigger:
+            onoutContains:
+             - triggered
+          action:
+            target: subTarget
+    - id: base3
+      script:
+        - echo "triggered_base3"
+      listener:
+        - trigger:
+           onoutContains:
+             - triggered
+
+    - id: base4
+      script:
+        - echo "triggered_base4"
+      listener:
+          - trigger:
+              onoutContains:
+                - triggered
+            action:
+                target: notExists
+
+    - id: base5
+      needs:                
+        - base1        
+      script:
+        - echo "triggered_base5"
+
+    - id: base6
+      options:
+        displaycmd: true
+        ignoreCmdError: true
+        stickcursor: true
+      script:
+        - echo "triggered_base6"
+        - echo "lala" | grep "oops"
+      stopreasons:
+         onerror: true
+
+    - id: base7
+      options:
+        displaycmd: true
+        ignoreCmdError: true
+        stickcursor: true
+        maincmd: not-existing-command
+      script:
+        - will not work anyway
+        
+`
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		type TestRuns struct {
+			target           string
+			expectedCode     int
+			expectedError    string
+			expectInMessages string
+			targetUpdate     string
+			linuxOnly        bool
+		}
+
+		testRuns := []TestRuns{
+			{target: "base1", expectedCode: 0, expectInMessages: "reaction"},
+			{target: "base2", expectedCode: 0, expectInMessages: "reaction"},
+			{target: "base3", expectedCode: 0, expectedError: "trigger-defined-without-action"},
+			{target: "base4", expectedCode: 0, targetUpdate: "notExists:not_found[]"},
+			{target: "base5", expectedCode: 0, expectInMessages: "reaction"},
+			{target: "base6", expectedCode: 101, targetUpdate: "base6:error-catch-by-onerror[exit status 1]", expectInMessages: "exit status 1", expectedError: "exit status 1", linuxOnly: true},
+			{target: "base7", expectedCode: 102, targetUpdate: "base7:execution-error-ignored[exec: \"not-existing-command\": executable file not found in $PATH]", expectedError: "exec: \"not-existing-command\": executable file not found in $PATH", linuxOnly: true},
+		}
+
+		for _, testRun := range testRuns {
+
+			if (testRun.linuxOnly && runtime.GOOS == "linux") || !testRun.linuxOnly {
+				// reset the messages and error messages
+				messages = []string{}
+				errorMsg = []error{}
+				targetUpdates = []string{}
+
+				code := taskMain.RunTarget(testRun.target, true) // we run the task
+				if code != testRun.expectedCode {                // we expect a code 0
+					t.Errorf("Expected code %d, got %d", testRun.expectedCode, code)
+				}
+				// if we expect a error message, we check if it is in the error messages
+				if testRun.expectedError != "" {
+					assertErrormsgContains(t, testRun.expectedError, errorMsg)
+				}
+				// if we expect a message, we check if it is in the messages
+				if testRun.expectInMessages != "" {
+					assert.Contains(t, messages, testRun.expectInMessages, testRun.expectInMessages+" not found in messages ["+strings.Join(messages, ",")+"]")
+				}
+
+				if testRun.targetUpdate != "" {
+					assert.Contains(t, targetUpdates, testRun.targetUpdate, testRun.targetUpdate+" not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+				}
+			}
+		}
+	}
+
 }

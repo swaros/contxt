@@ -25,7 +25,11 @@ package tasks
 type MsgCommand string
 
 // MsgTarget is the target to execute the command on
-type MsgTarget string
+type MsgTarget struct {
+	Target  string
+	Context string
+	Info    string
+}
 
 // MsgReason is the reason that is used to set why somethingis triggered. like stopreason
 type MsgReason string

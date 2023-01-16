@@ -21,7 +21,10 @@
 // SOFTWARE.
 package tasks
 
-import "github.com/tidwall/gjson"
+import (
+	"github.com/swaros/contxt/module/configure"
+	"github.com/tidwall/gjson"
+)
 
 // DataMapHandler is the interface for the data handlers
 // they are used to store and retrieve data
@@ -46,4 +49,11 @@ type PlaceHolder interface {
 	HandlePlaceHolderWithScope(line string, scopeVars map[string]string) string // replaces all placeholders in a string with a scope
 	ClearAll()                                                                  // clears all placeholders
 	ExportVarToFile(variable string, filename string) error                     // exports a placeholder to a file
+}
+
+// MainCmdSetter is the interface for the main command setter
+// they are used to set the main command and its arguments
+
+type MainCmdSetter interface {
+	GetMainCmd(cfg configure.Options) (string, []string)
 }

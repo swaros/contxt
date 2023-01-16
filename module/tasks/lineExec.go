@@ -23,6 +23,7 @@ package tasks
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -39,12 +40,15 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 	if t.phHandler != nil {
 		replacedLine = t.phHandler.HandlePlaceHolderWithScope(codeLine, t.arguments) // placeholders
 	}
-	t.out(MsgTarget(currentTask.ID), MsgCommand(replacedLine)) // output the command
-	t.setPh("RUN."+currentTask.ID+".CMD.LAST", replacedLine)   // set or overwrite the last script command for the target
-	t.setPh("RUN.SCRIPT_LINE", replacedLine)                   // set or overwrite the last script command for the target
+	t.out(MsgTarget{Target: currentTask.ID, Context: "command", Info: replacedLine}) // output the command
+	t.setPh("RUN."+currentTask.ID+".CMD.LAST", replacedLine)                         // set or overwrite the last script command for the target
+	t.setPh("RUN.SCRIPT_LINE", replacedLine)                                         // set or overwrite the last script command for the target
+
+	runCmd, runArgs := t.commandFallback.GetMainCmd(currentTask.Options) // get the main command and arguments
+	t.SetMainCmd(runCmd, runArgs...)                                     // set the main command and arguments
 
 	// here we execute the current script line
-	execCode, realExitCode, execErr := t.ExecuteScriptLine(replacedLine,
+	execCode, realExitCode, execErr := t.ExecuteScriptLine(runCmd, runArgs, replacedLine,
 		func(logLine string, err error) bool { // callback for any logline
 			t.setPh("RUN."+currentTask.ID+".LOG.LAST", logLine) // set or overwrite the last script output for the target
 			if currentTask.Listener != nil {                    // do we have listener?
@@ -100,14 +104,15 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 	case systools.ExitCmdError:
 		if currentTask.Options.IgnoreCmdError {
 			if currentTask.Stopreasons.Onerror {
+				t.out(MsgTarget{Target: t.target, Context: "error-catch-by-onerror", Info: "" + execErr.Error()}, MsgError(execErr), MsgCommand(codeLine), MsgNumber(realExitCode))
 				return systools.ExitByStopReason, true
 			}
-			t.out(MsgTarget(t.target), MsgReason("execution-error-ignored"), MsgNumber(realExitCode), MsgProcess("ignored"), MsgError(execErr), MsgCommand(codeLine))
+			t.out(MsgTarget{Target: t.target, Context: "execution-error-ignored", Info: execErr.Error()}, MsgError(execErr), MsgCommand(codeLine), MsgNumber(realExitCode))
 
 		} else {
 			t.getLogger().WithFields(logrus.Fields{"processCode": realExitCode, "error": execErr}).Error("task exection error")
-
-			t.out(MsgTarget(t.target), MsgReason("execution-error"), MsgNumber(realExitCode), MsgProcess("aborted"), MsgError(execErr), MsgCommand(codeLine))
+			ErrorMsg := errors.New(codeLine + " fails with error: " + execErr.Error())
+			t.out(MsgTarget{Target: t.target, Context: "execution-error", Info: ErrorMsg.Error()}, MsgError(ErrorMsg), MsgCommand(codeLine), MsgNumber(realExitCode))
 			//systools.Exit(realExitCode) // origin behavior
 
 			// returns the error code
@@ -119,19 +124,7 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 	return systools.ExitNoCode, true
 }
 
-func (t *targetExecuter) getCmd() (string, []string) {
-	defaultCmd, defaultArgs := t.commandFallback.GetMainCmd()
-	if t.mainCmd != "" {
-		defaultCmd = t.mainCmd
-	}
-	if len(t.mainCmdArgs) > 0 {
-		defaultArgs = t.mainCmdArgs
-	}
-	return defaultCmd, defaultArgs
-}
-
-func (t *targetExecuter) ExecuteScriptLine(command string, callback func(string, error) bool, startInfo func(*os.Process)) (int, int, error) {
-	dCmd, dCmdArgs := t.getCmd()
+func (t *targetExecuter) ExecuteScriptLine(dCmd string, dCmdArgs []string, command string, callback func(string, error) bool, startInfo func(*os.Process)) (int, int, error) {
 	cmdArg := append(dCmdArgs, command)
 	cmd := exec.Command(dCmd, cmdArg...)
 	stdoutPipe, _ := cmd.StdoutPipe()
@@ -224,11 +217,12 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 					// try to run this target too async.
 					// also the target is triggered by an specific log entriy, it makes
 					// sence to stop the execution of the parent, til this target is executed
-					t.out(MsgType("running-trigger-target"), MsgInfo(actionDef.Target))
+					t.out(MsgTarget{Target: actionDef.Target, Context: "execute-trigger-target", Info: "start triggered action"})
 					t.executeTemplate(false, actionDef.Target, scopeVars)
 
 				}
 				if !someReactionTriggered {
+					t.out(MsgError(errors.New("trigger-defined-without-action")), MsgInfo(triggerMessage))
 					t.getLogger().WithFields(logrus.Fields{
 						"trigger": triggerMessage,
 						"output":  logLine,

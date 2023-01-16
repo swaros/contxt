@@ -24,6 +24,8 @@ package tasks
 import (
 	"runtime"
 	"strings"
+
+	"github.com/swaros/contxt/module/configure"
 )
 
 var (
@@ -37,26 +39,50 @@ var (
 type shellCmd struct{}
 
 // GetMainCmd returns the main command and the arguments to use
-func (s shellCmd) GetMainCmd() (string, []string) {
-	lwr := strings.ToLower(runtime.GOOS)
+func (s shellCmd) GetMainCmd(cfg configure.Options) (string, []string) {
 
-	switch lwr {
-	case "darwin": // macos
+	// the case we have no main command and no main params
+	if cfg.Maincmd == "" && (cfg.Mainparams == nil || len(cfg.Mainparams) == 0) {
+		lwr := strings.ToLower(runtime.GOOS)
+		switch lwr {
+		case "darwin": // macos
+			return "bash", []string{"-c"}
+		case "freebsd": // freebsd
+			return "bash", []string{"-c"}
+		case "netbsd": // netbsd
+			return "bash", []string{"-c"}
+		case "openbsd": // openbsd
+			return "bash", []string{"-c"}
+		case "plan9": // plan9
+			return "rc", []string{}
+		case "solaris": // solaris
+			return "bash", []string{"-c"}
+		case "windows": // windows
+			return "powershell", []string{"-nologo", "-noprofile"}
+
+		}
+		// fallback is bash. This is also the default for linux
 		return "bash", []string{"-c"}
-	case "freebsd": // freebsd
-		return "bash", []string{"-c"}
-	case "netbsd": // netbsd
-		return "bash", []string{"-c"}
-	case "openbsd": // openbsd
-		return "bash", []string{"-c"}
-	case "plan9": // plan9
-		return "rc", []string{}
-	case "solaris": // solaris
-		return "bash", []string{"-c"}
-	case "windows": // windows
-		return "powershell", []string{"-nologo", "-noprofile"}
+	}
+	// the case we have a main command and no main params
+	if cfg.Maincmd != "" {
+		return cfg.Maincmd, s.GetArgsForCmd(cfg.Maincmd)
+	}
+	// if anything is set already, we just return it
+	return cfg.Maincmd, cfg.Mainparams
+
+}
+
+// try to get the arguments for the most common shells
+func (s shellCmd) GetArgsForCmd(cmd string) []string {
+	switch cmd {
+	case "bash":
+		return []string{"-c"}
+	case "rc":
+		return []string{}
+	case "powershell":
+		return []string{"-nologo", "-noprofile"}
 
 	}
-	// fallback is bash. This is also the default for linux
-	return "bash", []string{"-c"}
+	return []string{}
 }

@@ -163,8 +163,9 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					restSlice := parts[2:]
 					keyname := parts[1]
 					cmd := strings.Join(restSlice, " ")
+					runCmd, runArgs := t.commandFallback.GetMainCmd(configure.Options{})
 					t.getLogger().WithFields(logrus.Fields{"key": keyname, "cmd": restSlice}).Info("execute for import-json-exec")
-					execCode, realExitCode, execErr := t.ExecuteScriptLine(cmd, func(output string, e error) bool {
+					execCode, realExitCode, execErr := t.ExecuteScriptLine(runCmd, runArgs, cmd, func(output string, e error) bool {
 						returnValue = returnValue + output
 						t.getLogger().WithField("cmd-output", output).Info("result of command")
 						return true
@@ -272,8 +273,8 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					var returnValues []string
 					restSlice := parts[2:]
 					cmd := strings.Join(restSlice, " ")
-
-					internalCode, cmdCode, errorFromCm := t.ExecuteScriptLine(cmd, func(output string, e error) bool {
+					runCmd, runArgs := t.commandFallback.GetMainCmd(configure.Options{})
+					internalCode, cmdCode, errorFromCm := t.ExecuteScriptLine(runCmd, runArgs, cmd, func(output string, e error) bool {
 						if e == nil {
 							returnValues = append(returnValues, output)
 						}

@@ -11,14 +11,14 @@ import (
 )
 
 func createRuntimeByYamlString(yamlString string, messages *[]string) (*tasks.TaskListExec, error) {
-	return createRuntimeByYamlStringWithAllMsg(yamlString, messages, nil)
+	return createRuntimeByYamlStringWithAllMsg(yamlString, messages, nil, nil, nil)
 }
 
 func createRuntimeByYamlStringWithErrors(yamlString string, messages *[]string, errors *[]error) (*tasks.TaskListExec, error) {
-	return createRuntimeByYamlStringWithAllMsg(yamlString, messages, errors)
+	return createRuntimeByYamlStringWithAllMsg(yamlString, messages, errors, nil, nil)
 }
 
-func createRuntimeByYamlStringWithAllMsg(yamlString string, messages *[]string, errors *[]error) (*tasks.TaskListExec, error) {
+func createRuntimeByYamlStringWithAllMsg(yamlString string, messages *[]string, errors *[]error, typeMsg *[]string, targetUpdates *[]string) (*tasks.TaskListExec, error) {
 	var runCfg configure.RunConfig = configure.RunConfig{}
 
 	if err := yaml.Unmarshal([]byte(yamlString), &runCfg); err != nil {
@@ -32,6 +32,16 @@ func createRuntimeByYamlStringWithAllMsg(yamlString string, messages *[]string, 
 				case tasks.MsgError: // this will be the error of the command
 					if errors != nil {
 						*errors = append(*errors, mt)
+					}
+
+				case tasks.MsgTarget:
+					if targetUpdates != nil {
+						*targetUpdates = append(*targetUpdates, mt.Target+":"+mt.Context+"["+mt.Info+"]")
+					}
+
+				case tasks.MsgType:
+					if typeMsg != nil {
+						*typeMsg = append(*typeMsg, string(mt))
 					}
 				}
 			}
