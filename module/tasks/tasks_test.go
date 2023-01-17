@@ -1202,3 +1202,300 @@ task:
 	}
 
 }
+
+func TestRequire(t *testing.T) {
+	source := `
+version: "1"
+config:
+    variables:
+       check: "hello"
+task:
+  - id: subTarget
+    require:
+       variables:
+          check: "hello" 
+    options:
+        displaycmd: true
+    script:
+        - echo "reaction"
+`
+
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("subTarget", true) // we run the task
+		if code != 0 {                                // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+
+		assert.Contains(t, messages, "reaction", "reaction not found in messages ["+strings.Join(messages, ",")+"]")
+		assert.Contains(t, targetUpdates, "subTarget:command[echo \"reaction\"]", "subTarget:command... not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+	}
+}
+
+func TestRequire2(t *testing.T) {
+	source := `
+version: "1"
+config:
+    variables:
+       check: "hello"
+task:
+  - id: subTarget
+    require:
+       variables:
+          check: "!winter" 
+    options:
+        displaycmd: true
+    script:
+        - echo "reaction"
+`
+
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("subTarget", true) // we run the task
+		if code != 0 {                                // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+
+		assert.Contains(t, messages, "reaction", "reaction not found in messages ["+strings.Join(messages, ",")+"]")
+		assert.Contains(t, targetUpdates, "subTarget:command[echo \"reaction\"]", "subTarget:command... not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+	}
+}
+
+func TestRequire3(t *testing.T) {
+	source := `
+task:
+  - id: subTarget
+    require:
+       system: !windows          
+    options:
+        displaycmd: true
+    script:
+        - echo "hello other then linux"
+  - id: subTarget
+    require:
+        system: windows         
+    options:
+        displaycmd: true
+    script:
+        - echo "hello windows"
+
+`
+
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("subTarget", true) // we run the task
+		if code != 0 {                                // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+		if runtime.GOOS == "windows" {
+			assert.Contains(t, messages, "hello windows", "'hello windows' found in messages ["+strings.Join(messages, ",")+"]")
+			assert.Contains(t, targetUpdates, "subTarget:command[echo \"reaction\"]", "subTarget:command... not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+		} else {
+			assert.Contains(t, messages, "hello other then linux", "hello other then linux not found in messages ["+strings.Join(messages, ",")+"]")
+			assert.Contains(t, targetUpdates, "subTarget:command[echo \"hello other then linux\"]", "subTarget:command... not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+		}
+	}
+}
+
+func TestRequire4(t *testing.T) {
+	source := `
+version: "1"
+config:
+    variables:
+       check: "hello"
+task:
+  - id: subTarget
+    require:
+       exists: 
+         - "test.txt"
+         
+    options:
+        displaycmd: true
+    script:
+        - echo "reaction"
+`
+
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("subTarget", true) // we run the task
+		if code != 107 {                              // we expect a code 107
+			t.Errorf("Expected code 107, got %d", code)
+		}
+
+		assert.Contains(t, targetUpdates, "subTarget:requirement-check-failed[required file (test.txt) not found ]", ".subTarget:crequirement.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+	}
+}
+
+func TestRequire5(t *testing.T) {
+	source := `
+version: "1"
+config:
+    variables:
+       check: "hello"
+task:
+  - id: subTarget
+    require:
+       exists: 
+         - "tasks_test.go"
+         
+    options:
+        displaycmd: true
+    script:
+        - echo "reaction"
+`
+
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("subTarget", true) // we run the task
+		if code != 0 {                                // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+		assert.Contains(t, messages, "reaction", "reaction not found in messages ["+strings.Join(messages, ",")+"]")
+		assert.Contains(t, targetUpdates, "subTarget:wait_next_done[]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+	}
+}
+
+func TestRequire6(t *testing.T) {
+	source := `
+version: "1"
+config:
+    variables:
+       check: "hello"
+task:
+  - id: subTarget
+    require:
+       notExists: 
+         - "lulu.chk"
+         
+    options:
+        displaycmd: true
+    script:
+        - echo "reaction"
+`
+
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("subTarget", true) // we run the task
+		if code != 0 {                                // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+		assert.Contains(t, messages, "reaction", "reaction not found in messages ["+strings.Join(messages, ",")+"]")
+		assert.Contains(t, targetUpdates, "subTarget:wait_next_done[]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+	}
+}
+
+func TestRequire7(t *testing.T) {
+	source := `
+version: "1"
+config:
+    variables:
+       check: "hello"
+task:
+  - id: subTarget
+    require:
+       notExists: 
+         - tasks_test.go
+         
+    options:
+        displaycmd: true
+    script:
+        - echo "reaction"
+`
+
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("subTarget", true) // we run the task
+		if code != 107 {                              // we expect a code 0
+			t.Errorf("Expected code 107, got %d", code)
+		}
+		assert.Contains(t, targetUpdates, "subTarget:requirement-check-failed[unexpected file (tasks_test.go)  found ]", ".subTarget:req... not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+	}
+}
+
+func TestRequire8(t *testing.T) {
+	source := `
+version: "1"
+task:
+  - id: subTarget
+    require:
+       environment:
+          OLDPWD: "!hello"
+         
+    options:
+        displaycmd: true
+    script:
+        - echo "works"
+`
+
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("subTarget", true) // we run the task
+		if code != 0 {                                // we expect a code 0
+			t.Errorf("Expected code 0, got %d", code)
+		}
+		assert.Contains(t, messages, "works", "'works' not found in messages ["+strings.Join(messages, ",")+"]")
+		assert.Contains(t, targetUpdates, "subTarget:command[echo \"works\"]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+	}
+}
+
+func TestRequire9(t *testing.T) {
+	source := `
+version: "1"
+task:
+  - id: subTarget
+    require:
+       environment:
+          OLDPWD: "hello"
+         
+    options:
+        displaycmd: true
+    script:
+        - echo "works"
+`
+
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("subTarget", true) // we run the task
+		if code != 107 {
+			t.Errorf("Expected code 0, got %d", code)
+		}
+
+		assert.Contains(t, targetUpdates, "subTarget:requirement-check-failed[environment variable[OLDPWD] not matching with hello]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+	}
+}
