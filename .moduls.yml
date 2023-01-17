@@ -43,6 +43,12 @@ module:
       timeout: 30s
 
   -
+    modul: ctemplate    
+    local: true
+    test:
+      timeout: 30s
+
+  -
     modul: ctxout
     local: true
     test:

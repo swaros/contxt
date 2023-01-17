@@ -53,6 +53,13 @@ updates:
        interval: daily
     assignees:
        - swaros
+### dependencie for /module/ctemplate/
+  - package-ecosystem: gomod
+    directory: /module/ctemplate/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
 ### dependencie for /module/ctxout/
   - package-ecosystem: gomod
     directory: /module/ctxout/
