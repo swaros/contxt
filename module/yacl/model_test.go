@@ -90,6 +90,38 @@ func TestComposePath(t *testing.T) {
 
 }
 
+func TestLoadByFullPathFail(t *testing.T) {
+	currentPath, errLoad := os.Getwd()
+	if errLoad != nil {
+		t.Error(errLoad)
+	}
+	var cfg configV1
+	cfgv1 := yacl.New(&cfg, yamc.NewYamlReader()).SetSingleFile(currentPath + "/data/001-test.base.yml")
+
+	err := cfgv1.Load()
+	if err == nil {
+		t.Error("error should happen, because file can not be loaded by setting the full path for the base name")
+	}
+}
+func TestLoadByFullPath(t *testing.T) {
+	currentPath, errLoad := os.Getwd()
+	if errLoad != nil {
+		t.Error(errLoad)
+	}
+	var cfg configV1
+	cfgv1 := yacl.New(&cfg, yamc.NewYamlReader()).SetFileAndPathsByFullFilePath(currentPath + "/data/v2/001-test.base.yml")
+
+	err := cfgv1.Load()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if cfgv1.GetLoadedFile() != filepath.Clean(currentPath+"/data/v2/001-test.base.yml") {
+		t.Error("wrong file loaded", cfgv1.GetLoadedFile())
+	}
+
+}
+
 func TestPropertieLoads(t *testing.T) {
 	var cfg configV2
 	cfgv1Handl := yacl.New(&cfg, yamc.NewYamlReader()).SetSubDirs("data", "v1").SetSingleFile("cfgv2.yml")

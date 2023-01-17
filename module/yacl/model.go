@@ -23,6 +23,7 @@ package yacl
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -36,6 +37,7 @@ const (
 	PATH_UNSET            = 0
 	PATH_HOME             = 1
 	PATH_CONFIG           = 2
+	PATH_ABSOLUTE         = 3
 	ERROR_PATH_NOT_EXISTS = 101
 	NO_CONFIG_FILES_FOUND = 102
 )
@@ -57,6 +59,8 @@ type ConfigModel struct {
 	allowSubDirs     bool                               // flag to enables scanning sub folders while looking for config files
 	allowDirPattern  string                             // regex-pattern to whitelist sub folders while looking for config files
 	filesPattern     string                             // file regex-pattern while looking for config files
+	errorHappened    bool                               // flag to indicate, that an error happened while loading the configuration
+	chainError       error                              // the last error that happened while loading the configuration
 }
 
 // New creates a New yacl ConfigModel with default properties
@@ -126,7 +130,27 @@ func (c *ConfigModel) SetSubDirs(dirs ...string) *ConfigModel {
 // if you like to load one specific file so use LoadFile instead.
 // if you like more flexible, depending what files should load, define a regex-pattern and use SetFilePattern
 func (c *ConfigModel) SetSingleFile(filename string) *ConfigModel {
+	if filepath.Base(filename) != filename {
+		c.errorHappened = true
+		c.chainError = fmt.Errorf("SetSingleFile: [%s] filename should not contain any path", filename)
+	}
 	c.setFile = filename
+	return c
+}
+
+// SetFileAndPathsByFullFilePath sets the file and the path to the file. so the file will be loaded and
+// the path will be used to scan for sub directories. so this is the same as SetSingleFile and SetSubDirs
+// but in one call.
+func (c *ConfigModel) SetFileAndPathsByFullFilePath(fullPath string) *ConfigModel {
+	c.setFile = filepath.Base(fullPath)
+	c.subDirs = strings.Split(filepath.Dir(fullPath), string(filepath.Separator))
+	// remove the first element, if it is empty
+	// this will happen if the path starts with a slash
+	// so this means also we have an absolute path
+	if c.subDirs[0] == "" {
+		c.subDirs = c.subDirs[1:]
+		c.useSpecialDir = PATH_ABSOLUTE
+	}
 	return c
 }
 
@@ -168,6 +192,9 @@ func (c *ConfigModel) Empty() *ConfigModel {
 // this can be called multiple times with different files.
 // the content is merged (no deep copy, so no list merge for example)
 func (c *ConfigModel) LoadFile(path string) error {
+	if c.errorHappened {
+		return c.chainError
+	}
 	c.Empty()
 	c.setFile = path
 	var extension = filepath.Ext(path)
@@ -230,6 +257,9 @@ func (c *ConfigModel) filePattenCheck(path string) bool {
 
 // Load start loading all configuration files depends the configured behavior.
 func (c *ConfigModel) Load() error {
+	if c.errorHappened {
+		return c.chainError
+	}
 	c.Empty()
 
 	// do we have loaders?
@@ -345,6 +375,8 @@ func (c *ConfigModel) GetConfigPath() string {
 		} else {
 			dir = usrCfgDir
 		}
+	case PATH_ABSOLUTE:
+		dir = "" // this is the root of the system. we add / later
 	}
 
 	if len(c.subDirs) > 0 {
