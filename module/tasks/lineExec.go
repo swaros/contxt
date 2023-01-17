@@ -32,9 +32,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/systools"
-	"github.com/swaros/manout"
 )
 
+// lineExecuter is the main function to execute a script line
+// it returns the exit code of the executed command
+// and a boolean value if the execution was successful
 func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Task) (int, bool) {
 	replacedLine := codeLine
 	if t.phHandler != nil {
@@ -59,16 +61,13 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 			// if this is not enabled then we handle all these here
 			if !currentTask.Options.Hideout {
 
-				//outStr := systools.LabelPrintWithArg(logLine, colorCode, "39", 2) // hardcoded format for the logoutput iteself
-				outStr := manout.MessageCln(logLine)
+				outStr := logLine                    // hardcoded format for the logoutput iteself
 				if currentTask.Options.Stickcursor { // optional set back the cursor to the beginning
-					//fmt.Print("\033[G\033[K") // done by escape codes
 					t.out(MsgStickCursor(true)) // trigger the stick cursor
 				}
 
 				t.out(MsgExecOutput(outStr))         // prints the codeline
 				if currentTask.Options.Stickcursor { // cursor stick handling
-					//fmt.Print("\033[A")
 					t.out(MsgStickCursor(false)) // trigger the stick cursor after output
 				}
 			}
@@ -124,6 +123,9 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 	return systools.ExitNoCode, true
 }
 
+// ExecuteScriptLine executes a script line and returns the exit code
+// the callback function is called for each line of the output
+// the startInfo function is called if the process started
 func (t *targetExecuter) ExecuteScriptLine(dCmd string, dCmdArgs []string, command string, callback func(string, error) bool, startInfo func(*os.Process)) (int, int, error) {
 	cmdArg := append(dCmdArgs, command)
 	cmd := exec.Command(dCmd, cmdArg...)
@@ -164,6 +166,7 @@ func (t *targetExecuter) ExecuteScriptLine(dCmd string, dCmdArgs []string, comma
 	return systools.ExitOk, 0, err
 }
 
+// listenerWatch checks if a trigger is hit and executes the action
 func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *configure.Task) {
 	if currentTask.Listener != nil {
 
@@ -195,23 +198,16 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 				if actionDef.Target != "" { // here we have a target defined thats needs to be started
 					someReactionTriggered = true
 					t.getLogger().WithFields(logrus.Fields{
-						"target": actionDef.Target,
+						"target":  actionDef.Target,
+						"trigger": triggerMessage,
 					}).Debug("TRIGGER ACTION")
 
 					if currentTask.Options.Displaycmd {
-						t.out(manout.MessageCln(manout.ForeCyan, "[trigger]\t ", manout.ForeGreen, "target:", manout.ForeLightGreen, actionDef.Target))
+
+						t.out(MsgType("run-trigger-target-output"), MsgCommand(actionDef.Target), MsgTarget{Target: actionDef.Target, Context: "run-trigger-target-output", Info: "start triggered action"})
 					}
 
-					t.getLogger().WithFields(logrus.Fields{
-						"trigger": triggerMessage,
-						"target":  actionDef.Target,
-					}).Info("TRIGGER Called")
-
-					var scopeVars map[string]string = make(map[string]string)
-
-					t.getLogger().WithFields(logrus.Fields{
-						"target": actionDef.Target,
-					}).Info("RUN Triggered target (not async)")
+					var scopeVars map[string]string = make(map[string]string) // create empty arguments as scoped values
 
 					// because we are anyway in a async scope, we should no longer
 					// try to run this target too async.

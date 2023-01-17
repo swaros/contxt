@@ -23,6 +23,7 @@ package tasks
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"time"
@@ -32,7 +33,6 @@ import (
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/systools"
-	"github.com/swaros/manout"
 )
 
 type TaskListExec struct {
@@ -234,7 +234,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 				}
 				chDirError := os.Chdir(wDir)
 				if chDirError != nil {
-					manout.Error("Workspace setting seems invalid ", chDirError)
+					t.out(MsgError(errors.New("workspace setting seems invalid " + chDirError.Error())))
 					systools.Exit(systools.ErrorBySystem)
 				}
 			}
