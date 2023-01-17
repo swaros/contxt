@@ -3,6 +3,7 @@ package tasks_test
 import (
 	"errors"
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -1441,6 +1442,9 @@ task:
 }
 
 func TestRequire8(t *testing.T) {
+	if os.Getenv("OLDPWD") == "" {
+		t.Skip("OLDPWD is empty")
+	}
 	source := `
 version: "1"
 task:
@@ -1471,6 +1475,12 @@ task:
 }
 
 func TestRequire9(t *testing.T) {
+	if os.Getenv("OLDPWD") == "" {
+		t.Skip("OLDPWD is empty")
+	}
+	if os.Getenv("OLDPWD") == "hello" {
+		t.Skip("OLDPWD is hello")
+	}
 	source := `
 version: "1"
 task:
