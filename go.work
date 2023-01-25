@@ -7,11 +7,13 @@ use (
 	./module/ctxout
 	./module/dirhandle
 	./module/linehack
+	./module/runner
 	./module/shellcmd
 	./module/systools
 	./module/taskrun
-	./module/tasks	
+	./module/tasks
 	./module/trigger
 	./module/yacl
 	./module/yamc
+	/home/tziegler/develop/projects/playground/markup/markup-string
 )

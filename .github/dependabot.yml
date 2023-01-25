@@ -18,6 +18,13 @@ updates:
        interval: daily
     assignees:
        - swaros
+### dependencie for /module/runner/
+  - package-ecosystem: gomod
+    directory: /module/runner/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
 ### dependencie for /module/configure/
   - package-ecosystem: gomod
     directory: /module/configure/

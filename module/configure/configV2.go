@@ -256,17 +256,40 @@ func (c *contxtConfigure) PathWorker(callbackInDirectory func(string, string), c
 		if cnt < 1 {
 			return errors.New("no paths actually stored ")
 		}
+		prepmap := make(map[string]any)
 		for index, path := range cfg.Paths {
-			if err := os.Chdir(path.Path); err == nil {
-				callbackInDirectory(index, path.Path)
-			} else {
-				return err
-			}
-
-			if err := os.Chdir(current); err != nil {
-				return err
-			}
+			prepmap[index] = path
 		}
+		var errorWhileLoop error
+		systools.MapRangeSortedFn(prepmap, func(index string, path any) {
+			localpath := path.(WorkspaceInfoV2)
+			if err := os.Chdir(localpath.Path); err == nil {
+				callbackInDirectory(index, localpath.Path)
+			} else {
+				errorWhileLoop = err
+				return
+			}
+			if err := os.Chdir(current); err != nil {
+				errorWhileLoop = err
+				return
+			}
+		})
+		if errorWhileLoop != nil {
+			return errorWhileLoop
+		}
+
+		/*
+			for index, path := range cfg.Paths {
+				if err := os.Chdir(path.Path); err == nil {
+					callbackInDirectory(index, path.Path)
+				} else {
+					return err
+				}
+
+				if err := os.Chdir(current); err != nil {
+					return err
+				}
+			}*/
 		// now it is time for going back to the dir we was before
 		if err := os.Chdir(current); err == nil {
 			callbackBackToOrigin(current)

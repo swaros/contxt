@@ -12,6 +12,12 @@ module:
       timeout: 30s
 
   -
+    modul: runner
+    local: true
+    test:
+      timeout: 30s
+
+  -
     modul: configure
     local: true
     test:
