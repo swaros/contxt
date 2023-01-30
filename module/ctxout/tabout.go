@@ -1,7 +1,6 @@
 package ctxout
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/swaros/contxt/module/systools"
@@ -94,10 +93,10 @@ func (tr *tabRow) Render() string {
 			case 0: // left padding
 				result = append(result, PadString(cell.Text, size, cell.fillChar))
 			case 1:
-				result = append(result, systools.StringSubRight(cell.Text, size))
-				result = append(result, PadString(cell.Text, size, cell.fillChar))
+				tempStr := systools.StringSubRight(cell.Text, size)
+				result = append(result, PadString(tempStr, size, cell.fillChar))
 			case 2:
-				result = append(result, PadStringToR(cell.Text, size, cell.fillChar))
+				result = append(result, PadStringToRight(cell.Text, size, cell.fillChar))
 			}
 		} else {
 			result = append(result, cell.Text)
@@ -255,7 +254,6 @@ func (t *TabOut) TableParse(text string) string {
 			t.tableMode = true
 			tokens := t.markup.Parse(text)
 			tableSlices, outers := t.markup.BuildInnerSlice(tokens, "table")
-			fmt.Println(tableSlices, outers)
 			t.table = *t.ScanForRows(tableSlices)
 
 			// look for a table end in then outer slice
@@ -284,10 +282,8 @@ func (t *TabOut) TableParse(text string) string {
 // and we do not wailt for a table end
 func (t *TabOut) RowParse(text string) string {
 	if t.IsRow(text) {
-
 		tokens := t.markup.Parse(text)
-		rowSlices, outers := t.markup.BuildInnerSlice(tokens, "row")
-		fmt.Println(rowSlices, outers)
+		rowSlices, _ := t.markup.BuildInnerSlice(tokens, "row")
 		t.table = *t.ScanForRows(rowSlices)
 		return t.table.Render()
 	} else {
@@ -297,29 +293,29 @@ func (t *TabOut) RowParse(text string) string {
 
 // PadString Returns max len string filled with spaces
 func PadString(line string, max int, fillChar string) string {
-	if len(line) > max {
+	if LenPrintable(line) > max {
 		lastEsc := GetLastEscapeSequence(line)
 		runes := []rune(line)
 		safeSubstring := string(runes[0:max]) + lastEsc
 		return safeSubstring
 	}
-	diff := max - len(line)
+	diff := max - LenPrintable(line)
 	for i := 0; i < diff; i++ {
 		line = line + fillChar
 	}
 	return line
 }
 
-// PadStringToR Returns max len string filled with spaces right placed
-func PadStringToR(line string, max int, fillChar string) string {
-	if len(line) > max {
+// PadStringToRight Returns max len string filled with spaces right placed
+func PadStringToRight(line string, max int, fillChar string) string {
+	if LenPrintable(line) > max {
 		lastEsc := GetLastEscapeSequence(line[:max])
 		runes := []rune(line)
 
 		safeSubstring := string(runes[0:max]) + lastEsc
 		return safeSubstring
 	}
-	diff := max - len(line)
+	diff := max - LenPrintable(line)
 	for i := 0; i < diff; i++ {
 		line = fillChar + line
 	}

@@ -187,19 +187,19 @@ func (c *CmdExecutorImpl) PrintPaths() {
 					outTasks = ctxout.ForeDarkGrey + "no tasks"
 					//ctxout.CtxOut(c.session.OutPutHdnl, "       path: ", manout.Dim, " no ", manout.ForeYellow, index, " ", pathColor, add, path)
 				}
-				ctxout.CtxOut(
+				ctxout.Print(
 					c.session.OutPutHdnl,
 					"<row>",
 					ctxout.ForeLightCyan,
-					"<tab size='5' fill='~' origin='2'>",
+					"<tab size='5' fill=' ' origin='2'>",
 					index, " ",
 					"</tab>",
 					add,
-					"<tab size='65' fill='-' origin='1'>",
+					"<tab size='65' fill=' ' origin='1'>",
 					path,
 					"</tab>",
 					ctxout.ForeYellow,
-					"<tab fill='.' size='20' origin='2'>",
+					"<tab fill=' ' size='20' origin='2'>",
 					outTasks,
 					"</tab>",
 					ctxout.CleanTag,
