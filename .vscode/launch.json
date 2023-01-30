@@ -5,13 +5,31 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "start v2",
+            "name": "start v2 plain",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/v2/main.go",
             "env": {},
             "args": []
+        },
+        {
+            "name": "start v2 workspaces scan",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/v2/main.go",
+            "env": {},
+            "args": ["workspace","scan","--coloroff"]
+        },
+        {
+            "name": "v2 dir",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/v2/main.go",
+            "env": {},
+            "args": ["dir"]
         },
         {
             "name": "plain start",

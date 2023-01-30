@@ -1,6 +1,7 @@
 package ctxout_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/swaros/contxt/module/ctxout"
@@ -67,5 +68,42 @@ func TestStreamFn(t *testing.T) {
 	ctxout.Print(tst, "hello")
 	if tst.message != "hello;hello" {
 		t.Error("message should be 'hello;hello'")
+	}
+}
+
+type TPostFilter struct {
+	config ctxout.PostFilterInfo
+}
+
+func (tst *TPostFilter) CanHandleThis(text string) bool {
+
+	return strings.Contains(text, "<UPPER>") && strings.Contains(text, "</UPPER>")
+}
+
+// simple example of a post filter
+func (tst *TPostFilter) Command(cmd string) string {
+	leftparts := strings.Split(cmd, "<UPPER>")
+	rightparts := strings.Split(leftparts[1], "</UPPER>")
+	if tst.config.Disabled {
+		return leftparts[0] + rightparts[0] + rightparts[1]
+	}
+	return leftparts[0] + strings.ToUpper(rightparts[0]) + rightparts[1]
+}
+
+func (tst *TPostFilter) Update(info ctxout.PostFilterInfo) {
+	tst.config = info
+}
+
+func TestPostFilter(t *testing.T) {
+	filter := &TPostFilter{}
+	ctxout.AddPostFilter(filter)
+	message := ctxout.ToString("hello <UPPER>test</UPPER> world")
+	if message != "hello TEST world" {
+		t.Error("message should be 'hello TEST world' got '" + message + "'")
+	}
+	filter.config.Disabled = true
+	message = ctxout.ToString("hello <UPPER>test</UPPER> world")
+	if message != "hello test world" {
+		t.Error("message should be 'hello test world' got '" + message + "'")
 	}
 }

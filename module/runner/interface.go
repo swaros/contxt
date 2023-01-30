@@ -3,11 +3,13 @@ package runner
 import (
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/ctxout"
 )
 
 type CmdExecutor interface {
 	PrintPaths()
 	GetLogger() *logrus.Logger
+	GetOuputHandler() ctxout.PrintInterface
 	SetLogLevel(level string) error
 	ResetVariables()
 	MainInit()

@@ -5,12 +5,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/ctemplate"
+	"github.com/swaros/contxt/module/ctxout"
 )
 
 type CmdSession struct {
 	Log          *SessionLogger
 	TemplateHndl *ctemplate.Template
 	Cobra        *SessionCobra
+	OutPutHdnl   ctxout.PrintInterface
 }
 
 type SessionLogger struct {
@@ -20,6 +22,7 @@ type SessionLogger struct {
 
 func NewCmdSession() *CmdSession {
 	return &CmdSession{
+		OutPutHdnl:   ctxout.NewMOWrap(),
 		Cobra:        NewCobraCmds(),
 		TemplateHndl: ctemplate.New(),
 		Log: &SessionLogger{

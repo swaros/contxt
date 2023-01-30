@@ -9,7 +9,6 @@ import (
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/systools"
-	"github.com/swaros/manout"
 )
 
 type SessionCobra struct {
@@ -164,7 +163,7 @@ and also onEnter task defined in the new workspace
 				if err := configure.CfgV1.AddWorkSpace(args[0], c.ExternalCmdHndl.CallBackOldWs, c.ExternalCmdHndl.CallBackNewWs); err != nil {
 					fmt.Println(err)
 				} else {
-					ctxout.CtxOut("workspace created ", args[0])
+					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), "workspace created ", args[0])
 				}
 
 			} else {
@@ -187,14 +186,14 @@ and also onEnter task defined in the new workspace
 			//checkDefaultFlags(cmd, args)
 			if len(args) > 0 {
 				if err := configure.CfgV1.RemoveWorkspace(args[0]); err != nil {
-					manout.Error("error while trying to remove workspace", err)
+					c.log().Error("error while trying to remove workspace", err)
 					systools.Exit(systools.ErrorBySystem)
 				} else {
 					if err := configure.CfgV1.SaveConfiguration(); err != nil {
-						manout.Error("error while trying to save configuration", err)
+						c.log().Error("error while trying to save configuration", err)
 						systools.Exit(systools.ErrorBySystem)
 					}
-					ctxout.CtxOut("workspace removed ", args[0])
+					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), "workspace removed ", args[0])
 				}
 			} else {
 				fmt.Println("no workspace name given")
@@ -216,15 +215,16 @@ func (c *SessionCobra) GetScanCmd() *cobra.Command {
 		Short: "scan for new projects in the workspace",
 		Long:  "scan for new projects in the workspace",
 		Run: func(cmd *cobra.Command, args []string) {
-			//checkDefaultFlags(cmd, args)
+			c.log().Debug("scan for new projects")
+			c.checkDefaultFlags(cmd, args)
 			all, updated := c.ExternalCmdHndl.FindWorkspaceInfoByTemplate(func(ws string, cnt int, update bool, info configure.WorkspaceInfoV2) {
 				if update {
-					ctxout.CtxOut(manout.ForeBlue, ws, " ", manout.ForeDarkGrey, " ", info.Path, manout.ForeGreen, "\tupdated")
+					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), ctxout.ForeBlue, ws, " ", ctxout.ForeDarkGrey, " ", info.Path, ctxout.ForeGreen, "\tupdated")
 				} else {
-					ctxout.CtxOut(manout.ForeBlue, ws, " ", manout.ForeDarkGrey, " ", info.Path, manout.ForeYellow, "\tignored. nothing to do.")
+					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), ctxout.ForeBlue, ws, " ", ctxout.ForeDarkGrey, " ", info.Path, ctxout.ForeYellow, "\tignored. nothing to do.")
 				}
 			})
-			ctxout.CtxOut("found ", all, " projects and updated ", updated, " projects")
+			ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), "found ", all, " projects and updated ", updated, " projects")
 
 		},
 	}
@@ -268,7 +268,9 @@ func (c *SessionCobra) log() *logrus.Logger {
 func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {
 	color, err := cmd.Flags().GetBool("coloroff")
 	if err == nil && color {
-		manout.ColorEnabled = false
+		behave := ctxout.GetBehavior()
+		behave.NoColored = true
+		ctxout.SetBehavior(behave)
 	}
 
 	c.Options.LogLevel, _ = cmd.Flags().GetString("loglevel")

@@ -61,3 +61,21 @@ func TestMarkup2(t *testing.T) {
 		}
 	}
 }
+
+func TestMixedMarkups(t *testing.T) {
+	testStr := "<tab size='5' origin='2'>0</tab><tab size='30' origin='2'>/home/testpath/someplace/check</tab><tab size='30'>no tasks</tab>"
+	mu := ctxout.NewMarkup()
+	res := mu.Parse(testStr)
+
+	expected := []string{"<tab size='5' origin='2'>", "0", "</tab>", "<tab size='30' origin='2'>", "/home/testpath/someplace/check", "</tab>", "<tab size='30'>", "no tasks", "</tab>"}
+	if len(res) != len(expected) {
+		t.Error("expected ", len(expected), " got ", len(res))
+		diffParsed(t, res, expected)
+	} else {
+		for i, r := range res {
+			if r.Text != expected[i] {
+				t.Error("expected ", expected[i], " got ", r.Text)
+			}
+		}
+	}
+}

@@ -2,25 +2,13 @@ package ctxout
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 type Markup struct {
-	startToken   rune
-	endToken     rune
-	closingToken rune
-}
-
-type MarkupParser struct {
-	HandleErrors bool          // flag if we stop on errors
-	Entries      []MarkupEntry // contains all found markups
-	LeftString   string        // at least the part of the string, until the first markup
-}
-
-type MarkupEntry struct {
-	Text       string
-	Properties []Markup
-	Parsed     string
+	startToken rune
+	endToken   rune
 }
 
 type Parsed struct {
@@ -30,9 +18,8 @@ type Parsed struct {
 
 func NewMarkup() *Markup {
 	return &Markup{
-		startToken:   '<',
-		endToken:     '>',
-		closingToken: '/',
+		startToken: '<',
+		endToken:   '>',
 	}
 }
 
@@ -52,14 +39,14 @@ func (m *Markup) Parse(orig string) []Parsed {
 		for _, markup := range markups { // iterate over all markups
 			// we ignore empty markups
 			if markup != "" {
-				strs := strings.Split(searchString, markup) // split the string by the markup
-				if len(strs) > 0 {                          // if we have a part before the markup
+				strs := strings.SplitN(searchString, markup, 2) // split the string by the markup
+				if len(strs) > 0 {                              // if we have a part before the markup
 					if strs[0] != "" { // if the part before the markup is not empty
 						pars = append(pars, Parsed{IsMarkup: false, Text: strs[0]}) // add the part before the markup
 					}
 
 					pars = append(pars, Parsed{IsMarkup: true, Text: markup}) // add the markup
-					searchString = strs[1]                                    // set the new search string to the part after the markup
+					searchString = strings.Join(strs[1:], "")                 // set the new search string to the part after the markup
 				}
 			}
 
@@ -84,4 +71,38 @@ func (m *Markup) splitByMarks(orig string) ([]string, bool) {
 	}
 
 	return result, found
+}
+
+func (m *Markup) GetMarkupIntValue(markup string, key string) int {
+	var result int
+	cmpStr := key + `='(\d+)'` // compose the regex
+	re := regexp.MustCompile(cmpStr)
+	newStrs := re.FindAllStringSubmatch(markup, -1)
+	for _, s := range newStrs {
+		result = m.toInt(s[1])
+	}
+	return result
+}
+
+func (m *Markup) GetMarkupStringValue(markup string, key string) string {
+	var result string
+	cmpStr := key + `='([^']*)'` // compose the regex
+	re := regexp.MustCompile(cmpStr)
+	newStrs := re.FindAllStringSubmatch(markup, -1)
+	for _, s := range newStrs {
+		result = s[1]
+	}
+	return result
+}
+
+func (m *Markup) toInt(s string) int {
+	var result int
+	if s != "" {
+		var e error
+		result, e = strconv.Atoi(s)
+		if e != nil {
+			result = 0
+		}
+	}
+	return result
 }
