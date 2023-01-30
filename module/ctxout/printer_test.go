@@ -37,12 +37,23 @@ func (tst *TestAsInterface) Filter(msg interface{}) interface{} {
 	return msg
 }
 
+func (tst *TestAsInterface) Update(info ctxout.CtxOutBehavior) {
+}
+
+func (tst *TestAsInterface) CanHandleThis(text string) bool {
+	return true
+}
+
 func TestInterfaces(t *testing.T) {
 
 	tst := &TestAsInterface{}
+	if !ctxout.IsPrinterInterface(tst) {
+		t.Error("TestAsInterface should be a printer interface")
+	}
+
 	message := ctxout.ToString(tst, "hello", "test")
-	if message != "hello TEST" {
-		t.Error("message should be 'hello TEST'")
+	if message != "helloTEST" {
+		t.Error("message should be 'helloTEST'")
 	}
 
 }

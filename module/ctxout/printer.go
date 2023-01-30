@@ -116,6 +116,14 @@ func InitTerminal() {
 	behavior.Info.IsTerminal = true
 }
 
+func IsPrinterInterface(msg interface{}) bool {
+	switch msg.(type) {
+	case PrintInterface:
+		return true
+	}
+	return false
+}
+
 // Message is the function that will be called by the Print and PrintLn functions
 func Message(msg ...interface{}) []interface{} {
 	initCtxOut()

@@ -1,25 +1,32 @@
 package ctxout
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/swaros/contxt/module/systools"
 )
 
 const (
-	RowStart = "<row>"
-	RowEnd   = "</row>"
-	TabStart = "<tab"
-	TabEnd   = "</tab>"
+	TableStart = "<table"
+	TableEnd   = "</table>"
+	RowStart   = "<row>"
+	RowEnd     = "</row>"
+	TabStart   = "<tab"
+	TabEnd     = "</tab>"
 )
 
-type table struct {
-	rows []tabRow
+type tableHandle struct {
+	rows         []tabRow
+	parent       *TabOut
+	rowSeperator string
 }
 
 // tabRow is a single row in a table
 type tabRow struct {
-	Cells []tabCell
+	Cells        []tabCell
+	parent       *tableHandle
+	rowEndString string
 }
 
 // tabCell is a single cell in a row
@@ -28,9 +35,13 @@ type tabCell struct {
 	Origin       int
 	OriginString string
 	Text         string
+	parent       *tabRow
+	fillChar     string
 }
 
 type TabOut struct {
+	table       tableHandle
+	tableMode   bool // if we are in the table mode, then we will not render until we get a </table> tag
 	rows        []tabCell
 	markup      Markup
 	info        PostFilterInfo
@@ -43,24 +54,175 @@ func NewTabOut() *TabOut {
 	}
 }
 
-func NewTabRow() *tabCell {
+func NewTabCell(parent *tabRow) *tabCell {
 	return &tabCell{
-		Size:   0, // 0 = auto
-		Origin: 0, // 0 left, 1 center, 2 right
-		Text:   "",
+		Size:     0, // 0 = auto
+		Origin:   0, // 0 left, 1 center, 2 right
+		Text:     "",
+		parent:   parent,
+		fillChar: "",
 	}
+}
+
+func NewTabRow(parent *tableHandle) *tabRow {
+	return &tabRow{
+		Cells:        []tabCell{},
+		parent:       parent,
+		rowEndString: "",
+	}
+}
+
+func NewTableHandle(parent *TabOut) *tableHandle {
+	return &tableHandle{
+		rows:         []tabRow{},
+		parent:       parent,
+		rowSeperator: "\n",
+	}
+}
+
+// Row functions
+
+func (tr *tabRow) Render() string {
+	if len(tr.Cells) == 0 {
+		return ""
+	}
+	var result []string
+	for _, cell := range tr.Cells {
+		if cell.Size > 0 {
+			size := tr.parent.parent.GetSize(cell.Size)
+			switch cell.Origin {
+			case 0: // left padding
+				result = append(result, PadString(cell.Text, size, cell.fillChar))
+			case 1:
+				result = append(result, systools.StringSubRight(cell.Text, size))
+				result = append(result, PadString(cell.Text, size, cell.fillChar))
+			case 2:
+				result = append(result, PadStringToR(cell.Text, size, cell.fillChar))
+			}
+		} else {
+			result = append(result, cell.Text)
+		}
+	}
+	return strings.Join(result, "") + tr.rowEndString
+}
+
+func (tb *tableHandle) Render() string {
+	var result []string
+	for _, row := range tb.rows {
+		cnt := row.Render()
+		if cnt != "" {
+			result = append(result, cnt)
+		}
+	}
+	return strings.Join(result, tb.rowSeperator)
 }
 
 func (t *TabOut) Filter(msg interface{}) interface{} {
 	return msg
 }
 
+// Update is called when the context is updated
+// interface fulfills the PostFilter interface
 func (t *TabOut) Update(info PostFilterInfo) {
 	t.info = info
 }
 
+// CanHandleThis returns true if the text is a table
+// interface fulfills the PostFilter interface
 func (t *TabOut) CanHandleThis(text string) bool {
+	return t.IsTable(text) || t.IsRow(text) || t.IsTab(text)
+}
+
+// Command is called when the text is a table
+// interface fulfills the PostFilter interface
+func (t *TabOut) Command(cmd string) string {
+	if t.IsTable(cmd) || t.IsRow(cmd) {
+		return t.TableParse(cmd)
+	} else {
+		return cmd
+	}
+}
+
+func (t *TabOut) Clear() {
+	t.rows = []tabCell{}
+	t.tableMode = false
+	t.table = tableHandle{}
+}
+
+func (t *TabOut) ScanForRows(tokens []Parsed) *tableHandle {
+	table := NewTableHandle(t)
+	/*
+		t.markup.BuildInnerSliceEach(tokens, "row", func(markup []Parsed) bool {
+			row := t.ScanForCells(markup, table)
+			table.rows = append(table.rows, *row)
+			return true
+		})*/
+	t.updateRows(table, tokens)
+	return table
+}
+
+func (t *TabOut) updateRows(table *tableHandle, tokens []Parsed) {
+	t.markup.BuildInnerSliceEach(tokens, "row", func(markup []Parsed) bool {
+		row := t.ScanForCells(markup, table)
+		table.rows = append(table.rows, *row)
+		return true
+	})
+}
+
+func (t *TabOut) GetProperty(text string, propertie string, defaultValue interface{}) interface{} {
+	if strings.Contains(text, propertie) {
+		switch defaultValue.(type) {
+		case int:
+			return t.markup.GetMarkupIntValue(text, propertie)
+		case string:
+			return t.markup.GetMarkupStringValue(text, propertie)
+		default:
+			return defaultValue
+		}
+	} else {
+		return defaultValue
+	}
+}
+
+func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
+	tabRow := NewTabRow(table)
+	tabCell := NewTabCell(tabRow)
+	for _, token := range tokens {
+		if token.IsMarkup {
+			if strings.HasPrefix(token.Text, "<tab") {
+				tabCell.Size = 0
+				tabCell.Origin = 0
+				tabCell.fillChar = t.GetProperty(token.Text, "fill", " ").(string)
+				if strings.Contains(token.Text, "size=") {
+					tabCell.Size = t.markup.GetMarkupIntValue(token.Text, "size")
+				}
+				if strings.Contains(token.Text, "origin=") {
+					tabCell.Origin = t.markup.GetMarkupIntValue(token.Text, "origin")
+				}
+			} else if strings.HasPrefix(token.Text, "</tab>") {
+				t.rows = append(t.rows, *tabCell)
+				tabCell = NewTabCell(tabRow)
+
+			}
+		} else {
+			tabCell.Text = token.Text
+			tabRow.Cells = append(tabRow.Cells, *tabCell)
+			tabCell = NewTabCell(tabRow)
+		}
+	}
+	return tabRow
+}
+
+func (t *TabOut) IsTable(text string) bool {
+	return strings.HasPrefix(text, TableStart) || strings.HasSuffix(text, TableEnd)
+}
+
+func (t *TabOut) IsRow(text string) bool {
 	return strings.HasPrefix(text, RowStart) && strings.HasSuffix(text, RowEnd)
+}
+
+func (t *TabOut) IsTab(text string) bool {
+	return strings.HasPrefix(text, TabStart) && strings.HasSuffix(text, TabEnd)
 }
 
 func (t *TabOut) GetSize(orig int) int {
@@ -75,72 +237,66 @@ func (t *TabOut) GetSize(orig int) int {
 	return orig
 }
 
-func (t *TabOut) Render() string {
-	var result string
-	for _, row := range t.rows {
-		if row.Size > 0 {
-			size := t.GetSize(row.Size)
-			switch row.Origin {
-			case 0: // left padding
-				row.Text = PadString(row.Text, size)
-			case 1:
-				row.Text = systools.StringSubRight(row.Text, size)
-				row.Text = PadString(row.Text, size)
-			case 2:
-				row.Text = PadStringToR(row.Text, size)
+// TableParse parses a table
+// If a Table is created, we also enters table mode.
+// In this mode the created table is not rendered until the table is closed.
+func (t *TabOut) TableParse(text string) string {
+	if t.IsTable(text) {
+		if t.tableMode {
+			if strings.HasPrefix(text, "<table") {
+				return "" // we are already in table mode, so we return nothing
 			}
+			if strings.HasPrefix(text, "</table>") {
+				t.tableMode = false
+				return t.table.Render()
+			}
+		} else {
 
-			switch row.OriginString {
-			case "left":
-				row.Text = PadString(row.Text, size)
-			case "rightReverse":
-				row.Text = PadString(row.Text, size)
-			case "right":
-				row.Text = PadStringToR(row.Text, size)
+			t.tableMode = true
+			tokens := t.markup.Parse(text)
+			tableSlices, outers := t.markup.BuildInnerSlice(tokens, "table")
+			fmt.Println(tableSlices, outers)
+			t.table = *t.ScanForRows(tableSlices)
+
+			// look for a table end in then outer slice
+			for _, outer := range outers {
+				if outer.IsMarkup && strings.HasPrefix(outer.Text, "</table>") {
+					t.tableMode = false
+					return t.table.Render()
+				}
 			}
+			return "" // we are in table mode, but no table end found. so we return nothing
 		}
-		result += row.Text
+		return "How came we here?"
+
+	} else if t.IsRow(text) {
+		if t.tableMode {
+			t.updateRows(&t.table, t.markup.Parse(text))
+			return ""
+		}
+		return t.RowParse(text)
+	} else {
+		return text
 	}
-	t.rows = []tabCell{}
-	return result
 }
 
-func (t *TabOut) Command(cmd string) string {
-	if t.CanHandleThis(cmd) {
-		cmd = strings.TrimPrefix(cmd, RowStart)
-		cmd = strings.TrimSuffix(cmd, RowEnd)
-		tokens := t.markup.Parse(cmd)
-		tabRow := NewTabRow()
-		for _, token := range tokens {
-			if token.IsMarkup {
-				if strings.HasPrefix(token.Text, "<tab") {
-					tabRow.Size = 0
-					tabRow.Origin = 0
-					if strings.Contains(token.Text, "size=") {
-						tabRow.Size = t.markup.GetMarkupIntValue(token.Text, "size")
-					}
-					if strings.Contains(token.Text, "origin=") {
-						tabRow.Origin = t.markup.GetMarkupIntValue(token.Text, "origin")
-					}
-				} else if strings.HasPrefix(token.Text, "</tab>") {
-					t.rows = append(t.rows, *tabRow)
-					tabRow = NewTabRow()
+// similar to TableParse, but for a single row
+// and we do not wailt for a table end
+func (t *TabOut) RowParse(text string) string {
+	if t.IsRow(text) {
 
-				}
-			} else {
-				tabRow.Text = token.Text
-				t.rows = append(t.rows, *tabRow)
-				tabRow = NewTabRow()
-			}
-		}
-		return t.Render()
+		tokens := t.markup.Parse(text)
+		rowSlices, outers := t.markup.BuildInnerSlice(tokens, "row")
+		fmt.Println(rowSlices, outers)
+		t.table = *t.ScanForRows(rowSlices)
+		return t.table.Render()
+	} else {
+		return text
 	}
-
-	return cmd
 }
 
 // PadString Returns max len string filled with spaces
-func PadString(line string, max int) string {
+func PadString(line string, max int, fillChar string) string {
 	if len(line) > max {
 		lastEsc := GetLastEscapeSequence(line)
 		runes := []rune(line)
@@ -149,13 +305,13 @@ func PadString(line string, max int) string {
 	}
 	diff := max - len(line)
 	for i := 0; i < diff; i++ {
-		line = line + " "
+		line = line + fillChar
 	}
 	return line
 }
 
 // PadStringToR Returns max len string filled with spaces right placed
-func PadStringToR(line string, max int) string {
+func PadStringToR(line string, max int, fillChar string) string {
 	if len(line) > max {
 		lastEsc := GetLastEscapeSequence(line[:max])
 		runes := []rune(line)
@@ -165,7 +321,7 @@ func PadStringToR(line string, max int) string {
 	}
 	diff := max - len(line)
 	for i := 0; i < diff; i++ {
-		line = " " + line
+		line = fillChar + line
 	}
 	return line
 }

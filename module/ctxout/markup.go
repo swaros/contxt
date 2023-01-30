@@ -9,6 +9,7 @@ import (
 type Markup struct {
 	startToken rune
 	endToken   rune
+	closeIdent string // the identifier for closing a markup
 }
 
 type Parsed struct {
@@ -20,6 +21,7 @@ func NewMarkup() *Markup {
 	return &Markup{
 		startToken: '<',
 		endToken:   '>',
+		closeIdent: "/", // the identifier for closing a markup
 	}
 }
 
@@ -56,6 +58,75 @@ func (m *Markup) Parse(orig string) []Parsed {
 		}
 	}
 	return pars
+}
+
+func (m *Markup) getStartToken(token string) string {
+	return string(m.startToken) + token
+}
+
+func (m *Markup) getEndToken(token string) string {
+	return string(m.startToken) + m.closeIdent + token
+}
+
+func (m *Markup) BuildInnerSlice(parsed []Parsed, outerMarkup string) ([]Parsed, []Parsed) {
+	var result []Parsed
+	var outer []Parsed
+	inInnerBlock := false
+	startM := m.getStartToken(outerMarkup)
+	endM := m.getEndToken(outerMarkup)
+	for _, p := range parsed {
+		if p.IsMarkup {
+			if strings.HasPrefix(p.Text, endM) {
+				inInnerBlock = false
+				outer = append(outer, p)
+				return result, outer
+			}
+			if inInnerBlock {
+				result = append(result, p)
+			} else {
+				inInnerBlock = strings.HasPrefix(p.Text, startM)
+				if inInnerBlock {
+					outer = append(outer, p) // if we hit this once, we have a outer markup
+				}
+			}
+		} else {
+			if inInnerBlock {
+				result = append(result, p)
+			}
+		}
+	}
+	return result, outer
+}
+
+func (m *Markup) BuildInnerSliceEach(parsed []Parsed, outerMarkup string, handleFn func(markup []Parsed) bool) []Parsed {
+	var result []Parsed
+	inInnerBlock := false
+	startM := m.getStartToken(outerMarkup)
+	endM := m.getEndToken(outerMarkup)
+	for _, p := range parsed {
+		if p.IsMarkup {
+			if strings.HasPrefix(p.Text, endM) {
+				inInnerBlock = false
+				if handleFn != nil && !handleFn(result) { // if the handleFn returns false, we stop the iteration
+					return result
+				}
+				result = []Parsed{} // reset the result after each handle
+			}
+			if inInnerBlock {
+				result = append(result, p)
+			} else {
+				inInnerBlock = strings.HasPrefix(p.Text, startM)
+			}
+		} else {
+			if inInnerBlock {
+				result = append(result, p)
+			}
+		}
+	}
+	if handleFn != nil {
+		handleFn(result)
+	}
+	return result
 }
 
 func (m *Markup) splitByMarks(orig string) ([]string, bool) {
