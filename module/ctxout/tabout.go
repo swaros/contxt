@@ -16,9 +16,10 @@ const (
 )
 
 type tableHandle struct {
-	rows         []tabRow
-	parent       *TabOut
-	rowSeperator string
+	rows             []tabRow
+	parent           *TabOut
+	rowSeperator     string
+	sizeCalculations map[int]int
 }
 
 // tabRow is a single row in a table
@@ -26,6 +27,7 @@ type tabRow struct {
 	Cells        []tabCell
 	parent       *tableHandle
 	rowEndString string
+	maxLengths   []int
 }
 
 // tabCell is a single cell in a row
@@ -36,6 +38,8 @@ type tabCell struct {
 	Text         string
 	parent       *tabRow
 	fillChar     string
+	index        int    // reference to the index in the parent row
+	drawMode     string // fixed = fixed size, relative = relative to terminal size, content = max size of content
 }
 
 type TabOut struct {
@@ -59,7 +63,7 @@ func NewTabCell(parent *tabRow) *tabCell {
 		Origin:   0, // 0 left, 1 center, 2 right
 		Text:     "",
 		parent:   parent,
-		fillChar: "",
+		fillChar: " ",
 	}
 }
 
@@ -73,22 +77,111 @@ func NewTabRow(parent *tableHandle) *tabRow {
 
 func NewTableHandle(parent *TabOut) *tableHandle {
 	return &tableHandle{
-		rows:         []tabRow{},
-		parent:       parent,
-		rowSeperator: "\n",
+		rows:             []tabRow{},
+		parent:           parent,
+		rowSeperator:     "\n",
+		sizeCalculations: make(map[int]int),
 	}
 }
 
 // Row functions
+
+func (tr *TabOut) getMaxLenByIndex(index int) int {
+	max := 0
+	for _, row := range tr.table.rows {
+		if len, ok := row.getLenByIndex(index); ok {
+			if len > max {
+				max = len
+			}
+		}
+	}
+	return max
+}
+
+func (tr *tabRow) getLenByIndex(index int) (int, bool) {
+	if len(tr.maxLengths) > index {
+		return tr.maxLengths[index], true
+	}
+	return 0, false
+}
+
+func (tr *tabRow) GetSize(cell *tabCell, index int) int {
+	orig := cell.Size
+	if tr.parent.parent.GetInfo().IsTerminal {
+		if tr.parent.parent.RowCalcMode == 0 { // relative to terminal width
+			calculatedSize := tr.parent.parent.GetSize(cell.Size)
+			if orig > 100 {
+				orig = 100
+			}
+
+			switch cell.drawMode {
+			case "fixed": // fixed size. if the calculated size is bigger than the cell size, then we will use the cell size
+				if calculatedSize > cell.Size {
+					diff := calculatedSize - cell.Size
+					if diff > 0 {
+						tr.parent.SetSizeCalculation(cell.index, diff) // store the difference so we can add it to the next cell
+						return cell.Size
+					}
+				}
+				return calculatedSize
+			case "extend": // fill the rest of the row with the space if prevoius fixed or content cells are smaller than the calculated size
+				fillSize := tr.parent.GetSumSize(cell.index)
+				if fillSize > 0 {
+					return calculatedSize + fillSize
+				}
+				return calculatedSize
+			case "content": // we will use the max size of the content if they is smaller than the calculated size
+				contentSize := tr.parent.parent.getMaxLenByIndex(cell.index)
+				diff := calculatedSize - contentSize
+				if diff > 0 {
+					tr.parent.SetSizeCalculation(cell.index, diff) // store the difference so we can add it to the next cell
+					return contentSize
+				}
+
+				return calculatedSize
+			default:
+				return calculatedSize
+			}
+		}
+	}
+
+	return cell.Size
+}
+
+func (tb *tableHandle) SetSizeCalculation(index int, size int) {
+	tb.sizeCalculations[index] = size
+}
+
+func (tb *tableHandle) GetSize(index int) (int, bool) {
+	if size, ok := tb.sizeCalculations[index]; ok {
+		return size, true
+	}
+	return 0, false
+}
+
+func (tb *tableHandle) GetSumSize(untilIndex int) int {
+	sum := 0
+	for indx, size := range tb.sizeCalculations {
+		if indx > untilIndex {
+			break
+		}
+		sum += size
+	}
+	return sum
+}
 
 func (tr *tabRow) Render() string {
 	if len(tr.Cells) == 0 {
 		return ""
 	}
 	var result []string
-	for _, cell := range tr.Cells {
+	for indx, cell := range tr.Cells {
 		if cell.Size > 0 {
+			rowSize := tr.GetSize(&cell, indx)
 			size := tr.parent.parent.GetSize(cell.Size)
+			if rowSize > 0 {
+				size = rowSize
+			}
 			switch cell.Origin {
 			case 0: // left padding
 				result = append(result, PadString(cell.Text, size, cell.fillChar))
@@ -148,14 +241,12 @@ func (t *TabOut) Clear() {
 	t.table = tableHandle{}
 }
 
+func (t *TabOut) GetInfo() PostFilterInfo {
+	return t.info
+}
+
 func (t *TabOut) ScanForRows(tokens []Parsed) *tableHandle {
 	table := NewTableHandle(t)
-	/*
-		t.markup.BuildInnerSliceEach(tokens, "row", func(markup []Parsed) bool {
-			row := t.ScanForCells(markup, table)
-			table.rows = append(table.rows, *row)
-			return true
-		})*/
 	t.updateRows(table, tokens)
 	return table
 }
@@ -171,14 +262,16 @@ func (t *TabOut) updateRows(table *tableHandle, tokens []Parsed) {
 func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 	tabRow := NewTabRow(table)
 	tabCell := NewTabCell(tabRow)
-	for _, token := range tokens {
+	for index, token := range tokens {
+		tSize := LenPrintable(token.Text)
+		tabCell.index = index
 		if token.IsMarkup {
 			if strings.HasPrefix(token.Text, "<tab") {
-				tabCell.Size = 0
-				tabCell.Origin = 0
+				tSize = 0 // markup have no text length
 				tabCell.fillChar = token.GetProperty("fill", " ").(string)
 				tabCell.Size = token.GetProperty("size", 0).(int)
 				tabCell.Origin = token.GetProperty("origin", 0).(int)
+				tabCell.drawMode = token.GetProperty("draw", "relative").(string)
 			} else if strings.HasPrefix(token.Text, "</tab>") {
 				t.rows = append(t.rows, *tabCell)
 				tabCell = NewTabCell(tabRow)
@@ -189,6 +282,7 @@ func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 			tabRow.Cells = append(tabRow.Cells, *tabCell)
 			tabCell = NewTabCell(tabRow)
 		}
+		tabRow.maxLengths = append(tabRow.maxLengths, tSize) // get the maximum length of the row
 	}
 	return tabRow
 }

@@ -181,25 +181,22 @@ func (c *CmdExecutorImpl) PrintPaths() {
 				if exists {
 					targets, _ := TemplateTargetsAsMap(template, true)
 					outTasks = strings.Join(targets, ", ")
-
-					//ctxout.CtxOut(c.session.OutPutHdnl, "       path: ", manout.Dim, " no ", manout.ForeYellow, index, " ", pathColor, add, path, manout.CleanTag, " targets", "[", manout.ForeYellow, outTasks, manout.CleanTag, "]")
 				} else {
 					outTasks = ctxout.ForeDarkGrey + "no tasks"
-					//ctxout.CtxOut(c.session.OutPutHdnl, "       path: ", manout.Dim, " no ", manout.ForeYellow, index, " ", pathColor, add, path)
 				}
 				ctxout.Print(
 					c.session.OutPutHdnl,
 					"<row>",
-					ctxout.ForeLightCyan,
-					"<tab size='5' fill=' ' origin='2'>",
+					ctxout.ForeLightBlue,
+					"<tab size='5' fill=' ' draw='fixed' origin='2'>",
 					index, " ",
 					"</tab>",
 					add,
-					"<tab size='65' fill=' ' origin='1'>",
-					path,
+					"<tab size='65' draw='content' fill=' ' origin='1'>",
+					path, " ",
 					"</tab>",
 					ctxout.ForeYellow,
-					"<tab fill=' ' size='20' origin='2'>",
+					"<tab fill=' ' draw='extend' size='30' origin='2'>",
 					outTasks,
 					"</tab>",
 					ctxout.CleanTag,
