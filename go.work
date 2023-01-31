@@ -14,6 +14,5 @@ use (
 	./module/tasks
 	./module/trigger
 	./module/yacl
-	./module/yamc
-	/home/tziegler/develop/projects/playground/markup/markup-string
+	./module/yamc	
 )
