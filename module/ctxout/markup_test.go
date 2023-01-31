@@ -45,6 +45,49 @@ func TestMarkup(t *testing.T) {
 	}
 }
 
+func TestCheckFlag(t *testing.T) {
+	mu := ctxout.NewMarkup()
+	parsed := mu.Parse(`<style color='red'></style><style  maincolor='red'></style><style colorback='blue'></style>`)
+	if len(parsed) != 6 {
+		t.Error("expected 6 results. got ", len(parsed))
+	}
+
+	if parsed[0].GetProperty("color", "blue") != "red" {
+		t.Error("expected red got ", parsed[0].GetProperty("color", "blue"))
+	}
+
+	if parsed[2].GetProperty("color", "blue") != "blue" {
+		t.Error("expected blue got ", parsed[2].GetProperty("color", "blue"))
+	}
+
+	if parsed[4].GetProperty("color", "orange") != "orange" {
+		t.Error("expected orange got ", parsed[4].GetProperty("color", "orange"))
+	}
+
+	if parsed[4].GetProperty("color", float64(15)) != float64(15) {
+		t.Error("expected 15 as float64 got ", parsed[4].GetProperty("color", float64(15)))
+	}
+
+	if parsed[4].GetProperty("color", 15) != 15 {
+		t.Error("expected 15  got ", parsed[4].GetProperty("color", 15))
+	}
+
+	val, found := parsed[0].GetMarkupIntValue("color")
+	if found {
+		t.Error("expected not found got ", val)
+	}
+
+	valStr, xfound := parsed[0].GetMarkupStringValue("color")
+	if !xfound {
+		t.Error("expected found got not found")
+	} else {
+		if valStr != "red" {
+			t.Error("expected red got ", valStr)
+		}
+	}
+
+}
+
 func TestMarkup2(t *testing.T) {
 	mu := ctxout.NewMarkup()
 	res := mu.Parse(`Marlon Brando <stay clean><some else>gotcha right<> nana <style color="red">World</style> chacka`)
@@ -76,6 +119,22 @@ func TestMixedMarkups(t *testing.T) {
 			if r.Text != expected[i] {
 				t.Error("expected ", expected[i], " got ", r.Text)
 			}
+		}
+	}
+}
+
+func TestOwnMarkup(t *testing.T) {
+	testStr := "{ONE}hello{-ONE}{TWO}world{-TWO}"
+	mu := ctxout.NewMarkup()
+	res := mu.SetStartToken('{').SetEndToken('}').SetCloseIdent('-').Parse(testStr)
+	if len(res) != 6 {
+		t.Error("expected 6 results. got ", len(res))
+	}
+
+	expected := []string{"{ONE}", "hello", "{-ONE}", "{TWO}", "world", "{-TWO}"}
+	for i, r := range res {
+		if r.Text != expected[i] {
+			t.Error("expected ", expected[i], " got ", r.Text)
 		}
 	}
 }

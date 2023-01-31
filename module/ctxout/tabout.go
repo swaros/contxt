@@ -168,21 +168,6 @@ func (t *TabOut) updateRows(table *tableHandle, tokens []Parsed) {
 	})
 }
 
-func (t *TabOut) GetProperty(text string, propertie string, defaultValue interface{}) interface{} {
-	if strings.Contains(text, propertie) {
-		switch defaultValue.(type) {
-		case int:
-			return t.markup.GetMarkupIntValue(text, propertie)
-		case string:
-			return t.markup.GetMarkupStringValue(text, propertie)
-		default:
-			return defaultValue
-		}
-	} else {
-		return defaultValue
-	}
-}
-
 func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 	tabRow := NewTabRow(table)
 	tabCell := NewTabCell(tabRow)
@@ -191,13 +176,9 @@ func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 			if strings.HasPrefix(token.Text, "<tab") {
 				tabCell.Size = 0
 				tabCell.Origin = 0
-				tabCell.fillChar = t.GetProperty(token.Text, "fill", " ").(string)
-				if strings.Contains(token.Text, "size=") {
-					tabCell.Size = t.markup.GetMarkupIntValue(token.Text, "size")
-				}
-				if strings.Contains(token.Text, "origin=") {
-					tabCell.Origin = t.markup.GetMarkupIntValue(token.Text, "origin")
-				}
+				tabCell.fillChar = token.GetProperty("fill", " ").(string)
+				tabCell.Size = token.GetProperty("size", 0).(int)
+				tabCell.Origin = token.GetProperty("origin", 0).(int)
 			} else if strings.HasPrefix(token.Text, "</tab>") {
 				t.rows = append(t.rows, *tabCell)
 				tabCell = NewTabCell(tabRow)
@@ -249,6 +230,12 @@ func (t *TabOut) TableParse(text string) string {
 				t.tableMode = false
 				return t.table.Render()
 			}
+
+			if strings.HasSuffix(text, TableEnd) {
+				t.tableMode = false
+				t.updateRows(&t.table, t.markup.Parse(text))
+				return t.table.Render()
+			}
 		} else {
 
 			t.tableMode = true
@@ -265,7 +252,7 @@ func (t *TabOut) TableParse(text string) string {
 			}
 			return "" // we are in table mode, but no table end found. so we return nothing
 		}
-		return "How came we here?"
+		return ""
 
 	} else if t.IsRow(text) {
 		if t.tableMode {

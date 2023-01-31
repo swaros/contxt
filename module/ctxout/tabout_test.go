@@ -104,6 +104,31 @@ second line_____________________________----------------------we do it different
 	}
 }
 
+func TestSizedTaboutNotClosedExtra(t *testing.T) {
+	to := ctxout.NewTabOut()
+
+	output1 := to.Command("<table>")
+	output2 := to.Command("<row><tab fill='.' size='50'>this is a test</tab><tab fill='+' size='50' origin='2'>and this is another test</tab></row>")
+	output3 := to.Command("<row><tab fill='_' size='50'>second line</tab><tab fill='-' size='50' origin='2'>we do it different</tab></row></table>")
+
+	expect := ""
+	if output1 != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output1)
+	}
+
+	expect = ""
+	if output2 != expect {
+		t.Errorf("Expected\n%s\nbut got\n'%s'\n", expect, output2)
+	}
+
+	expect = `this is a test....................................++++++++++++++++++++++++++and this is another test
+second line_______________________________________--------------------------------we do it different`
+	if output3 != expect {
+		t.Errorf("Expected\n%s\n but got\n%s\n__", expect, output3)
+	}
+
+}
+
 // testing single row in a table. all in one in one line
 func TestTableTabout(t *testing.T) {
 	to := ctxout.NewTabOut()

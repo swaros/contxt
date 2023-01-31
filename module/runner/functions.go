@@ -206,7 +206,7 @@ func (c *CmdExecutorImpl) PrintPaths() {
 					"</row>",
 				)
 			} else {
-				ctxout.CtxOut(c.session.OutPutHdnl, manout.MessageCln("       path: ", manout.Dim, " no ", manout.ForeYellow, index, " ", pathColor, path, manout.ForeRed, " error while loading template: ", err.Error()))
+				ctxout.CtxOut(c.session.OutPutHdnl, ctxout.Message("       path: ", manout.Dim, " no ", manout.ForeYellow, index, " ", pathColor, path, manout.ForeRed, " error while loading template: ", err.Error()))
 			}
 		}, func(origin string) {})
 		if notWorkspace {
