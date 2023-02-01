@@ -13,7 +13,7 @@ func TestPadString(t *testing.T) {
 	}
 
 	str = ctxout.PadStrLeft("we will now check that the text is cutted before we reach mor then 20 chars", 20, "-")
-	if str != "we will now check th" {
+	if str != "we will now chec ..." {
 		t.Errorf("Expected 'we will now check th' but got '%s'", str)
 	}
 }
@@ -25,7 +25,7 @@ func TestPadStringToRight(t *testing.T) {
 	}
 
 	str = ctxout.PadStrRight("we will now check that the text is cutted before we reach mor then 20 chars", 20, "-")
-	if str != "we will now check th" {
+	if str != "we will now chec ..." {
 		t.Errorf("Expected 'we will now check th' but got '%s'", str)
 	}
 
