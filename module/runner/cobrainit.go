@@ -217,14 +217,23 @@ func (c *SessionCobra) GetScanCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			c.log().Debug("scan for new projects")
 			c.checkDefaultFlags(cmd, args)
+			ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), ctxout.BoldTag, "Scanning for new projects", ctxout.CleanTag, " ... ")
+			ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), "checking any known contxt project if there are information to update")
+			ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "\n")
+			ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<table>")
+			ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<row>", ctxout.BoldTag, "<tab size='15'> project</tab><tab size='70'>path</tab><tab size='15' origin='2'>status</tab>", ctxout.CleanTag, "</row>")
 			all, updated := c.ExternalCmdHndl.FindWorkspaceInfoByTemplate(func(ws string, cnt int, update bool, info configure.WorkspaceInfoV2) {
-				if update {
-					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), ctxout.ForeBlue, ws, " ", ctxout.ForeDarkGrey, " ", info.Path, ctxout.ForeGreen, "\tupdated")
-				} else {
-					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), ctxout.ForeBlue, ws, " ", ctxout.ForeDarkGrey, " ", info.Path, ctxout.ForeYellow, "\tignored. nothing to do.")
+				color := ctxout.ForeYellow
+				msg := "found"
+				if !update {
+					msg = "nothing new"
+					color = ctxout.ForeLightGreen
 				}
+				ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<row>", ctxout.ForeBlue, "<tab size='15'> ", ws, "</tab>", ctxout.ForeLightBlue, "<tab size='70'>", info.Path, color, "</tab><tab size='15' origin='2'>", msg, "</tab></row>")
 			})
-			ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), "found ", all, " projects and updated ", updated, " projects")
+			ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), "</table>")
+			ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), ctxout.CleanTag, "\n")
+			ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), "found ", ctxout.ForeLightBlue, all, ctxout.CleanTag, " projects and updated ", ctxout.ForeLightBlue, updated, ctxout.CleanTag, " projects")
 
 		},
 	}

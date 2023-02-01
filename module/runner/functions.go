@@ -9,7 +9,6 @@ import (
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/systools"
-	"github.com/swaros/manout"
 )
 
 type CmdExecutorImpl struct {
@@ -111,7 +110,7 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 							ws2.Project = template.Workspace.Project
 							ws2.Role = template.Workspace.Role
 							cfg.Paths[pathIndex] = ws2
-							ctxout.CtxOut(c.session.OutPutHdnl, "Found template for workspace ", index, " and set project and role to ", ws2.Project, ":", ws2.Role)
+							//ctxout.CtxOut(c.session.OutPutHdnl, "Found template for workspace ", index, " and set project and role to ", ws2.Project, ":", ws2.Role)
 							configure.CfgV1.UpdateCurrentConfig(cfg)
 							haveUpdate = true
 							wsUpdated++
@@ -155,13 +154,12 @@ func (c *CmdExecutorImpl) GetLogger() *logrus.Logger {
 func (c *CmdExecutorImpl) PrintPaths() {
 	dir, err := os.Getwd()
 	if err == nil {
-		ctxout.CtxOut(c.session.OutPutHdnl, "current directory: ", dir)
-		ctxout.CtxOut(c.session.OutPutHdnl, manout.MessageCln(manout.ForeWhite, " current directory: ", manout.BoldTag, dir))
-		ctxout.CtxOut(c.session.OutPutHdnl, manout.MessageCln(manout.ForeWhite, " current workspace: ", manout.BoldTag, configure.CfgV1.UsedV2Config.CurrentSet))
+		ctxout.CtxOut(c.session.OutPutHdnl, ctxout.ForeWhite, " current directory: ", ctxout.BoldTag, dir, ctxout.CleanTag)
+		ctxout.CtxOut(c.session.OutPutHdnl, ctxout.ForeWhite, " current workspace: ", ctxout.BoldTag, configure.CfgV1.UsedV2Config.CurrentSet, ctxout.CleanTag)
 		notWorkspace := true
-		pathColor := manout.ForeLightBlue
+		pathColor := ctxout.ForeLightBlue
 		if !configure.CfgV1.PathMeightPartOfWs(dir) {
-			pathColor = manout.ForeLightMagenta
+			pathColor = ctxout.ForeLightMagenta
 		} else {
 			notWorkspace = false
 		}
@@ -203,13 +201,13 @@ func (c *CmdExecutorImpl) PrintPaths() {
 					"</row>",
 				)
 			} else {
-				ctxout.CtxOut(c.session.OutPutHdnl, ctxout.Message("       path: ", manout.Dim, " no ", manout.ForeYellow, index, " ", pathColor, path, manout.ForeRed, " error while loading template: ", err.Error()))
+				ctxout.CtxOut(c.session.OutPutHdnl, ctxout.Message("       path: ", ctxout.Dim, " no ", ctxout.ForeYellow, index, " ", pathColor, path, ctxout.ForeRed, " error while loading template: ", err.Error()))
 			}
 		}, func(origin string) {})
 		if notWorkspace {
 			ctxout.CtxOut(c.session.OutPutHdnl, "</table>")
 			ctxout.CtxOut(c.session.OutPutHdnl, "\n")
-			ctxout.CtxOut(c.session.OutPutHdnl, manout.MessageCln(manout.BackYellow, manout.ForeBlue, " WARNING ! ", manout.CleanTag, "\tyou are currently in none of the assigned locations."))
+			ctxout.CtxOut(c.session.OutPutHdnl, ctxout.BackYellow, ctxout.ForeBlue, " WARNING ! ", ctxout.CleanTag, "\tyou are currently in none of the assigned locations.")
 			ctxout.CtxOut(c.session.OutPutHdnl, "\t\tso maybe you are using the wrong workspace")
 		} else {
 			ctxout.CtxOut(c.session.OutPutHdnl, "</table>")
@@ -217,13 +215,13 @@ func (c *CmdExecutorImpl) PrintPaths() {
 
 		ctxout.CtxOut(c.session.OutPutHdnl, "\n")
 
-		ctxout.CtxOut(c.session.OutPutHdnl, manout.MessageCln(" all workspaces:"))
+		ctxout.CtxOut(c.session.OutPutHdnl, " all workspaces:")
 
 		configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 			if index == configure.CfgV1.UsedV2Config.CurrentSet {
-				ctxout.CtxOut(c.session.OutPutHdnl, manout.MessageCln("\t[ ", manout.BoldTag, index, manout.CleanTag, " ]"))
+				ctxout.CtxOut(c.session.OutPutHdnl, "\t[ ", ctxout.BoldTag, index, ctxout.CleanTag, " ]")
 			} else {
-				ctxout.CtxOut(c.session.OutPutHdnl, manout.MessageCln("\t  ", manout.ForeDarkGrey, index, manout.CleanTag))
+				ctxout.CtxOut(c.session.OutPutHdnl, "\t  ", ctxout.ForeDarkGrey, index, ctxout.CleanTag)
 			}
 		})
 	}
