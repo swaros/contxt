@@ -7,29 +7,29 @@ import (
 )
 
 func TestPadString(t *testing.T) {
-	str := ctxout.PadString("this is a test", 20, " ")
+	str := ctxout.PadStrLeft("this is a test", 20, " ")
 	if str != "this is a test      " {
 		t.Errorf("Expected 'this is a test      ' but got '%s'", str)
 	}
 
-	str = ctxout.PadString("we will now check that the text is cutted before we reach mor then 20 chars", 20, "-")
+	str = ctxout.PadStrLeft("we will now check that the text is cutted before we reach mor then 20 chars", 20, "-")
 	if str != "we will now check th" {
 		t.Errorf("Expected 'we will now check th' but got '%s'", str)
 	}
 }
 
 func TestPadStringToRight(t *testing.T) {
-	str := ctxout.PadStringToRight("this is a test", 20, " ")
+	str := ctxout.PadStrRight("this is a test", 20, " ")
 	if str != "      this is a test" {
 		t.Errorf("Expected '      this is a test' but got '%s'", str)
 	}
 
-	str = ctxout.PadStringToRight("we will now check that the text is cutted before we reach mor then 20 chars", 20, "-")
+	str = ctxout.PadStrRight("we will now check that the text is cutted before we reach mor then 20 chars", 20, "-")
 	if str != "we will now check th" {
 		t.Errorf("Expected 'we will now check th' but got '%s'", str)
 	}
 
-	str = ctxout.PadStringToRight("", 20, ".")
+	str = ctxout.PadStrRight("", 20, ".")
 	if str != "...................." {
 		t.Errorf("Expected '....................' but got '%s'", str)
 	}

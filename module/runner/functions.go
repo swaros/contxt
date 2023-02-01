@@ -180,7 +180,7 @@ func (c *CmdExecutorImpl) PrintPaths() {
 				outTasks := ""
 				if exists {
 					targets, _ := TemplateTargetsAsMap(template, true)
-					outTasks = strings.Join(targets, ", ")
+					outTasks = strings.Join(targets, " ")
 				} else {
 					outTasks = ctxout.ForeDarkGrey + "no tasks"
 				}
@@ -192,11 +192,11 @@ func (c *CmdExecutorImpl) PrintPaths() {
 					index, " ",
 					"</tab>",
 					add,
-					"<tab size='65' draw='content' fill=' ' origin='1'>",
+					"<tab size='65' draw='content' fill=' ' cut-add='///..' origin='1'>",
 					path, " ",
 					"</tab>",
 					ctxout.ForeYellow,
-					"<tab fill=' ' draw='extend' size='30' origin='2'>",
+					"<tab fill=' ' draw='extend' size='30' cut-add='<f:light-blue>...more</>' origin='2'>",
 					outTasks,
 					"</tab>",
 					ctxout.CleanTag,

@@ -2,8 +2,6 @@ package ctxout
 
 import (
 	"strings"
-
-	"github.com/swaros/contxt/module/systools"
 )
 
 const (
@@ -40,6 +38,7 @@ type tabCell struct {
 	fillChar     string
 	index        int    // reference to the index in the parent row
 	drawMode     string // fixed = fixed size, relative = relative to terminal size, content = max size of content
+	cutNotifier  string // if the text is cutted, then this string will be added to the end of the text
 }
 
 type TabOut struct {
@@ -59,11 +58,12 @@ func NewTabOut() *TabOut {
 
 func NewTabCell(parent *tabRow) *tabCell {
 	return &tabCell{
-		Size:     0, // 0 = auto
-		Origin:   0, // 0 left, 1 center, 2 right
-		Text:     "",
-		parent:   parent,
-		fillChar: " ",
+		Size:        0, // 0 = auto
+		Origin:      0, // 0 left, 1 center, 2 right
+		Text:        "",
+		parent:      parent,
+		fillChar:    " ",
+		cutNotifier: " ...",
 	}
 }
 
@@ -184,12 +184,13 @@ func (tr *tabRow) Render() string {
 			}
 			switch cell.Origin {
 			case 0: // left padding
-				result = append(result, PadString(cell.Text, size, cell.fillChar))
+				result = append(result, cell.PadString(cell.Text, size, cell.fillChar))
 			case 1:
-				tempStr := systools.StringSubRight(cell.Text, size)
-				result = append(result, PadString(tempStr, size, cell.fillChar))
+				//tempStr := systools.StringSubRight(cell.Text, size)
+				//result = append(result, cell.PadString(tempStr, size, cell.fillChar))
+				result = append(result, cell.PadStringToRightStayLeft(cell.Text, size, cell.fillChar))
 			case 2:
-				result = append(result, PadStringToRight(cell.Text, size, cell.fillChar))
+				result = append(result, cell.PadStringToRight(cell.Text, size, cell.fillChar))
 			}
 		} else {
 			result = append(result, cell.Text)
@@ -272,6 +273,7 @@ func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 				tabCell.Size = token.GetProperty("size", 0).(int)
 				tabCell.Origin = token.GetProperty("origin", 0).(int)
 				tabCell.drawMode = token.GetProperty("draw", "relative").(string)
+				tabCell.cutNotifier = token.GetProperty("cut-add", "...").(string)
 			} else if strings.HasPrefix(token.Text, "</tab>") {
 				t.rows = append(t.rows, *tabCell)
 				tabCell = NewTabCell(tabRow)
@@ -372,12 +374,28 @@ func (t *TabOut) RowParse(text string) string {
 	}
 }
 
+// PadStrLeft is a shortcut for PadString on a cell
+func PadStrLeft(line string, max int, fillChar string) string {
+	cell := NewTabCell(nil)
+	return cell.PadString(line, max, fillChar)
+}
+
+// PadStrRight is a shortcut for PadString on a cell
+func PadStrRight(line string, max int, fillChar string) string {
+	cell := NewTabCell(nil)
+	return cell.PadStringToRight(line, max, fillChar)
+}
+
 // PadString Returns max len string filled with spaces
-func PadString(line string, max int, fillChar string) string {
+func (td *tabCell) PadString(line string, max int, fillChar string) string {
 	if LenPrintable(line) > max {
+		max -= LenPrintable(td.cutNotifier)
+		if max < 0 {
+			max = 0
+		}
 		lastEsc := GetLastEscapeSequence(line)
 		runes := []rune(line)
-		safeSubstring := string(runes[0:max]) + lastEsc
+		safeSubstring := string(runes[0:max]) + td.cutNotifier + lastEsc
 		return safeSubstring
 	}
 	diff := max - LenPrintable(line)
@@ -388,17 +406,41 @@ func PadString(line string, max int, fillChar string) string {
 }
 
 // PadStringToRight Returns max len string filled with spaces right placed
-func PadStringToRight(line string, max int, fillChar string) string {
+func (td *tabCell) PadStringToRight(line string, max int, fillChar string) string {
 	if LenPrintable(line) > max {
+		max -= LenPrintable(td.cutNotifier)
+		if max < 0 {
+			max = 0
+		}
 		lastEsc := GetLastEscapeSequence(line[:max])
 		runes := []rune(line)
 
-		safeSubstring := string(runes[0:max]) + lastEsc
+		safeSubstring := string(runes[0:max]) + td.cutNotifier + lastEsc
 		return safeSubstring
 	}
 	diff := max - LenPrintable(line)
 	for i := 0; i < diff; i++ {
 		line = fillChar + line
+	}
+	return line
+}
+
+// PadStringToRight Returns max len string filled with spaces right placed
+func (td *tabCell) PadStringToRightStayLeft(line string, max int, fillChar string) string {
+	if LenPrintable(line) > max {
+		max -= LenPrintable(td.cutNotifier)
+		if max < 0 {
+			max = 0
+		}
+		lastEsc := GetLastEscapeSequence(line[:max])
+		runes := []rune(line)
+		left := LenPrintable(line) - max
+		safeSubstring := td.cutNotifier + string(runes[left:]) + lastEsc
+		return safeSubstring
+	}
+	diff := max - LenPrintable(line)
+	for i := 0; i < diff; i++ {
+		line = line + fillChar
 	}
 	return line
 }
