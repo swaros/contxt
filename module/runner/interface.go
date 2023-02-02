@@ -7,7 +7,7 @@ import (
 )
 
 type CmdExecutor interface {
-	PrintPaths()
+	PrintPaths(plain bool)
 	GetLogger() *logrus.Logger
 	GetOuputHandler() ctxout.PrintInterface
 	SetLogLevel(level string) error

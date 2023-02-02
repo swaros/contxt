@@ -95,6 +95,9 @@ func (c *CmdExecutorImpl) GetOuputHandler() ctxout.PrintInterface {
 func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace string, cnt int, update bool, info configure.WorkspaceInfoV2)) (allCount int, updatedCount int) {
 	wsCount := 0
 	wsUpdated := 0
+
+	c.session.Log.Logger.Info("Start to find workspace info by template")
+
 	if currentPath, err := os.Getwd(); err != nil {
 		ctxout.CtxOut("Error while reading current directory", err)
 		systools.Exit(systools.ErrorBySystem)
@@ -103,6 +106,7 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 		configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 			wsCount++
 			for pathIndex, ws2 := range cfg.Paths {
+				c.session.Log.Logger.WithFields(logrus.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}).Debug("parsing workspace")
 				if err := os.Chdir(ws2.Path); err == nil && ws2.Project == "" && ws2.Role == "" {
 					template, found, err := c.session.TemplateHndl.Load()
 					if found && err == nil {
@@ -110,11 +114,12 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 							ws2.Project = template.Workspace.Project
 							ws2.Role = template.Workspace.Role
 							cfg.Paths[pathIndex] = ws2
-							//ctxout.CtxOut(c.session.OutPutHdnl, "Found template for workspace ", index, " and set project and role to ", ws2.Project, ":", ws2.Role)
+							c.session.Log.Logger.WithFields(logrus.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}).Info("found template for workspace")
 							configure.CfgV1.UpdateCurrentConfig(cfg)
 							haveUpdate = true
 							wsUpdated++
 							if updateFn != nil {
+								c.session.Log.Logger.WithFields(logrus.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}).Debug("exeute update function")
 								updateFn(index, wsCount, true, ws2)
 							}
 						}
@@ -128,7 +133,12 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 
 		})
 		if haveUpdate {
-			configure.CfgV1.SaveConfiguration()
+			c.session.Log.Logger.Info("Update configuration")
+			if err := configure.CfgV1.SaveConfiguration(); err != nil {
+				c.session.Log.Logger.WithFields(logrus.Fields{"err": err}).Error("Error while saving configuration")
+				ctxout.CtxOut("Error while saving configuration", err)
+				systools.Exit(systools.ErrorBySystem)
+			}
 		}
 		os.Chdir(currentPath)
 	}
@@ -151,11 +161,18 @@ func (c *CmdExecutorImpl) GetLogger() *logrus.Logger {
 	return c.session.Log.Logger
 }
 
-func (c *CmdExecutorImpl) PrintPaths() {
+func (c *CmdExecutorImpl) PrintPaths(plain bool) {
 	dir, err := os.Getwd()
+	c.session.Log.Logger.WithFields(logrus.Fields{
+		"dir": dir,
+		"err": err,
+	}).Debug("print paths in workspace")
+
 	if err == nil {
-		ctxout.CtxOut(c.session.OutPutHdnl, ctxout.ForeWhite, " current directory: ", ctxout.BoldTag, dir, ctxout.CleanTag)
-		ctxout.CtxOut(c.session.OutPutHdnl, ctxout.ForeWhite, " current workspace: ", ctxout.BoldTag, configure.CfgV1.UsedV2Config.CurrentSet, ctxout.CleanTag)
+		if !plain {
+			ctxout.CtxOut(c.session.OutPutHdnl, ctxout.ForeWhite, " current directory: ", ctxout.BoldTag, dir, ctxout.CleanTag)
+			ctxout.CtxOut(c.session.OutPutHdnl, ctxout.ForeWhite, " current workspace: ", ctxout.BoldTag, configure.CfgV1.UsedV2Config.CurrentSet, ctxout.CleanTag)
+		}
 		notWorkspace := true
 		pathColor := ctxout.ForeLightBlue
 		if !configure.CfgV1.PathMeightPartOfWs(dir) {
@@ -163,12 +180,23 @@ func (c *CmdExecutorImpl) PrintPaths() {
 		} else {
 			notWorkspace = false
 		}
-		ctxout.CtxOut(c.session.OutPutHdnl, " contains paths:")
-		ctxout.CtxOut(c.session.OutPutHdnl, "<table>")
+		if !plain {
+			ctxout.CtxOut(c.session.OutPutHdnl, " contains paths:")
+		}
+		ctxout.Print(c.session.OutPutHdnl, "<table>")
 		configure.CfgV1.PathWorker(func(index string, path string) {
 			template, exists, err := c.session.TemplateHndl.Load()
 			if err == nil {
-				add := ctxout.ResetDim + ctxout.ForeLightMagenta
+				add := ctxout.Dim + ctxout.ForeLightGrey
+
+				indexColor := ctxout.ForeLightBlue
+				indexStr := index
+				if path == configure.CfgV1.GetActivePath("") {
+					indexColor = ctxout.ForeLightCyan
+					indexStr = "> " + index
+					add = ctxout.ResetDim + ctxout.ForeLightGrey
+				}
+
 				if strings.Contains(dir, path) {
 					add = ctxout.ResetDim + ctxout.ForeCyan
 				}
@@ -185,9 +213,9 @@ func (c *CmdExecutorImpl) PrintPaths() {
 				ctxout.Print(
 					c.session.OutPutHdnl,
 					"<row>",
-					ctxout.ForeLightBlue,
+					indexColor,
 					"<tab size='5' fill=' ' draw='fixed' origin='2'>",
-					index, " ",
+					indexStr, " ",
 					"</tab>",
 					add,
 					"<tab size='65' draw='content' fill=' ' cut-add='///..' origin='1'>",
@@ -204,7 +232,7 @@ func (c *CmdExecutorImpl) PrintPaths() {
 				ctxout.CtxOut(c.session.OutPutHdnl, ctxout.Message("       path: ", ctxout.Dim, " no ", ctxout.ForeYellow, index, " ", pathColor, path, ctxout.ForeRed, " error while loading template: ", err.Error()))
 			}
 		}, func(origin string) {})
-		if notWorkspace {
+		if notWorkspace && !plain {
 			ctxout.CtxOut(c.session.OutPutHdnl, "</table>")
 			ctxout.CtxOut(c.session.OutPutHdnl, "\n")
 			ctxout.CtxOut(c.session.OutPutHdnl, ctxout.BackYellow, ctxout.ForeBlue, " WARNING ! ", ctxout.CleanTag, "\tyou are currently in none of the assigned locations.")
@@ -212,19 +240,20 @@ func (c *CmdExecutorImpl) PrintPaths() {
 		} else {
 			ctxout.CtxOut(c.session.OutPutHdnl, "</table>")
 		}
-
-		ctxout.CtxOut(c.session.OutPutHdnl, "\n")
-
-		ctxout.CtxOut(c.session.OutPutHdnl, " all workspaces:")
-
-		configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
-			if index == configure.CfgV1.UsedV2Config.CurrentSet {
-				ctxout.CtxOut(c.session.OutPutHdnl, "\t[ ", ctxout.BoldTag, index, ctxout.CleanTag, " ]")
-			} else {
-				ctxout.CtxOut(c.session.OutPutHdnl, "\t  ", ctxout.ForeDarkGrey, index, ctxout.CleanTag)
-			}
-		})
+		if !plain {
+			ctxout.CtxOut(c.session.OutPutHdnl, "\n")
+		}
 	}
+}
+
+func (c *CmdExecutorImpl) PrintWorkspaces() {
+	configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+		if index == configure.CfgV1.UsedV2Config.CurrentSet {
+			ctxout.CtxOut(c.session.OutPutHdnl, "\t[ ", ctxout.BoldTag, index, ctxout.CleanTag, " ]")
+		} else {
+			ctxout.CtxOut(c.session.OutPutHdnl, "\t  ", ctxout.ForeDarkGrey, index, ctxout.CleanTag)
+		}
+	})
 }
 
 func TemplateTargetsAsMap(template configure.RunConfig, showInvTarget bool) ([]string, bool) {

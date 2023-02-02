@@ -21,6 +21,7 @@ type CobraOptions struct {
 	ShowColors bool
 	ShowHints  bool
 	LogLevel   string
+	DirAll     bool // dir flag for show all dirs in any workspace
 }
 
 func NewCobraCmds() *SessionCobra {
@@ -255,17 +256,28 @@ scan for new projects in the workspace 'ctx workspace scan'`,
 // -- Dir Command
 
 func (c *SessionCobra) GetDirCmd() *cobra.Command {
-	return &cobra.Command{
+	dCmd := &cobra.Command{
 		Use:   "dir",
 		Short: "handle workspaces and assigned paths",
 		Long:  "manage workspaces and paths they are assigned",
 		Run: func(cmd *cobra.Command, args []string) {
 			c.checkDefaultFlags(cmd, args)
-
-			c.ExternalCmdHndl.PrintPaths()
-
+			c.log().WithFields(logrus.Fields{"all-flag": c.Options.DirAll}).Debug("show all paths in any workspace shoul be executed")
+			current := configure.CfgV1.UsedV2Config.CurrentSet
+			if c.Options.DirAll {
+				configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+					configure.CfgV1.UsedV2Config.CurrentSet = index
+					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), ":", ctxout.BoldTag, index, ctxout.CleanTag, ctxout.ForeDarkGrey, ": index (", cfg.CurrentIndex, ")")
+					c.ExternalCmdHndl.PrintPaths(true)
+				})
+			} else {
+				c.ExternalCmdHndl.PrintPaths(false)
+			}
+			configure.CfgV1.UsedV2Config.CurrentSet = current
 		},
 	}
+	dCmd.Flags().BoolVarP(&c.Options.DirAll, "all", "a", false, "show all paths in any workspace")
+	return dCmd
 }
 
 // -- Cobra Tools
