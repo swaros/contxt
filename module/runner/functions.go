@@ -222,20 +222,20 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool) {
 					path, " ",
 					"</tab>",
 					ctxout.ForeYellow,
-					"<tab fill=' ' draw='extend' size='30' cut-add='<f:light-blue>...more</>' origin='2'>",
+					"<tab fill=' ' overflow='ignore' draw='extend' size='30' cut-add='<f:light-blue>...more</>' origin='2'>",
 					outTasks,
 					"</tab>",
 					ctxout.CleanTag,
 					"</row>",
 				)
 			} else {
-				ctxout.CtxOut(c.session.OutPutHdnl, ctxout.Message("       path: ", ctxout.Dim, " no ", ctxout.ForeYellow, index, " ", pathColor, path, ctxout.ForeRed, " error while loading template: ", err.Error()))
+				ctxout.Print(c.session.OutPutHdnl, ctxout.Message("       path: ", ctxout.Dim, " no ", ctxout.ForeYellow, index, " ", pathColor, path, ctxout.ForeRed, " error while loading template: ", err.Error()))
 			}
 		}, func(origin string) {})
 		if notWorkspace && !plain {
 
-			ctxout.CtxOut(c.session.OutPutHdnl, "<row><tab size='20' origin='2'>", ctxout.ForeYellow, " WARNING ! </tab>", ctxout.CleanTag, "<tab size='80'>you are currently in none of the assigned locations.<tab></row>")
-			ctxout.CtxOut(c.session.OutPutHdnl, "<row><tab size='20'> </tab><tab=size='80'>so maybe you are using the wrong workspace</tab></row>")
+			ctxout.PrintLn(c.session.OutPutHdnl, "<row><tab size='20' origin='2'>", ctxout.ForeYellow, " WARNING ! </tab>", ctxout.CleanTag, "<tab size='80'>you are currently in none of the assigned locations.<tab></row>")
+			ctxout.PrintLn(c.session.OutPutHdnl, "<row><tab size='20'> </tab><tab=size='80'>so maybe you are using the wrong workspace</tab></row>")
 		}
 
 	}

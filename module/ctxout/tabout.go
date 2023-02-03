@@ -1,6 +1,7 @@
 package ctxout
 
 import (
+	"errors"
 	"strings"
 )
 
@@ -14,7 +15,7 @@ const (
 )
 
 type tableHandle struct {
-	rows             []tabRow
+	rows             []*tabRow
 	parent           *TabOut
 	rowSeperator     string
 	sizeCalculations map[int]int
@@ -22,23 +23,27 @@ type tableHandle struct {
 
 // tabRow is a single row in a table
 type tabRow struct {
-	Cells        []tabCell
+	Cells        []*tabCell
 	parent       *tableHandle
 	rowEndString string
 	maxLengths   []int
+	Err          error
 }
 
 // tabCell is a single cell in a row
 type tabCell struct {
-	Size         int
-	Origin       int
-	OriginString string
-	Text         string
-	parent       *tabRow
-	fillChar     string
-	index        int    // reference to the index in the parent row
-	drawMode     string // fixed = fixed size, relative = relative to terminal size, content = max size of content
-	cutNotifier  string // if the text is cutted, then this string will be added to the end of the text
+	Size            int
+	Origin          int
+	OriginString    string
+	Text            string
+	parent          *tabRow
+	fillChar        string
+	index           int    // reference to the index in the parent row
+	drawMode        string // fixed = fixed size, relative = relative to terminal size, content = max size of content
+	cutNotifier     string // if the text is cutted, then this string will be added to the end of the text
+	overflow        bool   // if the text is cutted, then this will be set to true
+	overflowContent string // if the text is cutted, then this will be set to the cutted content
+	overflowMode    string // this is the mode how the overflow is handled. ignore = the text is ignored, wrap = wrap the text
 }
 
 type TabOut struct {
@@ -58,30 +63,180 @@ func NewTabOut() *TabOut {
 
 func NewTabCell(parent *tabRow) *tabCell {
 	return &tabCell{
-		Size:        0, // 0 = auto
-		Origin:      0, // 0 left, 1 center, 2 right
-		Text:        "",
-		parent:      parent,
-		fillChar:    " ",
-		cutNotifier: " ...",
+		Size:            0, // 0 = auto
+		Origin:          0, // 0 left, 1 center, 2 right
+		Text:            "",
+		parent:          parent,
+		fillChar:        " ",
+		cutNotifier:     " ...",
+		overflow:        false,
+		overflowMode:    "ignore",
+		overflowContent: "",
 	}
+}
+
+func (td *tabCell) SetSize(size int) *tabCell {
+	td.Size = size
+	return td
+}
+
+func (td *tabCell) SetOrigin(origin int) *tabCell {
+	td.Origin = origin
+	return td
+}
+
+func (td *tabCell) SetOriginString(origin string) *tabCell {
+	td.OriginString = origin
+	return td
+}
+
+func (td *tabCell) SetText(text string) *tabCell {
+	td.Text = text
+	return td
+}
+
+func (td *tabCell) SetFillChar(fillChar string) *tabCell {
+	td.fillChar = fillChar
+	return td
+}
+
+func (td *tabCell) SetDrawMode(drawMode string) *tabCell {
+	td.drawMode = drawMode
+	return td
+}
+
+func (td *tabCell) SetCutNotifier(cutNotifier string) *tabCell {
+	td.cutNotifier = cutNotifier
+	return td
+}
+
+func (td *tabCell) SetOverflowMode(overflowMode string) *tabCell {
+	td.overflowMode = overflowMode
+	return td
+}
+
+func (td *tabCell) SetIndex(index int) *tabCell {
+	td.index = index
+	return td
+}
+
+func (td *tabCell) GetOverflow() bool {
+	return td.overflow
+}
+
+func (td *tabCell) GetOverflowContent() string {
+	return td.overflowContent
+}
+
+func (td *tabCell) GetText() string {
+	return td.Text
+}
+
+func (td *tabCell) GetSize() int {
+	return td.Size
+}
+
+func (td *tabCell) GetOrigin() int {
+	return td.Origin
 }
 
 func NewTabRow(parent *tableHandle) *tabRow {
 	return &tabRow{
-		Cells:        []tabCell{},
+		Cells:        []*tabCell{},
 		parent:       parent,
 		rowEndString: "",
 	}
 }
 
+func (tr *tabRow) SetRowEndString(rowEndString string) *tabRow {
+	tr.rowEndString = rowEndString
+	return tr
+}
+
+func (tr *tabRow) GetRowEndString() string {
+	return tr.rowEndString
+}
+
+func (tr *tabRow) GetCells() []*tabCell {
+	return tr.Cells
+}
+
+func (tr *tabRow) GetCell(index int) *tabCell {
+	if len(tr.Cells) > index {
+		return tr.Cells[index]
+	}
+	return nil
+}
+
+func (tr *tabRow) CreateRow() *tabRow {
+	return NewTabRow(tr.parent)
+}
+
+func (tr *tabRow) CreateCell() *tabCell {
+	return NewTabCell(tr)
+}
+
+func (tr *tabRow) AddCell(cell *tabCell) *tabRow {
+	cell.parent = tr
+	tr.Cells = append(tr.Cells, cell)
+	return tr
+}
+
+func (tr *tabRow) AddCells(cells []*tabCell) *tabRow {
+	for _, cell := range cells {
+		tr.AddCell(cell)
+	}
+	return tr
+}
+
+func (tr *tabRow) GetMaxLengths() []int {
+	return tr.maxLengths
+}
+
 func NewTableHandle(parent *TabOut) *tableHandle {
 	return &tableHandle{
-		rows:             []tabRow{},
+		rows:             []*tabRow{},
 		parent:           parent,
 		rowSeperator:     "\n",
 		sizeCalculations: make(map[int]int),
 	}
+}
+
+func (th *tableHandle) SetRowSeperator(rowSeperator string) *tableHandle {
+	th.rowSeperator = rowSeperator
+	return th
+}
+
+func (th *tableHandle) CreateRow() *tabRow {
+	return NewTabRow(th)
+}
+
+func (th *tableHandle) GetRowSeperator() string {
+	return th.rowSeperator
+}
+
+func (th *tableHandle) AddRow(row *tabRow) *tableHandle {
+	row.parent = th
+	th.rows = append(th.rows, row)
+	return th
+}
+
+func (th *tableHandle) AddRows(rows []*tabRow) *tableHandle {
+	for _, row := range rows {
+		th.AddRow(row)
+	}
+	return th
+}
+
+func (th *tableHandle) GetRows() []*tabRow {
+	return th.rows
+}
+
+func (th *tableHandle) GetRow(index int) *tabRow {
+	if len(th.rows) > index {
+		return th.rows[index]
+	}
+	return nil
 }
 
 // Row functions
@@ -170,42 +325,86 @@ func (tb *tableHandle) GetSumSize(untilIndex int) int {
 	return sum
 }
 
-func (tr *tabRow) Render() string {
+func (tr *tabRow) Render() (string, *tabRow, error) {
+	tr.Err = nil // reset error
 	if len(tr.Cells) == 0 {
-		return ""
+		tr.Err = errors.New("no cells to render")
+		return "", nil, tr.Err
 	}
+
+	if tr.parent == nil {
+		tr.Err = errors.New("no parent table")
+		return "", nil, tr.Err
+	}
+
+	if tr.parent.parent == nil {
+		tr.Err = errors.New("no parent table parent")
+		return "", nil, tr.Err
+	}
+
 	var result []string
+	// this is the row that will be used if we have a wrap overflow mode.
+	// this will be created and updated all the time, but used only if we found an overflow usagewith wrap mode
+	wrapRow := NewTabRow(tr.parent)
+
 	for indx, cell := range tr.Cells {
+		wrapRow.AddCell(cell)
 		if cell.Size > 0 {
-			rowSize := tr.GetSize(&cell, indx)
+			rowSize := tr.GetSize(cell, indx)
 			size := tr.parent.parent.GetSize(cell.Size)
 			if rowSize > 0 {
 				size = rowSize
 			}
 			switch cell.Origin {
 			case 0: // left padding
-				result = append(result, cell.PadString(cell.Text, size, cell.fillChar))
+				result = append(result, cell.PadString(size))
 			case 1:
-				result = append(result, cell.PadStringToRightStayLeft(cell.Text, size, cell.fillChar))
+				result = append(result, cell.PadStringToRightStayLeft(size))
 			case 2:
-				result = append(result, cell.PadStringToRight(cell.Text, size, cell.fillChar))
+				result = append(result, cell.PadStringToRight(size))
 			}
+
 		} else {
 			result = append(result, cell.Text)
 		}
+		// we add all the cells to the wrap row, so we can use it if we have a wrap overflow mode
+		// any cell have the information about the overflow mode and it have also
+		// the content of the overflow text
+
 	}
-	return strings.Join(result, "") + tr.rowEndString
+
+	// now we try to wrap the cells if we have a wrap overflow mode
+	// if this returns true, then we have a wrap overflow mode
+	// and also print a additional row with the overflow text
+	// this must be recursive, because we can have a wrap overflow mode in a wrap overflow mode
+	if wrapRow.WrapCells() {
+		return strings.Join(result, tr.rowEndString), wrapRow, nil
+	}
+	//return []string{strings.Join(result, tr.rowEndString)}
+	return strings.Join(result, tr.rowEndString), nil, nil
 }
 
 func (tb *tableHandle) Render() string {
 	var result []string
 	for _, row := range tb.rows {
-		cnt := row.Render()
+		cnt, expandRow, _ := row.Render()
 		if cnt != "" {
 			result = append(result, cnt)
 		}
+		if expandRow != nil {
+			for {
+				cnt, expandRow, _ := expandRow.Render()
+				if cnt != "" {
+					result = append(result, cnt)
+				}
+				if expandRow == nil {
+					break
+				}
+			}
+		}
 	}
-	return strings.Join(result, tb.rowSeperator)
+	firstRow := strings.Join(result, tb.rowSeperator)
+	return firstRow
 }
 
 func (t *TabOut) Filter(msg interface{}) interface{} {
@@ -251,7 +450,7 @@ func (t *TabOut) ScanForRows(tokens []Parsed) *tableHandle {
 }
 
 func (t *TabOut) updateRows(table *tableHandle, tokens []Parsed) {
-	table.rows = append(table.rows, *t.ScanForCells(tokens, table))
+	table.rows = append(table.rows, t.ScanForCells(tokens, table))
 }
 
 func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
@@ -268,6 +467,7 @@ func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 				tabCell.Origin = token.GetProperty("origin", 0).(int)
 				tabCell.drawMode = token.GetProperty("draw", "relative").(string)
 				tabCell.cutNotifier = token.GetProperty("cut-add", "...").(string)
+				tabCell.overflowMode = token.GetProperty("overflow", "ignore").(string)
 			} else if strings.HasPrefix(token.Text, "</tab>") {
 				t.rows = append(t.rows, *tabCell)
 				tabCell = NewTabCell(tabRow)
@@ -275,7 +475,7 @@ func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 			}
 		} else {
 			tabCell.Text = token.Text
-			tabRow.Cells = append(tabRow.Cells, *tabCell)
+			tabRow.Cells = append(tabRow.Cells, tabCell)
 			tabCell = NewTabCell(tabRow)
 		}
 		tabRow.maxLengths = append(tabRow.maxLengths, tSize) // get the maximum length of the row
@@ -371,72 +571,156 @@ func (t *TabOut) RowParse(text string) string {
 // PadStrLeft is a shortcut for PadString on a cell
 func PadStrLeft(line string, max int, fillChar string) string {
 	cell := NewTabCell(nil)
-	return cell.PadString(line, max, fillChar)
+	cell.SetText(line).SetFillChar(fillChar)
+	return cell.PadString(max)
 }
 
 // PadStrRight is a shortcut for PadString on a cell
 func PadStrRight(line string, max int, fillChar string) string {
 	cell := NewTabCell(nil)
-	return cell.PadStringToRight(line, max, fillChar)
+	cell.SetText(line).SetFillChar(fillChar)
+	return cell.PadStringToRight(max)
+}
+
+// Copy returns a copy of the cell
+func (td *tabCell) Copy() *tabCell {
+	newCell := NewTabCell(td.parent)
+	newCell.fillChar = td.fillChar
+	newCell.Size = td.Size
+	newCell.Text = td.Text
+	newCell.Origin = td.Origin
+	newCell.drawMode = td.drawMode
+	newCell.cutNotifier = td.cutNotifier
+	newCell.overflowMode = td.overflowMode
+	newCell.overflow = td.overflow
+	newCell.overflowContent = td.overflowContent
+	return newCell
+}
+
+// WrapCells wraps the cells in the row
+// returns true if the row has changed
+func (tr *tabRow) WrapCells() bool {
+	changed := false
+	for i, cell := range tr.Cells {
+		if cell.MoveToWrap() {
+			changed = true
+		}
+		tr.Cells[i] = cell
+	}
+	return changed
+}
+
+// MoveToWrap moves the cell to the wrap mode and resets the text
+// but also it updates the content for cells that are not in wrap mode
+// so they can be drawed correctly by the row
+func (td *tabCell) MoveToWrap() bool {
+	if td.overflow && td.overflowContent != "" {
+		td.Text = td.overflowContent
+		td.overflowContent = ""
+		td.overflow = false
+		return true
+	}
+	td.Text = "" // also reset the text for cells that are not in overflow mode
+	td.overflow = false
+	return false
 }
 
 // PadString Returns max len string filled with spaces
-func (td *tabCell) PadString(line string, max int, fillChar string) string {
-	if LenPrintable(line) > max {
-		max -= LenPrintable(td.cutNotifier)
-		if max < 0 {
-			max = 0
+func (td *tabCell) PadString(max int) string {
+	if max < 1 {
+		return ""
+	}
+	tSize := LenPrintable(td.Text)
+	if tSize == max {
+		return td.Text
+	}
+	if tSize > max {
+		runes := []rune(td.Text)
+		add := td.cutNotifier
+
+		td.overflow = true
+		if td.overflowMode != "ignore" {
+			add = "" // if we keep the overflow, we do not add the cut notifier
+			td.overflowContent = string(runes[max:])
+		} else {
+			max -= LenPrintable(td.cutNotifier)
+			if max < 1 {
+				max = 0
+			}
 		}
-		//lastEsc := GetLastEscapeSequence(line)
-		runes := []rune(line)
-		safeSubstring := string(runes[0:max]) + td.cutNotifier //+ lastEsc
-		return safeSubstring
+		td.Text = string(runes[0:max]) + add //+ lastEsc
+		return td.Text
 	}
-	diff := max - LenPrintable(line)
+	diff := max - tSize
 	for i := 0; i < diff; i++ {
-		line = line + fillChar
+		td.Text += td.fillChar
 	}
-	return line
+	return td.Text
 }
 
 // PadStringToRight Returns max len string filled with spaces right placed
-func (td *tabCell) PadStringToRight(line string, max int, fillChar string) string {
-	if LenPrintable(line) > max {
-		max -= LenPrintable(td.cutNotifier)
-		if max < 0 {
-			max = 0
+func (td *tabCell) PadStringToRight(max int) string {
+	if max < 1 {
+		return ""
+	}
+	tSize := LenPrintable(td.Text)
+	if tSize == max {
+		return td.Text
+	}
+	if tSize > max {
+		td.overflow = true
+		runes := []rune(td.Text)
+		add := td.cutNotifier
+		if td.overflowMode != "ignore" {
+			add = "" // if we keep the overflow, we do not add the cut notifier
+			td.overflowContent = string(runes[max:])
+		} else {
+			max -= LenPrintable(td.cutNotifier)
+			if max < 0 {
+				max = 0
+			}
 		}
-		//lastEsc := GetLastEscapeSequence(line[:max])
-		runes := []rune(line)
-
-		safeSubstring := string(runes[0:max]) + td.cutNotifier
+		safeSubstring := string(runes[0:max]) + add //+ lastEsc
 		return safeSubstring
 	}
-	diff := max - LenPrintable(line)
+	diff := max - tSize
 	for i := 0; i < diff; i++ {
-		line = fillChar + line
+		td.Text = td.fillChar + td.Text
 	}
-	return line
+	return td.Text
 }
 
 // PadStringToRight Returns max len string filled with spaces right placed
-func (td *tabCell) PadStringToRightStayLeft(line string, max int, fillChar string) string {
-	if LenPrintable(line) > max {
-		max -= LenPrintable(td.cutNotifier)
-		if max < 0 {
-			max = 0
+func (td *tabCell) PadStringToRightStayLeft(max int) string {
+	if max < 1 {
+		return ""
+	}
+	tSize := LenPrintable(td.Text)
+	if tSize == max {
+		return td.Text
+	}
+	if tSize > max {
+		runes := []rune(td.Text)
+		left := LenPrintable(td.Text) - max
+		add := td.cutNotifier
+		td.overflow = true
+		if td.overflowMode != "ignore" {
+			add = "" // if we keep the overflow, we do not add the cut notifier
+			td.overflowContent = string(runes[left:])
+		} else {
+			max -= LenPrintable(td.cutNotifier)
+			if max < 0 {
+				max = 0
+			}
 		}
-		//lastEsc := GetLastEscapeSequence(line[:max])
-		runes := []rune(line)
-		left := LenPrintable(line) - max
-		safeSubstring := td.cutNotifier + string(runes[left:])
+		safeSubstring := add + string(runes[left:])
 		return safeSubstring
 	}
-	diff := max - LenPrintable(line)
+	diff := max - tSize
 	for i := 0; i < diff; i++ {
-		line = line + fillChar
+		td.Text += td.fillChar
 	}
-	return line
+	return td.Text
 }
 
 func GetLastEscapeSequence(text string) string {

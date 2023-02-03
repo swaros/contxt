@@ -1,6 +1,7 @@
 package ctxout_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/swaros/contxt/module/ctxout"
@@ -230,6 +231,205 @@ func TestRowOnlyOut(t *testing.T) {
 		output := to.Command(test.Row)
 		if output != test.Out {
 			t.Errorf("Expected\n%s\n  but got \n%s", test.Out, output)
+		}
+	}
+
+}
+
+func TestPadding(t *testing.T) {
+	abc := "abcdefghijklmnopqrstuvwxyz"
+	cell := ctxout.NewTabCell(nil)
+	cell.SetCutNotifier("").SetOverflowMode("wordwrap").SetText(abc).SetFillChar(".")
+	padStr := cell.PadStringToRight(10)
+	if padStr != "abcdefghij" {
+		t.Errorf("Expected 'abcdefghij' but got '%s'", padStr)
+	}
+
+	if cell.GetOverflowContent() != "klmnopqrstuvwxyz" {
+		t.Errorf("Expected 'klmnopqrstuvwxyz' but got '%s'", cell.GetOverflowContent())
+	}
+
+	moved := cell.MoveToWrap()
+	if !moved {
+		t.Errorf("Expected moved to be true but got false")
+	}
+	padStr = cell.PadStringToRight(10)
+	if padStr != "klmnopqrst" {
+		t.Errorf("Expected 'klmnopqrst' but got '%s'", padStr)
+	}
+	if cell.GetOverflowContent() != "uvwxyz" {
+		t.Errorf("Expected 'uvwxyz' but got '%s'", cell.GetOverflowContent())
+	}
+
+	moved = cell.MoveToWrap()
+	if !moved {
+		t.Errorf("Expected moved to be true but got false")
+	}
+	padStr = cell.PadStringToRight(10)
+	if padStr != "....uvwxyz" {
+		t.Errorf("Expected '....uvwxyz' but got '%s'", padStr)
+	}
+	if cell.GetOverflowContent() != "" {
+		t.Errorf("Expected '' but got '%s'", cell.GetOverflowContent())
+	}
+
+	moved = cell.MoveToWrap()
+	if moved {
+		t.Errorf("Expected moved to be false but got true")
+	}
+	padStr = cell.PadStringToRight(10)
+	if padStr != ".........." {
+		t.Errorf("Expected '..........' but got '%s'", padStr)
+	}
+
+}
+
+func TestRowDrawing(t *testing.T) {
+	row := ctxout.NewTabRow(nil)
+
+	row.AddCell(ctxout.NewTabCell(nil).SetCutNotifier("...").SetOverflowMode("ignore").SetText("abcdefghijklmnopqrstuvwxyz").SetFillChar(".").SetSize(10))
+	row.AddCell(ctxout.NewTabCell(nil).SetCutNotifier("...").SetOverflowMode("ignore").SetText("0123456789,.-;:!§$%&/()*+#").SetFillChar(".").SetSize(10))
+	rowAsStr, _, _ := row.Render()
+	if row.Err == nil {
+		t.Errorf("Expected an error but got nil")
+	}
+	fmt.Println(rowAsStr)
+
+	table := ctxout.NewTableHandle(ctxout.NewTabOut())
+	table.AddRow(row)
+
+	tableAsString := table.Render()
+	if tableAsString == "" {
+		t.Error("Expected a table but got nothing")
+	} else {
+		if tableAsString != "abcdefg...0123456..." {
+			t.Errorf("Expected 'abcdefg...0123456...' but got '%s'", tableAsString)
+		}
+	}
+}
+
+func TestRowWrap1(t *testing.T) {
+	table := ctxout.NewTableHandle(ctxout.NewTabOut())
+	table.AddRow(
+		ctxout.NewTabRow(nil).
+			AddCell(ctxout.NewTabCell(nil).SetCutNotifier("...").
+				SetOverflowMode("wordwrap").
+				SetText("abcdefghijklmnopqrstuvwxyz").
+				SetFillChar(".").
+				SetSize(10)))
+	tableAsString := table.Render()
+	expected := "abcdefghij\nklmnopqrst\nuvwxyz...."
+	if tableAsString != expected {
+		t.Errorf("Expected \n%s<<<\n>>>> but got \n%s<<", expected, tableAsString)
+	}
+}
+
+func TestRowWrap2(t *testing.T) {
+	table := ctxout.NewTableHandle(ctxout.NewTabOut())
+	table.AddRow(
+		ctxout.NewTabRow(nil).
+			AddCell(ctxout.NewTabCell(nil).SetCutNotifier("...").
+				SetOverflowMode("wordwrap").
+				SetText("abcdefghijklmnopqrstuvwxyz").
+				SetFillChar(".").
+				SetOrigin(2).
+				SetSize(10)))
+	tableAsString := table.Render()
+	expected := "abcdefghij\nklmnopqrst\n....uvwxyz"
+	if tableAsString != expected {
+		t.Errorf("Expected \n%s<<<\n>>>> but got \n%s<<", expected, tableAsString)
+	}
+
+}
+
+func TestRowWrap3(t *testing.T) {
+	table := ctxout.NewTableHandle(ctxout.NewTabOut())
+
+	table.AddRow(
+		ctxout.NewTabRow(table).
+			AddCell(
+				ctxout.NewTabCell(nil).
+					SetCutNotifier("...").
+					SetOverflowMode("wordwrap").
+					SetText("abcdefghijklmnopqrstuvwxyz").
+					SetFillChar(".").
+					SetOrigin(2).
+					SetSize(10),
+			).AddCell(
+			ctxout.NewTabCell(nil).
+				SetCutNotifier("...").
+				SetOverflowMode("wordwrap").
+				SetText("0123456789,.-;:_!§$%&/()=?").
+				SetFillChar("-").
+				SetOrigin(0).
+				SetSize(10),
+		),
+	)
+	tableAsString := table.Render()
+	expected := "abcdefghij0123456789\nklmnopqrst,.-;:_!§$%\n....uvwxyz&/()=?----"
+	if tableAsString != expected {
+		t.Errorf("Expected \n%s<<<\n>>>> but got \n%s<<", expected, tableAsString)
+	}
+
+}
+
+func TestMultiple(t *testing.T) {
+
+	to := ctxout.NewTabOut()
+	type rowTesting struct {
+		Info        *ctxout.PostFilterInfo // post filter info
+		TestInput   string                 // input
+		Out         string                 // expected output with post filter
+		Raw         string                 // expected output without post filter
+		ExpectedLen int
+	}
+	resetInfo := &ctxout.PostFilterInfo{
+		Width:      100,
+		IsTerminal: false, // we make sure we have the behavior of a terminal
+	}
+	info := &ctxout.PostFilterInfo{
+		Width:      80,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	tests := []rowTesting{
+		{
+			TestInput: "<row><tab overflow='wordwrap' fill='.' size='10'>0123456789</tab><tab fill='-' size='10' overflow='wordwrap' origin='0'>abcdefghijklmnopqrstuvwxyz</tab></row>",
+			Out:       "01234567abcdefgh\n89......ijklmnop\n........qrstuvwx\n........yz------",
+			Raw:       "0123456789abcdefghij\n..........klmnopqrst\n..........uvwxyz----",
+			Info:      info,
+		},
+
+		{
+			TestInput: "<row><tab overflow='wordwrap' size='5'>0123456789</tab><tab size='10' overflow='wordwrap' origin='0'>abcdefghijklmnopqrstuvwxyz</tab></row>",
+			Out:       "0123abcdefgh\n4567ijklmnop\n89  qrstuvwx\n    yz      ",
+			Raw:       "01234abcdefghij\n56789klmnopqrst\n     uvwxyz    ",
+			Info:      info,
+		},
+		{
+			TestInput: "<row><tab size='23'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row>",
+			Out:       "this is a test    and this is anoth...",
+			Raw:       "this is a test          and this is another test",
+			Info:      info,
+		},
+		{
+			TestInput: "<row>" + ctxout.ForeDarkGrey + "<tab size='100' fill='─'>─</tab>" + ctxout.CleanTag + "</row>",
+			Out:       "──────────────────────────────────────────────────────────────────────────────",
+			Raw:       "──────────────────────────────────────────────────────────────────────────────────────────────────",
+			Info:      info,
+		},
+	}
+
+	for round, test := range tests {
+		to.Update(*resetInfo)
+		output := to.Command(test.TestInput)
+		if output != test.Raw {
+			t.Errorf("round [%d] RAW Expected\n\"%s\"\n>>>>> but got \n\"%s\"\n______", round, test.Raw, output)
+		}
+		to.Update(*test.Info)
+		output = to.Command(test.TestInput)
+		if output != test.Out {
+			t.Errorf("round [%d] OUT Expected\n\"%s\"\n>>>>>  but got \n\"%s\"\n_______", round, test.Out, output)
 		}
 	}
 
