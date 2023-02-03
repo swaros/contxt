@@ -264,15 +264,20 @@ func (c *SessionCobra) GetDirCmd() *cobra.Command {
 			c.checkDefaultFlags(cmd, args)
 			c.log().WithFields(logrus.Fields{"all-flag": c.Options.DirAll}).Debug("show all paths in any workspace shoul be executed")
 			current := configure.CfgV1.UsedV2Config.CurrentSet
+			ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<table>")
 			if c.Options.DirAll {
 				configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 					configure.CfgV1.UsedV2Config.CurrentSet = index
-					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), ":", ctxout.BoldTag, index, ctxout.CleanTag, ctxout.ForeDarkGrey, ": index (", cfg.CurrentIndex, ")")
+					// header for each workspace
+					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), "<row>", ctxout.BoldTag, "<tab size='100' fill=' '>", index, ctxout.CleanTag, ctxout.ForeDarkGrey, ": index (", cfg.CurrentIndex, ")</tab></row>")
 					c.ExternalCmdHndl.PrintPaths(true)
+					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), "<row>", ctxout.ForeDarkGrey, "<tab size='100' fill='─'>─</tab>", ctxout.CleanTag, "</row>")
 				})
 			} else {
 				c.ExternalCmdHndl.PrintPaths(false)
 			}
+			ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "</table>")
+			ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), "\n")
 			configure.CfgV1.UsedV2Config.CurrentSet = current
 		},
 	}

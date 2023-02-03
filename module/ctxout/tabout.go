@@ -186,8 +186,6 @@ func (tr *tabRow) Render() string {
 			case 0: // left padding
 				result = append(result, cell.PadString(cell.Text, size, cell.fillChar))
 			case 1:
-				//tempStr := systools.StringSubRight(cell.Text, size)
-				//result = append(result, cell.PadString(tempStr, size, cell.fillChar))
 				result = append(result, cell.PadStringToRightStayLeft(cell.Text, size, cell.fillChar))
 			case 2:
 				result = append(result, cell.PadStringToRight(cell.Text, size, cell.fillChar))
@@ -253,11 +251,7 @@ func (t *TabOut) ScanForRows(tokens []Parsed) *tableHandle {
 }
 
 func (t *TabOut) updateRows(table *tableHandle, tokens []Parsed) {
-	t.markup.BuildInnerSliceEach(tokens, "row", func(markup []Parsed) bool {
-		row := t.ScanForCells(markup, table)
-		table.rows = append(table.rows, *row)
-		return true
-	})
+	table.rows = append(table.rows, *t.ScanForCells(tokens, table))
 }
 
 func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
@@ -362,7 +356,7 @@ func (t *TabOut) TableParse(text string) string {
 }
 
 // similar to TableParse, but for a single row
-// and we do not wailt for a table end
+// and we do not wait for a table end
 func (t *TabOut) RowParse(text string) string {
 	if t.IsRow(text) {
 		tokens := t.markup.Parse(text)
@@ -393,9 +387,9 @@ func (td *tabCell) PadString(line string, max int, fillChar string) string {
 		if max < 0 {
 			max = 0
 		}
-		lastEsc := GetLastEscapeSequence(line)
+		//lastEsc := GetLastEscapeSequence(line)
 		runes := []rune(line)
-		safeSubstring := string(runes[0:max]) + td.cutNotifier + lastEsc
+		safeSubstring := string(runes[0:max]) + td.cutNotifier //+ lastEsc
 		return safeSubstring
 	}
 	diff := max - LenPrintable(line)
@@ -412,10 +406,10 @@ func (td *tabCell) PadStringToRight(line string, max int, fillChar string) strin
 		if max < 0 {
 			max = 0
 		}
-		lastEsc := GetLastEscapeSequence(line[:max])
+		//lastEsc := GetLastEscapeSequence(line[:max])
 		runes := []rune(line)
 
-		safeSubstring := string(runes[0:max]) + td.cutNotifier + lastEsc
+		safeSubstring := string(runes[0:max]) + td.cutNotifier
 		return safeSubstring
 	}
 	diff := max - LenPrintable(line)
@@ -432,10 +426,10 @@ func (td *tabCell) PadStringToRightStayLeft(line string, max int, fillChar strin
 		if max < 0 {
 			max = 0
 		}
-		lastEsc := GetLastEscapeSequence(line[:max])
+		//lastEsc := GetLastEscapeSequence(line[:max])
 		runes := []rune(line)
 		left := LenPrintable(line) - max
-		safeSubstring := td.cutNotifier + string(runes[left:]) + lastEsc
+		safeSubstring := td.cutNotifier + string(runes[left:])
 		return safeSubstring
 	}
 	diff := max - LenPrintable(line)

@@ -183,7 +183,7 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool) {
 		if !plain {
 			ctxout.CtxOut(c.session.OutPutHdnl, " contains paths:")
 		}
-		ctxout.Print(c.session.OutPutHdnl, "<table>")
+		//ctxout.Print(c.session.OutPutHdnl, "<table>")
 		configure.CfgV1.PathWorker(func(index string, path string) {
 			template, exists, err := c.session.TemplateHndl.Load()
 			if err == nil {
@@ -233,16 +233,11 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool) {
 			}
 		}, func(origin string) {})
 		if notWorkspace && !plain {
-			ctxout.CtxOut(c.session.OutPutHdnl, "</table>")
-			ctxout.CtxOut(c.session.OutPutHdnl, "\n")
-			ctxout.CtxOut(c.session.OutPutHdnl, ctxout.BackYellow, ctxout.ForeBlue, " WARNING ! ", ctxout.CleanTag, "\tyou are currently in none of the assigned locations.")
-			ctxout.CtxOut(c.session.OutPutHdnl, "\t\tso maybe you are using the wrong workspace")
-		} else {
-			ctxout.CtxOut(c.session.OutPutHdnl, "</table>")
+
+			ctxout.CtxOut(c.session.OutPutHdnl, "<row><tab size='20' origin='2'>", ctxout.ForeYellow, " WARNING ! </tab>", ctxout.CleanTag, "<tab size='80'>you are currently in none of the assigned locations.<tab></row>")
+			ctxout.CtxOut(c.session.OutPutHdnl, "<row><tab size='20'> </tab><tab=size='80'>so maybe you are using the wrong workspace</tab></row>")
 		}
-		if !plain {
-			ctxout.CtxOut(c.session.OutPutHdnl, "\n")
-		}
+
 	}
 }
 

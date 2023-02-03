@@ -188,3 +188,49 @@ func TestGettingEscape(t *testing.T) {
 		t.Errorf("Expected '%s' but got '%s'", "\033[0m", lastEscape)
 	}
 }
+
+func TestRowOnlyOut(t *testing.T) {
+
+	to := ctxout.NewTabOut()
+
+	content := "<row><tab size='23'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row>"
+	output := to.Command(content)
+	if !to.IsRow(content) {
+		t.Errorf("Expected content is a row but got false")
+	}
+	expect := "this is a test          and this is another test"
+	if output != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output)
+	}
+
+	// now we test again but now we fake a working terminal
+	info := ctxout.PostFilterInfo{
+		Width:      80,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+	to.Update(info)
+
+	type rowTesting struct {
+		Row string
+		Out string
+	}
+
+	tests := []rowTesting{
+		{
+			Row: "<row><tab size='23'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row>",
+			Out: "this is a test    and this is anoth...",
+		},
+		{
+			Row: "<row>" + ctxout.ForeDarkGrey + "<tab size='100' fill='─'>─</tab>" + ctxout.CleanTag + "</row>",
+			Out: "──────────────────────────────────────────────────────────────────────────────",
+		},
+	}
+
+	for _, test := range tests {
+		output := to.Command(test.Row)
+		if output != test.Out {
+			t.Errorf("Expected\n%s\n  but got \n%s", test.Out, output)
+		}
+	}
+
+}
