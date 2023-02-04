@@ -28,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/swaros/contxt/module/yamc"
@@ -379,7 +380,10 @@ func (c *ConfigModel) GetConfigPath() string {
 		}
 		startSep = "/"
 	case PATH_ABSOLUTE:
-		dir = "" // this is the root of the system. we add / later
+		dir = ""                       // this is the root of the system. we add / later
+		if runtime.GOOS != "windows" { // windows does not have a root folder. it is C:\
+			startSep = "/"
+		}
 	default:
 		startSep = "/"
 	}
