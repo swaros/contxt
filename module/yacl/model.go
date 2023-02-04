@@ -144,6 +144,7 @@ func (c *ConfigModel) SetSingleFile(filename string) *ConfigModel {
 func (c *ConfigModel) SetFileAndPathsByFullFilePath(fullPath string) *ConfigModel {
 	c.setFile = filepath.Base(fullPath)
 	c.subDirs = strings.Split(filepath.Dir(fullPath), string(filepath.Separator))
+	c.useSpecialDir = PATH_ABSOLUTE
 	// remove the first element, if it is empty
 	// this will happen if the path starts with a slash
 	// so this means also we have an absolute path
@@ -361,7 +362,7 @@ func (c *ConfigModel) Save() error {
 // anything what can go wrong will end up in a panic
 func (c *ConfigModel) GetConfigPath() string {
 	dir := "."
-
+	startSep := ""
 	switch c.useSpecialDir {
 	case PATH_HOME:
 		if usrDir, err := os.UserHomeDir(); err != nil {
@@ -369,18 +370,20 @@ func (c *ConfigModel) GetConfigPath() string {
 		} else {
 			dir = usrDir
 		}
+		startSep = "/"
 	case PATH_CONFIG:
 		if usrCfgDir, err := os.UserConfigDir(); err != nil {
 			panic(err) // if this fails, there is something terrible wrong. a good reason for panic
 		} else {
 			dir = usrCfgDir
 		}
+		startSep = "/"
 	case PATH_ABSOLUTE:
 		dir = "" // this is the root of the system. we add / later
 	}
 
 	if len(c.subDirs) > 0 {
-		dir += "/" + strings.Join(c.subDirs, "/")
+		dir += startSep + strings.Join(c.subDirs, "/")
 	}
 	return filepath.Clean(dir)
 }
