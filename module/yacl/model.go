@@ -380,6 +380,8 @@ func (c *ConfigModel) GetConfigPath() string {
 		startSep = "/"
 	case PATH_ABSOLUTE:
 		dir = "" // this is the root of the system. we add / later
+	default:
+		startSep = "/"
 	}
 
 	if len(c.subDirs) > 0 {

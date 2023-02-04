@@ -978,7 +978,11 @@ task:
 			t.Errorf("Expected code 0, got %d", code)
 		}
 		assert.Contains(t, messages, "triggered", "triggered not found in messages")
-		assertErrormsgContains(t, "some-not-working-command fails with error: exit status 127", errorMsg)
+		if runtime.GOOS == "windows" {
+			assertErrormsgContains(t, "some-not-working-command fails with error: exit status 1", errorMsg)
+		} else {
+			assertErrormsgContains(t, "some-not-working-command fails with error: exit status 127", errorMsg)
+		}
 
 	}
 }
@@ -1040,7 +1044,11 @@ task:
 		if code != systools.ExitCmdError {       // we expect a error code similar to 103
 			t.Errorf("Expected code 103, got %d", code)
 		}
-		assertErrormsgContains(t, "me-is-already-not-working fails with error: exit status 127", errorMsg)
+		if runtime.GOOS == "windows" {
+			assertErrormsgContains(t, "me-is-already-not-working fails with error: exit status 1", errorMsg)
+		} else {
+			assertErrormsgContains(t, "me-is-already-not-working fails with error: exit status 127", errorMsg)
+		}
 
 	}
 }
@@ -1302,7 +1310,7 @@ task:
 		}
 		if runtime.GOOS == "windows" {
 			assert.Contains(t, messages, "hello windows", "'hello windows' found in messages ["+strings.Join(messages, ",")+"]")
-			assert.Contains(t, targetUpdates, "subTarget:command[echo \"reaction\"]", "subTarget:command... not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+			assert.Contains(t, targetUpdates, "subTarget:command[echo \"hello windows\"]", "subTarget:command... not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
 		} else {
 			assert.Contains(t, messages, "hello other then linux", "hello other then linux not found in messages ["+strings.Join(messages, ",")+"]")
 			assert.Contains(t, targetUpdates, "subTarget:command[echo \"hello other then linux\"]", "subTarget:command... not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
