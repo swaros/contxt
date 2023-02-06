@@ -147,14 +147,16 @@ func (tr *tabRow) Render() (string, *tabRow, error) {
 			if rowSize > 0 {
 				size = rowSize
 			}
-			switch cell.Origin {
-			case 0: // left padding
-				result = append(result, cell.PadString(size))
-			case 1:
-				result = append(result, cell.PadStringToRightStayLeft(size))
-			case 2:
-				result = append(result, cell.PadStringToRight(size))
-			}
+			/*
+				switch cell.Origin {
+				case 0: // left padding
+					result = append(result, cell.PadString(size))
+				case 1:
+					result = append(result, cell.PadStringToRightStayLeft(size))
+				case 2:
+					result = append(result, cell.PadStringToRight(size))
+				}*/
+			result = append(result, cell.CutString(size))
 
 		} else {
 			result = append(result, cell.Text)

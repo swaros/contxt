@@ -1,5 +1,7 @@
 package ctxout
 
+import "strings"
+
 // tabCell is a single cell in a row
 type tabCell struct {
 	Size            int
@@ -125,6 +127,60 @@ func (td *tabCell) MoveToWrap() bool {
 	return false
 }
 
+func (td *tabCell) CutString(max int) string {
+	if max < 1 {
+		return ""
+	}
+	tSize := LenPrintable(td.Text)
+	if tSize == max {
+		return td.Text
+	}
+	if tSize > max {
+		runes := []rune(td.Text)
+		add := td.cutNotifier
+		left := LenPrintable(td.Text) - max
+		td.overflow = true
+		if td.overflowMode != "ignore" {
+			add = "" // if we keep the overflow, we do not add the cut notifier
+			switch td.Origin {
+			case 0:
+				td.overflowContent = string(runes[max:])
+			case 1:
+				td.overflowContent = string(runes[left:])
+			case 2:
+				td.overflowContent = string(runes[max:])
+			}
+
+		} else {
+			max -= LenPrintable(td.cutNotifier)
+			if max < 1 {
+				max = 0
+			}
+			left = LenPrintable(td.Text) - max
+		}
+		switch td.Origin {
+		case 0:
+			td.Text = string(runes[0:max]) + add
+		case 1:
+			td.Text = add + string(runes[left:])
+		case 2:
+			td.Text = string(runes[0:max]) + add
+		}
+		return td.Text
+	}
+	diff := max - tSize
+	switch td.Origin {
+	case 0:
+		return td.Text + strings.Repeat(td.fillChar, diff)
+	case 1:
+		return strings.Repeat(td.fillChar, diff) + td.Text
+	case 2:
+		return strings.Repeat(td.fillChar, diff) + td.Text
+	}
+	return td.Text
+}
+
+/*
 // PadString Returns max len string filled with spaces
 func (td *tabCell) PadString(max int) string {
 	if max < 1 {
@@ -222,3 +278,4 @@ func (td *tabCell) PadStringToRightStayLeft(max int) string {
 	}
 	return td.Text
 }
+*/

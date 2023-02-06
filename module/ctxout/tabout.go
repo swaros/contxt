@@ -211,15 +211,15 @@ func (t *TabOut) RowParse(text string) string {
 // PadStrLeft is a shortcut for PadString on a cell
 func PadStrLeft(line string, max int, fillChar string) string {
 	cell := NewTabCell(nil)
-	cell.SetText(line).SetFillChar(fillChar)
-	return cell.PadString(max)
+	cell.SetText(line).SetFillChar(fillChar).SetOrigin(0)
+	return cell.CutString(max)
 }
 
 // PadStrRight is a shortcut for PadString on a cell
 func PadStrRight(line string, max int, fillChar string) string {
 	cell := NewTabCell(nil)
-	cell.SetText(line).SetFillChar(fillChar)
-	return cell.PadStringToRight(max)
+	cell.SetText(line).SetFillChar(fillChar).SetOrigin(2)
+	return cell.CutString(max)
 }
 
 func GetLastEscapeSequence(text string) string {

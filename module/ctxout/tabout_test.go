@@ -239,8 +239,8 @@ func TestRowOnlyOut(t *testing.T) {
 func TestPadding(t *testing.T) {
 	abc := "abcdefghijklmnopqrstuvwxyz"
 	cell := ctxout.NewTabCell(nil)
-	cell.SetCutNotifier("").SetOverflowMode("wordwrap").SetText(abc).SetFillChar(".")
-	padStr := cell.PadStringToRight(10)
+	cell.SetCutNotifier("").SetOverflowMode("wordwrap").SetText(abc).SetFillChar(".").SetOrigin(2)
+	padStr := cell.CutString(10)
 	if padStr != "abcdefghij" {
 		t.Errorf("Expected 'abcdefghij' but got '%s'", padStr)
 	}
@@ -253,7 +253,7 @@ func TestPadding(t *testing.T) {
 	if !moved {
 		t.Errorf("Expected moved to be true but got false")
 	}
-	padStr = cell.PadStringToRight(10)
+	padStr = cell.CutString(10)
 	if padStr != "klmnopqrst" {
 		t.Errorf("Expected 'klmnopqrst' but got '%s'", padStr)
 	}
@@ -265,7 +265,7 @@ func TestPadding(t *testing.T) {
 	if !moved {
 		t.Errorf("Expected moved to be true but got false")
 	}
-	padStr = cell.PadStringToRight(10)
+	padStr = cell.CutString(10)
 	if padStr != "....uvwxyz" {
 		t.Errorf("Expected '....uvwxyz' but got '%s'", padStr)
 	}
@@ -277,7 +277,7 @@ func TestPadding(t *testing.T) {
 	if moved {
 		t.Errorf("Expected moved to be false but got true")
 	}
-	padStr = cell.PadStringToRight(10)
+	padStr = cell.CutString(10)
 	if padStr != ".........." {
 		t.Errorf("Expected '..........' but got '%s'", padStr)
 	}
