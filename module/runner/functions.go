@@ -161,7 +161,7 @@ func (c *CmdExecutorImpl) GetLogger() *logrus.Logger {
 	return c.session.Log.Logger
 }
 
-func (c *CmdExecutorImpl) PrintPaths(plain bool) {
+func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 	dir, err := os.Getwd()
 	c.session.Log.Logger.WithFields(logrus.Fields{
 		"dir": dir,
@@ -188,7 +188,10 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool) {
 			template, exists, err := c.session.TemplateHndl.Load()
 			if err == nil {
 				add := ctxout.Dim + ctxout.ForeLightGrey
-
+				taskDrawMode := "ignore"
+				if showFulltask {
+					taskDrawMode = "wordwrap"
+				}
 				indexColor := ctxout.ForeLightBlue
 				indexStr := index
 				if path == configure.CfgV1.GetActivePath("") {
@@ -221,11 +224,10 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool) {
 					"<tab size='65' draw='content' fill=' ' cut-add='///..' origin='1'>",
 					path, " ",
 					"</tab>",
-					ctxout.ForeYellow,
-					"<tab fill=' ' overflow='ignore' draw='extend' size='30' cut-add='<f:light-blue>...more</>' origin='2'>",
+					ctxout.CleanTag,
+					"<tab fill=' ' prefix='<f:yellow>' suffix='</>'  overflow='"+taskDrawMode+"' draw='extend' size='30' cut-add='<f:light-blue>...more</>' origin='2'>",
 					outTasks,
 					"</tab>",
-					ctxout.CleanTag,
 					"</row>",
 				)
 			} else {

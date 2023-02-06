@@ -136,11 +136,11 @@ func (tr *tabRow) Render() (string, *tabRow, error) {
 
 	var result []string
 	// this is the row that will be used if we have a wrap overflow mode.
-	// this will be created and updated all the time, but used only if we found an overflow usagewith wrap mode
-	wrapRow := NewTabRow(tr.parent)
+	// this will be created and updated all the time, but used only if we found an overflow usage with wrap mode
+	wrapRow := NewTabRow(tr.parent) // so we just create them just in case we need them
 
 	for indx, cell := range tr.Cells {
-		wrapRow.AddCell(cell)
+		wrapRow.AddCell(cell) // update the possible wrap row
 		if cell.Size > 0 {
 			rowSize := tr.GetSize(cell, indx)
 			size := tr.parent.parent.GetSize(cell.Size)
@@ -156,10 +156,11 @@ func (tr *tabRow) Render() (string, *tabRow, error) {
 				case 2:
 					result = append(result, cell.PadStringToRight(size))
 				}*/
-			result = append(result, cell.CutString(size))
+
+			result = append(result, cell.anyPrefix+cell.CutString(size)+cell.anySuffix)
 
 		} else {
-			result = append(result, cell.Text)
+			result = append(result, cell.GetText())
 		}
 		// we add all the cells to the wrap row, so we can use it if we have a wrap overflow mode
 		// any cell have the information about the overflow mode and it have also

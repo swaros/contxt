@@ -4,18 +4,19 @@ import "strings"
 
 // tabCell is a single cell in a row
 type tabCell struct {
-	Size            int
-	Origin          int
-	OriginString    string
-	Text            string
-	parent          *tabRow
-	fillChar        string
-	index           int    // reference to the index in the parent row
-	drawMode        string // fixed = fixed size, relative = relative to terminal size, content = max size of content
-	cutNotifier     string // if the text is cutted, then this string will be added to the end of the text
-	overflow        bool   // if the text is cutted, then this will be set to true
-	overflowContent string // if the text is cutted, then this will be set to the cutted content
-	overflowMode    string // this is the mode how the overflow is handled. ignore = the text is ignored, wrap = wrap the text
+	Size                 int
+	Origin               int
+	OriginString         string
+	Text                 string
+	parent               *tabRow
+	fillChar             string
+	index                int    // reference to the index in the parent row
+	drawMode             string // fixed = fixed size, relative = relative to terminal size, content = max size of content
+	cutNotifier          string // if the text is cutted, then this string will be added to the end of the text
+	overflow             bool   // if the text is cutted, then this will be set to true
+	overflowContent      string // if the text is cutted, then this will be set to the cutted content
+	overflowMode         string // this is the mode how the overflow is handled. ignore = the text is ignored, wrap = wrap the text
+	anyPrefix, anySuffix string // this is the prefix and postfix for the cell that will be added all the time. is ment for colorcodes
 }
 
 func NewTabCell(parent *tabRow) *tabCell {
@@ -86,7 +87,7 @@ func (td *tabCell) GetOverflowContent() string {
 }
 
 func (td *tabCell) GetText() string {
-	return td.Text
+	return td.anyPrefix + td.Text + td.anySuffix
 }
 
 func (td *tabCell) GetSize() int {
@@ -173,7 +174,7 @@ func (td *tabCell) CutString(max int) string {
 	case 0:
 		return td.Text + strings.Repeat(td.fillChar, diff)
 	case 1:
-		return strings.Repeat(td.fillChar, diff) + td.Text
+		return td.Text + strings.Repeat(td.fillChar, diff)
 	case 2:
 		return strings.Repeat(td.fillChar, diff) + td.Text
 	}

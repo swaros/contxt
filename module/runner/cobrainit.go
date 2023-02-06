@@ -18,10 +18,11 @@ type SessionCobra struct {
 }
 
 type CobraOptions struct {
-	ShowColors bool
-	ShowHints  bool
-	LogLevel   string
-	DirAll     bool // dir flag for show all dirs in any workspace
+	ShowColors      bool
+	ShowHints       bool
+	LogLevel        string
+	DirAll          bool // dir flag for show all dirs in any workspace
+	ShowFullTargets bool
 }
 
 func NewCobraCmds() *SessionCobra {
@@ -270,18 +271,18 @@ func (c *SessionCobra) GetDirCmd() *cobra.Command {
 					configure.CfgV1.UsedV2Config.CurrentSet = index
 					// header for each workspace
 					ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<row>", ctxout.BoldTag, "<tab size='100' fill=' '>", index, ctxout.CleanTag, ctxout.ForeDarkGrey, ": index (", cfg.CurrentIndex, ")</tab></row>")
-					c.ExternalCmdHndl.PrintPaths(true)
+					c.ExternalCmdHndl.PrintPaths(true, c.Options.ShowFullTargets)
 					ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<row>", ctxout.ForeDarkGrey, "<tab size='100' fill='─'>─</tab>", ctxout.CleanTag, "</row>")
 				})
 			} else {
-				c.ExternalCmdHndl.PrintPaths(false)
+				c.ExternalCmdHndl.PrintPaths(false, c.Options.ShowFullTargets)
 			}
 			ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), "</table>")
-			//ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), "\n")
 			configure.CfgV1.UsedV2Config.CurrentSet = current
 		},
 	}
 	dCmd.Flags().BoolVarP(&c.Options.DirAll, "all", "a", false, "show all paths in any workspace")
+	dCmd.Flags().BoolVarP(&c.Options.ShowFullTargets, "full", "f", false, "show full amount of targets")
 	return dCmd
 }
 

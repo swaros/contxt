@@ -105,6 +105,8 @@ func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 				tabCell.drawMode = token.GetProperty("draw", "relative").(string)
 				tabCell.cutNotifier = token.GetProperty("cut-add", "...").(string)
 				tabCell.overflowMode = token.GetProperty("overflow", "ignore").(string)
+				tabCell.anySuffix = token.GetProperty("suffix", "").(string)
+				tabCell.anyPrefix = token.GetProperty("prefix", "").(string)
 			} else if strings.HasPrefix(token.Text, "</tab>") {
 				t.rows = append(t.rows, *tabCell)
 				tabCell = NewTabCell(tabRow)
