@@ -1,6 +1,11 @@
 package ctxout
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/muesli/reflow/wordwrap"
+	"github.com/muesli/reflow/wrap"
+)
 
 // tabCell is a single cell in a row
 type tabCell struct {
@@ -141,7 +146,7 @@ func (td *tabCell) CutString(max int) string {
 		add := td.cutNotifier
 		left := LenPrintable(td.Text) - max
 		td.overflow = true
-		if td.overflowMode != "ignore" {
+		if td.overflowMode == "any" {
 			add = "" // if we keep the overflow, we do not add the cut notifier
 			switch td.Origin {
 			case 0:
@@ -151,7 +156,26 @@ func (td *tabCell) CutString(max int) string {
 			case 2:
 				td.overflowContent = string(runes[max:])
 			}
+		} else if td.overflowMode == "wordwrap" {
+			add = ""
 
+			wrp := wordwrap.NewWriter(max)
+			wrp.Breakpoints = []rune{':', ',', ' ', '\n'}
+			wrp.Newline = []rune{'\n'}
+			wrp.Write([]byte(td.Text))
+			wordWrap := wrp.String()
+			if wordWrap == "" {
+				wordWrap = td.Text
+			}
+			wrapped := wrap.String(wordWrap, max)
+			rows := strings.SplitN(wrapped, "\n", 2)
+			if len(rows) > 1 {
+				td.Text = rows[0]
+				td.overflowContent = string(runes[len(td.Text):])
+			}
+			tSize := LenPrintable(td.Text)
+			td.fillUpString(max, tSize) // fill up the cell
+			return td.Text
 		} else {
 			max -= LenPrintable(td.cutNotifier)
 			if max < 1 {
@@ -169,16 +193,33 @@ func (td *tabCell) CutString(max int) string {
 		}
 		return td.Text
 	}
+	/*
+		diff := max - tSize
+		switch td.Origin {
+		case 0:
+			return td.Text + strings.Repeat(td.fillChar, diff)
+		case 1:
+			return td.Text + strings.Repeat(td.fillChar, diff)
+		case 2:
+			return strings.Repeat(td.fillChar, diff) + td.Text
+		}*/
+	td.fillUpString(max, tSize)
+	return td.Text
+}
+
+func (td *tabCell) fillUpString(max, tSize int) {
 	diff := max - tSize
+	if diff < 1 {
+		return
+	}
 	switch td.Origin {
 	case 0:
-		return td.Text + strings.Repeat(td.fillChar, diff)
+		td.Text = td.Text + strings.Repeat(td.fillChar, diff)
 	case 1:
-		return td.Text + strings.Repeat(td.fillChar, diff)
+		td.Text = td.Text + strings.Repeat(td.fillChar, diff)
 	case 2:
-		return strings.Repeat(td.fillChar, diff) + td.Text
+		td.Text = strings.Repeat(td.fillChar, diff) + td.Text
 	}
-	return td.Text
 }
 
 /*
