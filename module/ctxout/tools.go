@@ -3,6 +3,7 @@ package ctxout
 import (
 	"regexp"
 	"strings"
+	//"github.com/muesli/reflow/ansi"
 )
 
 // LenPrintable returns the length of a string, but only counts printable characters
@@ -10,6 +11,7 @@ import (
 // and also ignores the length of the ANSI escape codes
 // also igrnores any newlines
 func LenPrintable(s string) int {
+	//return ansi.PrintableRuneWidth(s)  // investigate why it is different
 	return len(StringPure(s))
 }
 

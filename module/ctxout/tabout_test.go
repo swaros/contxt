@@ -394,32 +394,32 @@ func TestMultiple(t *testing.T) {
 	}
 
 	tests := []rowTesting{
-		/*
-			{
-				TestInput: "<row><tab overflow='any' fill='.' size='10'>0123456789</tab><tab fill='-' size='10' overflow='any' origin='0'>abcdefghijklmnopqrstuvwxyz</tab></row>",
-				Out:       "01234567abcdefgh\n89......ijklmnop\n........qrstuvwx\n........yz------",
-				Raw:       "0123456789abcdefghij\n..........klmnopqrst\n..........uvwxyz----",
-				Info:      info,
-			},
 
-			{
-				TestInput: "<row><tab overflow='any' size='5'>0123456789</tab><tab size='10' overflow='any' origin='0'>abcdefghijklmnopqrstuvwxyz</tab></row>",
-				Out:       "0123abcdefgh\n4567ijklmnop\n89  qrstuvwx\n    yz      ",
-				Raw:       "01234abcdefghij\n56789klmnopqrst\n     uvwxyz    ",
-				Info:      info,
-			},
-			{
-				TestInput: "<row><tab size='23'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row>",
-				Out:       "this is a test    and this is anoth...",
-				Raw:       "this is a test          and this is another test",
-				Info:      info,
-			},
-			{
-				TestInput: "<row>" + ctxout.ForeDarkGrey + "<tab size='100' fill='─'>─</tab>" + ctxout.CleanTag + "</row>",
-				Out:       "──────────────────────────────────────────────────────────────────────────────",
-				Raw:       "──────────────────────────────────────────────────────────────────────────────────────────────────",
-				Info:      info,
-			},*/
+		{
+			TestInput: "<row><tab overflow='any' fill='.' size='10'>0123456789</tab><tab fill='-' size='10' overflow='any' origin='0'>abcdefghijklmnopqrstuvwxyz</tab></row>",
+			Out:       "01234567abcdefgh\n89......ijklmnop\n........qrstuvwx\n........yz------",
+			Raw:       "0123456789abcdefghij\n..........klmnopqrst\n..........uvwxyz----",
+			Info:      info,
+		},
+
+		{
+			TestInput: "<row><tab overflow='any' size='5'>0123456789</tab><tab size='10' overflow='any' origin='0'>abcdefghijklmnopqrstuvwxyz</tab></row>",
+			Out:       "0123abcdefgh\n4567ijklmnop\n89  qrstuvwx\n    yz      ",
+			Raw:       "01234abcdefghij\n56789klmnopqrst\n     uvwxyz    ",
+			Info:      info,
+		},
+		{
+			TestInput: "<row><tab size='23'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row>",
+			Out:       "this is a test    and this is anoth...",
+			Raw:       "this is a test          and this is another test",
+			Info:      info,
+		},
+		{
+			TestInput: "<row>" + ctxout.ForeDarkGrey + "<tab size='100' fill='─'>─</tab>" + ctxout.CleanTag + "</row>",
+			Out:       "──────────────────────────────────────────────────────────────────────────────",
+			Raw:       "──────────────────────────────────────────────────────────────────────────────────────────────────",
+			Info:      info,
+		},
 		{
 			TestInput: "<row><tab overflow='wordwrap' size='23'>this is a test about wordwarpping</tab><tab overflow='wordwrap' size='25' origin='2'>itisakwardtosplitlingtextifwedonothaveanywhhitespace</tab></row>",
 			Out:       "this is a test    itisakwardtosplitlin\n about            gtextifwedonothavean\n wordwarpping             ywhhitespace",
