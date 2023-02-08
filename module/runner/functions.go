@@ -92,6 +92,12 @@ func (c *CmdExecutorImpl) GetOuputHandler() ctxout.PrintInterface {
 	return c.session.OutPutHdnl
 }
 
+func (c *CmdExecutorImpl) GetWorkspaces() []string {
+	ws := configure.CfgV1.ListWorkSpaces()
+	sort.Strings(ws)
+	return ws
+}
+
 func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace string, cnt int, update bool, info configure.WorkspaceInfoV2)) (allCount int, updatedCount int) {
 	wsCount := 0
 	wsUpdated := 0
