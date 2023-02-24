@@ -344,7 +344,8 @@ func (c *SessionCobra) GetDirAddCmd() *cobra.Command {
 		Short: "add path(s) to the workspace",
 		Long: `add current path (pwd) if no argument is set.
 		else add the given paths to the workspace
-		like 'ctx dir add /path/to/dir /path/to/other/dir'`,
+		like 'ctx dir add /path/to/dir /path/to/other/dir'
+		paths need to be absolute paths`,
 		Run: func(cmd *cobra.Command, args []string) {
 			c.checkDefaultFlags(cmd, args)
 			c.print("add path(s) to workspace: ", ctxout.ForeGreen, configure.CfgV1.UsedV2Config.CurrentSet, ctxout.CleanTag)
@@ -434,12 +435,14 @@ func (c *SessionCobra) log() *logrus.Logger {
 	return c.ExternalCmdHndl.GetLogger()
 }
 
+// print prints the given message to the output handler
 func (c *SessionCobra) print(msg ...interface{}) {
 	add := []interface{}{c.ExternalCmdHndl.GetOuputHandler()}
 	msg = append(add, msg...)
 	ctxout.Print(msg...)
 }
 
+// println prints the given message to the output handler with a new line
 func (c *SessionCobra) println(msg ...interface{}) {
 	add := []interface{}{c.ExternalCmdHndl.GetOuputHandler()}
 	msg = append(add, msg...)
