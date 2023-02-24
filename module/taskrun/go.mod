@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/gdamore/tcell/v2 v2.5.4
 	github.com/sirupsen/logrus v1.9.0
-	github.com/swaros/contxt/module/awaitgroup v0.0.0-20221206091003-553c703b0561
+	github.com/swaros/contxt/module/awaitgroup v0.4.0
 	github.com/swaros/contxt/module/configure v0.0.0-20221206091003-553c703b0561
 	github.com/swaros/contxt/module/dirhandle v0.0.0-20221206091003-553c703b0561
 	github.com/swaros/contxt/module/systools v0.0.0-20221206091003-553c703b0561
