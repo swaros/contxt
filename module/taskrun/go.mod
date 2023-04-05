@@ -21,7 +21,7 @@ require (
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/huandu/xstrings v1.3.3 // indirect
-	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -43,7 +43,7 @@ require (
 	github.com/imdario/mergo v0.3.13
 	github.com/kylelemons/godebug v1.1.0
 	github.com/rivo/tview v0.0.0-20221117065207-09f052e6ca98
-	github.com/spf13/cobra v1.6.1
+	github.com/spf13/cobra v1.7.0
 	github.com/tidwall/gjson v1.14.4
 	golang.org/x/sys v0.5.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
