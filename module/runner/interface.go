@@ -21,4 +21,5 @@ type CmdExecutor interface {
 	PrintWorkspaces()                                  // print out all workspaces
 	GetWorkspaces() []string                           // print out all workspaces as a list
 	DirFindApplyAndSave(args []string) (string, error) // find pathbay arguments,save the current path print the path
+	InteractiveScreen()                                // interactive screen
 }

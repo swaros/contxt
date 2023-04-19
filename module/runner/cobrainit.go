@@ -53,7 +53,7 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.ShowHints, "nohints", "n", false, "disable printing hints")
 	c.RootCmd.PersistentFlags().StringVar(&c.Options.LogLevel, "loglevel", "FATAL", "set loglevel")
 
-	c.RootCmd.AddCommand(c.GetWorkspaceCmd(), c.getCompletion(), c.GetGotoCmd(), c.GetDirCmd())
+	c.RootCmd.AddCommand(c.GetWorkspaceCmd(), c.getCompletion(), c.GetGotoCmd(), c.GetDirCmd(), c.GetInteractiveCmd())
 
 	return nil
 }
@@ -459,4 +459,19 @@ func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {
 
 	c.Options.LogLevel, _ = cmd.Flags().GetString("loglevel")
 	c.ExternalCmdHndl.SetLogLevel(c.Options.LogLevel)
+}
+
+func (c *SessionCobra) GetInteractiveCmd() *cobra.Command {
+	iCmd := &cobra.Command{
+		Use:   "interactive",
+		Short: "start the interactive mode",
+		Long:  `start the interactive mode`,
+		Run: func(cmd *cobra.Command, args []string) {
+			c.checkDefaultFlags(cmd, args)
+			c.println("start interactive mode")
+			c.ExternalCmdHndl.InteractiveScreen()
+		},
+	}
+
+	return iCmd
 }

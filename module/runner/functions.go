@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
@@ -273,4 +274,33 @@ func TemplateTargetsAsMap(template configure.RunConfig, showInvTarget bool) ([]s
 	}
 	sort.Strings(targets)
 	return targets, found
+}
+
+func (c *CmdExecutorImpl) InteractiveScreen() {
+	tc := NewTcell()
+	tc.Init(true)
+	hello := tc.Text("Hello World")
+	tc.AddElement(hello)
+
+	box := tc.NewBox().SetTopLeft(5, 5).SetBottomRight(40, 40)
+
+	box.SetFillStyle(tcell.StyleDefault.Background(tcell.ColorLightGoldenrodYellow).Foreground(tcell.ColorWhiteSmoke))
+
+	tc.AddElement(box)
+
+	contxtLabel := tc.ActiveText("Context: ")
+	contxtLabel.SetPos(10, 10)
+	tc.AddElement(contxtLabel)
+
+	secondLabel := tc.ActiveText("Second Label")
+	secondLabel.SetPos(10, 11)
+
+	tc.AddElement(secondLabel)
+
+	thirdLabel := tc.ActiveText("Third Label")
+	thirdLabel.SetPos(10, 12)
+
+	tc.AddElement(thirdLabel)
+
+	tc.Run()
 }
