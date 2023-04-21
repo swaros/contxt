@@ -28,6 +28,13 @@ func (t *textElement) SetPos(x, y int) *textElement {
 	return t
 }
 
+func (t *textElement) SetPosProcentage(x, y int) *textElement {
+	t.pos.X = x
+	t.pos.Y = y
+	t.pos.isProcentage = true
+	return t
+}
+
 func (t *textElement) SetDim(w, h int) *textElement {
 	t.dim.w = w
 	t.dim.h = h
@@ -174,8 +181,8 @@ func (t *textElement) Hit(pos position) bool {
 }
 
 func (t textElement) Draw(s tcell.Screen) {
-	row := t.pos.Y
-	col := t.pos.X
+
+	col, row := t.pos.GetXY(s)
 	width := t.dim.w + col
 	for _, r := range t.text {
 		s.SetContent(col, row, r, nil, t.style)

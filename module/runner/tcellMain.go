@@ -14,17 +14,6 @@ type ctCell struct {
 	regularStyles defaultStyles
 }
 
-type position struct {
-	X            int
-	Y            int
-	isProcentage bool
-}
-
-type dim struct {
-	w int
-	h int
-}
-
 type defaultStyles struct {
 	normal  tcell.Style
 	hovered tcell.Style
@@ -60,7 +49,7 @@ func (c *ctCell) CleanDebugMessages() {
 
 func (c *ctCell) debugOut(msg string) {
 	w, h := c.screen.Size()
-	row := h - 1
+	row := h - 2
 	col := 1
 	width := w - 1
 	for _, r := range msg {
@@ -80,18 +69,16 @@ func (c *ctCell) Loop() {
 	ox, oy := -1, -1
 	for {
 		// Update screen
-		c.CleanDebugMessages()
+		c.screen.Clear()
+		// draw all elements
 		c.DrawAll()
-		c.screen.Show()
+
 		// Poll event
 		ev := c.screen.PollEvent()
 
-		var clickEventPos position
+		var mousePos position
 		var clickReleaseEventPos position
 		releaseBtnCache := 0
-
-		debugMsg := strings.Join(debugMessages, ",")
-		c.debugOut(debugMsg)
 
 		// Process event
 		switch ev := ev.(type) {
@@ -104,41 +91,47 @@ func (c *ctCell) Loop() {
 				c.screen.Sync()
 			} else if ev.Rune() == 'C' || ev.Rune() == 'c' {
 				c.screen.Clear()
-			} else if ev.Key() == tcell.KeyTAB {
+			} else if ev.Key() == tcell.KeyTAB { // cycle focus by pressing tab
 				c.CycleFocus()
 			}
 		case *tcell.EventMouse:
 			x, y := ev.Position()
-			clickEventPos = position{x, y, false}
-			c.MouseHoverAll(clickEventPos) // trigger hover event
-			c.screen.ShowCursor(x, y)
-			// show mouse coords and debug messages
+			mousePos = position{x, y, false}
+			c.MouseHoverAll(mousePos) // trigger hover event
+			//c.screen.ShowCursor(x, y)
 
-			c.debugOut(fmt.Sprintf("x: %d, y: %d debug[%s]:", x, y, debugMsg))
+			// show mouse coords and debug messages
+			c.AddDebugMessage(fmt.Sprintf("[mouse (x: %d, y: %d)] ", x, y))
 			switch ev.Buttons() {
 			case tcell.Button1:
-				c.MousePressAll(clickEventPos, 1)
+				c.MousePressAll(mousePos, 1)
 				releaseBtnCache = 1
 				if ox < 0 {
 					ox, oy = x, y // record location when click started
 				}
 
 			case tcell.Button2:
-				c.MousePressAll(clickEventPos, 2)
+				c.MousePressAll(mousePos, 2)
 				releaseBtnCache = 2
 
 			case tcell.Button3:
-				c.MousePressAll(clickEventPos, 3)
+				c.MousePressAll(mousePos, 3)
 				releaseBtnCache = 3
 
 			case tcell.ButtonNone:
 				if ox >= 0 {
 					clickReleaseEventPos = position{ox, oy, false}
-					c.MouseReleaseAll(clickEventPos, clickReleaseEventPos, releaseBtnCache)
+					c.MouseReleaseAll(mousePos, clickReleaseEventPos, releaseBtnCache)
 					ox, oy = -1, -1
 				}
 			}
 		}
+		debugMsg := strings.Join(debugMessages, ",")
+		c.debugOut(debugMsg)
+		// show screen
+		c.screen.Show()
+		// remove any onscreen debug messages
+		c.CleanDebugMessages()
 	}
 }
 

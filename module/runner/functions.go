@@ -282,14 +282,14 @@ func (c *CmdExecutorImpl) InteractiveScreen() {
 	hello := tc.Text("Hello World")
 	tc.AddElement(hello)
 
-	box := tc.NewBox().SetTopLeft(5, 5).SetBottomRight(40, 40)
+	box := tc.NewBox().SetTopLeft(5, 5).SetBottomRightProcentage(50, 50)
 
 	box.SetFillStyle(tcell.StyleDefault.Background(tcell.ColorLightGoldenrodYellow).Foreground(tcell.ColorWhiteSmoke))
 
 	tc.AddElement(box)
 
 	contxtLabel := tc.ActiveText("Context: ")
-	contxtLabel.SetPos(10, 10)
+	contxtLabel.SetPosProcentage(10, 10)
 	tc.AddElement(contxtLabel)
 
 	secondLabel := tc.ActiveText("Second Label")
@@ -301,6 +301,18 @@ func (c *CmdExecutorImpl) InteractiveScreen() {
 	thirdLabel.SetPos(10, 12)
 
 	tc.AddElement(thirdLabel)
+
+	menu := tc.NewMenu()
+	menu.SetTopLeftProcentage(51, 51).SetBottomRightProcentage(99, 99)
+	menu.SetStyle(tcell.StyleDefault.Background(tcell.ColorBlue).Foreground(tcell.ColorWhiteSmoke))
+	menu.SetSelectedStyle(tcell.StyleDefault.Background(tcell.ColorLightBlue).Foreground(tcell.ColorYellow))
+	menu.AddItem("Hello")
+	menu.AddItem("World")
+	menu.AddItem("Test")
+	menu.AddItem("Test2")
+	menu.AddItem("Test3")
+
+	tc.AddElement(menu)
 
 	tc.Run()
 }

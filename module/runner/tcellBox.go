@@ -97,6 +97,7 @@ func (c *ctBox) Focus(activated bool) {
 }
 
 func (c *ctBox) Hit(pos position) bool {
+	// is not selectable by default
 	return false
 }
 
@@ -110,10 +111,8 @@ func (c *ctBox) IsSelectable() bool {
 func (c *ctBox) Draw(s tcell.Screen) {
 	w, h := s.Size()
 
-	x1 := c.topLeft.X
-	y1 := c.topLeft.Y
-	x2 := c.bottomRight.X
-	y2 := c.bottomRight.Y
+	x1, y1 := c.topLeft.GetXY(s)
+	x2, y2 := c.bottomRight.GetXY(s)
 
 	if w == 0 || h == 0 {
 		return
