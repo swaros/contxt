@@ -13,11 +13,18 @@ import (
 
 type ctMenu struct {
 	border        *ctBox
-	items         []*textElement
+	items         []*menuElement
 	parent        *ctCell
 	selectedStyle tcell.Style
 	regularStyle  tcell.Style
+	hoverStyle    tcell.Style
 	haveFocus     bool
+}
+
+type menuElement struct {
+	text        *textElement
+	coordinates Coordinates
+	isSelected  bool
 }
 
 // NewMenu creates a new menu
@@ -27,9 +34,17 @@ func (c *ctCell) NewMenu() *ctMenu {
 	menu.border.filled = true
 	menu.regularStyle = tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
 	menu.border.fillStyle = menu.regularStyle
-	menu.items = make([]*textElement, 0)
+	menu.items = make([]*menuElement, 0)
+	menu.SetDefaultStyle()
 	menu.parent = c
 	return menu
+}
+
+func (c *ctMenu) NewMenuElement(content string) *menuElement {
+	element := &menuElement{}
+	element.text = c.parent.Text(content)
+	element.coordinates = Coordinates{}
+	return element
 }
 
 // SetTopLeft sets the top left position of the menu
@@ -62,7 +77,7 @@ func (c *ctMenu) SetBottomRightProcentage(x, y int) *ctMenu {
 func (c *ctMenu) SetStyle(style tcell.Style) *ctMenu {
 	c.regularStyle = style
 	for _, item := range c.items {
-		item.SetStyle(style)
+		item.text.SetStyle(style)
 	}
 	c.border.SetFillStyle(style)
 	return c
@@ -70,6 +85,18 @@ func (c *ctMenu) SetStyle(style tcell.Style) *ctMenu {
 
 func (c *ctMenu) SetSelectedStyle(style tcell.Style) *ctMenu {
 	c.selectedStyle = style
+	return c
+}
+
+func (c *ctMenu) SetHoverStyle(style tcell.Style) *ctMenu {
+	c.hoverStyle = style
+	return c
+}
+
+func (c *ctMenu) SetDefaultStyle() *ctMenu {
+	c.regularStyle = tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
+	c.hoverStyle = tcell.StyleDefault.Underline(true)
+	c.selectedStyle = tcell.StyleDefault.Bold(true)
 	return c
 }
 
@@ -83,31 +110,42 @@ func (c *ctMenu) SetColor(fg, bg tcell.Color) *ctMenu {
 func (c *ctMenu) AddItem(text string) *ctMenu {
 	item := c.parent.Text(text)
 	item.SetStyle(c.regularStyle)
-	c.items = append(c.items, item)
+	c.items = append(c.items, c.NewMenuElement(text))
 	return c
 }
 
 // Implement the interface
 
 // Draw draws the menu
-func (c *ctMenu) Draw(s tcell.Screen) {
-	c.border.Draw(s)
+func (c *ctMenu) Draw(s tcell.Screen) Coordinates {
+	coords := c.border.Draw(s)
 	offX, offY := c.border.topLeft.GetXY(s)
 	width, bottom := c.border.bottomRight.GetXY(s)
 	for _, item := range c.items {
-		item.SetPos(offX+1, offY+1)
-		item.SetDim(width, 1)
+		item.text.SetPos(offX+1, offY+1)
+		item.text.SetDim(width, 1)
 		offY++
 		if offY > bottom {
 			break
 		}
-		item.Draw(s)
+		if item.isSelected {
+			item.text.SetStyle(c.selectedStyle)
+		}
+		item.coordinates = item.text.Draw(s)
 	}
+	return coords
 }
 
 // HandleEvent handles the events for the menu
 func (c *ctMenu) MouseReleaseEvent(start position, end position, trigger int) {
-
+	if c.HitTestFn(start) {
+		c.parent.AddDebugMessage("mouse HIT on menu with ", trigger, " button")
+		c.TestMenuEntry(start, func(item *menuElement) {
+			item.isSelected = true
+		}, func(item *menuElement) {
+			item.isSelected = false
+		})
+	}
 }
 
 func (c *ctMenu) MousePressEvent(start position, trigger int) {
@@ -122,18 +160,51 @@ func (c *ctMenu) MouseLeaveEvent() {
 
 }
 
+// shortcut for the test event
+func (c *ctMenu) HitTestFn(pos position) bool {
+	// do not get the wrong wy around. topLeft is more right and down than bottomRight
+	return pos.IsInBox(c.border.topLeft.GetReal(c.parent.screen), c.border.bottomRight.GetReal(c.parent.screen))
+}
+
+func (c *ctMenu) TestMenuEntry(pos position, onHit func(item *menuElement), onMiss func(item *menuElement)) {
+	for _, item := range c.items {
+		// we just need to check the y coordinate
+		// inside the menu we checked already that the x coordinate is within the menu
+		// so we we do not need to have an excact match on the text entry
+		if pos.Y == item.coordinates.TopLeft.Y {
+			onHit(item)
+		} else {
+			onMiss(item)
+		}
+	}
+}
+
+func (c *ctMenu) KeyEvent(key tcell.Key, r rune) {
+	if c.haveFocus {
+		switch key {
+		case tcell.KeyUp:
+			c.parent.AddDebugMessage("UP")
+		case tcell.KeyDown:
+			c.parent.AddDebugMessage("DOWN")
+		case tcell.KeyLeft:
+			c.parent.AddDebugMessage("LEFT")
+		case tcell.KeyRight:
+			c.parent.AddDebugMessage("RIGHT")
+		case tcell.KeyEnter:
+			c.parent.AddDebugMessage("ENTER")
+		}
+	}
+}
+
 func (c *ctMenu) Hit(pos position) bool {
 	// Check if the position is within the menu
-	// do not get the wrong wy around. topLeft is more right and down than bottomRight
-	if pos.IsInBox(c.border.topLeft.GetReal(c.parent.screen), c.border.bottomRight.GetReal(c.parent.screen)) {
+	if c.HitTestFn(pos) {
 		c.parent.AddDebugMessage("HIT MENU")
-		for _, item := range c.items {
-			if item.Hit(pos) {
-				item.SetStyle(c.selectedStyle)
-			} else {
-				item.SetStyle(c.regularStyle)
-			}
-		}
+		c.TestMenuEntry(pos, func(item *menuElement) {
+			item.text.SetStyle(c.hoverStyle)
+		}, func(item *menuElement) {
+			item.text.SetStyle(c.regularStyle)
+		})
 		return true
 	}
 	c.parent.AddDebugMessage("NO MENU HIT")

@@ -13,6 +13,22 @@ type dim struct {
 	h int
 }
 
+// Coordinates is a struct that contains the position and the dimensions of an element
+type Coordinates struct {
+	TopLeft    position
+	Dimensions dim
+}
+
+func NewCoordinates(topLeft position, w int, h int) *Coordinates {
+	return &Coordinates{
+		TopLeft: topLeft,
+		Dimensions: dim{
+			w: w,
+			h: h,
+		},
+	}
+}
+
 func CreatePosition(x, y int) position {
 	return position{X: x, Y: y}
 }

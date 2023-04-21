@@ -39,8 +39,9 @@ func (c *ctCell) Init(mouse bool) {
 	c.MouseEnabled = mouse
 }
 
-func (c *ctCell) AddDebugMessage(msg string) {
-	debugMessages = append(debugMessages, msg)
+func (c *ctCell) AddDebugMessage(msg ...interface{}) {
+	txtMsg := fmt.Sprint(msg...)
+	debugMessages = append(debugMessages, txtMsg)
 }
 
 func (c *ctCell) CleanDebugMessages() {
@@ -70,8 +71,6 @@ func (c *ctCell) Loop() {
 	for {
 		// Update screen
 		c.screen.Clear()
-		// draw all elements
-		c.DrawAll()
 
 		// Poll event
 		ev := c.screen.PollEvent()
@@ -126,6 +125,8 @@ func (c *ctCell) Loop() {
 				}
 			}
 		}
+		// draw all elements
+		c.DrawAll()
 		debugMsg := strings.Join(debugMessages, ",")
 		c.debugOut(debugMsg)
 		// show screen

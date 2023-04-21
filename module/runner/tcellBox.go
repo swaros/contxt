@@ -108,14 +108,14 @@ func (c *ctBox) IsSelectable() bool {
 	return false
 }
 
-func (c *ctBox) Draw(s tcell.Screen) {
+func (c *ctBox) Draw(s tcell.Screen) Coordinates {
 	w, h := s.Size()
 
 	x1, y1 := c.topLeft.GetXY(s)
 	x2, y2 := c.bottomRight.GetXY(s)
 
 	if w == 0 || h == 0 {
-		return
+		return *NewCoordinates(c.topLeft.GetReal(s), 0, 0)
 	}
 
 	if y2 < y1 {
@@ -151,4 +151,5 @@ func (c *ctBox) Draw(s tcell.Screen) {
 		s.SetContent(x1, y2, tcell.RuneLLCorner, nil, c.style)
 		s.SetContent(x2, y2, tcell.RuneLRCorner, nil, c.style)
 	}
+	return *NewCoordinates(c.topLeft.GetReal(s), x2-x1, y2-y1)
 }

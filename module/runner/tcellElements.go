@@ -10,7 +10,7 @@ import (
 
 type TcElement interface {
 	// Draw draw the element on the screen
-	Draw(s tcell.Screen)
+	Draw(s tcell.Screen) Coordinates
 	// MouseReleaseEvent is called when mouse is released
 	MouseReleaseEvent(start position, end position, trigger int)
 	// MousePressEvent is called when mouse is pressed

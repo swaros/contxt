@@ -180,13 +180,15 @@ func (t *textElement) Hit(pos position) bool {
 	return pos.X >= t.pos.X && pos.X <= t.pos.X+t.dim.w && pos.Y >= t.pos.Y && pos.Y <= t.pos.Y+t.dim.h
 }
 
-func (t textElement) Draw(s tcell.Screen) {
+func (t textElement) Draw(s tcell.Screen) Coordinates {
 
 	col, row := t.pos.GetXY(s)
 	width := t.dim.w + col
+	height := 0
 	for _, r := range t.text {
 		s.SetContent(col, row, r, nil, t.style)
 		col++
+		height = row
 		if col >= width { // wrap to next line
 			row++
 			col = t.pos.X
@@ -195,6 +197,7 @@ func (t textElement) Draw(s tcell.Screen) {
 			break
 		}
 	}
+	return *NewCoordinates(t.pos.GetReal(s), width, height)
 }
 
 // Text creates a new text element and returns a pointer to it.

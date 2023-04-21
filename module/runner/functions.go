@@ -304,8 +304,8 @@ func (c *CmdExecutorImpl) InteractiveScreen() {
 
 	menu := tc.NewMenu()
 	menu.SetTopLeftProcentage(51, 51).SetBottomRightProcentage(99, 99)
-	menu.SetStyle(tcell.StyleDefault.Background(tcell.ColorBlue).Foreground(tcell.ColorWhiteSmoke))
-	menu.SetSelectedStyle(tcell.StyleDefault.Background(tcell.ColorLightBlue).Foreground(tcell.ColorYellow))
+	//menu.SetStyle(tcell.StyleDefault.Background(tcell.ColorBlue).Foreground(tcell.ColorWhiteSmoke))
+	//menu.SetSelectedStyle(tcell.StyleDefault.Background(tcell.ColorLightBlue).Foreground(tcell.ColorYellow))
 	menu.AddItem("Hello")
 	menu.AddItem("World")
 	menu.AddItem("Test")
