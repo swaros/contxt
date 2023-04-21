@@ -94,6 +94,7 @@ func (c *ctCell) Loop() {
 				c.CycleFocus()
 			}
 		case *tcell.EventMouse:
+			c.AddDebugMessage("Mouse event")
 			x, y := ev.Position()
 			mousePos = position{x, y, false}
 			c.MouseHoverAll(mousePos) // trigger hover event
@@ -126,6 +127,7 @@ func (c *ctCell) Loop() {
 			}
 		}
 		// draw all elements
+		c.AddDebugMessage("DRAWING")
 		c.DrawAll()
 		debugMsg := strings.Join(debugMessages, ",")
 		c.debugOut(debugMsg)

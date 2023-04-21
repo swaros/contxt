@@ -109,7 +109,7 @@ func (c *ctCell) MouseReleaseAll(start position, end position, trigger int) {
 
 func (c *ctCell) MouseHoverAll(pos position) {
 	var nextHoverElement TcElement
-
+	c.AddDebugMessage("MA<")
 	c.SortedCallBack(func(b *TcElement) bool {
 		if (*b).Hit(pos) {
 			nextHoverElement = (*b)
@@ -128,6 +128,7 @@ func (c *ctCell) MouseHoverAll(pos position) {
 		LastHoverElement.MouseLeaveEvent()
 		LastHoverElement = nil
 	}
+	c.AddDebugMessage(">")
 }
 
 func (c *ctCell) CycleFocus() {

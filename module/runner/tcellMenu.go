@@ -13,7 +13,7 @@ import (
 
 type ctMenu struct {
 	border        *ctBox
-	items         []*menuElement
+	items         []*MenuElement
 	parent        *ctCell
 	selectedStyle tcell.Style
 	regularStyle  tcell.Style
@@ -21,10 +21,11 @@ type ctMenu struct {
 	haveFocus     bool
 }
 
-type menuElement struct {
+type MenuElement struct {
 	text        *textElement
 	coordinates Coordinates
 	isSelected  bool
+	OnSelect    func(*MenuElement)
 }
 
 // NewMenu creates a new menu
@@ -34,16 +35,17 @@ func (c *ctCell) NewMenu() *ctMenu {
 	menu.border.filled = true
 	menu.regularStyle = tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
 	menu.border.fillStyle = menu.regularStyle
-	menu.items = make([]*menuElement, 0)
+	menu.items = make([]*MenuElement, 0)
 	menu.SetDefaultStyle()
 	menu.parent = c
 	return menu
 }
 
-func (c *ctMenu) NewMenuElement(content string) *menuElement {
-	element := &menuElement{}
+func (c *ctMenu) NewMenuElement(content string, onSelect func(*MenuElement)) *MenuElement {
+	element := &MenuElement{}
 	element.text = c.parent.Text(content)
 	element.coordinates = Coordinates{}
+	element.OnSelect = onSelect
 	return element
 }
 
@@ -107,10 +109,10 @@ func (c *ctMenu) SetColor(fg, bg tcell.Color) *ctMenu {
 }
 
 // AddItem adds a new item to the menu
-func (c *ctMenu) AddItem(text string) *ctMenu {
+func (c *ctMenu) AddItem(text string, onSelect func(*MenuElement)) *ctMenu {
 	item := c.parent.Text(text)
 	item.SetStyle(c.regularStyle)
-	c.items = append(c.items, c.NewMenuElement(text))
+	c.items = append(c.items, c.NewMenuElement(text, onSelect))
 	return c
 }
 
@@ -140,9 +142,13 @@ func (c *ctMenu) Draw(s tcell.Screen) Coordinates {
 func (c *ctMenu) MouseReleaseEvent(start position, end position, trigger int) {
 	if c.HitTestFn(start) {
 		c.parent.AddDebugMessage("mouse HIT on menu with ", trigger, " button")
-		c.TestMenuEntry(start, func(item *menuElement) {
+		c.TestMenuEntry(start, func(item *MenuElement) {
+			// if the item is already selected, we do executes the callback
+			if item.isSelected {
+				item.OnSelect(item)
+			}
 			item.isSelected = true
-		}, func(item *menuElement) {
+		}, func(item *MenuElement) {
 			item.isSelected = false
 		})
 	}
@@ -166,7 +172,7 @@ func (c *ctMenu) HitTestFn(pos position) bool {
 	return pos.IsInBox(c.border.topLeft.GetReal(c.parent.screen), c.border.bottomRight.GetReal(c.parent.screen))
 }
 
-func (c *ctMenu) TestMenuEntry(pos position, onHit func(item *menuElement), onMiss func(item *menuElement)) {
+func (c *ctMenu) TestMenuEntry(pos position, onHit func(item *MenuElement), onMiss func(item *MenuElement)) {
 	for _, item := range c.items {
 		// we just need to check the y coordinate
 		// inside the menu we checked already that the x coordinate is within the menu
@@ -200,9 +206,9 @@ func (c *ctMenu) Hit(pos position) bool {
 	// Check if the position is within the menu
 	if c.HitTestFn(pos) {
 		c.parent.AddDebugMessage("HIT MENU")
-		c.TestMenuEntry(pos, func(item *menuElement) {
+		c.TestMenuEntry(pos, func(item *MenuElement) {
 			item.text.SetStyle(c.hoverStyle)
-		}, func(item *menuElement) {
+		}, func(item *MenuElement) {
 			item.text.SetStyle(c.regularStyle)
 		})
 		return true

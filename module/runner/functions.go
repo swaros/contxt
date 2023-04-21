@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
@@ -279,38 +278,15 @@ func TemplateTargetsAsMap(template configure.RunConfig, showInvTarget bool) ([]s
 func (c *CmdExecutorImpl) InteractiveScreen() {
 	tc := NewTcell()
 	tc.Init(true)
-	hello := tc.Text("Hello World")
-	tc.AddElement(hello)
-
-	box := tc.NewBox().SetTopLeft(5, 5).SetBottomRightProcentage(50, 50)
-
-	box.SetFillStyle(tcell.StyleDefault.Background(tcell.ColorLightGoldenrodYellow).Foreground(tcell.ColorWhiteSmoke))
-
-	tc.AddElement(box)
-
-	contxtLabel := tc.ActiveText("Context: ")
-	contxtLabel.SetPosProcentage(10, 10)
-	tc.AddElement(contxtLabel)
-
-	secondLabel := tc.ActiveText("Second Label")
-	secondLabel.SetPos(10, 11)
-
-	tc.AddElement(secondLabel)
-
-	thirdLabel := tc.ActiveText("Third Label")
-	thirdLabel.SetPos(10, 12)
-
-	tc.AddElement(thirdLabel)
-
 	menu := tc.NewMenu()
-	menu.SetTopLeftProcentage(51, 51).SetBottomRightProcentage(99, 99)
-	//menu.SetStyle(tcell.StyleDefault.Background(tcell.ColorBlue).Foreground(tcell.ColorWhiteSmoke))
-	//menu.SetSelectedStyle(tcell.StyleDefault.Background(tcell.ColorLightBlue).Foreground(tcell.ColorYellow))
-	menu.AddItem("Hello")
-	menu.AddItem("World")
-	menu.AddItem("Test")
-	menu.AddItem("Test2")
-	menu.AddItem("Test3")
+	menu.SetTopLeft(1, 1).SetBottomRightProcentage(30, 99)
+	menu.AddItem("Hello", func(itm *MenuElement) {
+		itm.text.text = "i am so selected"
+	})
+	//menu.AddItem("World")
+	//menu.AddItem("Test")
+	//menu.AddItem("Test2")
+	//menu.AddItem("Test3")
 
 	tc.AddElement(menu)
 
