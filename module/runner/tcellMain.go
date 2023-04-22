@@ -10,6 +10,7 @@ import (
 
 type ctCell struct {
 	MouseEnabled  bool
+	noClearScreen bool
 	screen        tcell.Screen
 	regularStyles defaultStyles
 }
@@ -35,8 +36,19 @@ func NewTcell() *ctCell {
 	return newct
 }
 
-func (c *ctCell) Init(mouse bool) {
+func (c *ctCell) SetMouse(mouse bool) *ctCell {
 	c.MouseEnabled = mouse
+	return c
+}
+
+func (c *ctCell) SetScreen(s tcell.Screen) *ctCell {
+	c.screen = s
+	return c
+}
+
+func (c *ctCell) SetNoClearScreen(noclear bool) *ctCell {
+	c.noClearScreen = noclear
+	return c
 }
 
 func (c *ctCell) AddDebugMessage(msg ...interface{}) {
@@ -69,8 +81,10 @@ func (c *ctCell) debugOut(msg string) {
 func (c *ctCell) Loop() {
 	ox, oy := -1, -1
 	for {
-		// Update screen
-		c.screen.Clear()
+		// clear screen if not disabled
+		if !c.noClearScreen {
+			c.screen.Clear()
+		}
 
 		// Poll event
 		ev := c.screen.PollEvent()
@@ -96,7 +110,7 @@ func (c *ctCell) Loop() {
 		case *tcell.EventMouse:
 			c.AddDebugMessage("Mouse event")
 			x, y := ev.Position()
-			mousePos = position{x, y, false}
+			mousePos = CreatePosition(x, y)
 			c.MouseHoverAll(mousePos) // trigger hover event
 			//c.screen.ShowCursor(x, y)
 
@@ -120,7 +134,7 @@ func (c *ctCell) Loop() {
 
 			case tcell.ButtonNone:
 				if ox >= 0 {
-					clickReleaseEventPos = position{ox, oy, false}
+					clickReleaseEventPos = CreatePosition(ox, oy)
 					c.MouseReleaseAll(mousePos, clickReleaseEventPos, releaseBtnCache)
 					ox, oy = -1, -1
 				}

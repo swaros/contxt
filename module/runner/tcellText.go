@@ -10,22 +10,36 @@ type textElement struct {
 	text       string
 	pos        position
 	dim        dim
+	visible    bool
 	style      tcell.Style
 	OnClicked  func(pos position, trigger int)
 	OnReleased func(start position, end position, trigger int)
 	OnHover    func(pos position)
 	OnLeave    func()
 	FucusFn    func(activated bool)
+	OnSelect   func(selected bool)
 }
 
 var (
 	texts []textElement
 )
 
+func (t *textElement) SetVisible(visible bool) {
+	t.visible = visible
+}
+
+func (t *textElement) IsVisible() bool {
+	return t.visible
+}
+
 func (t *textElement) SetPos(x, y int) *textElement {
 	t.pos.X = x
 	t.pos.Y = y
 	return t
+}
+
+func (t *textElement) GetPos() *position {
+	return &t.pos
 }
 
 func (t *textElement) SetPosProcentage(x, y int) *textElement {
@@ -204,6 +218,7 @@ func (t textElement) Draw(s tcell.Screen) Coordinates {
 func (c *ctCell) Text(content string) *textElement {
 	var te textElement
 	te.text = content
+	te.visible = true
 	te.pos.X = 0            // default is left edge
 	te.pos.Y = 0            // default is top edge
 	te.dim.w = len(content) // default is the length of the text
@@ -217,12 +232,16 @@ func (c *ctCell) Text(content string) *textElement {
 func (c *ctCell) ActiveText(content string) *textElement {
 	var te textElement
 	te.text = content
+	te.visible = true
 	te.pos.X = 0            // default is left edge
 	te.pos.Y = 0            // default is top edge
 	te.dim.w = len(content) // default is the length of the text
 	te.dim.h = 0            // default is at least one line
 	te.OnClicked = func(pos position, trigger int) {
 		c.SetFocus(&te)
+		if te.OnSelect != nil {
+			te.OnSelect(true)
+		}
 	}
 	te.OnReleased = func(start position, end position, trigger int) {
 		// nothing yet

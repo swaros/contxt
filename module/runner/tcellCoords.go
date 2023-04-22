@@ -6,11 +6,19 @@ type position struct {
 	X            int
 	Y            int
 	isProcentage bool
+	margin       margin
 }
 
 type dim struct {
 	w int
 	h int
+}
+
+type margin struct {
+	top    int
+	bottom int
+	left   int
+	right  int
 }
 
 // Coordinates is a struct that contains the position and the dimensions of an element
@@ -49,20 +57,40 @@ func (p *position) IsAbsolute() bool {
 	return !p.isProcentage
 }
 
+func (p *position) SetMargin(top, bottom, left, right int) {
+	p.margin.top = top
+	p.margin.bottom = bottom
+	p.margin.left = left
+	p.margin.right = right
+}
+
+func (p *position) GetX(s tcell.Screen) int {
+	if p.isProcentage {
+		w, _ := s.Size()
+		return (w * p.X / 100) + p.margin.left
+	}
+	return p.X
+}
+
+func (p *position) GetY(s tcell.Screen) int {
+	if p.isProcentage {
+		_, h := s.Size()
+		return (h * p.Y / 100) + p.margin.top
+	}
+	return p.Y
+}
+
 func (p *position) GetXY(s tcell.Screen) (int, int) {
 	if p.isProcentage {
 		w, h := s.Size()
-		return w * p.X / 100, h * p.Y / 100
+		return (w * p.X / 100) + p.margin.left, (h * p.Y / 100) + p.margin.top
 	}
 	return p.X, p.Y
 }
 
 func (p *position) GetReal(s tcell.Screen) position {
-	if p.isProcentage {
-		w, h := s.Size()
-		return position{X: w * p.X / 100, Y: h * p.Y / 100}
-	}
-	return *p
+	x, y := p.GetXY(s)
+	return position{X: x, Y: y}
 }
 
 // test if a different position more right and down than my self. or at least at same position

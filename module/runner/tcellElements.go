@@ -25,6 +25,10 @@ type TcElement interface {
 	Focus(activated bool)
 	// reports if the element is selectable and also can be focused
 	IsSelectable() bool
+	// reports if the element is visible. if not, it will not be drawn
+	IsVisible() bool
+	// set the visibility of the element
+	SetVisible(visible bool)
 }
 
 var (
@@ -57,7 +61,9 @@ func (c *ctCell) DrawAll() {
 	// we need to sort the elements by their z-index
 	elements := c.GetSortedElements()
 	for _, element := range elements {
-		element.Draw(c.screen)
+		if element.IsVisible() {
+			element.Draw(c.screen)
+		}
 	}
 	// recorde time for debugging
 	RenderTime = time.Since(start)
@@ -81,7 +87,7 @@ func (c *ctCell) SortedCallBack(doIt func(b *TcElement) bool) {
 func (c *ctCell) MousePressAll(pos position, trigger int) {
 
 	c.SortedCallBack(func(b *TcElement) bool {
-		if (*b).Hit(pos) {
+		if (*b).IsVisible() && (*b).Hit(pos) {
 			(*b).MousePressEvent(pos, trigger)
 			// we only want to trigger the first element
 			LastMouseElement = (*b)
@@ -111,7 +117,7 @@ func (c *ctCell) MouseHoverAll(pos position) {
 	var nextHoverElement TcElement
 	c.AddDebugMessage("MA<")
 	c.SortedCallBack(func(b *TcElement) bool {
-		if (*b).Hit(pos) {
+		if (*b).IsVisible() && (*b).Hit(pos) {
 			nextHoverElement = (*b)
 			return false
 		}
@@ -137,7 +143,7 @@ func (c *ctCell) CycleFocus() {
 
 	c.SortedCallBack(func(b *TcElement) bool {
 		if found {
-			if (*b).IsSelectable() {
+			if (*b).IsVisible() && (*b).IsSelectable() {
 				nextFocusElement = (*b)
 				return false
 			}

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
@@ -276,19 +277,44 @@ func TemplateTargetsAsMap(template configure.RunConfig, showInvTarget bool) ([]s
 }
 
 func (c *CmdExecutorImpl) InteractiveScreen() {
-	tc := NewTcell()
-	tc.Init(true)
-	menu := tc.NewMenu()
-	menu.SetTopLeft(1, 1).SetBottomRightProcentage(30, 99)
-	menu.AddItem("Hello", func(itm *MenuElement) {
-		itm.text.text = "i am so selected"
-	})
-	//menu.AddItem("World")
-	//menu.AddItem("Test")
-	//menu.AddItem("Test2")
-	//menu.AddItem("Test3")
+	tc := initTcellScreen(c)
+	tc.Run()
+}
 
+func initTcellScreen(c *CmdExecutorImpl) *ctCell {
+	tc := NewTcell()
+	tc.SetMouse(true).SetNoClearScreen(false)
+	// then first submenu
+	menu := tc.NewMenu()
+
+	// top bar
+	contxtTopMenu := tc.ActiveText("contxt")
+	contxtTopMenu.SetPos(1, 0).SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGoldenrod).Background(tcell.ColorBlack))
+	contxtTopMenu.OnSelect = func(selected bool) {
+		menu.SetVisible(!menu.IsVisible())
+	}
+	tc.AddElement(contxtTopMenu)
+
+	exitTopMenu := tc.ActiveText("exit")
+	exitTopMenu.SetPosProcentage(100, 0).
+		SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGoldenrod).Background(tcell.ColorBlack))
+
+	exitTopMenu.GetPos().SetMargin(0, 0, -5, 0)
+	exitTopMenu.OnSelect = func(selected bool) {
+		menu.SetVisible(false)
+	}
+	tc.AddElement(exitTopMenu)
+
+	menu.SetTopLeft(1, 1).SetBottomRight(20, 10)
+	menu.AddItem("PrintPaths", func(itm *MenuElement) {
+		itm.text.text = "PrintPaths RUNS"
+		c.PrintPaths(false, false)
+		itm.text.text = "PrintPaths done"
+	})
+
+	menu.SetVisible(false)
 	tc.AddElement(menu)
 
-	tc.Run()
+	return tc
+
 }

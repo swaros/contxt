@@ -19,6 +19,7 @@ type ctMenu struct {
 	regularStyle  tcell.Style
 	hoverStyle    tcell.Style
 	haveFocus     bool
+	visible       bool
 }
 
 type MenuElement struct {
@@ -38,6 +39,7 @@ func (c *ctCell) NewMenu() *ctMenu {
 	menu.items = make([]*MenuElement, 0)
 	menu.SetDefaultStyle()
 	menu.parent = c
+	menu.visible = true
 	return menu
 }
 
@@ -164,6 +166,14 @@ func (c *ctMenu) MouseHoverEvent(pos position) {
 
 func (c *ctMenu) MouseLeaveEvent() {
 
+}
+
+func (c *ctMenu) SetVisible(visible bool) {
+	c.visible = visible
+}
+
+func (c *ctMenu) IsVisible() bool {
+	return c.visible
 }
 
 // shortcut for the test event
