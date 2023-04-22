@@ -190,6 +190,11 @@ func (t *textElement) Hit(pos position) bool {
 	if t.OnClicked == nil && t.OnReleased == nil && t.OnHover == nil && t.OnLeave == nil {
 		return false
 	}
+	bottomRight := CreatePosition(t.pos.X+t.dim.w, t.pos.Y+t.dim.h)
+	if pos.IsInBox(t.pos, bottomRight) {
+		return true
+	}
+
 	// if the position is within the text element, we have a hit
 	return pos.X >= t.pos.X && pos.X <= t.pos.X+t.dim.w && pos.Y >= t.pos.Y && pos.Y <= t.pos.Y+t.dim.h
 }

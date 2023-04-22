@@ -1,6 +1,10 @@
 package runner
 
-import "github.com/gdamore/tcell/v2"
+import (
+	"fmt"
+
+	"github.com/gdamore/tcell/v2"
+)
 
 type position struct {
 	X            int
@@ -15,10 +19,8 @@ type dim struct {
 }
 
 type margin struct {
-	top    int
-	bottom int
-	left   int
-	right  int
+	top  int
+	left int
 }
 
 // Coordinates is a struct that contains the position and the dimensions of an element
@@ -57,11 +59,9 @@ func (p *position) IsAbsolute() bool {
 	return !p.isProcentage
 }
 
-func (p *position) SetMargin(top, bottom, left, right int) {
+func (p *position) SetMargin(left, top int) {
 	p.margin.top = top
-	p.margin.bottom = bottom
 	p.margin.left = left
-	p.margin.right = right
 }
 
 func (p *position) GetX(s tcell.Screen) int {
@@ -69,7 +69,7 @@ func (p *position) GetX(s tcell.Screen) int {
 		w, _ := s.Size()
 		return (w * p.X / 100) + p.margin.left
 	}
-	return p.X
+	return p.X + p.margin.left
 }
 
 func (p *position) GetY(s tcell.Screen) int {
@@ -77,7 +77,7 @@ func (p *position) GetY(s tcell.Screen) int {
 		_, h := s.Size()
 		return (h * p.Y / 100) + p.margin.top
 	}
-	return p.Y
+	return p.Y + p.margin.top
 }
 
 func (p *position) GetXY(s tcell.Screen) (int, int) {
@@ -85,7 +85,7 @@ func (p *position) GetXY(s tcell.Screen) (int, int) {
 		w, h := s.Size()
 		return (w * p.X / 100) + p.margin.left, (h * p.Y / 100) + p.margin.top
 	}
-	return p.X, p.Y
+	return p.X + p.margin.left, p.Y + p.margin.top
 }
 
 func (p *position) GetReal(s tcell.Screen) position {
@@ -94,6 +94,8 @@ func (p *position) GetReal(s tcell.Screen) position {
 }
 
 // test if a different position more right and down than my self. or at least at same position
+// this is not using the margin or relative position
+// all positions have to be calculated before, depending on the screen size
 func (p *position) IsMoreOrEvenRightAndDownThen(testPosition position) bool {
 	if p.X >= testPosition.X && p.Y >= testPosition.Y {
 		return true
@@ -116,5 +118,13 @@ func (p *position) IsInBox(topLeft position, bottomRight position) bool {
 	return false
 }
 func (p *position) String() string {
-	return "X: " + string(rune(p.X)) + " Y: " + string(rune(p.Y))
+	metric := "px"
+	if p.isProcentage {
+		metric = "%"
+	}
+	marginStr := ""
+	if p.margin.top != 0 || p.margin.left != 0 {
+		marginStr = fmt.Sprintf(" margin: %d,%d", p.margin.top, p.margin.left)
+	}
+	return fmt.Sprintf("x:%d%s y:%d%s%s", p.X, metric, p.Y, metric, marginStr)
 }

@@ -299,7 +299,7 @@ func initTcellScreen(c *CmdExecutorImpl) *ctCell {
 	exitTopMenu.SetPosProcentage(100, 0).
 		SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGoldenrod).Background(tcell.ColorBlack))
 
-	exitTopMenu.GetPos().SetMargin(0, 0, -5, 0)
+	exitTopMenu.GetPos().SetMargin(-5, 0)
 	exitTopMenu.OnSelect = func(selected bool) {
 		menu.SetVisible(false)
 	}
