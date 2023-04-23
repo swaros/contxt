@@ -1,4 +1,4 @@
-package runner
+package ctxtcell
 
 import (
 	"github.com/gdamore/tcell/v2"
@@ -22,11 +22,16 @@ type ctMenu struct {
 	visible       bool
 }
 
+// MenuElement is an element in a menu
 type MenuElement struct {
 	text        *textElement
 	coordinates Coordinates
 	isSelected  bool
 	OnSelect    func(*MenuElement)
+}
+
+func (m *MenuElement) GetText() *textElement {
+	return m.text
 }
 
 // NewMenu creates a new menu

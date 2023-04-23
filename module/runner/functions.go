@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
+	"github.com/swaros/contxt/module/ctxtcell"
 	"github.com/swaros/contxt/module/systools"
 )
 
@@ -281,8 +282,8 @@ func (c *CmdExecutorImpl) InteractiveScreen() {
 	tc.Run()
 }
 
-func initTcellScreen(c *CmdExecutorImpl) *CtCell {
-	tc := NewTcell()
+func initTcellScreen(c *CmdExecutorImpl) *ctxtcell.CtCell {
+	tc := ctxtcell.NewTcell()
 	tc.SetMouse(true).SetNoClearScreen(false)
 	// then first submenu
 	menu := tc.NewMenu()
@@ -306,10 +307,10 @@ func initTcellScreen(c *CmdExecutorImpl) *CtCell {
 	tc.AddElement(exitTopMenu)
 
 	menu.SetTopLeft(1, 1).SetBottomRight(20, 10)
-	menu.AddItem("PrintPaths", func(itm *MenuElement) {
-		itm.text.text = "PrintPaths RUNS"
+	menu.AddItem("PrintPaths", func(itm *ctxtcell.MenuElement) {
+		itm.GetText().SetText("PrintPaths RUNS")
 		c.PrintPaths(false, false)
-		itm.text.text = "PrintPaths done"
+		itm.GetText().SetText("PrintPaths done")
 	})
 
 	menu.SetVisible(false)

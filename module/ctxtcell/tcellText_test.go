@@ -1,4 +1,4 @@
-package runner_test
+package ctxtcell_test
 
 import "testing"
 

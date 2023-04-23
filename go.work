@@ -5,6 +5,7 @@ use (
 	./module/configure
 	./module/ctemplate
 	./module/ctxout
+	./module/ctxtcell
 	./module/dirhandle
 	./module/linehack
 	./module/runner
@@ -14,5 +15,5 @@ use (
 	./module/tasks
 	./module/trigger
 	./module/yacl
-	./module/yamc	
+	./module/yamc
 )

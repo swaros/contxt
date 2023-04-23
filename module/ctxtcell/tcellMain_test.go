@@ -1,4 +1,4 @@
-package runner_test
+package ctxtcell_test
 
 import (
 	"sync"
@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/swaros/contxt/module/runner"
+	"github.com/swaros/contxt/module/ctxtcell"
 )
 
-func GetTestScreen(t *testing.T) *runner.CtCell {
-	testApp := runner.NewTcell()
+func GetTestScreen(t *testing.T) *ctxtcell.CtCell {
+	testApp := ctxtcell.NewTcell()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Error(err)
@@ -25,8 +25,6 @@ func TestLoop(t *testing.T) {
 	app := GetTestScreen(t)
 
 	go app.Loop()
-	//time.Sleep(10 * time.Millisecond)
-
 	event := tcell.NewEventMouse(0, 0, 0, 0)
 
 	app.SendEvent(event)

@@ -1,4 +1,4 @@
-package runner
+package ctxtcell
 
 import "github.com/gdamore/tcell/v2"
 

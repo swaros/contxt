@@ -25,6 +25,13 @@ updates:
        interval: daily
     assignees:
        - swaros
+### dependencie for /module/ctxtcell/
+  - package-ecosystem: gomod
+    directory: /module/ctxtcell/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
 ### dependencie for /module/configure/
   - package-ecosystem: gomod
     directory: /module/configure/

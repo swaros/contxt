@@ -1,4 +1,4 @@
-package runner
+package ctxtcell
 
 import (
 	"fmt"
@@ -23,6 +23,15 @@ type textElement struct {
 var (
 	texts []textElement
 )
+
+func (t *textElement) SetText(text string) *textElement {
+	t.text = text
+	return t
+}
+
+func (t *textElement) GetText() string {
+	return t.text
+}
 
 func (t *textElement) SetVisible(visible bool) {
 	t.visible = visible

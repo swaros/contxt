@@ -18,6 +18,12 @@ module:
       timeout: 30s
 
   -
+    modul: ctxtcell
+    local: true
+    test:
+      timeout: 20s
+
+  -
     modul: configure
     local: true
     test:
