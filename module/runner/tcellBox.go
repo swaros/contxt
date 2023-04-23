@@ -10,7 +10,7 @@ type ctBox struct {
 	fillStyle   tcell.Style
 }
 
-func (c *ctCell) NewBox() *ctBox {
+func (c *CtCell) NewBox() *ctBox {
 	box := &ctBox{}
 	box.filled = false
 	box.style = tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
@@ -96,7 +96,7 @@ func (c *ctBox) MouseLeaveEvent() {
 func (c *ctBox) Focus(activated bool) {
 }
 
-func (c *ctBox) Hit(pos position) bool {
+func (c *ctBox) Hit(pos position, s tcell.Screen) bool {
 	// is not selectable by default
 	return false
 }

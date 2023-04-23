@@ -281,7 +281,7 @@ func (c *CmdExecutorImpl) InteractiveScreen() {
 	tc.Run()
 }
 
-func initTcellScreen(c *CmdExecutorImpl) *ctCell {
+func initTcellScreen(c *CmdExecutorImpl) *CtCell {
 	tc := NewTcell()
 	tc.SetMouse(true).SetNoClearScreen(false)
 	// then first submenu

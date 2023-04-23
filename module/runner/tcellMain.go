@@ -4,15 +4,18 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
 
-type ctCell struct {
+type CtCell struct {
 	MouseEnabled  bool
 	noClearScreen bool
 	screen        tcell.Screen
 	regularStyles defaultStyles
+	stopSign      bool
+	loopTimer     time.Duration
 }
 
 type defaultStyles struct {
@@ -26,9 +29,8 @@ var (
 	debugMessages []string
 )
 
-func NewTcell() *ctCell {
-
-	newct := &ctCell{}
+func NewTcell() *CtCell {
+	newct := &CtCell{}
 	newct.regularStyles.normal = tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
 	newct.regularStyles.hovered = tcell.StyleDefault.Underline(true)
 	newct.regularStyles.focused = tcell.StyleDefault.Bold(true)
@@ -36,31 +38,35 @@ func NewTcell() *ctCell {
 	return newct
 }
 
-func (c *ctCell) SetMouse(mouse bool) *ctCell {
+func (c *CtCell) SetMouse(mouse bool) *CtCell {
 	c.MouseEnabled = mouse
 	return c
 }
 
-func (c *ctCell) SetScreen(s tcell.Screen) *ctCell {
+func (c *CtCell) SetScreen(s tcell.Screen) *CtCell {
 	c.screen = s
 	return c
 }
 
-func (c *ctCell) SetNoClearScreen(noclear bool) *ctCell {
+func (c *CtCell) Stop() {
+	c.stopSign = true
+}
+
+func (c *CtCell) SetNoClearScreen(noclear bool) *CtCell {
 	c.noClearScreen = noclear
 	return c
 }
 
-func (c *ctCell) AddDebugMessage(msg ...interface{}) {
+func (c *CtCell) AddDebugMessage(msg ...interface{}) {
 	txtMsg := fmt.Sprint(msg...)
 	debugMessages = append(debugMessages, txtMsg)
 }
 
-func (c *ctCell) CleanDebugMessages() {
+func (c *CtCell) CleanDebugMessages() {
 	debugMessages = []string{}
 }
 
-func (c *ctCell) debugOut(msg string) {
+func (c *CtCell) debugOut(msg string) {
 	w, h := c.screen.Size()
 	row := h - 2
 	col := 1
@@ -78,9 +84,11 @@ func (c *ctCell) debugOut(msg string) {
 	}
 }
 
-func (c *ctCell) Loop() {
+func (c *CtCell) Loop() {
 	ox, oy := -1, -1
-	for {
+	startLoopTimer := time.Now()
+	for !c.stopSign {
+		log.Println(".:.")
 		// clear screen if not disabled
 		if !c.noClearScreen {
 			c.screen.Clear()
@@ -149,22 +157,32 @@ func (c *ctCell) Loop() {
 		c.screen.Show()
 		// remove any onscreen debug messages
 		c.CleanDebugMessages()
+
+		c.loopTimer = time.Since(startLoopTimer)
 	}
 }
 
-func (c *ctCell) Run() {
+func (c *CtCell) SendEvent(ev tcell.Event) error {
+	return c.screen.PostEvent(ev)
+}
+
+func (c *CtCell) GetLastLoopTime() time.Duration {
+	return c.loopTimer
+}
+
+func (c *CtCell) Run() error {
 
 	defStyle := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
-
-	s, err := tcell.NewScreen()
-	c.screen = s
-	if err != nil {
-		log.Fatalf("%+v", err)
+	if c.screen == nil {
+		s, err := tcell.NewScreen()
+		if err != nil {
+			return err
+		}
+		if err := s.Init(); err != nil {
+			return err
+		}
+		c.screen = s
 	}
-	if err := s.Init(); err != nil {
-		log.Fatalf("%+v", err)
-	}
-
 	c.screen.SetStyle(defStyle)
 	if c.MouseEnabled {
 		c.screen.EnableMouse()
@@ -183,5 +201,5 @@ func (c *ctCell) Run() {
 	}
 	defer quit()
 	c.Loop()
-
+	return nil
 }

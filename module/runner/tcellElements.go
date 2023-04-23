@@ -20,7 +20,7 @@ type TcElement interface {
 	// MouseLeaveEvent is called when mouse is leaving
 	MouseLeaveEvent()
 	// Hit check if the element is hit by the mouse
-	Hit(pos position) bool
+	Hit(pos position, s tcell.Screen) bool
 	// SetFocus set the focus of the element
 	Focus(activated bool)
 	// reports if the element is selectable and also can be focused
@@ -54,7 +54,7 @@ var (
 )
 
 // Draws all elements
-func (c *ctCell) DrawAll() {
+func (c *CtCell) DrawAll() {
 	// recorde time for debugging
 	start := time.Now()
 	// we draw all elements in the order of their z-index
@@ -73,7 +73,7 @@ func (c *ctCell) DrawAll() {
 
 // SortedCallBack will call the callback function for all elements
 // the elements are sorted by their z-index
-func (c *ctCell) SortedCallBack(doIt func(b *TcElement) bool) {
+func (c *CtCell) SortedCallBack(doIt func(b *TcElement) bool) {
 	elements := c.GetSortedElements()
 	for _, element := range elements {
 		if !doIt(&element) {
@@ -84,10 +84,10 @@ func (c *ctCell) SortedCallBack(doIt func(b *TcElement) bool) {
 
 // MousePressAll is called when the mouse is pressed
 // it will trigger the first element that is hit
-func (c *ctCell) MousePressAll(pos position, trigger int) {
+func (c *CtCell) MousePressAll(pos position, trigger int) {
 
 	c.SortedCallBack(func(b *TcElement) bool {
-		if (*b).IsVisible() && (*b).Hit(pos) {
+		if (*b).IsVisible() && (*b).Hit(pos, c.screen) {
 			(*b).MousePressEvent(pos, trigger)
 			// we only want to trigger the first element
 			LastMouseElement = (*b)
@@ -100,10 +100,10 @@ func (c *ctCell) MousePressAll(pos position, trigger int) {
 
 // MouseReleaseAll is called when the mouse is released
 // it will trigger the first element that is hit by the start coordinate
-func (c *ctCell) MouseReleaseAll(start position, end position, trigger int) {
+func (c *CtCell) MouseReleaseAll(start position, end position, trigger int) {
 
 	c.SortedCallBack(func(b *TcElement) bool {
-		if (*b).Hit(start) {
+		if (*b).Hit(start, c.screen) {
 			(*b).MouseReleaseEvent(start, end, trigger)
 			// we only want to trigger the first element
 			LastMouseElement = (*b)
@@ -113,11 +113,11 @@ func (c *ctCell) MouseReleaseAll(start position, end position, trigger int) {
 	})
 }
 
-func (c *ctCell) MouseHoverAll(pos position) {
+func (c *CtCell) MouseHoverAll(pos position) {
 	var nextHoverElement TcElement
 	c.AddDebugMessage("MA<")
 	c.SortedCallBack(func(b *TcElement) bool {
-		if (*b).IsVisible() && (*b).Hit(pos) {
+		if (*b).IsVisible() && (*b).Hit(pos, c.screen) {
 			nextHoverElement = (*b)
 			return false
 		}
@@ -137,7 +137,7 @@ func (c *ctCell) MouseHoverAll(pos position) {
 	c.AddDebugMessage(">")
 }
 
-func (c *ctCell) CycleFocus() {
+func (c *CtCell) CycleFocus() {
 	var nextFocusElement TcElement
 	var found bool
 
@@ -166,7 +166,7 @@ func (c *ctCell) CycleFocus() {
 
 // SetFocus set the focus of the element
 // the old focus element will be unfocused
-func (c *ctCell) SetFocus(elem TcElement) {
+func (c *CtCell) SetFocus(elem TcElement) {
 	if FocusedElement != nil {
 		FocusedElement.Focus(false)
 	}
@@ -174,7 +174,7 @@ func (c *ctCell) SetFocus(elem TcElement) {
 	FocusedElement.Focus(true)
 }
 
-func (c *ctCell) GetSortedKeys() []int {
+func (c *CtCell) GetSortedKeys() []int {
 	var sortedKeys []int
 	elements.Range(func(key, value interface{}) bool {
 		sortedKeys = append(sortedKeys, key.(int))
@@ -184,7 +184,7 @@ func (c *ctCell) GetSortedKeys() []int {
 	return sortedKeys
 }
 
-func (c *ctCell) GetSortedElements() []TcElement {
+func (c *CtCell) GetSortedElements() []TcElement {
 	if len(sortedElementsCache) > 0 {
 		return sortedElementsCache
 	}
@@ -201,21 +201,21 @@ func (c *ctCell) GetSortedElements() []TcElement {
 	return sortedElements
 }
 
-func (c *ctCell) GetElementByID(id int) TcElement {
+func (c *CtCell) GetElementByID(id int) TcElement {
 	if v, ok := elements.Load(id); ok {
 		return v.(TcElement)
 	}
 	return nil
 }
 
-func (c *ctCell) AddElement(e TcElement) int {
+func (c *CtCell) AddElement(e TcElement) int {
 	c.ResetCaches()
 	ElementLastID++
 	elements.Store(ElementLastID, e)
 	return ElementLastID
 }
 
-func (c *ctCell) RemoveElement(e TcElement) {
+func (c *CtCell) RemoveElement(e TcElement) {
 	elements.Range(func(key, value interface{}) bool {
 		if value == e {
 			elements.Delete(key)
@@ -226,16 +226,16 @@ func (c *ctCell) RemoveElement(e TcElement) {
 	})
 }
 
-func (c *ctCell) ResetCaches() {
+func (c *CtCell) ResetCaches() {
 	sortedElementsCache = nil
 }
 
-func (c *ctCell) RemoveElementByID(id int) {
+func (c *CtCell) RemoveElementByID(id int) {
 	elements.Delete(id)
 	c.ResetCaches()
 }
 
-func (c *ctCell) ClearElements() {
+func (c *CtCell) ClearElements() {
 	elements.Range(func(key, value interface{}) bool {
 		elements.Delete(key)
 		return true

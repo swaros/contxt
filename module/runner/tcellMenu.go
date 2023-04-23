@@ -14,7 +14,7 @@ import (
 type ctMenu struct {
 	border        *ctBox
 	items         []*MenuElement
-	parent        *ctCell
+	parent        *CtCell
 	selectedStyle tcell.Style
 	regularStyle  tcell.Style
 	hoverStyle    tcell.Style
@@ -30,7 +30,7 @@ type MenuElement struct {
 }
 
 // NewMenu creates a new menu
-func (c *ctCell) NewMenu() *ctMenu {
+func (c *CtCell) NewMenu() *ctMenu {
 	menu := &ctMenu{}
 	menu.border = c.NewBox()
 	menu.border.filled = true
@@ -212,7 +212,7 @@ func (c *ctMenu) KeyEvent(key tcell.Key, r rune) {
 	}
 }
 
-func (c *ctMenu) Hit(pos position) bool {
+func (c *ctMenu) Hit(pos position, s tcell.Screen) bool {
 	// Check if the position is within the menu
 	if c.HitTestFn(pos) {
 		c.parent.AddDebugMessage("HIT MENU")

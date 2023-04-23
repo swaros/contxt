@@ -185,7 +185,7 @@ func (t *textElement) IsSelectable() bool {
 	return t.FucusFn != nil
 }
 
-func (t *textElement) Hit(pos position) bool {
+func (t *textElement) Hit(pos position, s tcell.Screen) bool {
 	// if no event handler is set, we don't care about the hit
 	if t.OnClicked == nil && t.OnReleased == nil && t.OnHover == nil && t.OnLeave == nil {
 		return false
@@ -220,7 +220,7 @@ func (t textElement) Draw(s tcell.Screen) Coordinates {
 }
 
 // Text creates a new text element and returns a pointer to it.
-func (c *ctCell) Text(content string) *textElement {
+func (c *CtCell) Text(content string) *textElement {
 	var te textElement
 	te.text = content
 	te.visible = true
@@ -234,7 +234,7 @@ func (c *ctCell) Text(content string) *textElement {
 
 // Text creates a new text element and returns a pointer to it.
 // and sets the default behavior of an element to be clickable, can be focuses and can be hovered
-func (c *ctCell) ActiveText(content string) *textElement {
+func (c *CtCell) ActiveText(content string) *textElement {
 	var te textElement
 	te.text = content
 	te.visible = true
