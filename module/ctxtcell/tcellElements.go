@@ -1,6 +1,7 @@
 package ctxtcell
 
 import (
+	"errors"
 	"sort"
 	"sync"
 	"time"
@@ -29,6 +30,10 @@ type TcElement interface {
 	IsVisible() bool
 	// set the visibility of the element
 	SetVisible(visible bool)
+	// set the ID of the element
+	SetID(id int)
+	// get the ID of the element
+	GetID() int
 }
 
 var (
@@ -75,10 +80,10 @@ func (c *CtCell) DrawAll() {
 
 // SortedCallBack will call the callback function for all elements
 // the elements are sorted by their z-index
-func (c *CtCell) SortedCallBack(doIt func(b *TcElement) bool) {
+func (c *CtCell) SortedCallBack(doIt func(b TcElement) bool) {
 	elements := c.GetSortedElements()
 	for _, element := range elements {
-		if !doIt(&element) {
+		if !doIt(element) {
 			break
 		}
 	}
@@ -88,11 +93,11 @@ func (c *CtCell) SortedCallBack(doIt func(b *TcElement) bool) {
 // it will trigger the first element that is hit
 func (c *CtCell) MousePressAll(pos position, trigger int) {
 
-	c.SortedCallBack(func(b *TcElement) bool {
-		if (*b).IsVisible() && (*b).Hit(pos, c.screen) {
-			(*b).MousePressEvent(pos, trigger)
+	c.SortedCallBack(func(b TcElement) bool {
+		if b.IsVisible() && b.Hit(pos, c.screen) {
+			b.MousePressEvent(pos, trigger)
 			// we only want to trigger the first element
-			LastMouseElement = (*b)
+			LastMouseElement = b
 			return false
 		}
 		return true
@@ -104,11 +109,11 @@ func (c *CtCell) MousePressAll(pos position, trigger int) {
 // it will trigger the first element that is hit by the start coordinate
 func (c *CtCell) MouseReleaseAll(start position, end position, trigger int) {
 
-	c.SortedCallBack(func(b *TcElement) bool {
-		if (*b).Hit(start, c.screen) {
-			(*b).MouseReleaseEvent(start, end, trigger)
+	c.SortedCallBack(func(b TcElement) bool {
+		if b.Hit(start, c.screen) {
+			b.MouseReleaseEvent(start, end, trigger)
 			// we only want to trigger the first element
-			LastMouseElement = (*b)
+			LastMouseElement = b
 			return false
 		}
 		return true
@@ -119,9 +124,9 @@ func (c *CtCell) MouseReleaseAll(start position, end position, trigger int) {
 func (c *CtCell) MouseHoverAll(pos position) {
 	var nextHoverElement TcElement
 	c.AddDebugMessage("MA<")
-	c.SortedCallBack(func(b *TcElement) bool {
-		if (*b).IsVisible() && (*b).Hit(pos, c.screen) {
-			nextHoverElement = (*b)
+	c.SortedCallBack(func(b TcElement) bool {
+		if b.IsVisible() && b.Hit(pos, c.screen) {
+			nextHoverElement = b
 			return false
 		}
 		return true
@@ -145,25 +150,44 @@ func (c *CtCell) CycleFocus() {
 	var nextFocusElement TcElement
 	var found bool
 
-	c.SortedCallBack(func(b *TcElement) bool {
+	// if there is no element with the focus, we will set the focus to the first element
+	if FocusedElement == nil {
+		c.SortedCallBack(func(b TcElement) bool {
+			if b.IsVisible() && b.IsSelectable() {
+				nextFocusElement = b
+				return false
+			}
+			return true
+		})
+		c.SetFocus(nextFocusElement)
+		return
+	}
+
+	c.SortedCallBack(func(b TcElement) bool {
 		if found {
-			if (*b).IsVisible() && (*b).IsSelectable() {
-				nextFocusElement = (*b)
+			if b.IsVisible() && b.IsSelectable() {
+				nextFocusElement = b
 				return false
 			}
 		}
-		if (*b) == FocusedElement {
+		if b == FocusedElement {
 			found = true
 		}
 		return true
 
 	})
-
+	// this is the case if we are at the end of the list
+	// so we doing the same again, at the beginning
 	if nextFocusElement == nil {
-		elements.Range(func(key, value interface{}) bool {
-			nextFocusElement = value.(TcElement)
-			return false
+		c.SortedCallBack(func(b TcElement) bool {
+			if b.IsVisible() && b.IsSelectable() {
+				nextFocusElement = b
+				return false
+			}
+			return true
 		})
+		c.SetFocus(nextFocusElement)
+		return
 	}
 	c.SetFocus(nextFocusElement)
 }
@@ -176,6 +200,19 @@ func (c *CtCell) SetFocus(elem TcElement) {
 	}
 	FocusedElement = elem
 	FocusedElement.Focus(true)
+}
+
+// SetFocus set the focus of the element
+// the old focus element will be unfocused
+func (c *CtCell) SetFocusById(id int) {
+	if elem, ok := elements.Load(id); ok {
+		c.SetFocus(elem.(TcElement))
+	}
+}
+
+// GetFocusedElement returns the element that has the focus
+func (c *CtCell) GetFocusedElement() TcElement {
+	return FocusedElement
 }
 
 // GetSortedKeys returns all keys sorted
@@ -216,13 +253,19 @@ func (c *CtCell) GetElementByID(id int) TcElement {
 }
 
 // AddElement adds an element to the cell
-func (c *CtCell) AddElement(e TcElement) int {
+// it also checks if the element is already in the cell, if an id is already set
+func (c *CtCell) AddElement(e TcElement) (int, error) {
+	// if the element already has an id, it will not be added
+	if e.GetID() > 0 {
+		return 0, errors.New("element already exists")
+	}
 	mu.Lock()
 	c.ResetCaches()
 	ElementLastID++
+	e.SetID(ElementLastID)
 	elements.Store(ElementLastID, e)
 	mu.Unlock()
-	return ElementLastID
+	return ElementLastID, nil
 }
 
 // RemoveElement removes an element from the cell

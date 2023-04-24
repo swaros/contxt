@@ -8,6 +8,15 @@ type ctBox struct {
 	style       tcell.Style
 	filled      bool
 	fillStyle   tcell.Style
+	id          int
+}
+
+func (c *ctBox) SetID(id int) {
+	c.id = id
+}
+
+func (c *ctBox) GetID() int {
+	return c.id
 }
 
 func (c *CtCell) NewBox() *ctBox {

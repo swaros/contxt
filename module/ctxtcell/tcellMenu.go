@@ -20,6 +20,7 @@ type ctMenu struct {
 	hoverStyle    tcell.Style
 	haveFocus     bool
 	visible       bool
+	id            int
 }
 
 // MenuElement is an element in a menu
@@ -54,6 +55,14 @@ func (c *ctMenu) NewMenuElement(content string, onSelect func(*MenuElement)) *Me
 	element.coordinates = Coordinates{}
 	element.OnSelect = onSelect
 	return element
+}
+
+func (c *ctMenu) SetID(id int) {
+	c.id = id
+}
+
+func (c *ctMenu) GetID() int {
+	return c.id
 }
 
 // SetTopLeft sets the top left position of the menu

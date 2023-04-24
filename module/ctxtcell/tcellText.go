@@ -18,11 +18,20 @@ type textElement struct {
 	OnLeave    func()
 	FucusFn    func(activated bool)
 	OnSelect   func(selected bool)
+	id         int
 }
 
 var (
 	texts []textElement
 )
+
+func (t *textElement) SetID(id int) {
+	t.id = id
+}
+
+func (t *textElement) GetID() int {
+	return t.id
+}
 
 func (t *textElement) SetText(text string) *textElement {
 	t.text = text

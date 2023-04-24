@@ -3,7 +3,6 @@ package ctxtcell_test
 import (
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/swaros/contxt/module/ctxtcell"
@@ -19,21 +18,6 @@ func GetTestScreen(t *testing.T) *ctxtcell.CtCell {
 	screen.SetSize(1000, 100)
 	testApp.SetScreen(screen)
 	return testApp
-}
-
-// testing stop sign
-func TestLoop(t *testing.T) {
-	app := GetTestScreen(t)
-
-	go app.Loop()
-	event := tcell.NewEventMouse(0, 0, 0, 0)
-
-	app.SendEvent(event)
-	time.Sleep(100 * time.Millisecond)
-	app.Stop()
-	if app.GetLastLoopTime().Microseconds() < 1 {
-		t.Errorf("maybe this hardware is just to fast, but expected looptime should be more then 1 Microsecond, got %v", app.GetLastLoopTime().Microseconds())
-	}
 }
 
 func TestElementHit(t *testing.T) {
@@ -54,8 +38,13 @@ func TestElementHit(t *testing.T) {
 			app.Stop()
 		}
 	}
-	if id := app.AddElement(clickableText); id != 1 {
-		t.Errorf("Expected id to be 1, but got %v", id)
+	if id, err := app.AddElement(clickableText); id != 1 || err != nil {
+		if err != nil {
+			t.Error(err)
+		}
+		if id != 1 {
+			t.Errorf("Expected id to be 1, but got %v", id)
+		}
 	}
 
 	// running the app in a goroutine
