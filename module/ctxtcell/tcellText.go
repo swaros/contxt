@@ -261,7 +261,7 @@ func (c *CtCell) ActiveText(content string) *textElement {
 	te.dim.w = len(content) // default is the length of the text
 	te.dim.h = 0            // default is at least one line
 	te.OnClicked = func(pos position, trigger int) {
-		c.SetFocus(&te)
+		c.SetFocusById(te.id)
 		if te.OnSelect != nil {
 			te.OnSelect(true)
 		}

@@ -159,7 +159,7 @@ func (c *CtCell) CycleFocus() {
 			}
 			return true
 		})
-		c.SetFocus(nextFocusElement)
+		c.setFocus(nextFocusElement)
 		return
 	}
 
@@ -186,15 +186,15 @@ func (c *CtCell) CycleFocus() {
 			}
 			return true
 		})
-		c.SetFocus(nextFocusElement)
+		c.setFocus(nextFocusElement)
 		return
 	}
-	c.SetFocus(nextFocusElement)
+	c.setFocus(nextFocusElement)
 }
 
 // SetFocus set the focus of the element
 // the old focus element will be unfocused
-func (c *CtCell) SetFocus(elem TcElement) {
+func (c *CtCell) setFocus(elem TcElement) {
 	if FocusedElement != nil {
 		FocusedElement.Focus(false)
 	}
@@ -206,7 +206,7 @@ func (c *CtCell) SetFocus(elem TcElement) {
 // the old focus element will be unfocused
 func (c *CtCell) SetFocusById(id int) {
 	if elem, ok := elements.Load(id); ok {
-		c.SetFocus(elem.(TcElement))
+		c.setFocus(elem.(TcElement))
 	}
 }
 

@@ -222,7 +222,7 @@ func TestCycleFocus(t *testing.T) {
 		t.Errorf("Expected focused is %v, but got %v", ids[1], focused.GetID())
 	}
 	// focus the last element
-	main.SetFocus(main.GetElementByID(ids[len(ids)-1]))
+	main.SetFocusById(ids[len(ids)-1])
 
 	main.CycleFocus()
 	focused = main.GetFocusedElement()
