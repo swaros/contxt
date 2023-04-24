@@ -11,6 +11,7 @@ import (
 
 func GetTestScreen(t *testing.T) *ctxtcell.CtCell {
 	testApp := ctxtcell.NewTcell()
+	testApp.ClearElements()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Error(err)

@@ -32,6 +32,8 @@ type TcElement interface {
 }
 
 var (
+	// mutex to protect the elements
+	mu sync.Mutex
 	// contains all elements
 	elements sync.Map
 	// is the last element that was hovered
@@ -113,6 +115,7 @@ func (c *CtCell) MouseReleaseAll(start position, end position, trigger int) {
 	})
 }
 
+// MouseHoverAll is called when the mouse is hovering
 func (c *CtCell) MouseHoverAll(pos position) {
 	var nextHoverElement TcElement
 	c.AddDebugMessage("MA<")
@@ -137,6 +140,7 @@ func (c *CtCell) MouseHoverAll(pos position) {
 	c.AddDebugMessage(">")
 }
 
+// CycleFocus will cycle the focus to the next element
 func (c *CtCell) CycleFocus() {
 	var nextFocusElement TcElement
 	var found bool
@@ -174,6 +178,7 @@ func (c *CtCell) SetFocus(elem TcElement) {
 	FocusedElement.Focus(true)
 }
 
+// GetSortedKeys returns all keys sorted
 func (c *CtCell) GetSortedKeys() []int {
 	var sortedKeys []int
 	elements.Range(func(key, value interface{}) bool {
@@ -184,11 +189,12 @@ func (c *CtCell) GetSortedKeys() []int {
 	return sortedKeys
 }
 
+// GetSortedElements returns all elements sorted by their z-index
 func (c *CtCell) GetSortedElements() []TcElement {
 	if len(sortedElementsCache) > 0 {
 		return sortedElementsCache
 	}
-
+	mu.Lock()
 	var sortedElements []TcElement
 	keys := c.GetSortedKeys()
 	for _, key := range keys {
@@ -197,10 +203,11 @@ func (c *CtCell) GetSortedElements() []TcElement {
 		}
 	}
 	sortedElementsCache = sortedElements
-
+	mu.Unlock()
 	return sortedElements
 }
 
+// GetElementByID returns the element with the given id
 func (c *CtCell) GetElementByID(id int) TcElement {
 	if v, ok := elements.Load(id); ok {
 		return v.(TcElement)
@@ -208,13 +215,17 @@ func (c *CtCell) GetElementByID(id int) TcElement {
 	return nil
 }
 
+// AddElement adds an element to the cell
 func (c *CtCell) AddElement(e TcElement) int {
+	mu.Lock()
 	c.ResetCaches()
 	ElementLastID++
 	elements.Store(ElementLastID, e)
+	mu.Unlock()
 	return ElementLastID
 }
 
+// RemoveElement removes an element from the cell
 func (c *CtCell) RemoveElement(e TcElement) {
 	elements.Range(func(key, value interface{}) bool {
 		if value == e {
@@ -226,19 +237,25 @@ func (c *CtCell) RemoveElement(e TcElement) {
 	})
 }
 
+// ResetCaches resets the cache for the sorted elements
 func (c *CtCell) ResetCaches() {
 	sortedElementsCache = nil
 }
 
+// RemoveElementByID removes an element from the cell by its id
 func (c *CtCell) RemoveElementByID(id int) {
 	elements.Delete(id)
 	c.ResetCaches()
 }
 
+// ClearElements removes all elements from the cell
 func (c *CtCell) ClearElements() {
+	mu.Lock()
 	elements.Range(func(key, value interface{}) bool {
 		elements.Delete(key)
 		return true
 	})
+	ElementLastID = 0
 	c.ResetCaches()
+	mu.Unlock()
 }
