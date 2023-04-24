@@ -15,7 +15,7 @@ func GetTestScreen(t *testing.T) *ctxtcell.CtCell {
 	if err := screen.Init(); err != nil {
 		t.Error(err)
 	}
-	screen.SetSize(1000, 100)
+	screen.SetSize(100, 100)
 	testApp.SetScreen(screen)
 	return testApp
 }

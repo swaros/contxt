@@ -39,8 +39,8 @@ func NewCoordinates(topLeft position, w int, h int) *Coordinates {
 	}
 }
 
-func CreatePosition(x, y int) position {
-	return position{X: x, Y: y}
+func CreatePosition(x, y int, isPercent bool) position {
+	return position{X: x, Y: y, isProcentage: isPercent}
 }
 
 func (p *position) SetProcentage() {

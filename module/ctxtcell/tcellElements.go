@@ -126,9 +126,11 @@ func (c *CtCell) MouseHoverAll(pos position) {
 	c.AddDebugMessage("MA<")
 	c.SortedCallBack(func(b TcElement) bool {
 		if b.IsVisible() && b.Hit(pos, c.screen) {
+			c.AddDebugMessage("(H:(", b.GetID(), ")")
 			nextHoverElement = b
 			return false
 		}
+		c.AddDebugMessage(" ?:(", b.GetID(), ".vis:", b.IsVisible(), ".hit:", b.Hit(pos, c.screen), ")")
 		return true
 	})
 

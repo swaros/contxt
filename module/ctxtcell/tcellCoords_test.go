@@ -8,7 +8,7 @@ import (
 )
 
 func TestPosition(t *testing.T) {
-	position := ctxtcell.CreatePosition(10, 10)
+	position := ctxtcell.CreatePosition(10, 10, false)
 
 	position.SetProcentage()
 
@@ -82,7 +82,7 @@ func TestPosition(t *testing.T) {
 }
 
 func TestCoordString(t *testing.T) {
-	coord := ctxtcell.CreatePosition(10, 10)
+	coord := ctxtcell.CreatePosition(10, 10, false)
 
 	expected := "x:10px y:10px"
 	if coord.String() != expected {
@@ -104,7 +104,7 @@ func TestCoordString(t *testing.T) {
 }
 
 func TestGetRealPosition(t *testing.T) {
-	testPos := ctxtcell.CreatePosition(10, 10)
+	testPos := ctxtcell.CreatePosition(10, 10, false)
 	testPos.SetProcentage()
 
 	screen := tcell.NewSimulationScreen("UTF-8")
@@ -167,9 +167,9 @@ func TestGetRealPosition(t *testing.T) {
 }
 
 func TestTcellCoordsHitTestRightAndDown(t *testing.T) {
-	testPos := ctxtcell.CreatePosition(10, 10)
+	testPos := ctxtcell.CreatePosition(10, 10, false)
 
-	checkPos := ctxtcell.CreatePosition(10, 10)
+	checkPos := ctxtcell.CreatePosition(10, 10, false)
 
 	// at the same position is an match
 	if !testPos.IsMoreOrEvenRightAndDownThen(checkPos) {
@@ -177,21 +177,21 @@ func TestTcellCoordsHitTestRightAndDown(t *testing.T) {
 	}
 
 	// more right is an match
-	checkPos = ctxtcell.CreatePosition(11, 10)
+	checkPos = ctxtcell.CreatePosition(11, 10, false)
 	// [10,10] is not more right and down than [11,10]
 	if testPos.IsMoreOrEvenRightAndDownThen(checkPos) {
 		t.Errorf("Expected %v to be more right and down than %v", checkPos, testPos)
 	}
 
 	// more down is an match
-	checkPos = ctxtcell.CreatePosition(10, 11)
+	checkPos = ctxtcell.CreatePosition(10, 11, false)
 	// [10,10] is not more right and down than [10,11]
 	if testPos.IsMoreOrEvenRightAndDownThen(checkPos) {
 		t.Errorf("Expected %v to be more right and down than %v", checkPos, testPos)
 	}
 
 	// more right and down is an match
-	checkPos = ctxtcell.CreatePosition(11, 11)
+	checkPos = ctxtcell.CreatePosition(11, 11, false)
 	// [10,10] is not more right and down than [11,11]
 	if testPos.IsMoreOrEvenRightAndDownThen(checkPos) {
 		t.Errorf("Expected %v to be more right and down than %v", checkPos, testPos)
@@ -200,9 +200,9 @@ func TestTcellCoordsHitTestRightAndDown(t *testing.T) {
 }
 
 func TestTcellCoordsHitTestLeftAndUp(t *testing.T) {
-	testPos := ctxtcell.CreatePosition(10, 10)
+	testPos := ctxtcell.CreatePosition(10, 10, false)
 
-	checkPos := ctxtcell.CreatePosition(10, 10)
+	checkPos := ctxtcell.CreatePosition(10, 10, false)
 
 	// at the same position is an match
 	if !testPos.IsMoreOrEvenRightAndDownThen(checkPos) {
@@ -210,7 +210,7 @@ func TestTcellCoordsHitTestLeftAndUp(t *testing.T) {
 	}
 
 	// more left is not an match
-	checkPos = ctxtcell.CreatePosition(9, 10)
+	checkPos = ctxtcell.CreatePosition(9, 10, false)
 	// [10,10] is more right and down than [9,10]
 	if !testPos.IsMoreOrEvenRightAndDownThen(checkPos) {
 		t.Errorf("Expected %v to be more right and down than %v", checkPos, testPos)
@@ -223,16 +223,16 @@ func TestTcellCoordsHitTestLeftAndUp(t *testing.T) {
 }
 
 func TestHitByCoordsFuncs(t *testing.T) {
-	boxTopLeftCoords := ctxtcell.CreatePosition(10, 10)
-	boxBottomRightCoords := ctxtcell.CreatePosition(20, 20)
+	boxTopLeftCoords := ctxtcell.CreatePosition(10, 10, false)
+	boxBottomRightCoords := ctxtcell.CreatePosition(20, 20, false)
 
-	checkPos := ctxtcell.CreatePosition(15, 15)
+	checkPos := ctxtcell.CreatePosition(15, 15, false)
 
 	if !checkPos.IsInBox(boxTopLeftCoords, boxBottomRightCoords) {
 		t.Errorf("1. Expected %v to be in box %v, %v", checkPos, boxTopLeftCoords, boxBottomRightCoords)
 	}
 
-	checkPos = ctxtcell.CreatePosition(10, 10)
+	checkPos = ctxtcell.CreatePosition(10, 10, false)
 
 	if !checkPos.IsInBox(boxTopLeftCoords, boxBottomRightCoords) {
 		t.Errorf("2. Expected %v to be in box %v, %v", checkPos, boxTopLeftCoords, boxBottomRightCoords)

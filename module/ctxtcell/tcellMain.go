@@ -48,6 +48,10 @@ func (c *CtCell) SetScreen(s tcell.Screen) *CtCell {
 	return c
 }
 
+func (c *CtCell) GetScreen() tcell.Screen {
+	return c.screen
+}
+
 func (c *CtCell) Stop() {
 	c.stopSign = true
 }
@@ -118,7 +122,7 @@ func (c *CtCell) Loop() {
 		case *tcell.EventMouse:
 			c.AddDebugMessage("Mouse event")
 			x, y := ev.Position()
-			mousePos = CreatePosition(x, y)
+			mousePos = CreatePosition(x, y, false)
 			c.MouseHoverAll(mousePos) // trigger hover event
 			//c.screen.ShowCursor(x, y)
 
@@ -142,7 +146,7 @@ func (c *CtCell) Loop() {
 
 			case tcell.ButtonNone:
 				if ox >= 0 {
-					clickReleaseEventPos = CreatePosition(ox, oy)
+					clickReleaseEventPos = CreatePosition(ox, oy, false)
 					c.MouseReleaseAll(mousePos, clickReleaseEventPos, releaseBtnCache)
 					ox, oy = -1, -1
 				}
