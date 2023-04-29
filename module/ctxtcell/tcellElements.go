@@ -60,8 +60,10 @@ var (
 	RenderTime time.Duration
 )
 
-// Draws all elements
-func (c *CtCell) DrawAll() {
+// Draws all elements and returns the amount of drawed elements
+func (c *CtCell) DrawAll() int {
+	// cnt is the amount of drawed elements
+	cnt := 0
 	// recorde time for debugging
 	start := time.Now()
 	// we draw all elements in the order of their z-index
@@ -69,13 +71,14 @@ func (c *CtCell) DrawAll() {
 	elements := c.GetSortedElements()
 	for _, element := range elements {
 		if element.IsVisible() {
+			cnt++
 			element.Draw(c.screen)
 		}
 	}
 	// recorde time for debugging
 	RenderTime = time.Since(start)
 	c.AddDebugMessage("Render time: " + RenderTime.String())
-
+	return cnt
 }
 
 // SortedCallBack will call the callback function for all elements

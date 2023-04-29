@@ -13,7 +13,7 @@ import (
 
 func TestAddElements(t *testing.T) {
 	main := ctxtcell.NewTcell()
-
+	main.ClearElements()
 	// adding a active Text Element
 	activeText := main.ActiveText("I am active")
 	if id, _ := main.AddElement(activeText); id != 1 {

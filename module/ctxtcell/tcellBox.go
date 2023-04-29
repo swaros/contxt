@@ -8,6 +8,7 @@ type ctBox struct {
 	style       tcell.Style
 	filled      bool
 	fillStyle   tcell.Style
+	visible     bool
 	id          int
 }
 
@@ -23,6 +24,7 @@ func (c *CtCell) NewBox() *ctBox {
 	box := &ctBox{}
 	box.filled = false
 	box.style = tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
+	box.visible = true
 	return box
 }
 
@@ -88,6 +90,15 @@ func (c *ctBox) SetUnfilled() *ctBox {
 }
 
 // implemeting the TcElement interface
+
+func (c *ctBox) IsVisible() bool {
+	return c.visible
+}
+
+func (c *ctBox) SetVisible(visible bool) {
+	c.visible = visible
+}
+
 func (c *ctBox) MouseReleaseEvent(start position, end position, trigger int) {
 
 }
