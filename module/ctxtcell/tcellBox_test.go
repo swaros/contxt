@@ -36,8 +36,14 @@ func TestAddBox(t *testing.T) {
 }
 
 func TestAddBoxInRealtivePos(t *testing.T) {
-	// we have a screen with 1000x100
+	// we have a screen with 100x100
 	screen := GetTestScreen(t)
+	scr := screen.GetScreen()
+	// we have a screen with 100x100 and now we set the size to 1000x100
+	scr.SetSize(1000, 100)
+
+	// create a box with the top left at 5% of the screen
+	// and the bottom right at 15% of the screen
 
 	box := screen.NewBox().SetTopLeftProcentage(5, 5).SetBottomRightProcentage(15, 15)
 	screen.AddElement(box)
@@ -45,8 +51,6 @@ func TestAddBoxInRealtivePos(t *testing.T) {
 	if cnt := screen.DrawAll(); cnt != 1 {
 		t.Errorf("Expected 1 box to be drawn but got %v", cnt)
 	}
-
-	scr := screen.GetScreen()
 
 	// check the corners of the box
 	// with the the positions relative to the screen size
