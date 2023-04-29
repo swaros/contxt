@@ -11,31 +11,41 @@ import (
 // The menu items can be selected by using the arrow keys
 // and the enter key.
 
+// MenuElement is an element in a menu
 type ctMenu struct {
-	border        *ctBox
-	items         []*MenuElement
-	parent        *CtCell
-	selectedStyle tcell.Style
-	regularStyle  tcell.Style
-	hoverStyle    tcell.Style
-	haveFocus     bool
-	visible       bool
-	id            int
+	border        *ctBox         // the border of the menu
+	items         []*MenuElement // the items in the menu
+	parent        *CtCell        // the parent tcell manager
+	selectedStyle tcell.Style    // the style of the selected item
+	regularStyle  tcell.Style    // the style of the regular items
+	hoverStyle    tcell.Style    // the style of the hovered item
+	haveFocus     bool           // if the menu has focus
+	visible       bool           // if the menu is visible
+	id            int            // the id of the menu
 }
 
 // MenuElement is an element in a menu
 type MenuElement struct {
-	text        *textElement
-	coordinates Coordinates
-	isSelected  bool
-	OnSelect    func(*MenuElement)
+	text        *textElement       // the text of the element
+	coordinates Coordinates        // the coordinates of the element
+	isSelected  bool               // if the element is selected
+	OnSelect    func(*MenuElement) // the function that is called when the element is selected
+	reference   interface{}        // a reference to an object
 }
 
+// GetText returns the text Element of the menu element
 func (m *MenuElement) GetText() *textElement {
 	return m.text
 }
 
-// NewMenu creates a new menu
+// GetReference returns the reference of the menu element
+// this can be nil. it is an interface{} so it can be anything
+// also this is only valid for MenuElements created with NewMenuElementWithRef
+func (m *MenuElement) GetReference() interface{} {
+	return m.reference
+}
+
+// NewMenu creates a new menu and sets the default style
 func (c *CtCell) NewMenu() *ctMenu {
 	menu := &ctMenu{}
 	menu.border = c.NewBox()
@@ -49,6 +59,7 @@ func (c *CtCell) NewMenu() *ctMenu {
 	return menu
 }
 
+// NewMenuElement creates a new menu element
 func (c *ctMenu) NewMenuElement(content string, onSelect func(*MenuElement)) *MenuElement {
 	element := &MenuElement{}
 	element.text = c.parent.Text(content)
@@ -57,10 +68,22 @@ func (c *ctMenu) NewMenuElement(content string, onSelect func(*MenuElement)) *Me
 	return element
 }
 
+// NewMenuElementWithRef creates a new menu element that contains a reference
+func (c *ctMenu) NewMenuElementWithRef(content string, ref interface{}, onSelect func(*MenuElement)) *MenuElement {
+	element := &MenuElement{}
+	element.text = c.parent.Text(content)
+	element.coordinates = Coordinates{}
+	element.reference = ref
+	element.OnSelect = onSelect
+	return element
+}
+
+// SetID sets the id of the menu
 func (c *ctMenu) SetID(id int) {
 	c.id = id
 }
 
+// GetID returns the id of the menu
 func (c *ctMenu) GetID() int {
 	return c.id
 }
@@ -101,16 +124,19 @@ func (c *ctMenu) SetStyle(style tcell.Style) *ctMenu {
 	return c
 }
 
+// SetSelectedStyle sets the style of the selected item
 func (c *ctMenu) SetSelectedStyle(style tcell.Style) *ctMenu {
 	c.selectedStyle = style
 	return c
 }
 
+// SetHoverStyle sets the style of the hovered item
 func (c *ctMenu) SetHoverStyle(style tcell.Style) *ctMenu {
 	c.hoverStyle = style
 	return c
 }
 
+// SetDefaultStyle sets the default style of the menu
 func (c *ctMenu) SetDefaultStyle() *ctMenu {
 	c.regularStyle = tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
 	c.hoverStyle = tcell.StyleDefault.Underline(true)
@@ -129,6 +155,15 @@ func (c *ctMenu) AddItem(text string, onSelect func(*MenuElement)) *ctMenu {
 	item := c.parent.Text(text)
 	item.SetStyle(c.regularStyle)
 	c.items = append(c.items, c.NewMenuElement(text, onSelect))
+	return c
+}
+
+// AddItem adds a new item to the menu including an reference
+func (c *ctMenu) AddItemWithRef(text string, reference interface{}, onSelect func(*MenuElement)) *ctMenu {
+	item := c.parent.Text(text)
+	item.SetStyle(c.regularStyle)
+	c.items = append(c.items, c.NewMenuElementWithRef(text, reference, onSelect))
+
 	return c
 }
 
@@ -159,11 +194,8 @@ func (c *ctMenu) MouseReleaseEvent(start position, end position, trigger int) {
 	if c.HitTestFn(start) {
 		c.parent.AddDebugMessage("mouse HIT on menu with ", trigger, " button")
 		c.TestMenuEntry(start, func(item *MenuElement) {
-			// if the item is already selected, we do executes the callback
-			if item.isSelected {
-				item.OnSelect(item)
-			}
 			item.isSelected = true
+			item.OnSelect(item)
 		}, func(item *MenuElement) {
 			item.isSelected = false
 		})
@@ -209,23 +241,6 @@ func (c *ctMenu) TestMenuEntry(pos position, onHit func(item *MenuElement), onMi
 	}
 }
 
-func (c *ctMenu) KeyEvent(key tcell.Key, r rune) {
-	if c.haveFocus {
-		switch key {
-		case tcell.KeyUp:
-			c.parent.AddDebugMessage("UP")
-		case tcell.KeyDown:
-			c.parent.AddDebugMessage("DOWN")
-		case tcell.KeyLeft:
-			c.parent.AddDebugMessage("LEFT")
-		case tcell.KeyRight:
-			c.parent.AddDebugMessage("RIGHT")
-		case tcell.KeyEnter:
-			c.parent.AddDebugMessage("ENTER")
-		}
-	}
-}
-
 func (c *ctMenu) Hit(pos position, s tcell.Screen) bool {
 	// Check if the position is within the menu
 	if c.HitTestFn(pos) {
@@ -241,6 +256,7 @@ func (c *ctMenu) Hit(pos position, s tcell.Screen) bool {
 	return false
 }
 
+// Focus sets the focus of the menu
 func (c *ctMenu) Focus(activated bool) {
 	c.haveFocus = activated
 	if activated {
@@ -250,6 +266,7 @@ func (c *ctMenu) Focus(activated bool) {
 	}
 }
 
+// IsSelectable returns true if the menu is selectable
 func (c *ctMenu) IsSelectable() bool {
 	return true
 }

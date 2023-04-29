@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/ctxtcell"
@@ -302,7 +303,7 @@ func initTcellScreen(c *CmdExecutorImpl) *ctxtcell.CtCell {
 
 	exitTopMenu.GetPos().SetMargin(-5, 0)
 	exitTopMenu.OnSelect = func(selected bool) {
-		menu.SetVisible(false)
+		tc.Stop()
 	}
 	tc.AddElement(exitTopMenu)
 
@@ -312,6 +313,16 @@ func initTcellScreen(c *CmdExecutorImpl) *ctxtcell.CtCell {
 		c.PrintPaths(false, false)
 		itm.GetText().SetText("PrintPaths done")
 	})
+
+	// add cobra commands to menu
+	for _, cmd := range c.session.Cobra.RootCmd.Commands() {
+		menu.AddItemWithRef(cmd.Name(), cmd, func(itm *ctxtcell.MenuElement) {
+			itm.GetText().SetText("RUNS")
+			cmdIntern := itm.GetReference().(*cobra.Command)
+
+			itm.GetText().SetText(cmdIntern.Name() + " done")
+		})
+	}
 
 	menu.SetVisible(false)
 	tc.AddElement(menu)
