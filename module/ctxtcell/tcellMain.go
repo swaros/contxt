@@ -1,9 +1,8 @@
 package ctxtcell
 
 import (
+	"errors"
 	"fmt"
-	"log"
-	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -16,6 +15,7 @@ type CtCell struct {
 	regularStyles defaultStyles
 	stopSign      bool
 	loopTimer     time.Duration
+	output        *CtOutput
 }
 
 type defaultStyles struct {
@@ -92,7 +92,6 @@ func (c *CtCell) Loop() {
 	ox, oy := -1, -1
 	startLoopTimer := time.Now()
 	for !c.stopSign {
-		log.Println(".:.")
 		// clear screen if not disabled
 		if !c.noClearScreen {
 			c.screen.Clear()
@@ -155,8 +154,8 @@ func (c *CtCell) Loop() {
 		// draw all elements
 		c.AddDebugMessage("DRAWING")
 		c.DrawAll()
-		debugMsg := strings.Join(debugMessages, ",")
-		c.debugOut(debugMsg)
+		//debugMsg := strings.Join(debugMessages, ",")
+		//c.debugOut(debugMsg)
 		// show screen
 		c.screen.Show()
 		// remove any onscreen debug messages
@@ -174,8 +173,11 @@ func (c *CtCell) GetLastLoopTime() time.Duration {
 	return c.loopTimer
 }
 
-func (c *CtCell) Run() error {
+func (c *CtCell) GetOutput() *CtOutput {
+	return c.output
+}
 
+func (c *CtCell) Init() error {
 	defStyle := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
 	if c.screen == nil {
 		s, err := tcell.NewScreen()
@@ -185,14 +187,21 @@ func (c *CtCell) Run() error {
 		if err := s.Init(); err != nil {
 			return err
 		}
-		c.screen = s
+		c.SetScreen(s)
 	}
+	c.output = NewCtOutput(c)
 	c.screen.SetStyle(defStyle)
 	if c.MouseEnabled {
 		c.screen.EnableMouse()
 	}
-	c.screen.Clear()
+	return nil
+}
 
+func (c *CtCell) Run() error {
+	if c.screen == nil {
+		return errors.New("screen not initialized")
+	}
+	c.screen.Clear()
 	quit := func() {
 		// You have to catch panics in a defer, clean up, and
 		// re-raise them - otherwise your application can

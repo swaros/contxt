@@ -32,6 +32,15 @@
             "args": ["dir"]
         },
         {
+            "name": "v2 interactive start",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/v2/main.go",
+            "env": {},
+            "args": ["interactive"]
+        },
+        {
             "name": "plain start",
             "type": "go",
             "request": "launch",
