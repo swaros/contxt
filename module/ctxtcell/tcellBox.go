@@ -10,6 +10,7 @@ type ctBox struct {
 	fillStyle   tcell.Style
 	visible     bool
 	id          int
+	noBorders   bool
 }
 
 func (c *ctBox) SetID(id int) {
@@ -18,6 +19,10 @@ func (c *ctBox) SetID(id int) {
 
 func (c *ctBox) GetID() int {
 	return c.id
+}
+
+func (c *ctBox) SetNoBorders(noBorders bool) {
+	c.noBorders = noBorders
 }
 
 func (c *CtCell) NewBox() *ctBox {

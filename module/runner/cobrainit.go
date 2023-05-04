@@ -173,7 +173,8 @@ func (c *SessionCobra) GetListWsCmd() *cobra.Command {
 			c.checkDefaultFlags(cmd, args)
 			ws := c.ExternalCmdHndl.GetWorkspaces()
 			for _, w := range ws {
-				ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), w)
+				out, printer := c.ExternalCmdHndl.GetOuputHandler()
+				ctxout.CtxOut(out, printer, w)
 			}
 		},
 	}
@@ -194,7 +195,7 @@ and also onEnter task defined in the new workspace
 				if err := configure.CfgV1.AddWorkSpace(args[0], c.ExternalCmdHndl.CallBackOldWs, c.ExternalCmdHndl.CallBackNewWs); err != nil {
 					fmt.Println(err)
 				} else {
-					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), "workspace created ", args[0])
+					c.print("workspace created ", args[0])
 				}
 
 			} else {
@@ -224,7 +225,7 @@ and also onEnter task defined in the new workspace
 						c.log().Error("error while trying to save configuration", err)
 						systools.Exit(systools.ErrorBySystem)
 					}
-					ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), "workspace removed ", args[0])
+					c.print("workspace removed ", args[0])
 				}
 			} else {
 				fmt.Println("no workspace name given")
@@ -248,11 +249,11 @@ func (c *SessionCobra) GetScanCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			c.log().Debug("scan for new projects")
 			c.checkDefaultFlags(cmd, args)
-			ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), ctxout.BoldTag, "Scanning for new projects", ctxout.CleanTag, " ... ")
-			ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), "checking any known contxt project if there are information to update")
-			ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "\n")
-			ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<table>")
-			ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<row>", ctxout.BoldTag, "<tab size='15'> project</tab><tab size='70'>path</tab><tab size='15' origin='2'>status</tab>", ctxout.CleanTag, "</row>")
+			c.println(ctxout.BoldTag, "Scanning for new projects", ctxout.CleanTag, " ... ")
+			c.println("checking any known contxt project if there are information to update")
+			c.print("\n")
+			c.print("<table>")
+			c.print("<row>", ctxout.BoldTag, "<tab size='15'> project</tab><tab size='70'>path</tab><tab size='15' origin='2'>status</tab>", ctxout.CleanTag, "</row>")
 			all, updated := c.ExternalCmdHndl.FindWorkspaceInfoByTemplate(func(ws string, cnt int, update bool, info configure.WorkspaceInfoV2) {
 				color := ctxout.ForeYellow
 				msg := "found"
@@ -260,11 +261,11 @@ func (c *SessionCobra) GetScanCmd() *cobra.Command {
 					msg = "nothing new"
 					color = ctxout.ForeLightGreen
 				}
-				ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<row>", ctxout.ForeBlue, "<tab size='15'> ", ws, "</tab>", ctxout.ForeLightBlue, "<tab size='70'>", info.Path, color, "</tab><tab size='15' origin='2'>", msg, "</tab></row>")
+				c.print("<row>", ctxout.ForeBlue, "<tab size='15'> ", ws, "</tab>", ctxout.ForeLightBlue, "<tab size='70'>", info.Path, color, "</tab><tab size='15' origin='2'>", msg, "</tab></row>")
 			})
-			ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), "</table>")
-			ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), ctxout.CleanTag, "\n")
-			ctxout.CtxOut(c.ExternalCmdHndl.GetOuputHandler(), "found ", ctxout.ForeLightBlue, all, ctxout.CleanTag, " projects and updated ", ctxout.ForeLightBlue, updated, ctxout.CleanTag, " projects")
+			c.print("</table>")
+			c.print(ctxout.CleanTag, "\n")
+			c.print("found ", ctxout.ForeLightBlue, all, ctxout.CleanTag, " projects and updated ", ctxout.ForeLightBlue, updated, ctxout.CleanTag, " projects")
 
 		},
 	}
@@ -296,19 +297,19 @@ func (c *SessionCobra) GetDirCmd() *cobra.Command {
 				c.log().Debug("show all paths in any workspace")
 				c.log().WithFields(logrus.Fields{"all-flag": c.Options.DirAll}).Debug("show all paths in any workspace shoul be executed")
 				current := configure.CfgV1.UsedV2Config.CurrentSet
-				ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<table>")
+				c.print("<table>")
 				if c.Options.DirAll {
 					configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 						configure.CfgV1.UsedV2Config.CurrentSet = index
 						// header for each workspace
-						ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<row>", ctxout.BoldTag, "<tab size='100' fill=' '>", index, ctxout.CleanTag, ctxout.ForeDarkGrey, ": index (", cfg.CurrentIndex, ")</tab></row>")
+						c.print("<row>", ctxout.BoldTag, "<tab size='100' fill=' '>", index, ctxout.CleanTag, ctxout.ForeDarkGrey, ": index (", cfg.CurrentIndex, ")</tab></row>")
 						c.ExternalCmdHndl.PrintPaths(true, c.Options.ShowFullTargets)
-						ctxout.Print(c.ExternalCmdHndl.GetOuputHandler(), "<row>", ctxout.ForeDarkGrey, "<tab size='100' fill='─'>─</tab>", ctxout.CleanTag, "</row>")
+						c.print("<row>", ctxout.ForeDarkGrey, "<tab size='100' fill='─'>─</tab>", ctxout.CleanTag, "</row>")
 					})
 				} else {
 					c.ExternalCmdHndl.PrintPaths(false, c.Options.ShowFullTargets)
 				}
-				ctxout.PrintLn(c.ExternalCmdHndl.GetOuputHandler(), "</table>")
+				c.print("</table>")
 				configure.CfgV1.UsedV2Config.CurrentSet = current
 			}
 		},
@@ -437,16 +438,12 @@ func (c *SessionCobra) log() *logrus.Logger {
 
 // print prints the given message to the output handler
 func (c *SessionCobra) print(msg ...interface{}) {
-	add := []interface{}{c.ExternalCmdHndl.GetOuputHandler()}
-	msg = append(add, msg...)
-	ctxout.Print(msg...)
+	c.ExternalCmdHndl.Print(msg...)
 }
 
 // println prints the given message to the output handler with a new line
 func (c *SessionCobra) println(msg ...interface{}) {
-	add := []interface{}{c.ExternalCmdHndl.GetOuputHandler()}
-	msg = append(add, msg...)
-	ctxout.PrintLn(msg...)
+	c.ExternalCmdHndl.Println(msg...)
 }
 
 func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {

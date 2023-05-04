@@ -24,6 +24,7 @@ var (
 		ANSI16M:   false,
 		Info:      &termInfo,
 	}
+	runInfos []string // contains informartion what filters are run
 )
 
 type CtxOutBehavior struct {
@@ -74,20 +75,36 @@ type PostFilterInfo struct {
 
 }
 
+// AddPostFilter adds a post filter to the list of post filters
+// these filters are called after the markup filter
+// they works only on strings
 func AddPostFilter(filter PostFilter) {
 	initCtxOut()
 	postFilters = append(postFilters, filter)
 	filter.Update(termInfo)
 }
 
+// GetPostFilters returns the list of post filters
+func GetPostFilters() []PostFilter {
+	return postFilters
+}
+
+// ClearPostFilters clears the list of post filters
+func ClearPostFilters() {
+	postFilters = []PostFilter{}
+}
+
+// initCtxOut initializes the ctxout package
+// but only once
 func initCtxOut() {
 	if initDone {
 		return
 	}
 	fd := int(os.Stdout.Fd())
+	isTerm := term.IsTerminal(fd)
 	info := PostFilterInfo{
-		IsTerminal: term.IsTerminal(fd),
-		Colored:    term.IsTerminal(fd),
+		IsTerminal: isTerm,
+		Colored:    isTerm,
 		Disabled:   false,
 		Width:      80,
 		Height:     24,
@@ -99,8 +116,12 @@ func initCtxOut() {
 			info.Height = h
 		}
 	}
-
+	initDone = true
 	termInfo = info
+	behavior.Info = &info
+	behavior.NoColored = !info.Colored
+	behavior.ANSI = info.Colored
+
 }
 
 func SetBehavior(behave CtxOutBehavior) {
@@ -109,11 +130,6 @@ func SetBehavior(behave CtxOutBehavior) {
 
 func GetBehavior() CtxOutBehavior {
 	return behavior
-}
-
-func InitTerminal() {
-	initCtxOut()
-	behavior.Info.IsTerminal = true
 }
 
 func IsPrinterInterface(msg interface{}) bool {
@@ -125,9 +141,12 @@ func IsPrinterInterface(msg interface{}) bool {
 }
 
 // Message is the function that will be called by the Print and PrintLn functions
+// it handles the filtering and streaming of the message depending on the type of the message.
+// so here er can also inject the filters and the output stream
 func Message(msg ...interface{}) []interface{} {
+	runInfos = []string{}
 	initCtxOut()
-	filters := []PrintInterface{}
+	filters := []PrintInterface{} // these are filters just used in this function
 
 	if PreHook != nil { // if the prehook is defined AND it returns true, we just stop doing anything
 		if abort := PreHook(msg...); abort {
@@ -144,15 +163,36 @@ func Message(msg ...interface{}) []interface{} {
 			}
 		case PrintInterface: // we got an interface that can filter the message. so we add it to the list of filters
 			filters = append(filters, ctrl)
+			runInfos = append(runInfos, fmt.Sprintf("added filter: %T", ctrl))
 			ctrl.Update(behavior)
 		case StreamInterface: // we got an interface that can stream the message. so we set it as the output
+			runInfos = append(runInfos, fmt.Sprintf("set output: %T", ctrl))
 			output = ctrl
 		default:
+			runInfos = append(runInfos, fmt.Sprintf("default hndl message to filterExec: %T", chk))
 			newMsh = filterExec(newMsh, filters, chk)
 		}
 
 	}
 	return PostMarkupFilter(newMsh)
+}
+
+// GetRunInfos returns the list of run infos
+// while the message is processed, we add infos to this list
+func GetRunInfos() []string {
+	return runInfos
+}
+
+// GetRunInfosF returns the list of run infos
+// but only the ones that contains the pattern
+func GetRunInfosF(pattern string) []string {
+	ret := []string{}
+	for _, info := range runInfos {
+		if strings.Contains(info, pattern) {
+			ret = append(ret, info)
+		}
+	}
+	return ret
 }
 
 func PostMarkupFilter(msgSlice []interface{}) []interface{} {
@@ -184,27 +224,38 @@ func PostMarkupFilter(msgSlice []interface{}) []interface{} {
 	return newMsh
 }
 
+// MarkupFilter is the function that will be called by the Message function
+// it handles the filtering of the message depending on the type of the message.
 func MarkupFilter(msg string) string {
 
 	if len(postFilters) > 0 {
 		for _, filter := range postFilters {
 			if filter.CanHandleThis(msg) {
-				return filter.Command(msg)
+				runInfos = append(runInfos, fmt.Sprintf("(YES) post filter: %T", filter))
+				msg = filter.Command(msg)
+			} else {
+				runInfos = append(runInfos, fmt.Sprintf("(NO) post filter: %T - can not handle this", filter))
 			}
 		}
+	} else {
+		runInfos = append(runInfos, "no post filters")
 	}
 
 	// if we have found this flag set to true, it means ignore the message
 	if strings.HasPrefix(msg, "IGNORE") {
+		runInfos = append(runInfos, "IGNORE found. message ignored")
 		return ""
 	}
 	return msg
 }
 
+// filterExec is the function that will be called by the Message function
+// it handles the filters different than the defined post filters
 func filterExec(newMsh []interface{}, filters []PrintInterface, msg interface{}) []interface{} {
 	initCtxOut()
 	if len(filters) > 0 { // we have filters, so they do the job of filtering the message
 		for _, filter := range filters {
+			runInfos = append(runInfos, fmt.Sprintf("filter exec: %T", filter))
 			msg = filter.Filter(msg)
 			if msg == nil {
 				break

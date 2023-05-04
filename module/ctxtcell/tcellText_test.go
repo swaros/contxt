@@ -181,8 +181,24 @@ func TestHits(t *testing.T) {
 
 	exitTopMenu.GetPos().SetMargin(-5, 0) // minus length of the text + 1
 
-	fakeHitPosition = ctxtcell.CreatePosition(90, 10, false)
+	fakeHitPosition = ctxtcell.CreatePosition(95, 0, false) // click on the right top corner
 	if !exitTopMenu.Hit(fakeHitPosition, screen) {
 		t.Errorf("Expected to hit the text, but didn't")
+	}
+
+	// now test some positions they should not hit
+	fakeHitPosition = ctxtcell.CreatePosition(0, 0, false) // click on the left top corner
+	if exitTopMenu.Hit(fakeHitPosition, screen) {
+		t.Errorf("Expected to not hit the text, but did")
+	}
+
+	fakeHitPosition = ctxtcell.CreatePosition(0, 10, false) // click on the left side
+	if exitTopMenu.Hit(fakeHitPosition, screen) {
+		t.Errorf("Expected to not hit the text, but did")
+	}
+
+	fakeHitPosition = ctxtcell.CreatePosition(95, 10, false) // click on the right side
+	if exitTopMenu.Hit(fakeHitPosition, screen) {
+		t.Errorf("Expected to not hit the text, but did")
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
@@ -22,6 +21,27 @@ func NewCmd(session *CmdSession) *CmdExecutorImpl {
 	return &CmdExecutorImpl{
 		session: session,
 	}
+}
+
+func (c *CmdExecutorImpl) Combine4Print(msg ...interface{}) []interface{} {
+	var outInterfaces []interface{}
+	outInterfaces = append(outInterfaces, c.session.OutPutHdnl)
+	outInterfaces = append(outInterfaces, c.session.Printer)
+	outInterfaces = append(outInterfaces, msg...)
+	return outInterfaces
+}
+
+func (c *CmdExecutorImpl) MessageToString(msg ...interface{}) string {
+	msg = c.Combine4Print(msg...)
+	return ctxout.ToString(msg...)
+}
+
+func (c *CmdExecutorImpl) Print(msg ...interface{}) {
+	ctxout.Print(c.Combine4Print(msg...)...)
+}
+
+func (c *CmdExecutorImpl) Println(msg ...interface{}) {
+	ctxout.PrintLn(c.Combine4Print(msg...)...)
 }
 
 func (c *CmdExecutorImpl) doMagicParamOne(args string) {
@@ -91,8 +111,8 @@ func (c *CmdExecutorImpl) ResetVariables() {
 func (c *CmdExecutorImpl) MainInit() {
 }
 
-func (c *CmdExecutorImpl) GetOuputHandler() ctxout.PrintInterface {
-	return c.session.OutPutHdnl
+func (c *CmdExecutorImpl) GetOuputHandler() (ctxout.StreamInterface, ctxout.PrintInterface) {
+	return c.session.OutPutHdnl, c.session.Printer
 }
 
 func (c *CmdExecutorImpl) GetWorkspaces() []string {
@@ -179,8 +199,8 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 
 	if err == nil {
 		if !plain {
-			ctxout.CtxOut(c.GetOuputHandler(), ctxout.ForeWhite, " current directory: ", ctxout.BoldTag, dir, ctxout.CleanTag)
-			ctxout.CtxOut(c.GetOuputHandler(), ctxout.ForeWhite, " current workspace: ", ctxout.BoldTag, configure.CfgV1.UsedV2Config.CurrentSet, ctxout.CleanTag)
+			c.Print(ctxout.ForeWhite, " current directory: ", ctxout.BoldTag, dir, ctxout.CleanTag)
+			c.Print(ctxout.ForeWhite, " current workspace: ", ctxout.BoldTag, configure.CfgV1.UsedV2Config.CurrentSet, ctxout.CleanTag)
 		}
 		notWorkspace := true
 		pathColor := ctxout.ForeLightBlue
@@ -190,7 +210,7 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 			notWorkspace = false
 		}
 		if !plain {
-			ctxout.CtxOut(c.GetOuputHandler(), " contains paths:")
+			c.Println(" contains paths:")
 		}
 		//ctxout.Print(c.session.OutPutHdnl, "<table>")
 		configure.CfgV1.PathWorker(func(index string, path string) {
@@ -222,8 +242,7 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 				} else {
 					outTasks = ctxout.ForeDarkGrey + "no tasks"
 				}
-				ctxout.Print(
-					c.GetOuputHandler(),
+				c.Print(
 					"<row>",
 					indexColor,
 					"<tab size='5' fill=' ' draw='fixed' origin='2'>",
@@ -240,13 +259,13 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 					"</row>",
 				)
 			} else {
-				ctxout.Print(c.GetOuputHandler(), ctxout.Message("       path: ", ctxout.Dim, " no ", ctxout.ForeYellow, index, " ", pathColor, path, ctxout.ForeRed, " error while loading template: ", err.Error()))
+				c.Print(ctxout.Message("       path: ", ctxout.Dim, " no ", ctxout.ForeYellow, index, " ", pathColor, path, ctxout.ForeRed, " error while loading template: ", err.Error()))
 			}
 		}, func(origin string) {})
 		if notWorkspace && !plain {
 
-			ctxout.PrintLn(c.GetOuputHandler(), "<row><tab size='20' origin='2'>", ctxout.ForeYellow, " WARNING ! </tab>", ctxout.CleanTag, "<tab size='80'>you are currently in none of the assigned locations.<tab></row>")
-			ctxout.PrintLn(c.GetOuputHandler(), "<row><tab size='20'> </tab><tab=size='80'>so maybe you are using the wrong workspace</tab></row>")
+			c.Println("<row><tab size='20' origin='2'>", ctxout.ForeYellow, " WARNING ! </tab>", ctxout.CleanTag, "<tab size='80'>you are currently in none of the assigned locations.<tab></row>")
+			c.Println("<row><tab size='20'> </tab><tab=size='80'>so maybe you are using the wrong workspace</tab></row>")
 		}
 
 	}
@@ -255,9 +274,9 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 func (c *CmdExecutorImpl) PrintWorkspaces() {
 	configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 		if index == configure.CfgV1.UsedV2Config.CurrentSet {
-			ctxout.CtxOut(c.session.OutPutHdnl, "\t[ ", ctxout.BoldTag, index, ctxout.CleanTag, " ]")
+			c.Println("\t[ ", ctxout.BoldTag, index, ctxout.CleanTag, " ]")
 		} else {
-			ctxout.CtxOut(c.session.OutPutHdnl, "\t  ", ctxout.ForeDarkGrey, index, ctxout.CleanTag)
+			c.Println("\t  ", ctxout.ForeDarkGrey, index, ctxout.CleanTag)
 		}
 	})
 }
@@ -281,80 +300,17 @@ func TemplateTargetsAsMap(template configure.RunConfig, showInvTarget bool) ([]s
 func (c *CmdExecutorImpl) InteractiveScreen() {
 
 	if !systools.IsStdOutTerminal() {
-		ctxout.Print(c.session.OutPutHdnl, "no terminal detected")
-		systools.Exit(systools.ErrorBySystem)
+		c.Print("no terminal detected")
+		systools.Exit(systools.ErrorInitApp)
 		return
 	}
-
-	tc := initTcellScreen(c)
-	if err := tc.Init(); err != nil {
-		fmt.Println(err)
-		systools.Exit(systools.ErrorBySystem)
-	}
-	outHndl := tc.GetOutput()
-
-	if outHndl != nil {
-		c.session.OutPutHdnl = outHndl
-	} else {
-		panic("no output handler for interactive screen")
-	}
-
-	if err := tc.Run(); err != nil {
-		fmt.Println(err)
-		systools.Exit(systools.ErrorBySystem)
+	if _, err := initTcellScreen(c); err != nil {
+		fmt.Println("error init interactive screen:", err)
+		systools.Exit(systools.ErrorInitApp)
 	}
 
 }
 
-func initTcellScreen(c *CmdExecutorImpl) *ctxtcell.CtCell {
-	tc := ctxtcell.NewTcell()
-	tc.SetMouse(true).SetNoClearScreen(false)
-	// then first submenu
-	menu := tc.NewMenu()
-
-	// top bar
-	contxtTopMenu := tc.ActiveText("contxt")
-	contxtTopMenu.SetPos(1, 0).SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGoldenrod).Background(tcell.ColorBlack))
-	contxtTopMenu.OnSelect = func(selected bool) {
-		menu.SetVisible(!menu.IsVisible())
-	}
-	tc.AddElement(contxtTopMenu)
-
-	exitTopMenu := tc.ActiveText("exit")
-	exitTopMenu.SetPosProcentage(100, 0).
-		SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGoldenrod).Background(tcell.ColorBlack))
-
-	exitTopMenu.GetPos().SetMargin(-5, 0)
-	exitTopMenu.OnSelect = func(selected bool) {
-		tc.Stop()
-	}
-	tc.AddElement(exitTopMenu)
-
-	menu.SetTopLeft(1, 1).SetBottomRight(20, 10)
-
-	menu.AddItem("PrintPaths", func(itm *ctxtcell.MenuElement) {
-		itm.GetText().SetText("PrintPaths RUNS")
-		c.GetLogger().Debug("run command: PrintPaths")
-		ctxout.CtxOut(c.GetOuputHandler(), "run command: ", ctxout.ForeLightBlue, "PrintPaths")
-		c.PrintPaths(false, false)
-		itm.GetText().SetText("PrintPaths done")
-	})
-
-	// add cobra commands to menu
-	/*
-		for _, cmd := range c.session.Cobra.RootCmd.Commands() {
-			menu.AddItemWithRef(cmd.Name(), cmd, func(itm *ctxtcell.MenuElement) {
-				itm.GetText().SetText("RUNS")
-				cmdIntern := itm.GetReference().(*cobra.Command)
-				ctxout.CtxOut(c.session.OutPutHdnl, "run command: ", ctxout.ForeLightBlue, cmdIntern.Name())
-				cmdIntern.Run(cmdIntern, []string{})
-				itm.GetText().SetText(cmdIntern.Name() + " done")
-			})
-		}
-	*/
-	menu.SetVisible(false)
-	tc.AddElement(menu)
-
-	return tc
-
+func initTcellScreen(c *CmdExecutorImpl) (*ctxtcell.CtCell, error) {
+	return MainScreen(c)
 }

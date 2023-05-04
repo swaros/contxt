@@ -3,6 +3,7 @@ package ctxtcell
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -16,6 +17,7 @@ type CtCell struct {
 	stopSign      bool
 	loopTimer     time.Duration
 	output        *CtOutput
+	debug         bool
 }
 
 type defaultStyles struct {
@@ -36,6 +38,11 @@ func NewTcell() *CtCell {
 	newct.regularStyles.focused = tcell.StyleDefault.Bold(true)
 	newct.regularStyles.active = tcell.StyleDefault.Background(tcell.ColorGreen).Foreground(tcell.ColorWhite)
 	return newct
+}
+
+func (c *CtCell) SetDebug(debug bool) *CtCell {
+	c.debug = debug
+	return c
 }
 
 func (c *CtCell) SetMouse(mouse bool) *CtCell {
@@ -154,12 +161,16 @@ func (c *CtCell) Loop() {
 		// draw all elements
 		c.AddDebugMessage("DRAWING")
 		c.DrawAll()
-		//debugMsg := strings.Join(debugMessages, ",")
-		//c.debugOut(debugMsg)
+		if c.debug {
+			debugMsg := strings.Join(debugMessages, ",")
+			c.debugOut(debugMsg)
+		}
 		// show screen
 		c.screen.Show()
 		// remove any onscreen debug messages
-		c.CleanDebugMessages()
+		if c.debug {
+			c.CleanDebugMessages()
+		}
 
 		c.loopTimer = time.Since(startLoopTimer)
 	}
@@ -189,7 +200,7 @@ func (c *CtCell) Init() error {
 		}
 		c.SetScreen(s)
 	}
-	c.output = NewCtOutput(c)
+
 	c.screen.SetStyle(defStyle)
 	if c.MouseEnabled {
 		c.screen.EnableMouse()

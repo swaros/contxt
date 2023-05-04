@@ -12,7 +12,8 @@ type CmdSession struct {
 	Log          *SessionLogger
 	TemplateHndl *ctemplate.Template
 	Cobra        *SessionCobra
-	OutPutHdnl   ctxout.PrintInterface
+	OutPutHdnl   ctxout.StreamInterface
+	Printer      ctxout.PrintInterface
 }
 
 type SessionLogger struct {
@@ -22,7 +23,8 @@ type SessionLogger struct {
 
 func NewCmdSession() *CmdSession {
 	return &CmdSession{
-		OutPutHdnl:   ctxout.NewMOWrap(),
+		OutPutHdnl:   ctxout.NewFmtWrap(),
+		Printer:      ctxout.NewMOWrap(),
 		Cobra:        NewCobraCmds(),
 		TemplateHndl: ctemplate.New(),
 		Log: &SessionLogger{

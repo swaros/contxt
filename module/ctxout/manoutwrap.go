@@ -21,3 +21,7 @@ func (m *MOWrap) Update(info CtxOutBehavior) {
 	m.ctxBehave = info
 	manout.ColorEnabled = !info.NoColored
 }
+
+func (m *MOWrap) GetInfo() CtxOutBehavior {
+	return m.ctxBehave
+}

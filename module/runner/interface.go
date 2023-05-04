@@ -7,12 +7,14 @@ import (
 )
 
 type CmdExecutor interface {
-	PrintPaths(plain bool, showFulltask bool) // print out all paths
-	GetLogger() *logrus.Logger                // get logger
-	GetOuputHandler() ctxout.PrintInterface   // get output handler
-	SetLogLevel(level string) error           // set log level
-	ResetVariables()                          // reset old variables while change the workspace. (req for shell mode)
-	MainInit()                                // initialize the workspace
+	Print(msg ...interface{})
+	Println(msg ...interface{})
+	PrintPaths(plain bool, showFulltask bool)                         // print out all paths
+	GetLogger() *logrus.Logger                                        // get logger
+	GetOuputHandler() (ctxout.StreamInterface, ctxout.PrintInterface) // get output handlers
+	SetLogLevel(level string) error                                   // set log level
+	ResetVariables()                                                  // reset old variables while change the workspace. (req for shell mode)
+	MainInit()                                                        // initialize the workspace
 	doMagicParamOne(string)
 	RunTargets(string, bool)   // run targets
 	CallBackNewWs(string)      // callback for new workspace

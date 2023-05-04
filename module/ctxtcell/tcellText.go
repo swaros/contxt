@@ -218,6 +218,11 @@ func (t textElement) Draw(s tcell.Screen) Coordinates {
 	width := t.dim.w + col
 	height := 0
 	for _, r := range t.text {
+		if r == '\n' {
+			row++
+			col = t.pos.X
+			continue
+		}
 		s.SetContent(col, row, r, nil, t.style)
 		col++
 		height = row
