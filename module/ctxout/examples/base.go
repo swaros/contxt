@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/swaros/contxt/module/ctxout"
 )
@@ -62,4 +65,85 @@ func tableFilter() {
 		ctxout.PrintLn(ctxout.OTR, ctxout.TabF(sizeAtrr, "fill=-", "origin=1"), "hello", ctxout.CTB, ctxout.TabF(otherSizeAtrr, "fill=|", "origin=2"), "world", ctxout.CTRT)
 	}
 
+	ctxout.AddPostFilter(ctxout.NewCursorFilter())
+	// stick filter
+	for i := 0; i < 20; i++ {
+		rndWord1 := createRandomWords()
+		rndWord2 := createRandomWords()
+		ctxout.PrintLn(
+			ctxout.OTR,
+			ctxout.TabF("size=30", "fill=-", "origin=1"),
+			rndWord1,
+			ctxout.CTB,
+			ctxout.TabF("size=70", "fill=|", "origin=2"),
+			rndWord2,
+			ctxout.CTRT)
+
+		//ctxout.PrintLn("cursor:bottom;round no:", i)
+		//ctxout.PrintLn("cursor:up,6;")
+		// wait a little bit
+		time.Sleep(time.Millisecond * 100)
+	}
+
+	for i := 0; i < 50; i++ {
+		lines := 0
+		for m := 1; m < 6; m++ {
+			rndWord1 := createRandomWords()
+			rndWord2 := createRandomWords()
+			rndWord3 := createRandomWords()
+			//cursorCmd := fmt.Sprintf("cursor:down,%v;", m)
+
+			ctxout.PrintLn(
+				//cursorCmd,
+				ctxout.OTR,
+				ctxout.TabF("size=5", "fill=-", "origin=1"),
+				m,
+				ctxout.CTB,
+				ctxout.TabF("size=25", "fill=-", "origin=2"),
+				rndWord1,
+				ctxout.CTB,
+				ctxout.TabF("size=30", "fill=|", "origin=2"),
+				rndWord2,
+				ctxout.CTB,
+				ctxout.TabF("size=40", "fill=|", "origin=2"),
+				rndWord3,
+				ctxout.CTRT)
+
+			lines++
+		}
+		lineUpCmd := fmt.Sprintf("cursor:up,%v;", lines+1)
+		ctxout.PrintLn(lineUpCmd)
+
+		// wait a little bit
+		time.Sleep(time.Millisecond * 100)
+	}
+
+}
+
+func createRandomWords() string {
+	// just some random words
+	// they are not really random, but it is enough for this example
+
+	words := []string{
+		"Lorem", "ipsum", "dolor", "sit", "amet,", "consectetur", "adipiscing", "elit.",
+		"Nulla", "facilisi.", "Sed", "eu", "diam", "nec", "nisl", "consequat", "viverra.",
+		"Vivamus", "nec", "diam", "nec", "nisl", "consequat", "viverra.", "Vivamus", "nec",
+		"diam", "nec", "nisl", "consequat", "viverra.", "Vivamus", "nec", "diam", "nec",
+		"nisl", "consequat", "viverra.", "Vivamus", "nec", "diam", "nec", "nisl", "consequat",
+		"viverra.", "Vivamus", "nec", "diam", "nec", "nisl", "consequat", "viverra.", "Vivamus",
+		"nec", "diam", "nec", "nisl", "consequat", "viverra.", "Vivamus", "nec", "diam", "nec",
+		"nisl", "consequat", "viverra.", "Vivamus", "nec", "diam", "nec", "nisl", "consequat",
+		"viverra.", "Vivamus", "nec", "diam", "nec", "nisl", "consequat", "viverra.", "Vivamus",
+		"nec", "diam", "nec", "nisl", "consequat", "viverra.", "Vivamus", "nec", "diam", "nec",
+		"nisl", "consequat", "viverra.", "Vivamus", "nec", "diam", "nec", "nisl", "consequat",
+		"viverra.", "Vivamus", "nec", "diam", "nec", "nisl", "consequat", "viverra.", "Vivamus",
+	}
+
+	// create a random string with 100 words
+	var buffer bytes.Buffer
+	for i := 0; i < 100; i++ {
+		buffer.WriteString(words[rand.Intn(len(words))])
+		buffer.WriteString(" ")
+	}
+	return buffer.String()
 }
