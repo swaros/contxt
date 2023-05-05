@@ -21,20 +21,24 @@ func baseFunc() {
 	printNextExampleHeader("color codes")
 	// simple print with line break. nothing special
 	ctxout.PrintLn("hello", " ", "world")
+	time.Sleep(time.Millisecond * 1400)
 
 	// print with color. but we will see the color codes
 	// because we have nothing that will handle the color codes
-	ctxout.PrintLn(ctxout.ForeRed, "hello", " ", ctxout.ForeGreen, "world", ctxout.ResetCode)
+	ctxout.PrintLn(ctxout.ForeRed, "(okay now we should see markups....) hello", " ", ctxout.ForeGreen, "world", ctxout.ResetCode)
+	time.Sleep(time.Millisecond * 1400)
 
 	// now the colors are shown, because we injected a PrinterInterface
 	// that will handle the color codes
-	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, "hello", " ", ctxout.ForeGreen, "world", ctxout.ResetCode)
+	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, "(but now colored output) hello", " ", ctxout.ForeGreen, "world", ctxout.ResetCode)
+	time.Sleep(time.Millisecond * 1400)
 
 	// the same as above, but with the PrinterInterface injected in between
 	// the arguments. this is just to point out that the PrinterInterface
 	// should be the first argument. at least before the first color code
 	// or other special code is used
-	ctxout.PrintLn(ctxout.ForeRed, "hello", " ", ctxout.NewMOWrap(), ctxout.ForeGreen, "world", ctxout.ResetCode)
+	ctxout.PrintLn(ctxout.ForeRed, "(and here mixed loutput because of maybe wrong placed printerInterface) hello", " ", ctxout.NewMOWrap(), ctxout.ForeGreen, "world", ctxout.ResetCode)
+	time.Sleep(time.Millisecond * 1400)
 }
 
 func printNextExampleHeader(name string) {
@@ -200,8 +204,8 @@ func tableFilter() {
 				),
 			),
 		)
-		// wait a little bit
-		time.Sleep(time.Millisecond * 100)
+		// wait a little bit. here a little bit longer because the content is longer
+		time.Sleep(time.Millisecond * 400)
 	}
 
 	printNextExampleHeader("pure row usage")
@@ -251,9 +255,8 @@ func tableFilter() {
 }
 
 func cursorAndTableFilter() {
-	printNextExampleHeader("cursor filter + table filter")
+	printNextExampleHeader("cursor filter + table filter + colored output")
 	ctxout.AddPostFilter(ctxout.NewCursorFilter())
-	// stick filter
 
 	for i := 0; i < 50; i++ {
 		lines := 0
@@ -262,12 +265,13 @@ func cursorAndTableFilter() {
 			rndWord2 := createRandomWords(90)
 			rndWord3 := createRandomWords(90)
 			ctxout.PrintLn(
+				ctxout.NewMOWrap(),
 				ctxout.OTR,
-				ctxout.TD(m, "size=5", "origin=1"),
-				ctxout.TD(i, "size=5", "origin=1"),
-				ctxout.TD(rndWord1, "size=20", "origin=2"),
-				ctxout.TD(rndWord2, "size=30", "origin=2"),
-				ctxout.TD(rndWord3, "size=40", "origin=2"),
+				ctxout.TD(m, "size=5", "origin=2", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeLightYellow),
+				ctxout.TD(i, "size=5", "origin=2", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeLightBlue+ctxout.BackBlue),
+				ctxout.TD(rndWord1, "size=20", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeGreen),
+				ctxout.TD(rndWord2, "size=30", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeDarkGrey),
+				ctxout.TD(rndWord3, "size=40"),
 				ctxout.CRT)
 
 			lines++
