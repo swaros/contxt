@@ -11,6 +11,32 @@ const (
 	RowEnd     = "</row>"
 	TabStart   = "<tab"
 	TabEnd     = "</tab>"
+	// defines the size of the cell in relation to the max length of the screen. 10 means 10% of the screen
+	ATTR_SIZE = "size"
+	// defines the char if the cell should fill the remaining space of the cell
+	// default is  " " (space)
+	ATTR_FILL = "fill"
+	// defines how the cell should be aligned
+	// 1 = left, 2 = right
+	ATTR_ORIGIN = "origin"
+	// defines how the space is calculated.
+	// fixed = if the calculated size is bigger than the cell size, then we will use the cell size
+	// extend = fill the rest of the row with the space if prevoius fixed or content cells are smaller than the calculated size
+	// content = we will use the max size of the content if they is smaller than the calculated size
+	ATTR_DRAW = "draw"
+	// if the text is cutted, then this string will be added to the end of the text
+	ATTR_CUT_ADD = "cut-add"
+	// this is the mode how the overflow is handled. ignore = the text is ignored, wrap = wrap the text
+	ATTR_OVERFLOW = "overflow"
+	// this is the suffix for the cell that will be added to the content all the time. is ment for colorcodes. here and clear code is usually used
+	ATTR_SUFFIX = "suffix"
+	// this is the prefix for the cell that will be placed in front of the content all the time. is ment for colorcodes
+	ATTR_PREFIX = "prefix"
+
+	// the content will be shown, cuttet and alligned depending the origin value
+	OVERFLOW_ANY = "any"
+	// we will keep the content and wrap it. this will increase the height of the row if we need more space
+	OVERFLOW_WORDWRAP = "wordwrap"
 )
 
 type TabOut struct {
@@ -99,14 +125,14 @@ func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 		if token.IsMarkup {
 			if strings.HasPrefix(token.Text, "<tab") {
 				tSize = 0 // markup have no text length
-				tabCell.fillChar = token.GetProperty("fill", " ").(string)
-				tabCell.Size = token.GetProperty("size", 0).(int)
-				tabCell.Origin = token.GetProperty("origin", 0).(int)
-				tabCell.drawMode = token.GetProperty("draw", "relative").(string)
-				tabCell.cutNotifier = token.GetProperty("cut-add", "...").(string)
-				tabCell.overflowMode = token.GetProperty("overflow", "ignore").(string)
-				tabCell.anySuffix = token.GetProperty("suffix", "").(string)
-				tabCell.anyPrefix = token.GetProperty("prefix", "").(string)
+				tabCell.fillChar = token.GetProperty(ATTR_FILL, " ").(string)
+				tabCell.Size = token.GetProperty(ATTR_SIZE, 0).(int)
+				tabCell.Origin = token.GetProperty(ATTR_ORIGIN, 0).(int)
+				tabCell.drawMode = token.GetProperty(ATTR_DRAW, "relative").(string)
+				tabCell.cutNotifier = token.GetProperty(ATTR_CUT_ADD, "...").(string)
+				tabCell.overflowMode = token.GetProperty(ATTR_OVERFLOW, "ignore").(string)
+				tabCell.anySuffix = token.GetProperty(ATTR_SUFFIX, "").(string)
+				tabCell.anyPrefix = token.GetProperty(ATTR_PREFIX, "").(string)
 			} else if strings.HasPrefix(token.Text, "</tab>") {
 				t.rows = append(t.rows, *tabCell)
 				tabCell = NewTabCell(tabRow)
