@@ -1,5 +1,10 @@
 # Contxt Output Handle
 
+> NOTE: execution is delayed by an timer. see the code in example folder
+
+![example](https://github.com/swaros/docu-asset-store/blob/main/ctxout_example.gif)
+
+
 this library maps different ways to render output.
 - post filter
 - injected PrinterInterface
