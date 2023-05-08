@@ -8,7 +8,7 @@ import (
 
 // general markup parser. this defines a single markup
 // and NOT the markup itself
-// so a a markup is created by openeing the markup with START-TOKEN + something + END-TOKEN
+// so a markup is created by openeing the markup with START-TOKEN + something + END-TOKEN
 // and closing it with START-TOKEN + CLOSE-IDENT + something + END-TOKEN
 // the default markup is <something> and </something>
 type Markup struct {
@@ -75,6 +75,7 @@ func (p *Parsed) toInt(s string) int {
 	return result
 }
 
+// GetProperty returns the value of a property of a markup
 func (p *Parsed) GetProperty(propertie string, defaultValue interface{}) interface{} {
 	if strings.Contains(p.Text, propertie) {
 		switch defaultValue.(type) {
@@ -98,16 +99,22 @@ func (p *Parsed) GetProperty(propertie string, defaultValue interface{}) interfa
 	}
 }
 
+// SetStartToken sets the start token of a markup
+// like < so the markup would looks like <something/>
 func (m *Markup) SetStartToken(token rune) *Markup {
 	m.startToken = token
 	return m
 }
 
+// SetEndToken sets the end token of a markup
+// like > so the markup would looks like <something/>
 func (m *Markup) SetEndToken(token rune) *Markup {
 	m.endToken = token
 	return m
 }
 
+// SetCloseIdent sets the close identifier of a markup
+// like / so the markup would looks like <something/>
 func (m *Markup) SetCloseIdent(token rune) *Markup {
 	m.closeIdent = token
 	return m

@@ -1,6 +1,7 @@
 package ctxout
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 
@@ -8,16 +9,21 @@ import (
 )
 
 // filter that sets the cursor position
+// the text is in the format cursor:command,param1,param2;rest of the text
+// example: cursor:down,1;hello world
+// the command is the cursor command
+// the params are the params for the command
+// the rest of the text is the text that is returned
+
+// for the cursor movement https://github.com/atomicgo/cursor package is used
+// except for area, which is not implemented yet, but will be in the future
 
 // CursorFilter is a filter that sets the cursor position
 type CursorFilter struct {
-	// X is the x position of the cursor
-	X int
-	// Y is the y position of the cursor
-	Y int
-
 	// Info is the PostFilterInfo
 	Info PostFilterInfo
+	//Last error that occured
+	LastError error
 }
 
 func NewCursorFilter() *CursorFilter {
@@ -27,7 +33,10 @@ func NewCursorFilter() *CursorFilter {
 // Filter is called when the context is updated
 // interface fulfills the PostFilter interface
 func (t *CursorFilter) Filter(msg interface{}) interface{} {
-	t.command(msg.(string))
+	// check if a string
+	if _, ok := msg.(string); !ok {
+		return t.cmd(msg.(string))
+	}
 	return msg
 }
 
@@ -38,7 +47,7 @@ func (t *CursorFilter) Update(info PostFilterInfo) {
 }
 
 func (t *CursorFilter) Command(str string) string {
-	return t.command(str)
+	return t.cmd(str)
 }
 
 // CanHandleThis returns true if the text is requesting a cursor position
@@ -55,8 +64,8 @@ func (t *CursorFilter) IsCursor(text string) bool {
 
 // Command handler they get the paramaters
 // from the text and maps it to the https://github.com/atomicgo/cursor package
-func (t *CursorFilter) command(text string) string {
-	// test starts allways wirth cursor:
+func (t *CursorFilter) cmd(text string) string {
+	// text starts allways with cursor:
 	text = strings.TrimPrefix(text, "cursor:")
 	// keep anything after the first ;
 	textSplits := strings.Split(text, ";")
@@ -72,24 +81,120 @@ func (t *CursorFilter) command(text string) string {
 	// the rest are the params
 	params := split[1:]
 	// switch on the command
+	// and call the cursor package
+	/*
+		func Bottom()
+		func ClearLine()
+		func ClearLinesDown(n int)
+		func ClearLinesUp(n int)
+		func Down(n int)
+		func DownAndClear(n int)
+		func Hide()
+		func HorizontalAbsolute(n int)
+		func Left(n int)
+		func Move(x, y int)
+		func Right(n int)
+		func SetTarget(w Writer)
+		func Show()
+		func StartOfLine()
+		func StartOfLineDown(n int)
+		func StartOfLineUp(n int)
+		func TestCustomIOWriter(t *testing.T)
+		func Up(n int)
+		func UpAndClear(n int)
+	*/
+
 	switch strings.ToLower(command) {
 	case "up":
-		cursor.Up(t.getArgAsInt(params[0]))
+		if t.assertParams(params, 1) {
+			cursor.Up(t.getArgAsInt(params[0]))
+		}
 	case "down":
-		cursor.Down(t.getArgAsInt(params[0]))
+		if t.assertParams(params, 1) {
+			cursor.Down(t.getArgAsInt(params[0]))
+		}
+
 	case "left":
-		cursor.Left(t.getArgAsInt(params[0]))
+		if t.assertParams(params, 1) {
+			cursor.Left(t.getArgAsInt(params[0]))
+		}
+
 	case "right":
-		cursor.Right(t.getArgAsInt(params[0]))
+		if t.assertParams(params, 1) {
+			cursor.Right(t.getArgAsInt(params[0]))
+		}
+
 	case "move":
-		cursor.Move(t.getArgAsInt(params[0]), t.getArgAsInt(params[1]))
+		if t.assertParams(params, 2) {
+			cursor.Move(t.getArgAsInt(params[0]), t.getArgAsInt(params[1]))
+		}
+
 	case "bottom":
 		cursor.Bottom()
+
+	case "clearline":
+		cursor.ClearLine()
+
+	case "clearlinesdown":
+		if t.assertParams(params, 1) {
+			cursor.ClearLinesDown(t.getArgAsInt(params[0]))
+		}
+
+	case "clearlinesup":
+		if t.assertParams(params, 1) {
+			cursor.ClearLinesUp(t.getArgAsInt(params[0]))
+		}
+
+	case "downandclear":
+		if t.assertParams(params, 1) {
+			cursor.DownAndClear(t.getArgAsInt(params[0]))
+		}
+
+	case "hide":
+		cursor.Hide()
+
+	case "horizontalabsolute":
+		if t.assertParams(params, 1) {
+			cursor.HorizontalAbsolute(t.getArgAsInt(params[0]))
+		}
+
+	case "startofline":
+		cursor.StartOfLine()
+
+	case "startoflinedown":
+		if t.assertParams(params, 1) {
+			cursor.StartOfLineDown(t.getArgAsInt(params[0]))
+		}
+
+	case "startoflineup":
+		if t.assertParams(params, 1) {
+			cursor.StartOfLineUp(t.getArgAsInt(params[0]))
+		}
+
+	case "show":
+		cursor.Show()
+
+	case "upandclear":
+		if t.assertParams(params, 1) {
+			cursor.UpAndClear(t.getArgAsInt(params[0]))
+		}
+
 	default:
-		return text
+		t.LastError = errors.New("invalid command " + command)
 
 	}
+
 	return textKeep
+}
+
+func (t *CursorFilter) assertParams(params []string, length int) bool {
+	if len(params) != length {
+		t.LastError = errors.New(
+			"invalid number of params. expected " + strconv.Itoa(length) + " got " + strconv.Itoa(len(params)),
+		)
+		return false
+	}
+	return true
 }
 
 func (t *CursorFilter) getArgAsInt(arg string) int {

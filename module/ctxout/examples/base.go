@@ -39,6 +39,23 @@ func baseFunc() {
 	// or other special code is used
 	ctxout.PrintLn(ctxout.ForeRed, "(and here mixed loutput because of maybe wrong placed printerInterface) hello", " ", ctxout.NewMOWrap(), ctxout.ForeGreen, "world", ctxout.ResetCode)
 	time.Sleep(time.Millisecond * 1400)
+
+	// the filter decides depending on the environment if the color codes
+	// should be shown or not.
+	// because this is done automatically, we have to force disabling the
+	// the color codes here.
+	// this is done by setting the NoColored flag to true
+
+	// first we keep the default behavior
+	originBehavior := ctxout.GetBehavior()
+	// and set the NoColored flag to true
+	ctxout.SetBehavior(ctxout.CtxOutBehavior{NoColored: true})
+	// and here we will get a clean string, even if the color codes are used
+	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, "hello", " ", ctxout.ForeGreen, "world", ctxout.ResetCode)
+	time.Sleep(time.Millisecond * 1400)
+
+	// for the next example we will use the the original behavior again
+	ctxout.SetBehavior(originBehavior)
 }
 
 func printNextExampleHeader(name string) {

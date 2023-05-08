@@ -138,3 +138,37 @@ func TestOwnMarkup(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildInnerSliceEach(t *testing.T) {
+	testStr := "<map><item>one</item><item>two</item><item>three</item></map><item>last</item>"
+	mu := ctxout.NewMarkup()
+
+	parsed := mu.Parse(testStr)
+	if len(parsed) != 14 {
+		t.Error("expected 14 results. got ", len(parsed))
+	}
+	hits := 0
+	var hitRes []ctxout.Parsed
+	parsedInner := mu.BuildInnerSliceEach(parsed, "map", func(markup []ctxout.Parsed) bool {
+		// we should only hit once with an non empty slice
+		if len(markup) > 0 {
+			hitRes = markup
+			hits++
+		}
+		return true
+	})
+
+	if hits != 1 {
+		t.Error("expected 1 hit got ", hits)
+	}
+
+	if len(hitRes) != 9 {
+		t.Error("expected 9 results. got ", len(hitRes), hitRes)
+	}
+	// the return slice should be empty
+	if len(parsedInner) != 0 {
+		t.Error("expected 0 results. got ", len(parsedInner))
+	}
+	// build the inner slice
+
+}
