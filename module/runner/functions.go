@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -304,10 +303,12 @@ func (c *CmdExecutorImpl) InteractiveScreen() {
 		systools.Exit(systools.ErrorInitApp)
 		return
 	}
-	if _, err := initTcellScreen(c); err != nil {
-		fmt.Println("error init interactive screen:", err)
-		systools.Exit(systools.ErrorInitApp)
-	}
+	shellRunner(c)
+	/*
+		if _, err := initTcellScreen(c); err != nil {
+			fmt.Println("error init interactive screen:", err)
+			systools.Exit(systools.ErrorInitApp)
+		}*/
 
 }
 

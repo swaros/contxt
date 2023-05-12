@@ -86,6 +86,12 @@ module:
       timeout: 30s
 
   -
+    modul: ctxshell
+    local: true
+    test:
+      timeout: 30s
+
+  -
     modul: tasks
     local: true
     test:

@@ -5,6 +5,7 @@ use (
 	./module/configure
 	./module/ctemplate
 	./module/ctxout
+	./module/ctxshell
 	./module/ctxtcell
 	./module/dirhandle
 	./module/linehack

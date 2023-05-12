@@ -102,6 +102,13 @@ updates:
        interval: daily
     assignees:
        - swaros
+### dependencie for /module/ctxshell/
+  - package-ecosystem: gomod
+    directory: /module/ctxshell/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
 ### dependencie for /module/tasks/
   - package-ecosystem: gomod
     directory: /module/tasks/
