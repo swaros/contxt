@@ -12,6 +12,8 @@ import (
 type Cshell struct {
 	CobraRootCmd *cobra.Command
 	cobraCmdList []string // just to remember if we deal with an cobra command
+	navtiveCmds  []*NativeCmd
+	getPrompt    func() string
 }
 
 func NewCshell() *Cshell {
@@ -23,12 +25,26 @@ func (t *Cshell) SetCobraRootCommand(cmd *cobra.Command) *Cshell {
 	return t
 }
 
+func (t *Cshell) AddNativeCmd(cmd *NativeCmd) *Cshell {
+	t.navtiveCmds = append(t.navtiveCmds, cmd)
+	return t
+}
+
+func (t *Cshell) SetPromptFunc(f func() string) *Cshell {
+	t.getPrompt = f
+	return t
+}
+
 func (t *Cshell) createCompleter() *readline.PrefixCompleter {
-	completer := readline.NewPrefixCompleter(
-		readline.PcItem("run"),
-		readline.PcItem("help"),
-		readline.PcItem("exit"),
-	)
+	completer := readline.NewPrefixCompleter()
+	for _, c := range t.navtiveCmds {
+		if c.CompleterFunc != nil {
+			nativeCmd := readline.PcItem(c.Name)
+			nativeCmd.Callback = c.CompleterFunc
+			completer.Children = append(completer.Children, nativeCmd)
+		}
+
+	}
 
 	if t.CobraRootCmd != nil {
 		for _, c := range t.CobraRootCmd.Commands() {
@@ -55,7 +71,19 @@ func (t *Cshell) createSubCommandCompleter(compl *readline.PrefixCompleter, cmd 
 	return compl
 }
 
-func (t *Cshell) Run() {
+// cmd have to be taken from the first word of the comand line.
+// e.g. "cmd arg1 arg2" -> "cmd"
+func (t *Cshell) getNativeCmd(cmd string) *NativeCmd {
+	for _, c := range t.navtiveCmds {
+		if c.Name == cmd {
+			return c
+		}
+	}
+	return nil
+}
+
+// Run starts the shell
+func (t *Cshell) Run() error {
 	completer := t.createCompleter()
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          " CTX \033[31m»\033[0m ",
@@ -68,11 +96,14 @@ func (t *Cshell) Run() {
 		FuncFilterInputRune: filterInput,
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer l.Close()
 	l.CaptureExitSignal()
 	log.SetOutput(l.Stderr())
+	if t.getPrompt != nil {
+		l.SetPrompt(t.getPrompt())
+	}
 	for {
 		line, err := l.Readline()
 		if err == readline.ErrInterrupt {
@@ -85,19 +116,26 @@ func (t *Cshell) Run() {
 			break
 		}
 		line = strings.TrimSpace(line)
+		lineCmd := strings.Split(line, " ")[0]
+		fullArgs := strings.Split(line, " ")
 		switch {
 		case line == "exit":
-			return
+			return nil
 		case line == "help":
 			l.Write([]byte("help\n"))
 		default:
+			if c := t.getNativeCmd(lineCmd); c != nil {
+				c.Exec(fullArgs)
+				continue
+			}
 			// check if we deal with an cobra command
+			// so we do not execute the root command, because we would not
+			// know if this is an valid command or not
 			if t.CobraRootCmd != nil {
 				for _, c := range t.CobraRootCmd.Commands() {
 					// the name is in the list of cobra commands
 					// rest is the args
 
-					lineCmd := strings.Split(line, " ")[0]
 					if c.Name() == lineCmd {
 						t.CobraRootCmd.SetArgs(strings.Split(line, " "))
 						t.CobraRootCmd.Execute()
@@ -110,7 +148,7 @@ func (t *Cshell) Run() {
 			l.Write([]byte("\n\n"))
 		}
 	}
-
+	return nil
 }
 
 func filterInput(r rune) (rune, bool) {
