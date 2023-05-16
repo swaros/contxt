@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
-	"github.com/swaros/contxt/module/ctxtcell"
 	"github.com/swaros/contxt/module/systools"
 )
 
@@ -170,6 +169,7 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 		}
 		os.Chdir(currentPath)
 	}
+	ctxout.PrintLn("")
 	return wsCount, wsUpdated
 }
 
@@ -266,7 +266,9 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 			c.Println("<row><tab size='20' origin='2'>", ctxout.ForeYellow, " WARNING ! </tab>", ctxout.CleanTag, "<tab size='80'>you are currently in none of the assigned locations.<tab></row>")
 			c.Println("<row><tab size='20'> </tab><tab=size='80'>so maybe you are using the wrong workspace</tab></row>")
 		}
-
+		// end table
+		// print a new line
+		c.Println("")
 	}
 }
 
@@ -304,14 +306,4 @@ func (c *CmdExecutorImpl) InteractiveScreen() {
 		return
 	}
 	shellRunner(c)
-	/*
-		if _, err := initTcellScreen(c); err != nil {
-			fmt.Println("error init interactive screen:", err)
-			systools.Exit(systools.ErrorInitApp)
-		}*/
-
-}
-
-func initTcellScreen(c *CmdExecutorImpl) (*ctxtcell.CtCell, error) {
-	return MainScreen(c)
 }

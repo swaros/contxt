@@ -11,14 +11,20 @@ import (
 )
 
 type Cshell struct {
-	CobraRootCmd *cobra.Command
-	cobraCmdList []string // just to remember if we deal with an cobra command
-	navtiveCmds  []*NativeCmd
-	getPrompt    func() string
+	CobraRootCmd   *cobra.Command
+	cobraCmdList   []string // just to remember if we deal with an cobra command
+	navtiveCmds    []*NativeCmd
+	getPrompt      func() string
+	exitCmdStr     string
+	rlInstance     *readline.Instance
+	asyncCobraExec bool
+	asyncNativeCmd bool
 }
 
 func NewCshell() *Cshell {
-	return &Cshell{}
+	return &Cshell{
+		exitCmdStr: "exit",
+	}
 }
 
 func (t *Cshell) SetCobraRootCommand(cmd *cobra.Command) *Cshell {
@@ -33,6 +39,21 @@ func (t *Cshell) AddNativeCmd(cmd *NativeCmd) *Cshell {
 
 func (t *Cshell) SetPromptFunc(f func() string) *Cshell {
 	t.getPrompt = f
+	return t
+}
+
+func (t *Cshell) SetExitCmdStr(s string) *Cshell {
+	t.exitCmdStr = s
+	return t
+}
+
+func (t *Cshell) SetAsyncCobraExec(b bool) *Cshell {
+	t.asyncCobraExec = b
+	return t
+}
+
+func (t *Cshell) SetAsyncNativeCmd(b bool) *Cshell {
+	t.asyncNativeCmd = b
 	return t
 }
 
@@ -103,27 +124,28 @@ func (t *Cshell) getNativeCmd(cmd string) *NativeCmd {
 // Run starts the shell
 func (t *Cshell) Run() error {
 	completer := t.createCompleter()
-	l, err := readline.NewEx(&readline.Config{
-		Prompt:          " CTX \033[31m»\033[0m ",
-		HistoryFile:     "/tmp/readline.tmp",
-		AutoComplete:    completer,
-		InterruptPrompt: "^C",
-		EOFPrompt:       "exit",
-
+	var err error
+	t.rlInstance, err = readline.NewEx(&readline.Config{
+		Prompt:              " > ",
+		HistoryFile:         "/tmp/readline.tmp",
+		AutoComplete:        completer,
+		InterruptPrompt:     "^C",
+		EOFPrompt:           "exit",
 		HistorySearchFold:   true,
 		FuncFilterInputRune: filterInput,
+		UniqueEditLine:      true,
 	})
 	if err != nil {
 		return err
 	}
-	defer l.Close()
-	l.CaptureExitSignal()
-	log.SetOutput(l.Stderr())
+	defer t.rlInstance.Close()
+	t.rlInstance.CaptureExitSignal()
+	log.SetOutput(t.rlInstance.Stderr())
 	if t.getPrompt != nil {
-		l.SetPrompt(t.getPrompt())
+		t.rlInstance.SetPrompt(t.getPrompt())
 	}
 	for {
-		line, err := l.Readline()
+		line, err := t.rlInstance.Readline()
 		if err == readline.ErrInterrupt {
 			if len(line) == 0 {
 				break
@@ -133,38 +155,75 @@ func (t *Cshell) Run() error {
 		} else if err == io.EOF {
 			break
 		}
+
+		// skip empty lines
+		if line == "" {
+			continue
+		}
+
+		// get out by typing exit
+		if line == t.exitCmdStr {
+			break
+		}
+
 		line = strings.TrimSpace(line)
 		lineCmd := strings.Split(line, " ")[0]
 		fullArgs := strings.Split(line, " ")
-		switch {
-		case line == "exit":
-			return nil
-		case line == "help":
-			l.Write([]byte("help\n"))
-		default:
-			if c := t.getNativeCmd(lineCmd); c != nil {
-				c.Exec(fullArgs)
-				continue
-			}
-			// check if we deal with an cobra command
-			// so we do not execute the root command, because we would not
-			// know if this is an valid command or not
-			if t.CobraRootCmd != nil {
-				for _, c := range t.CobraRootCmd.Commands() {
-					// the name is in the list of cobra commands
-					// rest is the args
-
-					if c.Name() == lineCmd {
-						t.CobraRootCmd.SetArgs(strings.Split(line, " "))
-						t.CobraRootCmd.Execute()
-						continue
+		weDidSomething := false
+		// native commands just a wrapper for the completion
+		// together with the exec function
+		if c := t.getNativeCmd(lineCmd); c != nil {
+			weDidSomething = true
+			if t.asyncNativeCmd {
+				go func() {
+					if err := c.Exec(fullArgs); err != nil {
+						log.Printf("error executing command: %s", err)
 					}
-				}
+					t.rlInstance.Write([]byte(lineCmd + "..done\n"))
+				}()
 			} else {
-				l.Write([]byte("unknown: " + line + "\n"))
+				if err := c.Exec(fullArgs); err != nil {
+					log.Printf("error executing command: %s", err)
+				}
+				t.rlInstance.Write([]byte(lineCmd + "..done\n"))
 			}
-			l.Write([]byte("\n\n"))
+			continue
 		}
+		// check if we deal with an cobra command
+		// so we do not execute the root command, because we would not
+		// know if this is an valid command or not
+		if t.CobraRootCmd != nil {
+			for _, c := range t.CobraRootCmd.Commands() {
+				// the name is in the list of cobra commands
+				// rest is the args
+
+				if c.Name() == lineCmd {
+					weDidSomething = true
+					t.CobraRootCmd.SetArgs(strings.Split(line, " "))
+					if t.asyncCobraExec {
+						go func() {
+							if err := t.CobraRootCmd.Execute(); err != nil {
+								log.Printf("error executing command: %s", err)
+							}
+							t.rlInstance.Write([]byte(lineCmd + "..done\n"))
+						}()
+					} else {
+						if err := t.CobraRootCmd.Execute(); err != nil {
+							log.Printf("error executing command: %s", err)
+						}
+						t.rlInstance.Write([]byte(lineCmd + "..done\n"))
+					}
+					continue
+				}
+			}
+		}
+		// if we are here, we have no idea what to do
+		if !weDidSomething {
+			log.Printf("unknown command: %s", lineCmd)
+		}
+		// move to the next line
+		t.rlInstance.Write([]byte("\n"))
+
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package runner
 
 import (
 	"strings"
+	"time"
 
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/ctxshell"
@@ -14,10 +15,18 @@ func shellRunner(c *CmdExecutorImpl) {
 	shell.SetCobraRootCommand(c.session.Cobra.RootCmd)
 
 	// add native commands to menu
+	// this one is for testing only
 	demoCmd := ctxshell.NewNativeCmd("demo", "demo command", func(args []string) error {
-		ctxout.PrintLn("demo command executed:", strings.Join(args, " "))
+		c.Println("demo command executed:", strings.Join(args, " "))
+		for i := 0; i < 5000; i++ {
+			time.Sleep(10 * time.Millisecond)
+			c.Println("i do something .. we are in round ", i)
+		}
 		return nil
 	})
+
+	// while developing, you can use this to test the completer
+	// and the command itself
 	demoCmd.SetCompleterFunc(func(line string) []string {
 		return []string{"demo"}
 	})
@@ -42,7 +51,7 @@ func shellRunner(c *CmdExecutorImpl) {
 			"<f:white><b:blue>ctx<f:yellow>shell:</><f:blue></> ",
 		)
 	})
-
+	c.session.OutPutHdnl = shell
 	// start the shell
-	shell.Run()
+	shell.SetAsyncCobraExec(true).SetAsyncNativeCmd(true).Run()
 }
