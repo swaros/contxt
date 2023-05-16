@@ -26,7 +26,21 @@ func shellRunner(c *CmdExecutorImpl) {
 
 	// set the prompt handler
 	shell.SetPromptFunc(func() string {
-		return ctxout.ToString("<f:yellow>contxt</> > ")
+		tpl := ""
+		template, exists, _ := c.session.TemplateHndl.Load()
+		if exists {
+			tpl = template.Workspace.Project
+			if template.Workspace.Role != "" {
+				tpl += "/" + template.Workspace.Role
+			}
+		}
+		return ctxout.ToString(
+			ctxout.NewMOWrap(),
+			ctxout.BackWhite,
+			ctxout.ForeBlue,
+			tpl,
+			"<f:white><b:blue>ctx<f:yellow>shell:</><f:blue></> ",
+		)
 	})
 
 	// start the shell

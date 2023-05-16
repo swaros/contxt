@@ -7,6 +7,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type Cshell struct {
@@ -53,6 +54,15 @@ func (t *Cshell) createCompleter() *readline.PrefixCompleter {
 			if c.HasSubCommands() {
 				newCmd = t.createSubCommandCompleter(newCmd, c)
 			}
+			c.Flags().VisitAll(func(f *pflag.Flag) {
+				if f.Shorthand != "" {
+					newCmd.Children = append(newCmd.Children, readline.PcItem("-"+f.Shorthand))
+				}
+				if f.Name != "" {
+					newCmd.Children = append(newCmd.Children, readline.PcItem("--"+f.Name))
+				}
+			})
+
 			completer.Children = append(completer.Children, newCmd)
 		}
 	}
@@ -66,6 +76,14 @@ func (t *Cshell) createSubCommandCompleter(compl *readline.PrefixCompleter, cmd 
 		if c.HasSubCommands() {
 			newCmd = t.createSubCommandCompleter(newCmd, c)
 		}
+		c.Flags().VisitAll(func(f *pflag.Flag) {
+			if f.Shorthand != "" {
+				newCmd.Children = append(newCmd.Children, readline.PcItem("-"+f.Shorthand))
+			}
+			if f.Name != "" {
+				newCmd.Children = append(newCmd.Children, readline.PcItem("--"+f.Name))
+			}
+		})
 		compl.Children = append(compl.Children, newCmd)
 	}
 	return compl
