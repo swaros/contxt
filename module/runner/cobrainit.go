@@ -135,9 +135,9 @@ if these task are defined
 		Run: func(_ *cobra.Command, args []string) {
 			c.ExternalCmdHndl.FindWorkspaceInfoByTemplate(nil)
 			if len(args) > 0 {
-				configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+				configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 					if args[0] == index {
-						configure.CfgV1.ChangeWorkspace(index, c.ExternalCmdHndl.CallBackOldWs, c.ExternalCmdHndl.CallBackNewWs)
+						configure.GetGlobalConfig().ChangeWorkspace(index, c.ExternalCmdHndl.CallBackOldWs, c.ExternalCmdHndl.CallBackNewWs)
 					}
 				})
 			}
@@ -146,7 +146,7 @@ if these task are defined
 			if len(args) != 0 {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
-			targets := configure.CfgV1.ListWorkSpaces()
+			targets := configure.GetGlobalConfig().ListWorkSpaces()
 			return targets, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
@@ -192,7 +192,7 @@ and also onEnter task defined in the new workspace
 		Run: func(cmd *cobra.Command, args []string) {
 			//checkDefaultFlags(cmd, args)
 			if len(args) > 0 {
-				if err := configure.CfgV1.AddWorkSpace(args[0], c.ExternalCmdHndl.CallBackOldWs, c.ExternalCmdHndl.CallBackNewWs); err != nil {
+				if err := configure.GetGlobalConfig().AddWorkSpace(args[0], c.ExternalCmdHndl.CallBackOldWs, c.ExternalCmdHndl.CallBackNewWs); err != nil {
 					fmt.Println(err)
 				} else {
 					c.print("workspace created ", args[0])
@@ -217,11 +217,11 @@ and also onEnter task defined in the new workspace
 		Run: func(cmd *cobra.Command, args []string) {
 			//checkDefaultFlags(cmd, args)
 			if len(args) > 0 {
-				if err := configure.CfgV1.RemoveWorkspace(args[0]); err != nil {
+				if err := configure.GetGlobalConfig().RemoveWorkspace(args[0]); err != nil {
 					c.log().Error("error while trying to remove workspace", err)
 					systools.Exit(systools.ErrorBySystem)
 				} else {
-					if err := configure.CfgV1.SaveConfiguration(); err != nil {
+					if err := configure.GetGlobalConfig().SaveConfiguration(); err != nil {
 						c.log().Error("error while trying to save configuration", err)
 						systools.Exit(systools.ErrorBySystem)
 					}
@@ -235,7 +235,7 @@ and also onEnter task defined in the new workspace
 			if len(args) != 0 {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
-			targets := configure.CfgV1.ListWorkSpaces()
+			targets := configure.GetGlobalConfig().ListWorkSpaces()
 			return targets, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
@@ -296,21 +296,22 @@ func (c *SessionCobra) GetDirCmd() *cobra.Command {
 			if len(args) == 0 {
 				c.log().Debug("show all paths in any workspace")
 				c.log().WithFields(logrus.Fields{"all-flag": c.Options.DirAll}).Debug("show all paths in any workspace shoul be executed")
-				current := configure.CfgV1.UsedV2Config.CurrentSet
+				current := configure.GetGlobalConfig().UsedV2Config.CurrentSet
 				c.print("<table>")
 				if c.Options.DirAll {
-					configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
-						configure.CfgV1.UsedV2Config.CurrentSet = index
+					configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+						configure.GetGlobalConfig().UsedV2Config.CurrentSet = index
 						// header for each workspace
 						c.print("<row>", ctxout.BoldTag, "<tab size='100' fill=' '>", index, ctxout.CleanTag, ctxout.ForeDarkGrey, ": index (", cfg.CurrentIndex, ")</tab></row>")
 						c.ExternalCmdHndl.PrintPaths(true, c.Options.ShowFullTargets)
-						c.print("<row>", ctxout.ForeDarkGrey, "<tab size='100' fill='─'>─</tab>", ctxout.CleanTag, "</row>")
+						//c.print("<row>", ctxout.ForeDarkGrey, "<tab size='100' fill='─'>─</tab>", ctxout.CleanTag, "</row>")
+
 					})
 				} else {
 					c.ExternalCmdHndl.PrintPaths(false, c.Options.ShowFullTargets)
 				}
 				c.print("</table>")
-				configure.CfgV1.UsedV2Config.CurrentSet = current
+				configure.GetGlobalConfig().UsedV2Config.CurrentSet = current
 			}
 		},
 	}
@@ -327,7 +328,7 @@ func (c *SessionCobra) GetDirFindCmd() *cobra.Command {
 		Long:  "find a path in the current workspace by the given argument combination",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) < 1 {
-				pathStr := configure.CfgV1.GetActivePath(".")
+				pathStr := configure.GetGlobalConfig().GetActivePath(".")
 				// we use plain output here. so we can use it in the shell and is not affected by the output handler
 				fmt.Println(pathStr)
 			} else {
@@ -349,7 +350,7 @@ func (c *SessionCobra) GetDirAddCmd() *cobra.Command {
 		paths need to be absolute paths`,
 		Run: func(cmd *cobra.Command, args []string) {
 			c.checkDefaultFlags(cmd, args)
-			c.print("add path(s) to workspace: ", ctxout.ForeGreen, configure.CfgV1.UsedV2Config.CurrentSet, ctxout.CleanTag)
+			c.print("add path(s) to workspace: ", ctxout.ForeGreen, configure.GetGlobalConfig().UsedV2Config.CurrentSet, ctxout.CleanTag)
 			if len(args) == 0 {
 				dir, err := os.Getwd()
 				if err != nil {
@@ -375,9 +376,9 @@ func (c *SessionCobra) GetDirAddCmd() *cobra.Command {
 					c.println("error: ", ctxout.ForeRed, "path does not exist", ctxout.CleanTag)
 					return
 				}
-				if err := configure.CfgV1.AddPath(arg); err == nil {
+				if err := configure.GetGlobalConfig().AddPath(arg); err == nil {
 					c.println("add ", ctxout.ForeBlue, arg, ctxout.CleanTag)
-					configure.CfgV1.SaveConfiguration()
+					configure.GetGlobalConfig().SaveConfiguration()
 					cmd := c.GetScanCmd() // we use the scan command to update the project infos
 					cmd.Run(cmd, nil)     // this is parsing all templates in all workspaces and updates the project Infos
 				} else {
@@ -397,7 +398,7 @@ func (c *SessionCobra) GetDirRmCmd() *cobra.Command {
 		like 'ctx dir rm /path/to/dir /path/to/other/dir'`,
 		Run: func(cmd *cobra.Command, args []string) {
 			c.checkDefaultFlags(cmd, args)
-			c.print("remove path(s) from workspace: ", ctxout.ForeGreen, configure.CfgV1.UsedV2Config.CurrentSet, ctxout.CleanTag)
+			c.print("remove path(s) from workspace: ", ctxout.ForeGreen, configure.GetGlobalConfig().UsedV2Config.CurrentSet, ctxout.CleanTag)
 			if len(args) == 0 {
 				dir, err := os.Getwd()
 				if err != nil {
@@ -417,9 +418,9 @@ func (c *SessionCobra) GetDirRmCmd() *cobra.Command {
 
 				// we don not check if the path exists. we just remove it
 				// it is possible that the path is not existing anymore
-				if ok := configure.CfgV1.RemovePath(arg); ok {
+				if ok := configure.GetGlobalConfig().RemovePath(arg); ok {
 					c.println("remove ", ctxout.ForeBlue, arg, ctxout.CleanTag)
-					configure.CfgV1.SaveConfiguration()
+					configure.GetGlobalConfig().SaveConfiguration()
 					cmd := c.GetScanCmd() // we use the scan command to update the project infos
 					cmd.Run(cmd, nil)     // this is parsing all templates in all workspaces and updates the project Infos
 				} else {

@@ -34,7 +34,7 @@ import (
 )
 
 func PrintCnPaths() {
-	fmt.Println(manout.MessageCln("\t", "paths stored in ", manout.ForeCyan, configure.CfgV1.UsedV2Config.CurrentSet))
+	fmt.Println(manout.MessageCln("\t", "paths stored in ", manout.ForeCyan, configure.GetGlobalConfig().UsedV2Config.CurrentSet))
 	dir, err := dirhandle.Current()
 	if err == nil {
 		ShowPaths(dir)
@@ -43,7 +43,7 @@ func PrintCnPaths() {
 
 // ShowPaths : display all stored paths in the workspace
 func ShowPaths(current string) {
-	configure.CfgV1.PathWorkerNoCd(func(index string, path string) {
+	configure.GetGlobalConfig().PathWorkerNoCd(func(index string, path string) {
 		if path == current {
 			fmt.Println(manout.MessageCln("\t[", manout.ForeLightYellow, index, manout.CleanTag, "]\t", manout.BoldTag, path))
 		} else {
@@ -153,16 +153,16 @@ func printPaths() {
 	dir, err := dirhandle.Current()
 	if err == nil {
 		fmt.Println(manout.MessageCln(manout.ForeWhite, " current directory: ", manout.BoldTag, dir))
-		fmt.Println(manout.MessageCln(manout.ForeWhite, " current workspace: ", manout.BoldTag, configure.CfgV1.UsedV2Config.CurrentSet))
+		fmt.Println(manout.MessageCln(manout.ForeWhite, " current workspace: ", manout.BoldTag, configure.GetGlobalConfig().UsedV2Config.CurrentSet))
 		notWorkspace := true
 		pathColor := manout.ForeLightBlue
-		if !configure.CfgV1.PathMeightPartOfWs(dir) {
+		if !configure.GetGlobalConfig().PathMeightPartOfWs(dir) {
 			pathColor = manout.ForeLightMagenta
 		} else {
 			notWorkspace = false
 		}
 		fmt.Println(" contains paths:")
-		configure.CfgV1.PathWorker(func(index string, path string) {
+		configure.GetGlobalConfig().PathWorker(func(index string, path string) {
 			template, _, exists, _ := GetTemplate()
 			add := ""
 			if strings.Contains(dir, path) {
@@ -200,8 +200,8 @@ func printPaths() {
 		} else {
 			fmt.Println(manout.MessageCln(" all workspaces:"))
 		}
-		configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
-			if cfg.Name == configure.CfgV1.UsedV2Config.CurrentSet {
+		configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+			if cfg.Name == configure.GetGlobalConfig().UsedV2Config.CurrentSet {
 				fmt.Println(manout.MessageCln("\t[ ", manout.BoldTag, cfg.Name, manout.CleanTag, " ]"))
 			} else {
 				fmt.Println(manout.MessageCln("\t  ", cfg.Name, "   "))

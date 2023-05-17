@@ -93,8 +93,8 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 
 func (ui *CtxUi) createHeaderText() string {
 	path := ""
-	if configure.CfgV1.UsedV2Config.CurrentSet != "" {
-		path = configure.CfgV1.GetActivePath("")
+	if configure.GetGlobalConfig().UsedV2Config.CurrentSet != "" {
+		path = configure.GetGlobalConfig().GetActivePath("")
 
 		dir, err := dirhandle.Current()
 		if err != nil {
@@ -105,7 +105,7 @@ func (ui *CtxUi) createHeaderText() string {
 			path = "[red]" + path + "[white](we are not in this path)"
 		}
 	}
-	header := "[blue]WORKSPACE [yellow]" + configure.CfgV1.UsedV2Config.CurrentSet + " [blue]current active dir[yellow] " + path
+	header := "[blue]WORKSPACE [yellow]" + configure.GetGlobalConfig().UsedV2Config.CurrentSet + " [blue]current active dir[yellow] " + path
 	return header
 }
 
@@ -132,7 +132,7 @@ func (ui *CtxUi) UpdatePathList() {
 		ui.pages.SendToBack("paths")
 	})
 
-	configure.CfgV1.PathWorkerNoCd(func(index string, name string) {
+	configure.GetGlobalConfig().PathWorkerNoCd(func(index string, name string) {
 
 		ui.pathList.AddItem(name, "", rune(index[0]), nil)
 	})
@@ -242,7 +242,7 @@ func (ui *CtxUi) CreateWorkSpacePage() *tview.Flex {
 	uiWsList.AddItem("[blue]<<< [green]BACK", "", 'x', func() {
 		ui.pages.SendToBack("workspace")
 	})
-	configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+	configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 		uiWsList.AddItem(index, "", rune(index[0]), nil)
 	})
 
@@ -267,9 +267,9 @@ func (ui *CtxUi) CreatePathSelectPage() *tview.Flex {
 	ui.pathList.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
 		//doMagicParamOne(s1)
 
-		configure.CfgV1.PathWorkerNoCd(func(index string, path string) {
+		configure.GetGlobalConfig().PathWorkerNoCd(func(index string, path string) {
 			if path == s1 {
-				configure.CfgV1.ChangeActivePath(index)
+				configure.GetGlobalConfig().ChangeActivePath(index)
 				os.Chdir(path)
 			}
 		})

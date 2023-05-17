@@ -48,7 +48,7 @@ func (c *CmdExecutorImpl) doMagicParamOne(args string) {
 func (c *CmdExecutorImpl) CallBackOldWs(oldws string) bool {
 	c.session.Log.Logger.Info("OLD workspace: ", oldws)
 	// get all paths first
-	configure.CfgV1.PathWorkerNoCd(func(_ string, path string) {
+	configure.GetGlobalConfig().PathWorkerNoCd(func(_ string, path string) {
 
 		os.Chdir(path)
 		template, exists, _ := c.session.TemplateHndl.Load()
@@ -75,7 +75,7 @@ func (c *CmdExecutorImpl) CallBackNewWs(newWs string) {
 	c.ResetVariables() // reset old variables while change the workspace. (req for shell mode)
 	c.MainInit()       // initialize the workspace
 	c.session.Log.Logger.Info("NEW workspace: ", newWs)
-	configure.CfgV1.PathWorker(func(_ string, path string) { // iterate any path
+	configure.GetGlobalConfig().PathWorker(func(_ string, path string) { // iterate any path
 		template, exists, _ := c.session.TemplateHndl.Load()
 
 		c.session.Log.Logger.WithFields(logrus.Fields{
@@ -114,7 +114,7 @@ func (c *CmdExecutorImpl) GetOuputHandler() (ctxout.StreamInterface, ctxout.Prin
 }
 
 func (c *CmdExecutorImpl) GetWorkspaces() []string {
-	ws := configure.CfgV1.ListWorkSpaces()
+	ws := configure.GetGlobalConfig().ListWorkSpaces()
 	sort.Strings(ws)
 	return ws
 }
@@ -130,7 +130,7 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 		systools.Exit(systools.ErrorBySystem)
 	} else {
 		haveUpdate := false
-		configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+		configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 			wsCount++
 			for pathIndex, ws2 := range cfg.Paths {
 				c.session.Log.Logger.WithFields(logrus.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}).Debug("parsing workspace")
@@ -142,7 +142,7 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 							ws2.Role = template.Workspace.Role
 							cfg.Paths[pathIndex] = ws2
 							c.session.Log.Logger.WithFields(logrus.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}).Info("found template for workspace")
-							configure.CfgV1.UpdateCurrentConfig(cfg)
+							configure.GetGlobalConfig().UpdateCurrentConfig(cfg)
 							haveUpdate = true
 							wsUpdated++
 							if updateFn != nil {
@@ -161,7 +161,7 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 		})
 		if haveUpdate {
 			c.session.Log.Logger.Info("Update configuration")
-			if err := configure.CfgV1.SaveConfiguration(); err != nil {
+			if err := configure.GetGlobalConfig().SaveConfiguration(); err != nil {
 				c.session.Log.Logger.WithFields(logrus.Fields{"err": err}).Error("Error while saving configuration")
 				ctxout.CtxOut("Error while saving configuration", err)
 				systools.Exit(systools.ErrorBySystem)
@@ -199,11 +199,11 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 	if err == nil {
 		if !plain {
 			c.Print(ctxout.ForeWhite, " current directory: ", ctxout.BoldTag, dir, ctxout.CleanTag)
-			c.Print(ctxout.ForeWhite, " current workspace: ", ctxout.BoldTag, configure.CfgV1.UsedV2Config.CurrentSet, ctxout.CleanTag)
+			c.Print(ctxout.ForeWhite, " current workspace: ", ctxout.BoldTag, configure.GetGlobalConfig().UsedV2Config.CurrentSet, ctxout.CleanTag)
 		}
 		notWorkspace := true
 		pathColor := ctxout.ForeLightBlue
-		if !configure.CfgV1.PathMeightPartOfWs(dir) {
+		if !configure.GetGlobalConfig().PathMeightPartOfWs(dir) {
 			pathColor = ctxout.ForeLightMagenta
 		} else {
 			notWorkspace = false
@@ -212,7 +212,7 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 			c.Println(" contains paths:")
 		}
 		//ctxout.Print(c.session.OutPutHdnl, "<table>")
-		configure.CfgV1.PathWorker(func(index string, path string) {
+		configure.GetGlobalConfig().PathWorker(func(index string, path string) {
 			template, exists, err := c.session.TemplateHndl.Load()
 			if err == nil {
 				add := ctxout.Dim + ctxout.ForeLightGrey
@@ -222,7 +222,7 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 				}
 				indexColor := ctxout.ForeLightBlue
 				indexStr := index
-				if path == configure.CfgV1.GetActivePath("") {
+				if path == configure.GetGlobalConfig().GetActivePath("") {
 					indexColor = ctxout.ForeLightCyan
 					indexStr = "> " + index
 					add = ctxout.ResetDim + ctxout.ForeLightGrey
@@ -273,8 +273,8 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 }
 
 func (c *CmdExecutorImpl) PrintWorkspaces() {
-	configure.CfgV1.ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
-		if index == configure.CfgV1.UsedV2Config.CurrentSet {
+	configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+		if index == configure.GetGlobalConfig().UsedV2Config.CurrentSet {
 			c.Println("\t[ ", ctxout.BoldTag, index, ctxout.CleanTag, " ]")
 		} else {
 			c.Println("\t  ", ctxout.ForeDarkGrey, index, ctxout.CleanTag)

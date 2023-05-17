@@ -6,6 +6,7 @@ import (
 
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/ctxshell"
+	"github.com/swaros/contxt/module/dirhandle"
 )
 
 func shellRunner(c *CmdExecutorImpl) {
@@ -36,12 +37,36 @@ func shellRunner(c *CmdExecutorImpl) {
 	// set the prompt handler
 	shell.SetPromptFunc(func() string {
 		tpl := ""
-		template, exists, _ := c.session.TemplateHndl.Load()
+		if dir, err := dirhandle.Current(); err == nil {
+			tpl = dir
+		}
+		template, exists, err := c.session.TemplateHndl.Load()
+		if err != nil {
+
+			c.session.Log.Logger.Error(err)
+			return ctxout.ToString(
+				ctxout.NewMOWrap(),
+				ctxout.BackYellow,
+				ctxout.ForeRed,
+				"error loading template: ",
+				ctxout.BackRed,
+				ctxout.ForeYellow,
+				err.Error(),
+				ctxout.BackBlue,
+				ctxout.ForeRed,
+				"",
+				"<f:white><b:blue>",
+				tpl,
+				"</><f:blue></> ",
+			)
+		}
 		if exists {
 			tpl = template.Workspace.Project
 			if template.Workspace.Role != "" {
 				tpl += "/" + template.Workspace.Role
 			}
+		} else {
+			tpl = "no template"
 		}
 		return ctxout.ToString(
 			ctxout.NewMOWrap(),

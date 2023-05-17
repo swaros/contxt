@@ -25,7 +25,7 @@ func inWs() bool {
 	if err != nil {
 		panic(err)
 	}
-	return configure.CfgV1.PathMeightPartOfWs(dir)
+	return configure.GetGlobalConfig().PathMeightPartOfWs(dir)
 }
 
 func resetShell() {
@@ -36,10 +36,10 @@ func resetShell() {
 // handleWorkSpaces display a list of workspace to select one.
 // it returns true, if the workspace is switched
 func handleWorkSpaces(c *ishell.Context) bool {
-	//var ws []string = configure.CfgV1.ListWorkSpaces()
+	//var ws []string = configure.GetGlobalConfig().ListWorkSpaces()
 	// adds workspaces to the list by callback iterator
 
-	configure.CfgV1.ExecOnWorkSpaces(func(wsName string, ws configure.ConfigurationV2) {
+	configure.GetGlobalConfig().ExecOnWorkSpaces(func(wsName string, ws configure.ConfigurationV2) {
 		AddItemToSelect(selectItem{title: wsName, desc: strconv.Itoa(len(ws.Paths)) + " stored paths"})
 	})
 
@@ -47,7 +47,7 @@ func handleWorkSpaces(c *ishell.Context) bool {
 	if selectedWs.isSelected {
 		c.Println("change to workspace: ", selectedWs.item.title)
 		UiLogger.Add("change to workspace: " + selectedWs.item.title)
-		configure.CfgV1.ChangeWorkspace(selectedWs.item.title, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
+		configure.GetGlobalConfig().ChangeWorkspace(selectedWs.item.title, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
 		return true
 	}
 	return false
@@ -64,7 +64,7 @@ func handleCreateWorkspace(c *ishell.Context) bool {
 	UiLogger.Add("try to create workspace: (" + wsName + ")")
 
 	if wsName != "" {
-		if err := configure.CfgV1.AddWorkSpace(wsName, taskrun.CallBackOldWs, taskrun.CallBackNewWs); err != nil {
+		if err := configure.GetGlobalConfig().AddWorkSpace(wsName, taskrun.CallBackOldWs, taskrun.CallBackNewWs); err != nil {
 			manout.Om.Println(manout.ForeRed, "Error while trying to create workspace", manout.CleanTag, err)
 			UiLogger.Add("error:" + err.Error())
 			return false
@@ -79,12 +79,12 @@ func handleCreateWorkspace(c *ishell.Context) bool {
 }
 
 func handleContexNavigation(c *ishell.Context) bool {
-	configure.CfgV1.PathWorkerNoCd(func(index, path string) {
+	configure.GetGlobalConfig().PathWorkerNoCd(func(index, path string) {
 
 		AddItemToSelect(selectItem{title: path, desc: index})
 	})
 
-	selectedCn := uIselectItem("choose path in "+configure.CfgV1.UsedV2Config.CurrentSet, false)
+	selectedCn := uIselectItem("choose path in "+configure.GetGlobalConfig().UsedV2Config.CurrentSet, false)
 	if selectedCn.isSelected {
 		if err := os.Chdir(selectedCn.item.title); err != nil {
 			manout.Om.Print(manout.ForeRed, "Error while trying to enter path", manout.CleanTag, err)

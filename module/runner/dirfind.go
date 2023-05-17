@@ -42,17 +42,17 @@ func (c *CmdExecutorImpl) DirFindApplyAndSave(args []string) (string, error) {
 		if !ok {
 			return dir, errors.New("path not found in configuration")
 		}
-		if err := configure.CfgV1.SetCurrentPathIndex(index); err != nil {
+		if err := configure.GetGlobalConfig().SetCurrentPathIndex(index); err != nil {
 			return dir, err
 		}
-		return dir, configure.CfgV1.SaveConfiguration()
+		return dir, configure.GetGlobalConfig().SaveConfiguration()
 	}
 	return dir, nil // just no or the same path reported
 }
 
 func (c *CmdExecutorImpl) FindIndexByPath(path string) (index string, ok bool) {
 	indexFound := ""
-	configure.CfgV1.PathWorkerNoCd(func(index string, p string) {
+	configure.GetGlobalConfig().PathWorkerNoCd(func(index string, p string) {
 		if p == path {
 			ok = true
 			indexFound = index
@@ -72,7 +72,7 @@ func (c *CmdExecutorImpl) DirFind(args []string) string {
 	paths := []string{}
 	indexMatchMap := map[string]string{}
 
-	configure.CfgV1.PathWorkerNoCd(func(index string, path string) {
+	configure.GetGlobalConfig().PathWorkerNoCd(func(index string, path string) {
 		paths = append(paths, path)
 		indexMatchMap[index] = path
 	})

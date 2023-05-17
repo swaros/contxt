@@ -14,9 +14,9 @@ func mainMenu(c *ishell.Context) {
 
 	for {
 		ApplyLogOut(UiLogger)
-		currentPath := configure.CfgV1.GetActivePath("[path not set]")
+		currentPath := configure.GetGlobalConfig().GetActivePath("[path not set]")
 
-		AddItemToSelect(selectItem{title: "Workspace", desc: "[" + configure.CfgV1.UsedV2Config.CurrentSet + "] change the active workspace"})
+		AddItemToSelect(selectItem{title: "Workspace", desc: "[" + configure.GetGlobalConfig().UsedV2Config.CurrentSet + "] change the active workspace"})
 		AddItemToSelect(selectItem{title: "Contxt Navigation", desc: "[" + currentPath + "] change the active path in the current workspace "})
 
 		AddItemToSelect(selectItem{title: "Show Variables", desc: "display the current variables"})
@@ -27,7 +27,7 @@ func mainMenu(c *ishell.Context) {
 
 		AddItemToSelect(selectItem{title: "close", desc: "close the menu and go back to shell"})
 		AddItemToSelect(selectItem{title: "exit", desc: "exit contxt"})
-		menuOption := uIselectItem("Contxt Main menu @ "+configure.CfgV1.UsedV2Config.CurrentSet, true)
+		menuOption := uIselectItem("Contxt Main menu @ "+configure.GetGlobalConfig().UsedV2Config.CurrentSet, true)
 		switch menuOption.item.title {
 		case "Workspace":
 			workspaceMenu(c)

@@ -14,18 +14,25 @@ import (
 )
 
 var (
-	CfgV1             *contxtConfigure = NewContxtConfig()
-	USE_SPECIAL_DIR                    = true
-	CONTEXT_DIR                        = "contxt"
-	CONTXT_FILE                        = "contxtv2.yml"
-	CFG               ConfigMetaV2     = ConfigMetaV2{}
-	MIGRATION_ENABLED                  = true
+	cfgV1             *contxtConfigure
+	USE_SPECIAL_DIR                = true
+	CONTEXT_DIR                    = "contxt"
+	CONTXT_FILE                    = "contxtv2.yml"
+	CFG               ConfigMetaV2 = ConfigMetaV2{}
+	MIGRATION_ENABLED              = true
 )
 
 type contxtConfigure struct {
 	UsedV2Config      *ConfigMetaV2
 	DefaultV2Yacl     *yacl.ConfigModel
 	migrationRequired bool
+}
+
+func GetGlobalConfig() *contxtConfigure {
+	if cfgV1 == nil {
+		cfgV1 = NewContxtConfig()
+	}
+	return cfgV1
 }
 
 func NewCfgV2(c *contxtConfigure) {
