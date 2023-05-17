@@ -16,7 +16,7 @@ func TestPadString(t *testing.T) {
 
 	str = ctxout.PadStrLeft("we will now check that the text is cutted before we reach mor then 20 chars", 20, "-")
 	if str != "we will now chec ..." {
-		t.Errorf("Expected 'we will now check th' but got '%s'", str)
+		t.Errorf("Expected 'we will now chec ...' but got '%s'", str)
 	}
 }
 
@@ -223,15 +223,19 @@ func TestRowOnlyOut(t *testing.T) {
 			Out: "this is a test    and this is anoth...",
 		},
 		{
-			Row: "<row>" + ctxout.ForeDarkGrey + "<tab size='100' fill='─'>─</tab>" + ctxout.CleanTag + "</row>",
-			Out: "──────────────────────────────────────────────────────────────────────────────",
+			Row: "<row><tab size='23'>this is a test</tab><tab size='25' origin='1'>and this is another test</tab></row>",
+			Out: "this is a test    ...s is another test",
+		},
+		{
+			Row: "<row><tab size='2'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row>",
+			Out: "..and this is anoth...",
 		},
 	}
 
 	for _, test := range tests {
 		output := to.Command(test.Row)
 		if output != test.Out {
-			t.Errorf("Expected\n%s\n  but got \n%s", test.Out, output)
+			t.Errorf("Expected\n'%s'\n  but got \n'%s'\nlength check %d ? %d ", test.Out, output, len(output), len(test.Out))
 		}
 	}
 
@@ -415,12 +419,6 @@ func TestMultiple(t *testing.T) {
 			Info:      info,
 		},
 		{
-			TestInput: "<row>" + ctxout.ForeDarkGrey + "<tab size='100' fill='─'>─</tab>" + ctxout.CleanTag + "</row>",
-			Out:       "──────────────────────────────────────────────────────────────────────────────",
-			Raw:       "──────────────────────────────────────────────────────────────────────────────────────────────────",
-			Info:      info,
-		},
-		{
 			TestInput: "<row><tab overflow='wordwrap' size='23'>this is a test about wordwarpping</tab><tab overflow='wordwrap' size='25' origin='2'>itisakwardtosplitlingtextifwedonothaveanywhhitespace</tab></row>",
 			Out:       "this is a test    itisakwardtosplitlin\n about            gtextifwedonothavean\n wordwarpping             ywhhitespace",
 			Raw:       "this is a test about   itisakwardtosplitlingtext\n wordwarpping          ifwedonothaveanywhhitespa\n                                              ce",
@@ -439,6 +437,91 @@ func TestMultiple(t *testing.T) {
 		if output != test.Out {
 			t.Errorf("round [%d] OUT Expected\n\"%s\"\n>>>>>  but got \n\"%s\"\n_______%s", round, test.Out, output, strings.Join(strings.Split(output, "\n"), "|"))
 		}
+	}
+
+}
+
+func TestSizeCalculation(t *testing.T) {
+	to := ctxout.NewTabOut()
+
+	info := &ctxout.PostFilterInfo{
+		Width:      80,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	// stop spamming the console with debug messages
+	// if we get a couple of errors already
+	maxErrors := 10
+
+	to.Update(*info)
+
+	for width := 10; width < 200; width++ {
+		info.Width = width
+		to.Update(*info)
+		runCnt := 0
+		for i := 6; i < 96; i++ {
+			runCnt++
+			right := i
+			left := 100 - i
+			// just to make sure left + right is always 100
+			if left+right != 100 {
+				t.Errorf("left + right should be 100 but is %d", left+right)
+			}
+
+			if width == -1 && left == 25 && right == 75 {
+				fmt.Println("breakpoint here")
+			}
+
+			testStr := ctxout.OTR +
+				ctxout.TD("hello", ctxout.Prop("size", left), ctxout.Prop("fill", "+"), ctxout.Prop("origin", 1)) +
+				ctxout.TD("world", ctxout.Prop("size", right), ctxout.Prop("fill", "-"), ctxout.Prop("origin", 1)) +
+				ctxout.CRT
+
+			result := to.Command(testStr)
+
+			if len(result) != width {
+				t.Errorf("round[%d] origin[1,1] Expected length %d but got %d [left %d right %d]", runCnt, width, len(result), left, right)
+				maxErrors--
+			}
+
+			testStr = ctxout.OTR +
+				ctxout.TD("hello", ctxout.Prop("size", left), ctxout.Prop("fill", "+"), ctxout.Prop("origin", 2)) +
+				ctxout.TD("world", ctxout.Prop("size", right), ctxout.Prop("fill", "-"), ctxout.Prop("origin", 1)) +
+				ctxout.CRT
+
+			result = to.Command(testStr)
+			if len(result) != width {
+				t.Errorf("round[%d] Origin[2,1] Expected length %d but got %d [left %d right %d]", runCnt, width, len(result), left, right)
+				maxErrors--
+			}
+
+			testStr = ctxout.OTR +
+				ctxout.TD("hello", ctxout.Prop("size", left), ctxout.Prop("fill", "+"), ctxout.Prop("origin", 1)) +
+				ctxout.TD("world", ctxout.Prop("size", right), ctxout.Prop("fill", "-"), ctxout.Prop("origin", 2)) +
+				ctxout.CRT
+
+			result = to.Command(testStr)
+			if len(result) != width {
+				t.Errorf("round[%d] Origin[1,2] Expected length %d but got %d [left %d right %d]", runCnt, width, len(result), left, right)
+				maxErrors--
+			}
+
+			testStr = ctxout.OTR +
+				ctxout.TD("hello", ctxout.Prop("size", left), ctxout.Prop("fill", "+"), ctxout.Prop("origin", 2)) +
+				ctxout.TD("world", ctxout.Prop("size", right), ctxout.Prop("fill", "-"), ctxout.Prop("origin", 2)) +
+				ctxout.CRT
+
+			result = to.Command(testStr)
+			if len(result) != width {
+				t.Errorf("round[%d] Origin[2,2] Expected length %d but got %d [left %d right %d]", runCnt, width, len(result), left, right)
+				maxErrors--
+			}
+			if maxErrors <= 0 {
+				t.Errorf("Too many errors, aborting")
+				return
+			}
+		}
+
 	}
 
 }

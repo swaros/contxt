@@ -75,13 +75,9 @@ func (tr *tabRow) getLenByIndex(index int) (int, bool) {
 }
 
 func (tr *tabRow) GetSize(cell *tabCell, index int) int {
-	orig := cell.Size
 	if tr.parent.parent.GetInfo().IsTerminal {
 		if tr.parent.parent.RowCalcMode == 0 { // relative to terminal width
 			calculatedSize := tr.parent.parent.GetSize(cell.Size)
-			if orig > 100 {
-				orig = 100
-			}
 
 			switch cell.drawMode {
 			case "fixed": // fixed size. if the calculated size is bigger than the cell size, then we will use the cell size
@@ -139,25 +135,16 @@ func (tr *tabRow) Render() (string, *tabRow, error) {
 	// this will be created and updated all the time, but used only if we found an overflow usage with wrap mode
 	wrapRow := NewTabRow(tr.parent) // so we just create them just in case we need them
 
+	tr.parent.parent.GetRoundTool().Next()
+
 	for indx, cell := range tr.Cells {
 		wrapRow.AddCell(cell) // update the possible wrap row
 		if cell.Size > 0 {
-			rowSize := tr.GetSize(cell, indx)
-			size := tr.parent.parent.GetSize(cell.Size)
-			if rowSize > 0 {
-				size = rowSize
+			size := tr.GetSize(cell, indx)
+			// we just ignore any cell with a size of 0
+			if size > 0 {
+				result = append(result, cell.anyPrefix+cell.CutString(size)+cell.anySuffix)
 			}
-			/*
-				switch cell.Origin {
-				case 0: // left padding
-					result = append(result, cell.PadString(size))
-				case 1:
-					result = append(result, cell.PadStringToRightStayLeft(size))
-				case 2:
-					result = append(result, cell.PadStringToRight(size))
-				}*/
-
-			result = append(result, cell.anyPrefix+cell.CutString(size)+cell.anySuffix)
 
 		} else {
 			result = append(result, cell.GetText())

@@ -1,7 +1,6 @@
 package ctxshell
 
 import (
-	"io"
 	"log"
 	"strings"
 
@@ -145,17 +144,14 @@ func (t *Cshell) Run() error {
 		t.rlInstance.SetPrompt(t.getPrompt())
 	}
 	for {
-		line, err := t.rlInstance.Readline()
-		if err == readline.ErrInterrupt {
-			if len(line) == 0 {
-				break
-			} else {
-				continue
-			}
-		} else if err == io.EOF {
+
+		ln := t.rlInstance.Line()
+		if ln.CanContinue() {
+			continue
+		} else if ln.CanBreak() {
 			break
 		}
-
+		line := ln.Line
 		// skip empty lines
 		if line == "" {
 			continue
@@ -223,6 +219,9 @@ func (t *Cshell) Run() error {
 		}
 		// move to the next line
 		t.rlInstance.Write([]byte("\n"))
+		if t.getPrompt != nil {
+			t.rlInstance.SetPrompt(t.getPrompt())
+		}
 
 	}
 	return nil

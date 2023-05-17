@@ -46,11 +46,13 @@ type TabOut struct {
 	markup      Markup
 	info        PostFilterInfo
 	RowCalcMode int // 0 = size is relative to with of terminal where maxsize is 100, 1 = absolute size
+	calcSize    *roundSerial
 }
 
 func NewTabOut() *TabOut {
 	return &TabOut{
-		markup: *NewMarkup(),
+		markup:   *NewMarkup(),
+		calcSize: NewRoundSerial(),
 	}
 }
 
@@ -78,12 +80,23 @@ func (t *TabOut) Filter(msg interface{}) interface{} {
 // interface fulfills the PostFilter interface
 func (t *TabOut) Update(info PostFilterInfo) {
 	t.info = info
+	if t.info.IsTerminal {
+		if t.RowCalcMode == 0 {
+			t.calcSize.SetMax(info.Width)
+		}
+	}
 }
 
 // CanHandleThis returns true if the text is a table
 // interface fulfills the PostFilter interface
 func (t *TabOut) CanHandleThis(text string) bool {
 	return t.IsTable(text) || t.IsRow(text) || t.IsTab(text)
+}
+
+// GetRoundTool returns the round tool what is used to calculate the size of the cells
+// without rounding errors
+func (t *TabOut) GetRoundTool() *roundSerial {
+	return t.calcSize
 }
 
 // Command is called when the text is a table
@@ -163,13 +176,18 @@ func (t *TabOut) IsTab(text string) bool {
 	return strings.HasPrefix(text, TabStart) && strings.HasSuffix(text, TabEnd)
 }
 
+// GetSize returns the size of the cell
+// if the cell is relative to the terminal width, the size is calculated
+// if the cell is absolute, the size is returned
 func (t *TabOut) GetSize(orig int) int {
 	if t.info.IsTerminal {
 		if t.RowCalcMode == 0 { // relative to terminal width
 			if orig > 100 {
 				orig = 100
 			}
-			return (t.info.Width * orig) / 100
+			//intRes, _, _ := RoundHelp(orig, t.info.Width)
+			intRes := t.calcSize.Round(orig)
+			return intRes
 		}
 	}
 	return orig

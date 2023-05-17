@@ -137,6 +137,7 @@ func (td *tabCell) CutString(max int) string {
 	if max < 1 {
 		return ""
 	}
+	originMax := max
 	tSize := LenPrintable(td.Text)
 	if tSize == max {
 		return td.Text
@@ -175,14 +176,16 @@ func (td *tabCell) CutString(max int) string {
 			}
 			tSize := LenPrintable(td.Text)
 			td.fillUpString(max, tSize) // fill up the cell
-			return td.Text
+			return td.forceCut(max)
 		} else {
+
 			max -= LenPrintable(td.cutNotifier)
 			if max < 1 {
 				max = 0
 			}
 			left = LenPrintable(td.Text) - max
 		}
+		// we changed the max, so we need to use originMax
 		switch td.Origin {
 		case 0:
 			td.Text = string(runes[0:max]) + add
@@ -191,7 +194,7 @@ func (td *tabCell) CutString(max int) string {
 		case 2:
 			td.Text = string(runes[0:max]) + add
 		}
-		return td.Text
+		return td.forceCut(originMax)
 	}
 	/*
 		diff := max - tSize
@@ -204,6 +207,23 @@ func (td *tabCell) CutString(max int) string {
 			return strings.Repeat(td.fillChar, diff) + td.Text
 		}*/
 	td.fillUpString(max, tSize)
+	return td.forceCut(max)
+}
+
+// whatever we add to the cell, we need to make sure it is not bigger than max
+func (td *tabCell) forceCut(max int) string {
+	tSize := LenPrintable(td.Text)
+	if tSize > max {
+		runes := []rune(td.Text)
+		switch td.Origin {
+		case 0:
+			td.Text = string(runes[0:max])
+		case 1:
+			td.Text = string(runes[len(td.Text)-max:])
+		case 2:
+			td.Text = string(runes[0:max])
+		}
+	}
 	return td.Text
 }
 
