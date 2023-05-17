@@ -25,10 +25,10 @@ func TestOutPutHandl(t *testing.T) {
 
 }
 
-func SetupTestApp() (*runner.CmdSession, error) {
+func SetupTestApp(dir, file string) (*runner.CmdSession, error) {
 	configure.USE_SPECIAL_DIR = false
-	configure.CONTEXT_DIR = "testdata/workspace0/config"
-	configure.CONTXT_FILE = "ctx_test_config.yml"
+	configure.CONTEXT_DIR = dir
+	configure.CONTXT_FILE = file
 	configure.MIGRATION_ENABLED = false
 
 	app := runner.NewCmdSession()
@@ -45,7 +45,7 @@ func SetupTestApp() (*runner.CmdSession, error) {
 }
 
 func TestDir(t *testing.T) {
-	app, _ := SetupTestApp()
+	app, _ := SetupTestApp("testdata/workspace0/config", "ctx_test_config.yml")
 
 	app.Cobra.RootCmd.SetArgs([]string{"dir"})
 	if err := app.Cobra.RootCmd.Execute(); err != nil {
