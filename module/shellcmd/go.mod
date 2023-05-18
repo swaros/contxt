@@ -6,7 +6,7 @@ require (
 	github.com/abiosoft/ishell v2.0.0+incompatible
 	github.com/charmbracelet/bubbletea v0.23.2
 	github.com/charmbracelet/lipgloss v0.6.0
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.2
 	github.com/swaros/contxt/module/configure v0.0.0-20230106225453-d04145a0b401
 	github.com/swaros/contxt/module/dirhandle v0.0.0-20230106225453-d04145a0b401
 	github.com/swaros/contxt/module/systools v0.0.0-20230106225453-d04145a0b401
