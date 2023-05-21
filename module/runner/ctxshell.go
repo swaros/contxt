@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"runtime"
 	"strings"
 	"time"
 
@@ -44,21 +45,11 @@ func shellRunner(c *CmdExecutorImpl) {
 		if err != nil {
 
 			c.session.Log.Logger.Error(err)
-			return ctxout.ToString(
-				ctxout.NewMOWrap(),
-				ctxout.BackYellow,
-				ctxout.ForeRed,
-				"error loading template: ",
-				ctxout.BackRed,
-				ctxout.ForeYellow,
-				err.Error(),
-				ctxout.BackBlue,
-				ctxout.ForeRed,
-				"",
-				"<f:white><b:blue>",
-				tpl,
-				"</><f:blue></> ",
-			)
+			if runtime.GOOS == "windows" {
+				return windowsPrompt(tpl, err)
+			} else {
+				return linuxPrompt(tpl, err)
+			}
 		}
 		if exists {
 			tpl = template.Workspace.Project
@@ -68,15 +59,71 @@ func shellRunner(c *CmdExecutorImpl) {
 		} else {
 			tpl = "no template"
 		}
-		return ctxout.ToString(
-			ctxout.NewMOWrap(),
-			ctxout.BackWhite,
-			ctxout.ForeBlue,
-			tpl,
-			"<f:white><b:blue>ctx<f:yellow>shell:</><f:blue></> ",
-		)
+		// depends runtime.GOOS
+		if runtime.GOOS == "windows" {
+			return windowsPrompt(tpl, nil)
+		} else {
+			return linuxPrompt(tpl, nil)
+		}
 	})
 	c.session.OutPutHdnl = shell
 	// start the shell
 	shell.SetAsyncCobraExec(true).SetAsyncNativeCmd(true).Run()
+}
+
+func windowsPrompt(tpl string, err error) string {
+	if err != nil {
+		return ctxout.ToString(
+			ctxout.NewMOWrap(),
+			ctxout.ForeRed,
+			"error loading template: ",
+			ctxout.ForeYellow,
+			err.Error(),
+			ctxout.ForeRed,
+			" › ",
+			ctxout.ForeBlue,
+			tpl,
+			ctxout.CleanTag,
+		)
+	}
+
+	return ctxout.ToString(
+		ctxout.NewMOWrap(),
+		ctxout.ForeBlue,
+		tpl,
+		" ",
+		ctxout.ForeCyan,
+		"› ",
+		ctxout.CleanTag,
+	)
+}
+
+func linuxPrompt(tpl string, err error) string {
+	if err != nil {
+		return ctxout.ToString(
+			ctxout.NewMOWrap(),
+			ctxout.BackYellow,
+			ctxout.ForeRed,
+			"error loading template: ",
+			ctxout.BackRed,
+			ctxout.ForeYellow,
+			err.Error(),
+			ctxout.BackBlue,
+			ctxout.ForeRed,
+			"",
+			"<f:white><b:blue>",
+			tpl,
+			"</><f:blue></> ",
+		)
+	}
+
+	return ctxout.ToString(
+		ctxout.NewMOWrap(),
+		ctxout.BackWhite,
+		ctxout.ForeBlue,
+		tpl,
+		ctxout.BackBlue,
+		ctxout.ForeWhite,
+		"ctx<f:yellow>shell:</><f:blue></> ",
+	)
 }
