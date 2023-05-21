@@ -3,7 +3,7 @@ module github.com/swaros/contxt/module/taskrun
 go 1.18
 
 require (
-	github.com/gdamore/tcell/v2 v2.5.4
+	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/swaros/contxt/module/awaitgroup v0.4.0
 	github.com/swaros/contxt/module/configure v0.0.0-20221206091003-553c703b0561
@@ -34,7 +34,7 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	golang.org/x/crypto v0.3.0 // indirect
-	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 )
 
 require (
