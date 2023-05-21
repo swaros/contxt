@@ -66,8 +66,8 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/swaros/contxt/module/awaitgroup v0.0.0-20221206091003-553c703b0561 h1:j5TNH77ftp0pCQqE3OFDzkS1Te54Wg3Y5uWKDD2nH1A=
-github.com/swaros/contxt/module/awaitgroup v0.0.0-20221206091003-553c703b0561/go.mod h1:JbVRzT4ND6Jjd6HXrTmcH2jS7RBv03XIrVzPYk/4+Zw=
+github.com/swaros/contxt/module/awaitgroup v0.4.0 h1:id/5Zc4GTGjnfU5rW4134PxpW563HHc8ASSWLiKeJB8=
+github.com/swaros/contxt/module/awaitgroup v0.4.0/go.mod h1:JbVRzT4ND6Jjd6HXrTmcH2jS7RBv03XIrVzPYk/4+Zw=
 github.com/swaros/contxt/module/configure v0.0.0-20221206091003-553c703b0561 h1:tYYRahJk+ljZw/mHuR4Xj1ZiajHeoXJXAqTvtPzG43E=
 github.com/swaros/contxt/module/configure v0.0.0-20221206091003-553c703b0561/go.mod h1:ELBh1Lf8n9iVF4foYiK73gJPAHZtDcTc92ZfVLZBXGU=
 github.com/swaros/contxt/module/dirhandle v0.0.0-20221206091003-553c703b0561 h1:7mI41o2rSVHjGoR2WId16b4Y0s+gPsFeB/QSe5R6ssk=
