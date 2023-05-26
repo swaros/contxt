@@ -3,6 +3,7 @@ package ctxshell
 import (
 	"log"
 	"strings"
+	"time"
 
 	"github.com/chzyer/readline"
 	"github.com/spf13/cobra"
@@ -10,20 +11,29 @@ import (
 )
 
 type Cshell struct {
-	CobraRootCmd   *cobra.Command
-	cobraCmdList   []string // just to remember if we deal with an cobra command
-	navtiveCmds    []*NativeCmd
-	getPrompt      func() string
-	exitCmdStr     string
-	rlInstance     *readline.Instance
-	asyncCobraExec bool
-	asyncNativeCmd bool
+	CobraRootCmd      *cobra.Command
+	cobraCmdList      []string // just to remember if we deal with an cobra command
+	navtiveCmds       []*NativeCmd
+	getPrompt         func() string
+	exitCmdStr        string
+	rlInstance        *readline.Instance
+	asyncCobraExec    bool
+	asyncNativeCmd    bool
+	tickTimerDuration time.Duration
+	messages          *CshellMsgSCope
 }
 
 func NewCshell() *Cshell {
 	return &Cshell{
-		exitCmdStr: "exit",
+		exitCmdStr:        "exit",
+		tickTimerDuration: 100 * time.Millisecond,
+		messages:          NewCshellMsgScope(100),
 	}
+}
+
+func (t *Cshell) ResizeMessageProvider(size int) *Cshell {
+	t.messages = NewCshellMsgScope(size)
+	return t
 }
 
 func (t *Cshell) SetCobraRootCommand(cmd *cobra.Command) *Cshell {
@@ -120,6 +130,36 @@ func (t *Cshell) getNativeCmd(cmd string) *NativeCmd {
 	return nil
 }
 
+func (t *Cshell) init() error {
+	completer := t.createCompleter()
+	var err error
+	t.rlInstance, err = readline.NewEx(&readline.Config{
+		Prompt:              " > ",
+		HistoryFile:         "/tmp/readline.tmp",
+		AutoComplete:        completer,
+		InterruptPrompt:     "^C",
+		EOFPrompt:           "exit",
+		HistorySearchFold:   true,
+		FuncFilterInputRune: filterInput,
+		UniqueEditLine:      true,
+	})
+	return err
+}
+
+func (t *Cshell) RunOnceWithCmd(cmd func()) error {
+	// skip if no cmd is given
+	if cmd == nil {
+		return nil
+	}
+	if err := t.init(); err != nil {
+		return err
+	}
+	defer t.rlInstance.Close()
+	cmd()
+	return nil
+
+}
+
 // Run starts the shell
 func (t *Cshell) Run() error {
 	completer := t.createCompleter()
@@ -143,6 +183,11 @@ func (t *Cshell) Run() error {
 	if t.getPrompt != nil {
 		t.rlInstance.SetPrompt(t.getPrompt())
 	}
+	// start the message provider they prints the messages
+	// any time defined by tickTimerDuration
+	t.StartMessageProvider()
+
+	// the main loop
 	for {
 
 		ln := t.rlInstance.Line()
