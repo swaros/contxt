@@ -13,8 +13,18 @@ import (
 func shellRunner(c *CmdExecutorImpl) {
 	// run the context shell
 	shell := ctxshell.NewCshell()
-	//// add cobra commands to menu
+
+	// add cobra commands to the shell, so they can be used there too.
+	// first we need to define the exceptions
+	// we do not want to have in the menu
+	shell.SetIgnoreCobraCmd("completion", "interactive")
+	// afterwards we can add the commands by injecting the root command
 	shell.SetCobraRootCommand(c.session.Cobra.RootCmd)
+
+	// some of the commands are not working well async, because they
+	// are switching between workspaces. so we have to disable async
+	// for them
+	shell.SetNeverAsyncCmd("workspace", "dir")
 
 	// add native commands to menu
 	// this one is for testing only

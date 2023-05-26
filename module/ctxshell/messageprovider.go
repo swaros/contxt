@@ -8,8 +8,9 @@ type CshellMessage struct {
 	Time    time.Time
 }
 
-type CshellMsgSCope struct {
-	FIFO chan *CshellMessage
+type CshellMsgFifo struct {
+	fifo   chan *CshellMessage
+	closed bool
 }
 
 func NewCshellMessage(msgType, msg string) *CshellMessage {
@@ -20,48 +21,61 @@ func NewCshellMessage(msgType, msg string) *CshellMessage {
 	}
 }
 
-func NewCshellMsgScope(size int) *CshellMsgSCope {
-	return &CshellMsgSCope{
-		FIFO: make(chan *CshellMessage, size),
+func NewCshellMsgScope(size int) *CshellMsgFifo {
+	return &CshellMsgFifo{
+		fifo: make(chan *CshellMessage, size),
 	}
 }
 
-func (t *CshellMsgSCope) Push(msgType, msg string) {
-	t.FIFO <- NewCshellMessage(msgType, msg)
+func (t *CshellMsgFifo) Push(msgType, msg string) {
+	if t.closed {
+		return
+	}
+	t.fifo <- NewCshellMessage(msgType, msg)
 }
 
-func (t *CshellMsgSCope) Pop() *CshellMessage {
-	return <-t.FIFO
+func (t *CshellMsgFifo) Pop() *CshellMessage {
+	if t.closed {
+		return nil
+	}
+	return <-t.fifo
 }
 
-func (t *CshellMsgSCope) Size() int {
-	return len(t.FIFO)
+func (t *CshellMsgFifo) Size() int {
+	return len(t.fifo)
 }
 
-func (t *CshellMsgSCope) Close() {
-	close(t.FIFO)
+func (t *CshellMsgFifo) Close() {
+	t.closed = true
+	close(t.fifo)
 }
 
-func (t *CshellMsgSCope) Flush() {
+func (t *CshellMsgFifo) Flush() {
+	if t.closed {
+		return
+	}
 	for {
 		select {
-		case <-t.FIFO:
+		case <-t.fifo:
 		default:
 			return
 		}
 	}
 }
 
-func (t *CshellMsgSCope) FlushAndClose() {
+func (t *CshellMsgFifo) FlushAndClose() {
 	t.Flush()
 	t.Close()
 }
 
-func (t *CshellMsgSCope) GetAllMessages() []*CshellMessage {
+func (t *CshellMsgFifo) GetAllMessages() []*CshellMessage {
+	if t.closed {
+		return nil
+	}
 	var msgs []*CshellMessage
 	for {
 		select {
-		case msg := <-t.FIFO:
+		case msg := <-t.fifo:
 			msgs = append(msgs, msg)
 		default:
 			return msgs

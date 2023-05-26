@@ -11,16 +11,18 @@ import (
 )
 
 type Cshell struct {
-	CobraRootCmd      *cobra.Command
-	cobraCmdList      []string // just to remember if we deal with an cobra command
-	navtiveCmds       []*NativeCmd
-	getPrompt         func() string
-	exitCmdStr        string
-	rlInstance        *readline.Instance
-	asyncCobraExec    bool
-	asyncNativeCmd    bool
-	tickTimerDuration time.Duration
-	messages          *CshellMsgSCope
+	CobraRootCmd      *cobra.Command     // the root command of the cobra command tree
+	navtiveCmds       []*NativeCmd       // commands that are not part of the cobra command tree
+	getPrompt         func() string      // function that returns the prompt string
+	exitCmdStr        string             // the command string that exits the shell
+	rlInstance        *readline.Instance // the readline instance
+	asyncCobraExec    bool               // if true, cobra commands are executed in a separate goroutine. a general rule.
+	asyncNativeCmd    bool               // if true, native commands are executed in a separate goroutine. a general rule.
+	tickTimerDuration time.Duration      // the duration of the tick timer for print the buffered messages
+	messages          *CshellMsgFifo     // the message buffer
+	neverAsncCmds     []string           // commands that are never executed in a separate goroutine
+	ignoreCobraCmds   []string           // commands that are ignored by the cobra command tree
+
 }
 
 func NewCshell() *Cshell {
@@ -28,7 +30,51 @@ func NewCshell() *Cshell {
 		exitCmdStr:        "exit",
 		tickTimerDuration: 100 * time.Millisecond,
 		messages:          NewCshellMsgScope(100),
+		neverAsncCmds:     []string{},
 	}
+}
+
+func (t *Cshell) SetNeverAsyncCmds(cmds []string) *Cshell {
+	t.neverAsncCmds = cmds
+	return t
+}
+
+func (t *Cshell) SetNeverAsyncCmd(cmd ...string) *Cshell {
+	t.neverAsncCmds = append(t.neverAsncCmds, cmd...)
+	return t
+}
+
+func (t *Cshell) isNeverAsyncCmd(cmd string) bool {
+	for _, c := range t.neverAsncCmds {
+		if c == cmd {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *Cshell) SetIgnoreCobraCmds(cmds []string) *Cshell {
+	t.ignoreCobraCmds = cmds
+	return t
+}
+
+func (t *Cshell) SetIgnoreCobraCmd(cmd ...string) *Cshell {
+	t.ignoreCobraCmds = append(t.ignoreCobraCmds, cmd...)
+	return t
+}
+
+func (t *Cshell) isIgnoreCobraCmd(cmd string) bool {
+	for _, c := range t.ignoreCobraCmds {
+		if c == cmd {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *Cshell) SetTickTimerDuration(d time.Duration) *Cshell {
+	t.tickTimerDuration = d
+	return t
 }
 
 func (t *Cshell) ResizeMessageProvider(size int) *Cshell {
@@ -79,7 +125,9 @@ func (t *Cshell) createCompleter() *readline.PrefixCompleter {
 
 	if t.CobraRootCmd != nil {
 		for _, c := range t.CobraRootCmd.Commands() {
-			t.cobraCmdList = append(t.cobraCmdList, c.Name())
+			if t.isIgnoreCobraCmd(c.Name()) {
+				continue
+			}
 			newCmd := readline.PcItem(c.Name())
 			if c.HasSubCommands() {
 				newCmd = t.createSubCommandCompleter(newCmd, c)
@@ -155,6 +203,7 @@ func (t *Cshell) RunOnceWithCmd(cmd func()) error {
 		return err
 	}
 	defer t.rlInstance.Close()
+	defer t.messages.FlushAndClose()
 	cmd()
 	return nil
 
@@ -215,7 +264,7 @@ func (t *Cshell) Run() error {
 		// together with the exec function
 		if c := t.getNativeCmd(lineCmd); c != nil {
 			weDidSomething = true
-			if t.asyncNativeCmd {
+			if t.asyncNativeCmd && !t.isNeverAsyncCmd(lineCmd) {
 				go func() {
 					if err := c.Exec(fullArgs); err != nil {
 						log.Printf("error executing command: %s", err)
@@ -241,7 +290,7 @@ func (t *Cshell) Run() error {
 				if c.Name() == lineCmd {
 					weDidSomething = true
 					t.CobraRootCmd.SetArgs(strings.Split(line, " "))
-					if t.asyncCobraExec {
+					if t.asyncCobraExec && !t.isNeverAsyncCmd(c.Name()) {
 						go func() {
 							if err := t.CobraRootCmd.Execute(); err != nil {
 								log.Printf("error executing command: %s", err)
