@@ -26,6 +26,8 @@ package configure
 import (
 	"runtime"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
 )
 
 // undefined variables they will be
@@ -75,8 +77,25 @@ func CheckCurrentVersion(askWithVersion string) bool {
 	return CheckVersion(askWithVersion, curentVersion)
 }
 
-func CheckVersion(askWithVersion string, versionStr string) bool {
-	return askWithVersion <= versionStr // til now this seems simple enough
+func CheckVersion(askWithVersion string, verifyAgainst string) bool {
+	current, err := semver.NewVersion(askWithVersion)
+	if err != nil {
+		return false
+	}
+	verifyVersion, verr := semver.NewVersion(verifyAgainst)
+	if verr != nil {
+		return false
+	}
+
+	if verifyVersion.GreaterThan(current) {
+		return true
+	}
+
+	if current.Equal(verifyVersion) {
+		return true
+	}
+
+	return false
 }
 
 func GetOs() string {

@@ -67,6 +67,9 @@ func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error)
 	// if needed
 	if pwd, derr := os.Getwd(); derr == nil {
 		useLastDir = pwd
+		configure.CONFIG_PATH_CALLBACK = func() string {
+			return useLastDir + "/" + configure.CONTEXT_DIR + "/" + configure.CONTXT_FILE
+		}
 	} else {
 		return nil, nil, derr
 	}
@@ -83,7 +86,6 @@ func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error)
 
 	outputHdnl := NewTestOutHandler()
 	app.OutPutHdnl = outputHdnl
-	cleanAllFiles()
 	return app, outputHdnl, nil
 }
 
@@ -128,11 +130,13 @@ func assertNotInMessage(t *testing.T, output *TestOutHandler, msg string) {
 
 // Testing the dir command togehther with the workspace command
 func TestDir(t *testing.T) {
-
+	backToWorkDir()
 	app, output, appErr := SetupTestApp("config", "ctx_test_config.yml")
 	if appErr != nil {
 		t.Errorf("Expected no error, got '%v'", appErr)
 	}
+
+	defer cleanAllFiles()
 	// clean the output buffer
 	output.Clear()
 	// just for sure, we go back to the testdata directory
@@ -234,5 +238,54 @@ func TestDir(t *testing.T) {
 	if lastExistCode != 10 {
 		t.Errorf("Expected exit code 10, got '%v'", lastExistCode)
 	}
+
+}
+
+func TestWorkSpaces(t *testing.T) {
+	app, output, appErr := SetupTestApp("config", "ctx_test_workspace.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	defer cleanAllFiles()
+	// clean the output buffer
+	output.Clear()
+
+	if err := runCobraCmd(app, "workspace new mainproject"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	dirnames := []string{"build", "web", "server", "client", "docs"}
+	for _, dirname := range dirnames {
+		os.MkdirAll(getAbsolutePath("workspace1/mainproject/"+dirname), 0755)
+		runCobraCmd(app, "dir add "+getAbsolutePath("workspace1/mainproject/"+dirname))
+	}
+
+	if cdir, derr := os.Getwd(); derr == nil {
+		if cdir != useLastDir {
+			t.Errorf("Expected '%v', got '%v'", useLastDir, cdir)
+		}
+	} else {
+		t.Errorf("Expected no error, got '%v'", derr)
+	}
+
+	if err := runCobraCmd(app, "workspace new subproject"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	if err := runCobraCmd(app, "dir add "+getAbsolutePath("workspace0/project1")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	if err := runCobraCmd(app, "dir add "+getAbsolutePath("workspace0/project2")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	// list all workspaces. we should get the test workspace
+	output.Clear()
+	if err := runCobraCmd(app, "workspace ls"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "mainproject")
+	assertInMessage(t, output, "subproject")
 
 }

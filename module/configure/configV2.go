@@ -14,13 +14,16 @@ import (
 )
 
 var (
-	cfgV1             *contxtConfigure
-	USE_SPECIAL_DIR                = true // if true, we will use some of the special dirs like user home or other. defined in the config model
-	CONTEXT_DIR                    = "contxt"
-	CONTXT_FILE                    = "contxtv2.yml"
-	CFG               ConfigMetaV2 = ConfigMetaV2{}
-	MIGRATION_ENABLED              = true
+	cfgV1                *contxtConfigure
+	USE_SPECIAL_DIR                      = true // if true, we will use some of the special dirs like user home or other. defined in the config model
+	CONTEXT_DIR                          = "contxt"
+	CONTXT_FILE                          = "contxtv2.yml"
+	CFG                  ConfigMetaV2    = ConfigMetaV2{}
+	MIGRATION_ENABLED                    = true
+	CONFIG_PATH_CALLBACK GetPathCallback = nil
 )
+
+type GetPathCallback func() string
 
 type contxtConfigure struct {
 	UsedV2Config      *ConfigMetaV2
@@ -57,6 +60,13 @@ func NewCfgV2(c *contxtConfigure) {
 	// we can use this for testing to point to a relative path
 	if USE_SPECIAL_DIR {
 		c.DefaultV2Yacl.UseConfigDir()
+	}
+
+	// if an callback is set, we will use this to get the path
+	// what will also forces the absolute path usage
+	if CONFIG_PATH_CALLBACK != nil {
+		c.DefaultV2Yacl.SetFileAndPathsByFullFilePath(CONFIG_PATH_CALLBACK())
+
 	}
 
 	if err := c.DefaultV2Yacl.Load(); err != nil {

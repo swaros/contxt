@@ -22,6 +22,7 @@
 package runner
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -210,18 +211,21 @@ create a new workspace.
 this will trigger any onLeave task defined in the workspace
 and also onEnter task defined in the new workspace
 `,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			//checkDefaultFlags(cmd, args)
 			if len(args) > 0 {
 				if err := configure.GetGlobalConfig().AddWorkSpace(args[0], c.ExternalCmdHndl.CallBackOldWs, c.ExternalCmdHndl.CallBackNewWs); err != nil {
 					fmt.Println(err)
+					return err
 				} else {
 					c.print("workspace created ", args[0])
 				}
 
 			} else {
 				fmt.Println("no workspace name given")
+				return errors.New("no workspace name given")
 			}
+			return nil
 		},
 	}
 }
