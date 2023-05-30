@@ -15,7 +15,7 @@ import (
 
 var (
 	cfgV1             *contxtConfigure
-	USE_SPECIAL_DIR                = true
+	USE_SPECIAL_DIR                = true // if true, we will use some of the special dirs like user home or other. defined in the config model
 	CONTEXT_DIR                    = "contxt"
 	CONTXT_FILE                    = "contxtv2.yml"
 	CFG               ConfigMetaV2 = ConfigMetaV2{}
@@ -163,6 +163,15 @@ func (c *contxtConfigure) ClearPaths() {
 		c.UpdateCurrentConfig(*cfg)
 	})
 	c.DefaultV2Yacl.Save()
+}
+
+// ListPaths returns all paths as array
+func (c *contxtConfigure) ListPaths() []string {
+	paths := []string{}
+	c.PathWorkerNoCd(func(index, path string) {
+		paths = append(paths, path)
+	})
+	return paths
 }
 
 // ListWorkSpaces returns all workspaces

@@ -1,13 +1,20 @@
 package runner_test
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/runner"
+	"github.com/swaros/contxt/module/systools"
 )
 
+var useLastDir = "./"
+var lastExistCode = 0
+
+// quicktesting the app messagehandler
 func TestOutPutHandl(t *testing.T) {
 	app := runner.NewCmd(runner.NewCmdSession())
 
@@ -25,11 +32,44 @@ func TestOutPutHandl(t *testing.T) {
 
 }
 
-func SetupTestApp(dir, file string) (*runner.CmdSession, error) {
-	configure.USE_SPECIAL_DIR = false
-	configure.CONTEXT_DIR = dir
-	configure.CONTXT_FILE = file
-	configure.MIGRATION_ENABLED = false
+// Setup the test app
+// create the application. set up the config folder name, and the name of the config file.
+// the testapp bevavior is afterwards different, because it uses the config
+// related to the current directory.
+// thats why we have some special helper functions.
+// - getAbsolutePath to get the absolute path to the testdata directory
+// - backToWorkDir to go back to the testdata directory
+// - cleanAllFiles to remove the config file
+func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error) {
+	// first we want to catch the exist codes
+	systools.AddExitListener("testing_prevent_exit", func(no int) systools.ExitBehavior {
+		lastExistCode = no
+		return systools.Interrupt
+	})
+
+	configure.USE_SPECIAL_DIR = false   // no special directory like userHome etc.
+	configure.CONTXT_FILE = file        // set the configuration file name
+	configure.MIGRATION_ENABLED = false // disable the migration
+	configure.CONTEXT_DIR = dir         // set the directory name
+	// we need to stick to the testdata directory
+	// any other directory will not work
+	if err := os.Chdir("testdata"); err != nil {
+		return nil, nil, err
+	}
+	// check if the directory exists, that we want to use in the testdata directory.
+	// even if the config package is abel to create them, we want avoid this here.
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return nil, nil, err
+	}
+
+	// build the absolute path to the testdata directory
+	// this is needed to go back to the testdata directory
+	// if needed
+	if pwd, derr := os.Getwd(); derr == nil {
+		useLastDir = pwd
+	} else {
+		return nil, nil, derr
+	}
 
 	app := runner.NewCmdSession()
 
@@ -38,17 +78,161 @@ func SetupTestApp(dir, file string) (*runner.CmdSession, error) {
 	ctxout.AddPostFilter(ctxout.NewTabOut())
 
 	if err := app.Cobra.Init(functions); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return app, nil
+	outputHdnl := NewTestOutHandler()
+	app.OutPutHdnl = outputHdnl
+	cleanAllFiles()
+	return app, outputHdnl, nil
 }
 
-func TestDir(t *testing.T) {
-	app, _ := SetupTestApp("testdata/workspace0/config", "ctx_test_config.yml")
+// helper function to change back to the testdata directory
+func backToWorkDir() {
+	if err := os.Chdir(useLastDir); err != nil {
+		panic(err)
+	}
+}
 
-	app.Cobra.RootCmd.SetArgs([]string{"dir"})
-	if err := app.Cobra.RootCmd.Execute(); err != nil {
+// helper function to get the absolute path to the testdata directory
+func getAbsolutePath(dir string) string {
+	return useLastDir + "/" + dir
+}
+
+// helper function to remove the config file
+func cleanAllFiles() {
+	if err := os.Remove(useLastDir + "/" + configure.CONTEXT_DIR + "/" + configure.CONTXT_FILE); err != nil {
+		panic(err)
+	}
+}
+
+// helper function to run a cobra command by argument line
+func runCobraCmd(app *runner.CmdSession, cmd string) error {
+	app.Cobra.RootCmd.SetArgs(strings.Split(cmd, " "))
+	return app.Cobra.RootCmd.Execute()
+}
+
+// assert a string is part of the output buffer
+func assertInMessage(t *testing.T, output *TestOutHandler, msg string) {
+	if !output.Contains(msg) {
+		t.Errorf("Expected '%s', got '%v'", msg, output.String())
+	}
+}
+
+// assert a string is not part of the output buffer
+func assertNotInMessage(t *testing.T, output *TestOutHandler, msg string) {
+	if output.Contains(msg) {
+		t.Errorf("Expected '%s' is not in the message, but got '%v'", msg, output.String())
+	}
+}
+
+// Testing the dir command togehther with the workspace command
+func TestDir(t *testing.T) {
+
+	app, output, appErr := SetupTestApp("config", "ctx_test_config.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	// clean the output buffer
+	output.Clear()
+	// just for sure, we go back to the testdata directory
+	backToWorkDir()
+
+	// we do not have any workspace, so we expect an hint to create one
+	if err := runCobraCmd(app, "dir"); err != nil {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
+	expected := "no workspace found, nothing to do. create a new workspace with 'ctx workspace new <name>'"
+	assertInMessage(t, output, expected)
+
+	// create a new workspace named test
+	output.Clear()
+	if err := runCobraCmd(app, "workspace new test"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "workspace created test")
+
+	// list all workspaces. we should get the test workspace
+	output.Clear()
+	if err := runCobraCmd(app, "workspace ls"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "test")
+
+	output.Clear()
+
+	// add an existing directory to the workspace without a absolute path
+	if err := runCobraCmd(app, "dir add project1"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "error: path is not absolute")
+
+	// add two directories to the workspace
+	diradds := []string{"project1", "project2"}
+	for _, diradd := range diradds {
+
+		output.Clear()
+		projectAbsPath := getAbsolutePath("workspace0/" + diradd)
+		if err := runCobraCmd(app, "dir add "+projectAbsPath); err != nil {
+			t.Errorf("Expected no error, got '%v'", err)
+		}
+		assertInMessage(t, output, "add "+projectAbsPath)
+	}
+	output.Clear()
+
+	// list all directories in the workspace
+	if err := runCobraCmd(app, "dir list"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, getAbsolutePath("workspace0/project1"))
+	assertInMessage(t, output, getAbsolutePath("workspace0/project2"))
+	output.Clear()
+
+	// remove the first directory
+	if err := runCobraCmd(app, "dir rm "+getAbsolutePath("workspace0/project1")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "remove "+getAbsolutePath("workspace0/project1"))
+	output.Clear()
+
+	// list all directories in the workspace after removing the first one
+	if err := runCobraCmd(app, "dir list"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertNotInMessage(t, output, getAbsolutePath("workspace0/project1"))
+	assertInMessage(t, output, getAbsolutePath("workspace0/project2"))
+	output.Clear()
+
+	// remove the second directory
+	if err := runCobraCmd(app, "dir rm "+getAbsolutePath("workspace0/project2")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "remove "+getAbsolutePath("workspace0/project2"))
+	output.Clear()
+
+	// list all directories in the workspace after removing the second one
+	// so booth should be gone
+	if err := runCobraCmd(app, "dir list"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertNotInMessage(t, output, getAbsolutePath("workspace0/project1"))
+	assertNotInMessage(t, output, getAbsolutePath("workspace0/project2"))
+	output.Clear()
+
+	// retry removing an path that is already removed
+	if err := runCobraCmd(app, "dir rm "+getAbsolutePath("workspace0/project2")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "error: could not remove path")
+	output.Clear()
+
+	// try to remove the whole workspace. that should not work, because we are in the workspace
+	if err := runCobraCmd(app, "workspace rm test"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	// we should get the exitcode 10 because we tryed to remove the current workspace
+	if lastExistCode != 10 {
+		t.Errorf("Expected exit code 10, got '%v'", lastExistCode)
+	}
+
 }

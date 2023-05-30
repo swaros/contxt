@@ -1,3 +1,24 @@
+// Copyright (c) 2023 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// # Licensed under the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 package runner
 
 import (
@@ -293,6 +314,15 @@ func (c *SessionCobra) GetDirCmd() *cobra.Command {
 		Long:  "manage workspaces and paths they are assigned",
 		Run: func(cmd *cobra.Command, args []string) {
 			c.checkDefaultFlags(cmd, args)
+
+			// if we do not have any workspace, we do not need to do anything.
+			// without an workspace we also have no paths to show
+			if len(configure.GetGlobalConfig().ListWorkSpaces()) == 0 {
+				c.log().Debug("no workspace found, nothing to do")
+				c.println("no workspace found, nothing to do. create a new workspace with 'ctx workspace new <name>'")
+				return
+			}
+
 			if len(args) == 0 {
 				c.log().Debug("show all paths in any workspace")
 				c.log().WithFields(logrus.Fields{"all-flag": c.Options.DirAll}).Debug("show all paths in any workspace shoul be executed")
@@ -317,7 +347,7 @@ func (c *SessionCobra) GetDirCmd() *cobra.Command {
 	}
 	dCmd.Flags().BoolVarP(&c.Options.DirAll, "all", "a", false, "show all paths in any workspace")
 	dCmd.Flags().BoolVarP(&c.Options.ShowFullTargets, "full", "f", false, "show full amount of targets")
-	dCmd.AddCommand(c.GetDirFindCmd(), c.GetDirAddCmd(), c.GetDirRmCmd())
+	dCmd.AddCommand(c.GetDirFindCmd(), c.GetDirAddCmd(), c.GetDirRmCmd(), c.GetDirLsCmd())
 	return dCmd
 }
 
@@ -335,6 +365,24 @@ func (c *SessionCobra) GetDirFindCmd() *cobra.Command {
 				path, _ := c.ExternalCmdHndl.DirFindApplyAndSave(args)
 				fmt.Println(path) // path only as output. so cn can handle it. and again plain fmt usage
 			}
+		},
+	}
+	return fCmd
+}
+
+// GetDirLsCmd returns the command to list all paths in the current workspace
+func (c *SessionCobra) GetDirLsCmd() *cobra.Command {
+	fCmd := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "list all paths in the current workspace",
+		Long:    "list all paths in the current workspace in a simple list",
+		Run: func(cmd *cobra.Command, args []string) {
+			paths := configure.GetGlobalConfig().ListPaths()
+			for _, path := range paths {
+				c.println(path)
+			}
+
 		},
 	}
 	return fCmd
