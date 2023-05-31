@@ -32,7 +32,6 @@ import (
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/dirhandle"
-	"github.com/swaros/contxt/module/systools"
 )
 
 type SessionCobra struct {
@@ -154,15 +153,24 @@ func (c *SessionCobra) GetGotoCmd() *cobra.Command {
 all defined onEnter and onLeave task will be executed
 if these task are defined
 `,
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			c.ExternalCmdHndl.FindWorkspaceInfoByTemplate(nil)
+			var cmderr error
+			found := false
 			if len(args) > 0 {
 				configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 					if args[0] == index {
-						configure.GetGlobalConfig().ChangeWorkspace(index, c.ExternalCmdHndl.CallBackOldWs, c.ExternalCmdHndl.CallBackNewWs)
+						found = true
+						if err := configure.GetGlobalConfig().ChangeWorkspace(index, c.ExternalCmdHndl.CallBackOldWs, c.ExternalCmdHndl.CallBackNewWs); err != nil {
+							cmderr = err
+						}
 					}
 				})
 			}
+			if !found {
+				cmderr = fmt.Errorf("workspace %s not found", args[0])
+			}
+			return cmderr
 		},
 		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 			if len(args) != 0 {
@@ -182,6 +190,19 @@ func (c *SessionCobra) GetPrintWsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			c.checkDefaultFlags(cmd, args)
 			c.ExternalCmdHndl.PrintWorkspaces()
+		},
+	}
+}
+
+// prints the current workspace
+func (c *SessionCobra) PrintCurrentWs() *cobra.Command {
+	return &cobra.Command{
+		Use:   "current",
+		Short: "prints the current workspace",
+		Long:  `prints the current active workspace. This is the workspace which is used for the current session`,
+		Run: func(cmd *cobra.Command, args []string) {
+			c.checkDefaultFlags(cmd, args)
+			c.println(c.ExternalCmdHndl.GetCurrentWorkSpace())
 		},
 	}
 }
@@ -215,14 +236,12 @@ and also onEnter task defined in the new workspace
 			//checkDefaultFlags(cmd, args)
 			if len(args) > 0 {
 				if err := configure.GetGlobalConfig().AddWorkSpace(args[0], c.ExternalCmdHndl.CallBackOldWs, c.ExternalCmdHndl.CallBackNewWs); err != nil {
-					fmt.Println(err)
 					return err
 				} else {
 					c.print("workspace created ", args[0])
 				}
 
 			} else {
-				fmt.Println("no workspace name given")
 				return errors.New("no workspace name given")
 			}
 			return nil
@@ -239,22 +258,23 @@ remove a workspace.
 this will trigger any onLeave task defined in the workspace
 and also onEnter task defined in the new workspace
 `,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			//checkDefaultFlags(cmd, args)
 			if len(args) > 0 {
 				if err := configure.GetGlobalConfig().RemoveWorkspace(args[0]); err != nil {
 					c.log().Error("error while trying to remove workspace", err)
-					systools.Exit(systools.ErrorBySystem)
+					return err
 				} else {
 					if err := configure.GetGlobalConfig().SaveConfiguration(); err != nil {
 						c.log().Error("error while trying to save configuration", err)
-						systools.Exit(systools.ErrorBySystem)
+						return err
 					}
 					c.print("workspace removed ", args[0])
 				}
 			} else {
-				fmt.Println("no workspace name given")
+				return errors.New("no workspace name given")
 			}
+			return nil
 		},
 		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 			if len(args) != 0 {
@@ -305,7 +325,14 @@ Remove a workspace 'ctx workspace rm <name>'.
 list all workspaces 'ctx workspace list'.
 scan for new projects in the workspace 'ctx workspace scan'`,
 	}
-	wsCmd.AddCommand(c.GetNewWsCmd(), c.GetRmWsCmd(), c.GetScanCmd(), c.GetPrintWsCmd(), c.GetListWsCmd())
+	wsCmd.AddCommand(
+		c.GetNewWsCmd(),
+		c.GetRmWsCmd(),
+		c.GetScanCmd(),
+		c.GetPrintWsCmd(),
+		c.GetListWsCmd(),
+		c.PrintCurrentWs(),
+	)
 	return wsCmd
 }
 
@@ -400,14 +427,14 @@ func (c *SessionCobra) GetDirAddCmd() *cobra.Command {
 		else add the given paths to the workspace
 		like 'ctx dir add /path/to/dir /path/to/other/dir'
 		paths need to be absolute paths`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			c.checkDefaultFlags(cmd, args)
 			c.print("add path(s) to workspace: ", ctxout.ForeGreen, configure.GetGlobalConfig().UsedV2Config.CurrentSet, ctxout.CleanTag)
 			if len(args) == 0 {
 				dir, err := os.Getwd()
 				if err != nil {
 					c.log().Error(err)
-					return
+					return err
 				}
 				args = append(args, dir)
 			}
@@ -417,16 +444,16 @@ func (c *SessionCobra) GetDirAddCmd() *cobra.Command {
 				// we need to check if the path is absolute
 				if !filepath.IsAbs(arg) {
 					c.println("error: ", ctxout.ForeRed, "path is not absolute", ctxout.CleanTag)
-					return
+					return errors.New("path is not absolute")
 				}
 
 				if ok, err := dirhandle.Exists(arg); !ok || err != nil {
 					if err != nil {
 						c.println("error: ", ctxout.ForeRed, err, ctxout.CleanTag)
-						return
+						return err
 					}
 					c.println("error: ", ctxout.ForeRed, "path does not exist", ctxout.CleanTag)
-					return
+					return errors.New("path does not exist")
 				}
 				if err := configure.GetGlobalConfig().AddPath(arg); err == nil {
 					c.println("add ", ctxout.ForeBlue, arg, ctxout.CleanTag)
@@ -435,8 +462,10 @@ func (c *SessionCobra) GetDirAddCmd() *cobra.Command {
 					cmd.Run(cmd, nil)     // this is parsing all templates in all workspaces and updates the project Infos
 				} else {
 					c.println("error: ", ctxout.ForeRed, err, ctxout.CleanTag)
+					return err
 				}
 			}
+			return nil
 		},
 	}
 	return aCmd
@@ -448,14 +477,14 @@ func (c *SessionCobra) GetDirRmCmd() *cobra.Command {
 		Short: "remove path(s) from the workspace",
 		Long: `remove the given paths from the workspace
 		like 'ctx dir rm /path/to/dir /path/to/other/dir'`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			c.checkDefaultFlags(cmd, args)
 			c.print("remove path(s) from workspace: ", ctxout.ForeGreen, configure.GetGlobalConfig().UsedV2Config.CurrentSet, ctxout.CleanTag)
 			if len(args) == 0 {
 				dir, err := os.Getwd()
 				if err != nil {
 					c.log().Error(err)
-					return
+					return err
 				}
 				args = append(args, dir)
 			}
@@ -465,7 +494,7 @@ func (c *SessionCobra) GetDirRmCmd() *cobra.Command {
 				// we need to check if the path is absolute
 				if !filepath.IsAbs(arg) {
 					c.println("error: ", ctxout.ForeRed, "path is not absolute", ctxout.CleanTag)
-					return
+					return errors.New("path is not absolute")
 				}
 
 				// we don not check if the path exists. we just remove it
@@ -477,8 +506,10 @@ func (c *SessionCobra) GetDirRmCmd() *cobra.Command {
 					cmd.Run(cmd, nil)     // this is parsing all templates in all workspaces and updates the project Infos
 				} else {
 					c.println("error: ", ctxout.ForeRed, "could not remove path", ctxout.CleanTag)
+					return errors.New("could not remove path")
 				}
 			}
+			return nil
 		},
 	}
 	return rCmd

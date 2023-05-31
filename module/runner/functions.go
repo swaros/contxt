@@ -293,6 +293,10 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 	}
 }
 
+func (c *CmdExecutorImpl) GetCurrentWorkSpace() string {
+	return configure.GetGlobalConfig().UsedV2Config.CurrentSet
+}
+
 func (c *CmdExecutorImpl) PrintWorkspaces() {
 	configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 		if index == configure.GetGlobalConfig().UsedV2Config.CurrentSet {
