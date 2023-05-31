@@ -157,3 +157,14 @@ func assertNotInMessage(t *testing.T, output *TestOutHandler, msg string) {
 		t.Errorf("Expected '%s' is not in the message, but got '%v'", msg, output.String())
 	}
 }
+
+func assertCobraError(t *testing.T, app *runner.CmdSession, cmd string, expectedMessageContains string) {
+	t.Helper()
+	if err := runCobraCmd(app, cmd); err == nil {
+		t.Errorf("Expected error, but got none")
+	} else {
+		if !strings.Contains(err.Error(), expectedMessageContains) {
+			t.Errorf("Expected error message to contain '%s', but got '%s'", expectedMessageContains, err.Error())
+		}
+	}
+}

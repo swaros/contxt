@@ -259,6 +259,17 @@ func (c *contxtConfigure) AddWorkSpace(name string, oldspace func(string) bool, 
 		return errors.New("the workspace name [" + name + "] is invalid")
 	}
 
+	// we need at least 3 chars
+	if len(clearname) < 3 {
+		return errors.New("the workspace name [" + name + "] too short (min 3 chars)")
+	}
+
+	// allowed length is 125 chars
+	if len(clearname) > 125 {
+		return errors.New("the workspace name [" + name + "] too long. (max 125 chars)")
+	}
+
+	// check if the workspace already exists
 	if c.HaveWorkSpace(name) {
 		return errors.New("the workspace [" + clearname + "] already exists")
 	}

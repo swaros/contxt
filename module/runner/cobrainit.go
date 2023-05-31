@@ -234,7 +234,7 @@ and also onEnter task defined in the new workspace
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			//checkDefaultFlags(cmd, args)
-			if len(args) > 0 {
+			if len(args) == 1 {
 				if err := configure.GetGlobalConfig().AddWorkSpace(args[0], c.ExternalCmdHndl.CallBackOldWs, c.ExternalCmdHndl.CallBackNewWs); err != nil {
 					return err
 				} else {
@@ -242,7 +242,11 @@ and also onEnter task defined in the new workspace
 				}
 
 			} else {
-				return errors.New("no workspace name given")
+				if len(args) == 0 {
+					return errors.New("no workspace name given")
+				} else {
+					return errors.New("to many arguments")
+				}
 			}
 			return nil
 		},

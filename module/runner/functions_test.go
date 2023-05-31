@@ -145,6 +145,7 @@ func TestWorkSpaces(t *testing.T) {
 		t.Errorf("Expected no error, got '%v'", appErr)
 	}
 	defer cleanAllFiles()
+	defer output.ClearAndLog()
 	// clean the output buffer
 	output.Clear()
 	logFileName := "TestWorkSpaces_" + time.Now().Format(time.RFC3339) + ".log"
@@ -248,4 +249,56 @@ func TestWorkSpaces(t *testing.T) {
 	assertNotInMessage(t, output, "subproject")
 	assertInMessage(t, output, "testproject: index (0)")
 	output.ClearAndLog()
+
+	// behavior if paths get removed
+	os.RemoveAll(getAbsolutePath("workspace1/mainproject/docs"))
+	output.ClearAndLog()
+	if err := runCobraCmd(app, "dir -a"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertNotInMessage(t, output, "docs")
+}
+
+func TestWorkSpacesInvalidNames(t *testing.T) {
+
+	app, output, appErr := SetupTestApp("config", "ctx_test_ws_naming.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "ws_names_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+	assertCobraError(t, app, "workspace new", "no workspace name given")
+	assertCobraError(t, app, "workspace new 1", "the workspace name [1] too short")
+
+	toLongString := "asbfdufkif"
+	for i := 0; i < 13; i++ {
+		toLongString += toLongString
+	}
+	assertCobraError(t, app, "workspace new "+toLongString, " too long")
+	output.ClearAndLog()
+	assertCobraError(t, app, "workspace new ^^..", "string contains not accepted chars")
+	output.ClearAndLog()
+	assertCobraError(t, app, "workspace new \"hello\"", "string contains not accepted chars")
+	output.ClearAndLog()
+	assertCobraError(t, app, "workspace new 'hello'", "string contains not accepted chars")
+	output.ClearAndLog()
+	assertCobraError(t, app, "workspace new hello/", "the workspace name [hello/] is invalid")
+	output.ClearAndLog()
+	assertCobraError(t, app, "workspace new hello\\", "the workspace name [hello\\] is invalid")
+	output.ClearAndLog()
+	assertCobraError(t, app, "workspace new hello:", "the workspace name [hello:] is invalid")
+	output.ClearAndLog()
+	assertCobraError(t, app, "workspace new hello?", "string contains not accepted chars")
+	output.ClearAndLog()
+	assertCobraError(t, app, "workspace new hello*", "string contains not accepted chars")
+	output.ClearAndLog()
+	assertCobraError(t, app, "workspace new hello<", "string contains not accepted chars")
+	output.ClearAndLog()
+	assertCobraError(t, app, "workspace new hello>", "string contains not accepted chars")
+	output.ClearAndLog()
+	assertCobraError(t, app, "workspace new hello world", "to many arguments")
 }
