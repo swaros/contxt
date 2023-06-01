@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/abiosoft/ishell v2.0.0+incompatible
 	github.com/charmbracelet/bubbletea v0.24.1
-	github.com/charmbracelet/lipgloss v0.6.0
+	github.com/charmbracelet/lipgloss v0.7.1
 	github.com/sirupsen/logrus v1.9.2
 	github.com/swaros/contxt/module/configure v0.0.0-20230106225453-d04145a0b401
 	github.com/swaros/contxt/module/dirhandle v0.0.0-20230106225453-d04145a0b401
@@ -61,7 +61,7 @@ require (
 
 require (
 	github.com/abiosoft/readline v0.0.0-20180607040430-155bce2042db // indirect
-	github.com/charmbracelet/bubbles v0.15.0
+	github.com/charmbracelet/bubbles v0.16.1
 	github.com/chzyer/logex v1.1.10 // indirect
 	github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1 // indirect
 	github.com/fatih/color v1.12.0 // indirect
