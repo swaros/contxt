@@ -10,6 +10,8 @@ import (
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/runner"
 	"github.com/swaros/contxt/module/systools"
+	"github.com/swaros/contxt/module/yacl"
+	"github.com/swaros/contxt/module/yamc"
 )
 
 var useLastDir = "./"
@@ -78,7 +80,46 @@ func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error)
 
 	outputHdnl := NewTestOutHandler()
 	app.OutPutHdnl = outputHdnl
+	configure.GetGlobalConfig().ResetConfig()
 	return app, outputHdnl, nil
+}
+
+// helper function to verify the configuration file.
+// if the testCallBack is not nil, we will call it with the configuration model
+// so we can check the content of the configuration file.
+// this is helpfull just because to double check the content of the file itself and
+// the current state of the configuration. the configuration can be different from the file.
+// just because the configuration is in memory and the file is on the disk.
+// this functions is all about checking if the configuration is updated correctly, also in the file content.
+func verifyConfigurationFile(t *testing.T, testCallBack func(CFG *configure.ConfigMetaV2)) {
+	t.Helper()
+	file := ""
+	if configure.CONFIG_PATH_CALLBACK != nil {
+		file = configure.CONFIG_PATH_CALLBACK()
+	}
+
+	if file == "" {
+		t.Error("configuration setup failed. could not determine the configuration file.")
+		return
+	}
+
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		t.Error("configuration file not found: ", file)
+		return
+	}
+	// if the testCallBack is nil, we dont need to check the content
+	if testCallBack == nil {
+		return
+	}
+	// model
+	var CFG configure.ConfigMetaV2 = configure.ConfigMetaV2{}
+	// load the configuration file
+	loader := yacl.New(&CFG, yamc.NewYamlReader()).SetFileAndPathsByFullFilePath(file)
+	if err := loader.Load(); err != nil {
+		t.Error(err)
+	}
+	testCallBack(&CFG)
+
 }
 
 // save and go back to the test folder

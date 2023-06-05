@@ -473,6 +473,13 @@ func (c *ConfigModel) GetLoadedFile() string {
 	return c.usedFile
 }
 
+// Reset the configuration. this will clear the usedFile and loadedFiles.
+// this is useful for testing
+func (c *ConfigModel) Reset() {
+	c.usedFile = ""
+	c.loadedFiles = []string{}
+}
+
 // GetAllParsedFiles returns all parsed configuration filenames
 func (c *ConfigModel) GetAllParsedFiles() []string {
 	return c.loadedFiles

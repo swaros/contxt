@@ -14,13 +14,13 @@ import (
 )
 
 var (
-	cfgV1                *contxtConfigure
-	USE_SPECIAL_DIR                      = true // if true, we will use some of the special dirs like user home or other. defined in the config model
-	CONTEXT_DIR                          = "contxt"
-	CONTXT_FILE                          = "contxtv2.yml"
-	CFG                  ConfigMetaV2    = ConfigMetaV2{}
-	MIGRATION_ENABLED                    = true
-	CONFIG_PATH_CALLBACK GetPathCallback = nil
+	cfgV1                *contxtConfigure                  // global config
+	USE_SPECIAL_DIR                       = true           // if true, we will use some of the special dirs like user home or other. defined in the config model
+	CONTEXT_DIR                           = "contxt"       // default directory name for the config files
+	CONTXT_FILE                           = "contxtv2.yml" // default file name for the config file
+	CFG                  ConfigMetaV2     = ConfigMetaV2{} // the config model
+	MIGRATION_ENABLED                     = true           // if true, we will try to migrate from v1 to v2
+	CONFIG_PATH_CALLBACK GetPathCallback  = nil            // if set, we will use this callback to get the absolte path to the config file
 )
 
 type GetPathCallback func() string
@@ -138,7 +138,13 @@ func NewContxtConfig() *contxtConfigure {
 // InitConfig initilize the configuration files
 func (c *contxtConfigure) InitConfig() error {
 	//err := c.CheckSetup()
+	c.ResetConfig()
 	return nil
+}
+
+// Resets the global config so it forces a reload
+func (c *contxtConfigure) ResetConfig() {
+	cfgV1 = nil
 }
 
 // getConfig helper function to get a config by the name

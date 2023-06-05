@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/runner"
 )
@@ -165,13 +166,43 @@ func TestWorkSpaces(t *testing.T) {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
 
+	verifyConfigurationFile(t, func(CFG *configure.ConfigMetaV2) {
+		if CFG.CurrentSet != "subproject" {
+			t.Errorf("Expected the current set to be 'subproject', got '%v'", CFG.CurrentSet)
+		}
+		// there should no paths in the subproject at this point
+		if len(CFG.Configs["subproject"].Paths) != 0 {
+			t.Errorf("Expected no paths in the subproject, got '%v'", CFG.Configs["subproject"].Paths)
+		}
+	})
+
 	if err := runCobraCmd(app, "dir add "+getAbsolutePath("workspace0/project1")); err != nil {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
 
+	verifyConfigurationFile(t, func(CFG *configure.ConfigMetaV2) {
+		if len(CFG.Configs["subproject"].Paths) != 1 {
+			t.Errorf("Expected one path in the subproject, got '%v'", CFG.Configs["subproject"].Paths)
+		} else {
+			if CFG.Configs["subproject"].Paths["0"].Path != getAbsolutePath("workspace0/project1") {
+				t.Errorf("Expected the path to be '%v', got '%v'", getAbsolutePath("workspace0/project1"), CFG.Configs["subproject"].Paths["0"].Path)
+			}
+		}
+	})
+
 	if err := runCobraCmd(app, "dir add "+getAbsolutePath("workspace0/project2")); err != nil {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
+
+	verifyConfigurationFile(t, func(CFG *configure.ConfigMetaV2) {
+		if len(CFG.Configs["subproject"].Paths) != 2 {
+			t.Errorf("Expected two paths in the subproject, got '%v'", CFG.Configs["subproject"].Paths)
+		} else {
+			if CFG.Configs["subproject"].Paths["1"].Path != getAbsolutePath("workspace0/project2") {
+				t.Errorf("Expected the path to be '%v', got '%v'", getAbsolutePath("workspace0/project2"), CFG.Configs["subproject"].Paths["1"].Path)
+			}
+		}
+	})
 
 	// list all workspaces. we should get the test workspace
 	output.Clear()
@@ -184,6 +215,17 @@ func TestWorkSpaces(t *testing.T) {
 	if err := runCobraCmd(app, "workspace new testproject"); err != nil {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
+
+	verifyConfigurationFile(t, func(CFG *configure.ConfigMetaV2) {
+		if CFG.CurrentSet != "testproject" {
+			t.Errorf("Expected the current set to be 'testproject', got '%v'", CFG.CurrentSet)
+		}
+		// there should no paths in the subproject at this point
+		if len(CFG.Configs["testproject"].Paths) != 0 {
+			t.Errorf("Expected no paths in the subproject, got '%v'", CFG.Configs["testproject"].Paths)
+		}
+	})
+
 	dirnames = []string{"website", "backend", "testing"}
 	for _, dirname := range dirnames {
 		os.MkdirAll(getAbsolutePath("workspace1/testproject/"+dirname), 0755)
@@ -192,6 +234,17 @@ func TestWorkSpaces(t *testing.T) {
 		}
 	}
 	output.Clear()
+
+	verifyConfigurationFile(t, func(CFG *configure.ConfigMetaV2) {
+		if len(CFG.Configs["testproject"].Paths) != 3 {
+			t.Errorf("Expected three paths in the testproject, got '%v'", CFG.Configs["testproject"].Paths)
+		} else {
+			if CFG.Configs["testproject"].Paths["2"].Path != getAbsolutePath("workspace1/testproject/testing") {
+				t.Errorf("Expected the path to be '%v', got '%v'", getAbsolutePath("workspace1/testproject/testing"), CFG.Configs["testproject"].Paths["2"].Path)
+			}
+		}
+	})
+
 	// try to add a directory that is already added
 	if err := runCobraCmd(app, "dir add "+getAbsolutePath("workspace1/testproject/testing")); err == nil {
 		t.Error("Expected an error, got none")
