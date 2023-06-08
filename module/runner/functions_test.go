@@ -309,7 +309,7 @@ func TestWorkSpaces(t *testing.T) {
 	if err := runCobraCmd(app, "dir -a"); err != nil {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
-	assertNotInMessage(t, output, "docs")
+	assertInMessage(t, output, "docs: no such file or directory")
 }
 
 func TestWorkSpacesInvalidNames(t *testing.T) {

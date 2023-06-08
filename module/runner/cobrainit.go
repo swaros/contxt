@@ -313,8 +313,8 @@ func (c *SessionCobra) GetScanCmd() *cobra.Command {
 				c.print("<row>", ctxout.ForeBlue, "<tab size='15'> ", ws, "</tab>", ctxout.ForeLightBlue, "<tab size='70'>", info.Path, color, "</tab><tab size='15' origin='2'>", msg, "</tab></row>")
 			})
 			c.print("</table>")
-			c.print(ctxout.CleanTag, "\n")
-			c.print("found ", ctxout.ForeLightBlue, all, ctxout.CleanTag, " projects and updated ", ctxout.ForeLightBlue, updated, ctxout.CleanTag, " projects")
+			c.println(ctxout.CleanTag, "")
+			c.println("found ", ctxout.ForeLightBlue, all, ctxout.CleanTag, " projects and updated ", ctxout.ForeLightBlue, updated, ctxout.CleanTag, " projects")
 
 		},
 	}
@@ -369,13 +369,13 @@ func (c *SessionCobra) GetDirCmd() *cobra.Command {
 						// header for each workspace
 						c.print("<row>", ctxout.BoldTag, "<tab size='100' fill=' '>", index, ctxout.CleanTag, ctxout.ForeDarkGrey, ": index (", cfg.CurrentIndex, ")</tab></row>")
 						c.ExternalCmdHndl.PrintPaths(true, c.Options.ShowFullTargets)
-						//c.print("<row>", ctxout.ForeDarkGrey, "<tab size='100' fill='─'>─</tab>", ctxout.CleanTag, "</row>")
+						c.print("<row>", ctxout.ForeDarkGrey, "<tab size='100' fill='─'> </tab>", ctxout.CleanTag, "</row>")
 
 					})
 				} else {
 					c.ExternalCmdHndl.PrintPaths(false, c.Options.ShowFullTargets)
 				}
-				c.print("</table>")
+				c.println("</table>")
 				configure.GetGlobalConfig().UsedV2Config.CurrentSet = current
 			}
 		},

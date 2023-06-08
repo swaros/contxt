@@ -219,21 +219,18 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 
 	if err == nil {
 		if !plain {
-			c.Print(ctxout.ForeWhite, " current directory: ", ctxout.BoldTag, dir, ctxout.CleanTag)
-			c.Print(ctxout.ForeWhite, " current workspace: ", ctxout.BoldTag, configure.GetGlobalConfig().UsedV2Config.CurrentSet, ctxout.CleanTag)
+			c.Println(ctxout.ForeWhite, " current directory: ", ctxout.BoldTag, dir, ctxout.CleanTag)
+			c.Println(ctxout.ForeWhite, " current workspace: ", ctxout.BoldTag, configure.GetGlobalConfig().UsedV2Config.CurrentSet, ctxout.CleanTag)
 		}
-		notWorkspace := true
 		pathColor := ctxout.ForeLightBlue
 		if !configure.GetGlobalConfig().PathMeightPartOfWs(dir) {
 			pathColor = ctxout.ForeLightMagenta
-		} else {
-			notWorkspace = false
 		}
 		if !plain {
 			c.Println(" contains paths:")
 		}
 		//ctxout.Print(c.session.OutPutHdnl, "<table>")
-		configure.GetGlobalConfig().PathWorker(func(index string, path string) {
+		walkErr := configure.GetGlobalConfig().PathWorker(func(index string, path string) {
 			template, exists, err := c.session.TemplateHndl.Load()
 			if err == nil {
 				add := ctxout.Dim + ctxout.ForeLightGrey
@@ -282,14 +279,14 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 				c.Print(ctxout.Message("       path: ", ctxout.Dim, " no ", ctxout.ForeYellow, index, " ", pathColor, path, ctxout.ForeRed, " error while loading template: ", err.Error()))
 			}
 		}, func(origin string) {})
-		if notWorkspace && !plain {
 
-			c.Println("<row><tab size='20' origin='2'>", ctxout.ForeYellow, " WARNING ! </tab>", ctxout.CleanTag, "<tab size='80'>you are currently in none of the assigned locations.<tab></row>")
-			c.Println("<row><tab size='20'> </tab><tab=size='80'>so maybe you are using the wrong workspace</tab></row>")
+		if walkErr != nil {
+			c.session.Log.Logger.WithFields(logrus.Fields{
+				"err": walkErr,
+			}).Error("Error while walking through paths")
+			c.Println(ctxout.ForeRed, "Error while walking through paths: ", ctxout.CleanTag, walkErr.Error(), ctxout.CleanTag)
 		}
-		// end table
-		// print a new line
-		c.Println("")
+		//c.Println("")
 	}
 }
 

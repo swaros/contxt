@@ -297,7 +297,7 @@ func (c *contxtConfigure) PathWorker(callbackInDirectory func(string, string), c
 		}
 		cnt := len(cfg.Paths)
 		if cnt < 1 {
-			return errors.New("no paths actually stored ")
+			return errors.New("no paths actually stored in workspace " + c.UsedV2Config.CurrentSet)
 		}
 		prepmap := make(map[string]any)
 		for index, path := range cfg.Paths {
