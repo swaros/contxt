@@ -74,7 +74,14 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.ShowHints, "nohints", "n", false, "disable printing hints")
 	c.RootCmd.PersistentFlags().StringVar(&c.Options.LogLevel, "loglevel", "FATAL", "set loglevel")
 
-	c.RootCmd.AddCommand(c.GetWorkspaceCmd(), c.getCompletion(), c.GetGotoCmd(), c.GetDirCmd(), c.GetInteractiveCmd())
+	c.RootCmd.AddCommand(
+		c.GetWorkspaceCmd(),
+		c.getCompletion(),
+		c.GetGotoCmd(),
+		c.GetDirCmd(),
+		c.GetInteractiveCmd(),
+		c.GetRunCmd(),
+	)
 
 	return nil
 }
@@ -293,8 +300,8 @@ and also onEnter task defined in the new workspace
 func (c *SessionCobra) GetScanCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "scan",
-		Short: "scan for new projects in the workspace",
-		Long:  "scan for new projects in the workspace",
+		Short: "scan all projects in the workspace",
+		Long:  "looking for project information, like names and roles, in all the workspaces, and update the global project list",
 		Run: func(cmd *cobra.Command, args []string) {
 			c.log().Debug("scan for new projects")
 			c.checkDefaultFlags(cmd, args)
@@ -338,6 +345,40 @@ scan for new projects in the workspace 'ctx workspace scan'`,
 		c.PrintCurrentWs(),
 	)
 	return wsCmd
+}
+
+// -- Run cmd
+
+func (c *SessionCobra) GetRunCmd() *cobra.Command {
+	rCmd := &cobra.Command{
+		Use:   "run",
+		Short: "run a command in the context of a project",
+		Long:  "run a command in the context of a project",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.checkDefaultFlags(cmd, args)
+			if len(args) > 0 {
+				c.log().Debug("run command in context of project", args)
+				for _, p := range args {
+					c.ExternalCmdHndl.RunTargets(p, true)
+				}
+			} else {
+				targets := c.ExternalCmdHndl.GetTargets(false)
+				for _, p := range targets {
+					c.println(p)
+				}
+				return nil
+			}
+			return nil
+		},
+		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			targets := c.ExternalCmdHndl.GetTargets(false)
+			return targets, cobra.ShellCompDirectiveNoFileComp
+		},
+	}
+	return rCmd
 }
 
 // -- Dir Command

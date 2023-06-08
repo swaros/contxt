@@ -32,6 +32,16 @@
             "args": ["dir"]
         },
         {
+            "name": "v2 run test (on regular contxt tasks)",            
+            "type": "go",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/v2/main.go",
+            "env": {},
+            "args": ["run","test"]
+        },
+        {
             "name": "v2 interactive start",
             "type": "go",
             "request": "launch",

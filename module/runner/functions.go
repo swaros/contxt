@@ -30,6 +30,7 @@ import (
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/systools"
+	"github.com/swaros/contxt/module/tasks"
 )
 
 type CmdExecutorImpl struct {
@@ -121,7 +122,51 @@ func (c *CmdExecutorImpl) CallBackNewWs(newWs string) {
 	})
 }
 
+// RunTargets run the given targets
+// force is used as flag for the first level targets, and is used
+// to runs shared targets once in front of the regular assigned targets
 func (c *CmdExecutorImpl) RunTargets(target string, force bool) {
+	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
+		c.session.Log.Logger.WithFields(logrus.Fields{
+			"error": err,
+		}).Error("error while loading template")
+	} else if !exists {
+		c.session.Log.Logger.WithFields(logrus.Fields{
+			"error": err,
+		}).Error("template not exists")
+	} else {
+
+		outHandler := func(msg ...interface{}) {
+			c.Println(msg...)
+
+		}
+
+		executer := tasks.NewStdTaskListExec(
+			template,
+			tasks.NewDefaultDataHandler(),
+			tasks.NewDefaultPhHandler(),
+			outHandler,
+			tasks.ShellCmd,
+		)
+		executer.RunTarget(target, force)
+	}
+}
+
+func (c *CmdExecutorImpl) GetTargets(incInvisible bool) []string {
+	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
+		c.session.Log.Logger.WithFields(logrus.Fields{
+			"error": err,
+		}).Error("error while loading template")
+	} else if !exists {
+		c.session.Log.Logger.WithFields(logrus.Fields{
+			"error": err,
+		}).Error("template not exists")
+	} else {
+		if res, have := TemplateTargetsAsMap(template, incInvisible); have {
+			return res
+		}
+	}
+	return nil
 }
 
 func (c *CmdExecutorImpl) ResetVariables() {

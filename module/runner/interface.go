@@ -37,9 +37,10 @@ type CmdExecutor interface {
 	ResetVariables()                                                  // reset old variables while change the workspace. (req for shell mode)
 	MainInit()                                                        // initialize the workspace
 	doMagicParamOne(string)
-	RunTargets(string, bool)   // run targets
-	CallBackNewWs(string)      // callback for new workspace
-	CallBackOldWs(string) bool // callback for old workspace
+	RunTargets(string, bool)               // run targets
+	GetTargets(incInvisible bool) []string // return all targets. optional include invisible targets
+	CallBackNewWs(string)                  // callback for new workspace
+	CallBackOldWs(string) bool             // callback for old workspace
 	FindWorkspaceInfoByTemplate(updateFn func(workspace string, cnt int, update bool, info configure.WorkspaceInfoV2)) (allCount int, updatedCount int)
 	PrintWorkspaces()                                  // print out all workspaces
 	GetWorkspaces() []string                           // print out all workspaces as a list
