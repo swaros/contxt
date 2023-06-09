@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"golang.org/x/term"
 )
@@ -252,8 +253,11 @@ func MarkupFilter(msg string) string {
 // filterExec is the function that will be called by the Message function
 // it handles the filters different than the defined post filters
 func filterExec(newMsh []interface{}, filters []PrintInterface, msg interface{}) []interface{} {
+	var lock sync.Mutex
+	lock.Lock()
 	initCtxOut()
 	if len(filters) > 0 { // we have filters, so they do the job of filtering the message
+
 		for _, filter := range filters {
 			runInfos = append(runInfos, fmt.Sprintf("filter exec: %T", filter))
 			msg = filter.Filter(msg)
@@ -261,12 +265,14 @@ func filterExec(newMsh []interface{}, filters []PrintInterface, msg interface{})
 				break
 			}
 		}
+
 		if msg != nil {
 			newMsh = append(newMsh, msg)
 		}
 	} else {
 		newMsh = append(newMsh, msg)
 	}
+	lock.Unlock()
 	return newMsh
 }
 

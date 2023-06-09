@@ -136,18 +136,16 @@ func (c *CmdExecutorImpl) RunTargets(target string, force bool) {
 		}).Error("template not exists")
 	} else {
 
-		outHandler := func(msg ...interface{}) {
-			c.Println(msg...)
-
-		}
-
-		executer := tasks.NewStdTaskListExec(
+		datahndl := tasks.NewCombinedDataHandler()
+		requireHndl := tasks.NewDefaultRequires(datahndl, c.session.Log.Logger)
+		executer := tasks.NewTaskListExec(
 			template,
-			tasks.NewDefaultDataHandler(),
-			tasks.NewDefaultPhHandler(),
-			outHandler,
+			datahndl,
+			requireHndl,
+			c.getOutHandler(),
 			tasks.ShellCmd,
 		)
+		executer.SetLogger(c.session.Log.Logger)
 		executer.RunTarget(target, force)
 	}
 }

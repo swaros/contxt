@@ -40,6 +40,7 @@ type TaskListExec struct {
 	watch    *Watchman
 	subTasks map[string]*targetExecuter
 	args     []interface{}
+	logger   *logrus.Logger
 }
 
 func NewTaskListExec(config configure.RunConfig, adds ...interface{}) *TaskListExec {
@@ -78,15 +79,26 @@ func (e *TaskListExec) RunTargetWithVars(target string, scopeVars map[string]str
 	return tExec.executeTemplate(async, target, scopeVars)
 }
 
+func (e *TaskListExec) SetLogger(logger *logrus.Logger) {
+	e.logger = logger
+}
+
 func (e *TaskListExec) GetTask(target string) *targetExecuter {
 	if e.subTasks == nil {
 		e.subTasks = make(map[string]*targetExecuter)
 		return nil
 	}
 	if tExec, found := e.subTasks[target]; found {
-		return tExec
+		return e.applyLogger(tExec)
 	}
 	return nil
+}
+
+func (e *TaskListExec) applyLogger(tExec *targetExecuter) *targetExecuter {
+	if e.logger != nil && tExec != nil && !tExec.haveLogger() {
+		tExec.SetLogger(e.logger)
+	}
+	return tExec
 }
 
 func (e *TaskListExec) GetWatch() *Watchman {
@@ -107,7 +119,7 @@ func (e *TaskListExec) findOrCreateTask(target string, scopeVars map[string]stri
 			}
 		}
 	}
-	return tExec
+	return e.applyLogger(tExec)
 }
 
 func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars map[string]string) int {

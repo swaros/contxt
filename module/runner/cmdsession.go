@@ -49,7 +49,7 @@ func NewCmdSession() *CmdSession {
 		Cobra:        NewCobraCmds(),
 		TemplateHndl: ctemplate.New(),
 		Log: &SessionLogger{
-			LogLevel: "info",
+			LogLevel: "error",
 			Logger: &logrus.Logger{
 				Out:       os.Stdout,
 				Formatter: new(logrus.TextFormatter),

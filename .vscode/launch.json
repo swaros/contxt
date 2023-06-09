@@ -39,7 +39,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/v2/main.go",
             "env": {},
-            "args": ["run","test"]
+            "args": ["run","test-each","--loglevel=debug"]
         },
         {
             "name": "v2 interactive start",

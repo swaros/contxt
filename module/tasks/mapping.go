@@ -34,6 +34,10 @@ func (t *targetExecuter) out(msg ...interface{}) {
 	}
 }
 
+func (t *targetExecuter) haveLogger() bool {
+	return t.Logger != nil
+}
+
 func (t *targetExecuter) getLogger() *logrus.Logger {
 	if t.Logger == nil {
 		t.Logger = logrus.New()
@@ -42,6 +46,8 @@ func (t *targetExecuter) getLogger() *logrus.Logger {
 			FullTimestamp: true,
 		})
 		t.Logger.SetOutput(os.Stdout)
+		t.Logger.SetLevel(logrus.WarnLevel)
+		t.Logger.Warn("no logger set, create default logger with warn level [tasks.getLogger()]")
 	}
 	return t.Logger
 }

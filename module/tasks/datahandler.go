@@ -124,3 +124,12 @@ func (d *DefaultDataHandler) GetData(key string) (interface{}, bool) {
 func (d *DefaultDataHandler) GetYamc() *yamc.Yamc {
 	return d.yamcHndl
 }
+
+func (d *DefaultDataHandler) GetDataKeys() []string {
+	data := d.yamcHndl.GetData()
+	keys := make([]string, 0, len(data))
+	for k := range data {
+		keys = append(keys, k)
+	}
+	return keys
+}

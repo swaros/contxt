@@ -31,6 +31,10 @@ type DefaultPhHandler struct {
 	ph map[string]string
 }
 
+// this is a simple implementation of the PlaceHolder interface
+// it is used to store and retrieve placeholder
+// this implementation is not thread safe and should only be used for basic testing
+
 func NewDefaultPhHandler() *DefaultPhHandler {
 	return &DefaultPhHandler{
 		ph: make(map[string]string),

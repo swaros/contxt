@@ -74,6 +74,13 @@ func assertContainsCount(t *testing.T, slice []string, substr string, count int)
 	}
 }
 
+func assertStrEqual(t *testing.T, expected string, actual string) {
+	t.Helper()
+	if expected != actual {
+		t.Errorf("expected [%q], but got [%q]", expected, actual)
+	}
+}
+
 func assertPositionInSliceBefore(t *testing.T, slice []string, substr string, before string) {
 	t.Helper()
 	substrIndex := -1

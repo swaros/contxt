@@ -62,7 +62,6 @@ func New(target string, arguments map[string]string, any ...interface{}) *target
 
 	for i := 0; i < len(any); i++ {
 		switch any[i].(type) {
-
 		case configure.RunConfig:
 			t.runCfg = any[i].(configure.RunConfig)
 

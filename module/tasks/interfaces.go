@@ -34,6 +34,7 @@ type DataMapHandler interface {
 	GetDataAsYaml(key string) (string, bool)                 // returns the data as yaml string
 	AddJSON(key, jsonString string) error                    // adds data by parsing a json string
 	SetJSONValueByPath(key, path, value string) error        // sets a value by a json path using
+	GetDataKeys() []string                                   // returns all keys
 }
 
 // PlaceHolder is the interface for the placeholder handler

@@ -359,3 +359,12 @@ func (d *CombinedDh) ExportVarToFile(variable string, filename string) error {
 
 	return nil
 }
+
+func (d *CombinedDh) GetDataKeys() []string {
+	data := d.yamcRoot.GetData()
+	keys := make([]string, 0, len(data))
+	for k := range data {
+		keys = append(keys, k)
+	}
+	return keys
+}

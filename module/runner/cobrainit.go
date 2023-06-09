@@ -32,6 +32,7 @@ import (
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/systools"
 )
 
 type SessionCobra struct {
@@ -581,10 +582,16 @@ func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {
 		behave := ctxout.GetBehavior()
 		behave.NoColored = true
 		ctxout.SetBehavior(behave)
+	} else if err != nil {
+		c.log().Error(err)
+		systools.Exit(systools.ErrorInitApp)
 	}
 
 	c.Options.LogLevel, _ = cmd.Flags().GetString("loglevel")
-	c.ExternalCmdHndl.SetLogLevel(c.Options.LogLevel)
+	if err := c.ExternalCmdHndl.SetLogLevel(c.Options.LogLevel); err != nil {
+		c.log().Error(err)
+		systools.Exit(systools.ErrorInitApp)
+	}
 }
 
 func (c *SessionCobra) GetInteractiveCmd() *cobra.Command {
