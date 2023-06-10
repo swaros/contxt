@@ -6,6 +6,7 @@ import (
 	"github.com/swaros/contxt/module/ctxout"
 )
 
+// testing the fmtwrap without any other printer
 func TestFmtConcurrentWithInject(t *testing.T) {
 	prnt := ctxout.NewFmtWrap()
 	assertConcurrentPrinter(t, prnt, 100, func(jobIndex int) []interface{} {
@@ -18,6 +19,7 @@ func TestFmtConcurrentWithInject(t *testing.T) {
 
 }
 
+// testing the fmtwrap without with native ctxout (what is using fmt as fallback)
 func TestFmtConcurrent(t *testing.T) {
 	assertConcurrentPrinter(t, ctxout.NewFmtWrap(), 100, func(jobIndex int) []interface{} {
 		for i := 0; i < 100; i++ {
