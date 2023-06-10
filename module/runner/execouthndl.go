@@ -31,18 +31,21 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					c.Println(
 						ctxout.ForeWhite,
 						ctxout.BackLightBlue,
-						" 🙭 ",
+						" 🙮 ",
 						ctxout.CleanTag,
 						ctxout.ForeLightCyan,
-						" ⚒ ",
+						" ⚙ ",
 						ctxout.ForeCyan,
 						" [",
 						ctxout.ForeYellow,
 						tm.Target,
 						ctxout.ForeCyan,
 						"] ",
-
 						ctxout.ForeLightBlue,
+						"⌨  >> ",
+						ctxout.BackBlack,
+						ctxout.ForeGreen,
+						ctxout.BoldTag,
 						tm.Info,
 						ctxout.CleanTag,
 					)
@@ -50,7 +53,7 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					c.Println(
 						ctxout.ForeLightCyan,
 						ctxout.BackLightBlue,
-						" 🙭 ",
+						" 🔍 ",
 						ctxout.CleanTag,
 						ctxout.ForeCyan,
 						" [",
@@ -83,8 +86,8 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					)
 				case "needs_done":
 					c.Println(
-						ctxout.ForeGreen,
-						ctxout.BackDarkGrey,
+						ctxout.ForeWhite,
+						ctxout.BackLightGreen,
 						" 🙭 ",
 						" ✓ ",
 						ctxout.CleanTag,
@@ -102,7 +105,7 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				case "wait_next_done":
 					c.Println(
 						ctxout.ForeWhite,
-						ctxout.BackLightBlue,
+						ctxout.BackGreen,
 						" 🙭 ",
 						ctxout.CleanTag,
 						ctxout.ForeLightGreen,
@@ -176,12 +179,16 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				)
 			case tasks.MsgExecOutput:
 				c.Println(
+					ctxout.ForeDarkGrey,
+					ctxout.BackLightBlue,
+					" ⚙ ",
+					ctxout.CleanTag,
 					ctxout.ForeBlue,
 					"       ⌨  >> ",
 					ctxout.CleanTag,
 					tm,
 					ctxout.ForeBlue,
-					" << 🎧 ",
+					" << 🖵 ",
 					ctxout.CleanTag,
 				)
 			default:

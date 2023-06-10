@@ -9,10 +9,9 @@ import (
 	"golang.org/x/term"
 )
 
-// PreHook is a function that can be used to intercept the message before it is printed
-var PreHook func(msg ...interface{}) bool = nil
-
 var (
+	// PreHook is a function that can be used to intercept the message before it is printed
+	PreHook func(msg ...interface{}) bool = nil
 	// output is the interface that will be used to print the message
 	output      StreamInterface = nil
 	initDone    bool            = false
@@ -26,6 +25,7 @@ var (
 		Info:      &termInfo,
 	}
 	runInfos []string // contains informartion what filters are run
+	mu       sync.Mutex
 )
 
 type CtxOutBehavior struct {
@@ -145,6 +145,8 @@ func IsPrinterInterface(msg interface{}) bool {
 // it handles the filtering and streaming of the message depending on the type of the message.
 // so here er can also inject the filters and the output stream
 func Message(msg ...interface{}) []interface{} {
+	mu.Lock()
+	defer mu.Unlock()
 	runInfos = []string{}
 	initCtxOut()
 	filters := []PrintInterface{} // these are filters just used in this function
@@ -221,7 +223,6 @@ func PostMarkupFilter(msgSlice []interface{}) []interface{} {
 	if stringSum != "" {
 		newMsh = append(newMsh, MarkupFilter(stringSum))
 	}
-
 	return newMsh
 }
 
@@ -253,8 +254,6 @@ func MarkupFilter(msg string) string {
 // filterExec is the function that will be called by the Message function
 // it handles the filters different than the defined post filters
 func filterExec(newMsh []interface{}, filters []PrintInterface, msg interface{}) []interface{} {
-	var lock sync.Mutex
-	lock.Lock()
 	initCtxOut()
 	if len(filters) > 0 { // we have filters, so they do the job of filtering the message
 
@@ -272,7 +271,6 @@ func filterExec(newMsh []interface{}, filters []PrintInterface, msg interface{})
 	} else {
 		newMsh = append(newMsh, msg)
 	}
-	lock.Unlock()
 	return newMsh
 }
 

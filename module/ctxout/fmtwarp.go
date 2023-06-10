@@ -2,7 +2,8 @@ package ctxout
 
 import "fmt"
 
-type FmtWarper struct{}
+type FmtWarper struct {
+}
 
 func NewFmtWrap() *FmtWarper {
 	return &FmtWarper{}
