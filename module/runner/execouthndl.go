@@ -4,8 +4,71 @@ import (
 	"sync"
 
 	"github.com/swaros/contxt/module/ctxout"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
 )
+
+func (c *CmdExecutorImpl) drawRow(label, labelColor, content, contentColor, info, infoColor string) {
+	c.Println(
+		ctxout.OPEN_ROW,
+		ctxout.TD(
+			"[",
+			ctxout.Prop(ctxout.ATTR_SIZE, "2"),
+			ctxout.Prop(ctxout.ATTR_PREFIX, labelColor+ctxout.BoldTag+ctxout.ForeLightYellow),
+			ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
+			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+		),
+		ctxout.TD(
+			label,
+			ctxout.Prop(ctxout.ATTR_SIZE, "11"),
+			ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
+			ctxout.Prop(ctxout.ATTR_PREFIX, labelColor),
+			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+		),
+		ctxout.TD(
+			"]",
+			ctxout.Prop(ctxout.ATTR_SIZE, "2"),
+			ctxout.Prop(ctxout.ATTR_PREFIX, labelColor+ctxout.BoldTag+ctxout.ForeLightYellow),
+			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+		),
+		ctxout.TD(
+			content,
+			ctxout.Prop(ctxout.ATTR_SIZE, "80"),
+			ctxout.Prop(ctxout.ATTR_PREFIX, contentColor),
+			ctxout.Prop(ctxout.ATTR_OVERFLOW, "wordwrap"),
+			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+		),
+		ctxout.TD(
+			info,
+			ctxout.Prop(ctxout.ATTR_SIZE, "5"),
+			ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
+			ctxout.Prop(ctxout.ATTR_PREFIX, infoColor),
+			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+		),
+		ctxout.CLOSE_ROW,
+	)
+}
+
+func (c *CmdExecutorImpl) drawTwoRow(content, contentColor, info, infoColor string) {
+	c.Println(
+		ctxout.OPEN_ROW,
+		ctxout.TD(
+			content,
+			ctxout.Prop(ctxout.ATTR_SIZE, "95"),
+			ctxout.Prop(ctxout.ATTR_PREFIX, contentColor),
+			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+		),
+		ctxout.TD(
+			info,
+			ctxout.Prop(ctxout.ATTR_SIZE, "4"),
+			ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
+			ctxout.Prop(ctxout.ATTR_PREFIX, infoColor),
+			ctxout.Prop(ctxout.ATTR_OVERFLOW, "wrap"),
+			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+		),
+		ctxout.CLOSE_ROW,
+	)
+}
 
 // handles all the incomming messages from the tasks
 // depending on the message type it will print the message
@@ -28,98 +91,55 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 			case tasks.MsgTarget:
 				switch tm.Context {
 				case "command":
-					c.Println(
-						ctxout.ForeWhite,
-						ctxout.BackLightBlue,
-						" 🙮 ",
-						ctxout.CleanTag,
-						ctxout.ForeLightCyan,
-						" ⚙ ",
-						ctxout.ForeCyan,
-						" [",
-						ctxout.ForeYellow,
+					c.drawRow(
 						tm.Target,
-						ctxout.ForeCyan,
-						"] ",
-						ctxout.ForeLightBlue,
-						"⌨  >> ",
-						ctxout.BackBlack,
-						ctxout.ForeGreen,
-						ctxout.BoldTag,
+						ctxout.ForeLightYellow+ctxout.BackCyan,
 						tm.Info,
-						ctxout.CleanTag,
+						ctxout.ForeDarkGrey+ctxout.BackLightGrey,
+						"cmd",
+						ctxout.ForeBlue+ctxout.BackLightBlue,
 					)
+
 				case "needs_required":
-					c.Println(
-						ctxout.ForeLightCyan,
-						ctxout.BackLightBlue,
-						" 🔍 ",
-						ctxout.CleanTag,
-						ctxout.ForeCyan,
-						" [",
-						ctxout.ForeYellow,
+					c.drawRow(
 						tm.Target,
-						ctxout.ForeCyan,
-						"] ",
-						ctxout.ForeLightYellow,
-						" requires ",
-						ctxout.ForeDarkGrey,
+						ctxout.ForeLightCyan,
 						tm.Info,
-						ctxout.CleanTag,
+						ctxout.ForeDarkGrey+ctxout.BackLightGrey,
+						"req",
+						ctxout.ForeBlue,
 					)
 
 				case "needs_execute":
-					c.Println(
-						ctxout.ForeDarkGrey,
-						ctxout.BackWhite,
-						" 🙭 ",
-						ctxout.CleanTag,
-						ctxout.ForeCyan,
-						" [",
-						ctxout.ForeYellow,
+					c.drawRow(
 						tm.Target,
-						ctxout.ForeCyan,
-						"] ",
-						ctxout.ForeLightBlue,
-						tm.Info,
-						ctxout.CleanTag,
+						ctxout.ForeYellow+ctxout.BackLightGrey,
+						"request to start ... "+tm.Info,
+						ctxout.ForeBlue+ctxout.BackLightGrey,
+						"launch",
+						ctxout.ForeBlue,
 					)
+
 				case "needs_done":
-					c.Println(
-						ctxout.ForeWhite,
-						ctxout.BackLightGreen,
-						" 🙭 ",
-						" ✓ ",
-						ctxout.CleanTag,
-						ctxout.ForeCyan,
-						" [",
-						ctxout.ForeYellow,
+					c.drawRow(
 						tm.Target,
-						ctxout.ForeCyan,
-						"]",
-						ctxout.ForeDarkGrey,
-						" (all needs are done) ",
-						ctxout.CleanTag,
+						ctxout.ForeLightCyan,
+						tm.Info,
+						ctxout.ForeDarkGrey+ctxout.BackLightGrey,
+						"done",
+						ctxout.ForeBlue,
 					)
 
 				case "wait_next_done":
-					c.Println(
-						ctxout.ForeWhite,
-						ctxout.BackGreen,
-						" 🙭 ",
-						ctxout.CleanTag,
-						ctxout.ForeLightGreen,
-						" ✓ ",
-						ctxout.ForeCyan,
-						" [",
-						ctxout.ForeYellow,
+					c.drawRow(
 						tm.Target,
-						ctxout.ForeCyan,
-						"]",
-						ctxout.ForeDarkGrey,
-						" ⏲ ",
-						ctxout.CleanTag,
+						ctxout.ForeBlue+ctxout.BackLightBlue,
+						"....task finished ..."+tm.Info,
+						ctxout.ForeDarkGrey+ctxout.BackLightGrey,
+						"done",
+						ctxout.ForeBlue,
 					)
+
 				default:
 					c.Println(
 						ctxout.ForeCyan,
@@ -178,27 +198,22 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					ctxout.CleanTag,
 				)
 			case tasks.MsgExecOutput:
-				c.Println(
-					ctxout.ForeDarkGrey,
-					ctxout.BackLightBlue,
-					" ⚙ ",
+				c.drawTwoRow(
+					systools.AnyToStrNoTabs(tm),
 					ctxout.CleanTag,
-					ctxout.ForeBlue,
-					"       ⌨  >> ",
-					ctxout.CleanTag,
-					tm,
-					ctxout.ForeBlue,
-					" << 🖵 ",
-					ctxout.CleanTag,
+					"cmd",
+					ctxout.ForeLightCyan+ctxout.BackBlue,
 				)
+
 			default:
 
-				c.Println(
-					ctxout.ForeDarkGrey,
-					"UNKNOWN",
-					ctxout.ForeCyan,
-					tm,
-					ctxout.CleanTag,
+				c.drawRow(
+					"?",
+					ctxout.ForeWhite+ctxout.BackBlue,
+					systools.AnyToStrNoTabs(tm),
+					ctxout.ForeDarkGrey+ctxout.BackLightGrey,
+					"<<<",
+					ctxout.ForeLightCyan+ctxout.BackBlue,
 				)
 
 			}

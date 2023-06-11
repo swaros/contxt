@@ -128,3 +128,7 @@ func SplitQuoted(oristr string, sep string) []string {
 
 	return result
 }
+
+func AnyToStrNoTabs(any interface{}) string {
+	return strings.ReplaceAll(fmt.Sprintf("%v", any), "\t", " ")
+}
