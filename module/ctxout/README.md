@@ -10,6 +10,27 @@ this library maps different ways to render output.
 - injected PrinterInterface
 - stream handler
 
+usecase is to have an output handler, which can be used in different ways depending on the capabilities of the output device.
+and this whithout to have to taking care of the output device.
+
+the base idea is to have one way to render output, and extend them with different handlers, they are responsible for the output by itself.
+so if i like to have an colored output, i just add an printer, which is responsible for the coloring.
+so i expect i can add any color code to the output, and the printer will handle it even if the output device is not able to handle it.
+
+for that being possible, any code, like defining a color, is done by an markup, that comes from the output handler.
+
+so instead of writing
+````go
+fmt.Printf("\033[1;33m%s\033[0m", "hello world")
+````
+i can write
+````go
+ctxout.PrintLn(ctxout.NewMOWrap(),ctxout.BoldTag, ctxout.ForeYellow, "hello world", ctxout.ResetCode)
+````
+the printer will handle the markup and the output device will get the colored output.
+and if the output device is not able to handle the markup, the printer will handle it and ignore the colorcodes.
+
+the responsible outputhandler needs to be added to the output chain, before the markup is used. *(ctxout.PrintLn(ctxout.NewMOWrap(),...) )*
 
 ## basic usage
 

@@ -10,63 +10,63 @@ import (
 
 func (c *CmdExecutorImpl) drawRow(label, labelColor, content, contentColor, info, infoColor string) {
 	c.Println(
-		ctxout.OPEN_ROW,
-		ctxout.TD(
-			"[",
-			ctxout.Prop(ctxout.ATTR_SIZE, "2"),
-			ctxout.Prop(ctxout.ATTR_PREFIX, labelColor+ctxout.BoldTag+ctxout.ForeLightYellow),
-			ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
-			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+		ctxout.Row(
+			ctxout.TD(
+				"[",
+				ctxout.Prop(ctxout.ATTR_SIZE, "2"),
+				ctxout.Prop(ctxout.ATTR_PREFIX, labelColor+ctxout.BoldTag+ctxout.ForeLightYellow),
+				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
+				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+			),
+			ctxout.TD(
+				label,
+				ctxout.Prop(ctxout.ATTR_SIZE, "11"),
+				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
+				ctxout.Prop(ctxout.ATTR_PREFIX, labelColor),
+				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+			),
+			ctxout.TD(
+				"]",
+				ctxout.Prop(ctxout.ATTR_SIZE, "2"),
+				ctxout.Prop(ctxout.ATTR_PREFIX, labelColor+ctxout.BoldTag+ctxout.ForeLightYellow),
+				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+			),
+			ctxout.TD(
+				content,
+				ctxout.Prop(ctxout.ATTR_SIZE, "80"),
+				ctxout.Prop(ctxout.ATTR_PREFIX, contentColor),
+				ctxout.Prop(ctxout.ATTR_OVERFLOW, "wordwrap"),
+				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+			),
+			ctxout.TD(
+				info,
+				ctxout.Prop(ctxout.ATTR_SIZE, "5"),
+				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
+				ctxout.Prop(ctxout.ATTR_PREFIX, infoColor),
+				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+			),
 		),
-		ctxout.TD(
-			label,
-			ctxout.Prop(ctxout.ATTR_SIZE, "11"),
-			ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
-			ctxout.Prop(ctxout.ATTR_PREFIX, labelColor),
-			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
-		),
-		ctxout.TD(
-			"]",
-			ctxout.Prop(ctxout.ATTR_SIZE, "2"),
-			ctxout.Prop(ctxout.ATTR_PREFIX, labelColor+ctxout.BoldTag+ctxout.ForeLightYellow),
-			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
-		),
-		ctxout.TD(
-			content,
-			ctxout.Prop(ctxout.ATTR_SIZE, "80"),
-			ctxout.Prop(ctxout.ATTR_PREFIX, contentColor),
-			ctxout.Prop(ctxout.ATTR_OVERFLOW, "wordwrap"),
-			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
-		),
-		ctxout.TD(
-			info,
-			ctxout.Prop(ctxout.ATTR_SIZE, "5"),
-			ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
-			ctxout.Prop(ctxout.ATTR_PREFIX, infoColor),
-			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
-		),
-		ctxout.CLOSE_ROW,
 	)
 }
 
 func (c *CmdExecutorImpl) drawTwoRow(content, contentColor, info, infoColor string) {
 	c.Println(
-		ctxout.OPEN_ROW,
-		ctxout.TD(
-			content,
-			ctxout.Prop(ctxout.ATTR_SIZE, "95"),
-			ctxout.Prop(ctxout.ATTR_PREFIX, contentColor),
-			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+		ctxout.Row(
+			ctxout.TD(
+				content,
+				ctxout.Prop(ctxout.ATTR_SIZE, "95"),
+				ctxout.Prop(ctxout.ATTR_PREFIX, contentColor),
+				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+			),
+			ctxout.TD(
+				info,
+				ctxout.Prop(ctxout.ATTR_SIZE, "4"),
+				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
+				ctxout.Prop(ctxout.ATTR_PREFIX, infoColor),
+				ctxout.Prop(ctxout.ATTR_OVERFLOW, "wrap"),
+				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+			),
 		),
-		ctxout.TD(
-			info,
-			ctxout.Prop(ctxout.ATTR_SIZE, "4"),
-			ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
-			ctxout.Prop(ctxout.ATTR_PREFIX, infoColor),
-			ctxout.Prop(ctxout.ATTR_OVERFLOW, "wrap"),
-			ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
-		),
-		ctxout.CLOSE_ROW,
 	)
 }
 

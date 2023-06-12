@@ -525,3 +525,43 @@ func TestSizeCalculation(t *testing.T) {
 	}
 
 }
+
+type utfTesting struct {
+	left  string
+	right string
+}
+
+func TestUtf8Chars(t *testing.T) {
+	to := ctxout.NewTabOut()
+
+	info := &ctxout.PostFilterInfo{
+		Width:      100,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	to.Update(*info)
+
+	utf8Chars := []utfTesting{
+		{"testing left", "testing right"},
+		{"\u2588 check", "\u2588 also check"},
+		{"\u2588", "\u2588\u2588"},
+		{"verify \u2588\u2588 is okay?", "block \u2588 check"},
+		{"plain", "🖵"},
+	}
+	for _, utf8Char := range utf8Chars {
+		testStr := ctxout.OTR +
+			ctxout.TD(utf8Char.left, ctxout.Prop("size", 50), ctxout.Prop("fill", "+"), ctxout.Prop("origin", 1)) +
+			ctxout.TD(utf8Char.right, ctxout.Prop("size", 50), ctxout.Prop("fill", "-"), ctxout.Prop("origin", 1)) +
+			ctxout.CRT
+
+		result := to.Command(testStr)
+		// resulting length should be 100.
+		// but be aware that we need to count the visible characters and they required space on screen.
+		// so we need to count the utf8 characters and add the space they require (not the bytes)
+		// and ignore escape sequences and other invisible characters
+		// thats why we use ctxout.LenPrintable instead of len
+		if ctxout.LenPrintable(result) != 100 {
+			t.Errorf("Expected length %d but got %d", 100, len(result))
+		}
+	}
+}
