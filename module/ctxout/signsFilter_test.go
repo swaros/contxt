@@ -83,7 +83,7 @@ func TestBasicFilterWorkingWithMutliple(t *testing.T) {
 	}
 
 	sf.Disable()
-	expected = "hello [i] this is a test [v]"
+	expected = "hello [i] this is a test [ok]"
 	chk = ctxout.ToString(source)
 	if chk != expected {
 		t.Errorf("expected '%s' got '%s'", expected, chk)

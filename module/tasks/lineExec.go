@@ -127,6 +127,10 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 // the callback function is called for each line of the output
 // the startInfo function is called if the process started
 func (t *targetExecuter) ExecuteScriptLine(dCmd string, dCmdArgs []string, command string, callback func(string, error) bool, startInfo func(*os.Process)) (int, int, error) {
+	return Execute(dCmd, dCmdArgs, command, callback, startInfo)
+}
+
+func Execute(dCmd string, dCmdArgs []string, command string, callback func(string, error) bool, startInfo func(*os.Process)) (int, int, error) {
 	cmdArg := append(dCmdArgs, command)
 	cmd := exec.Command(dCmd, cmdArg...)
 	stdoutPipe, _ := cmd.StdoutPipe()

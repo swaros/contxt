@@ -39,22 +39,22 @@ func NewBaseSignSet() *SignSet {
 		{
 			Name:     "error",
 			Glyph:    "⛔",
-			Fallback: "[x]",
+			Fallback: "[!!!]",
 		},
 		{
 			Name:     "success",
 			Glyph:    "✔",
-			Fallback: "[v]",
+			Fallback: "[ok]",
 		},
 		{
 			Name:     "debug",
 			Glyph:    "👓",
-			Fallback: "[d]",
+			Fallback: "[¿]",
 		},
 		{
 			Name:     "screen",
 			Glyph:    "🖵",
-			Fallback: "[.:.]",
+			Fallback: "[«»]",
 		},
 	}
 	return set

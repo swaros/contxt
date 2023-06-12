@@ -10,37 +10,27 @@ import (
 
 func (c *CmdExecutorImpl) drawRow(label, labelColor, content, contentColor, info, infoColor string) {
 	c.Println(
+
 		ctxout.Row(
-			ctxout.TD(
-				"[",
-				ctxout.Prop(ctxout.ATTR_SIZE, "2"),
-				ctxout.Prop(ctxout.ATTR_PREFIX, labelColor+ctxout.BoldTag+ctxout.ForeLightYellow),
-				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
-				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
-			),
+			ctxout.ForeYellow, "<sign runident> ", ctxout.CleanTag,
 			ctxout.TD(
 				label,
-				ctxout.Prop(ctxout.ATTR_SIZE, "11"),
+				ctxout.Prop(ctxout.ATTR_SIZE, 11),
 				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
 				ctxout.Prop(ctxout.ATTR_PREFIX, labelColor),
 				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
 			),
-			ctxout.TD(
-				"]",
-				ctxout.Prop(ctxout.ATTR_SIZE, "2"),
-				ctxout.Prop(ctxout.ATTR_PREFIX, labelColor+ctxout.BoldTag+ctxout.ForeLightYellow),
-				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
-			),
+			ctxout.ForeYellow, "<sign stopident> ", ctxout.CleanTag,
 			ctxout.TD(
 				content,
-				ctxout.Prop(ctxout.ATTR_SIZE, "80"),
+				ctxout.Prop(ctxout.ATTR_SIZE, 80),
 				ctxout.Prop(ctxout.ATTR_PREFIX, contentColor),
 				ctxout.Prop(ctxout.ATTR_OVERFLOW, "wordwrap"),
 				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
 			),
 			ctxout.TD(
 				info,
-				ctxout.Prop(ctxout.ATTR_SIZE, "5"),
+				ctxout.Prop(ctxout.ATTR_SIZE, 5),
 				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
 				ctxout.Prop(ctxout.ATTR_PREFIX, infoColor),
 				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
@@ -53,17 +43,24 @@ func (c *CmdExecutorImpl) drawTwoRow(content, contentColor, info, infoColor stri
 	c.Println(
 		ctxout.Row(
 			ctxout.TD(
-				content,
-				ctxout.Prop(ctxout.ATTR_SIZE, "95"),
-				ctxout.Prop(ctxout.ATTR_PREFIX, contentColor),
+				ctxout.BaseSignScreen+" > ",
+				ctxout.Prop(ctxout.ATTR_SIZE, "5"),
+				ctxout.Prop(ctxout.ATTR_PREFIX, ctxout.ForeBlue),
+				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
 				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
 			),
 			ctxout.TD(
-				info,
+				content,
+				ctxout.Prop(ctxout.ATTR_SIZE, "90"),
+				ctxout.Prop(ctxout.ATTR_PREFIX, contentColor),
+				ctxout.Prop(ctxout.ATTR_OVERFLOW, "wordwrap"),
+				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+			),
+			ctxout.TD(
+				"| "+info,
 				ctxout.Prop(ctxout.ATTR_SIZE, "4"),
 				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
 				ctxout.Prop(ctxout.ATTR_PREFIX, infoColor),
-				ctxout.Prop(ctxout.ATTR_OVERFLOW, "wrap"),
 				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
 			),
 		),
@@ -92,20 +89,20 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				switch tm.Context {
 				case "command":
 					c.drawRow(
-						tm.Target,
-						ctxout.ForeLightYellow+ctxout.BackCyan,
+						tm.Target+" "+ctxout.BaseSignScreen+" ",
+						ctxout.ForeYellow+ctxout.BoldTag,
 						tm.Info,
-						ctxout.ForeDarkGrey+ctxout.BackLightGrey,
-						"cmd",
-						ctxout.ForeBlue+ctxout.BackLightBlue,
+						ctxout.ForeDarkGrey,
+						ctxout.BaseSignScreen+" ",
+						ctxout.ForeYellow,
 					)
 
 				case "needs_required":
 					c.drawRow(
-						tm.Target,
+						tm.Target+" "+ctxout.BaseSignDebug+" ",
 						ctxout.ForeLightCyan,
 						tm.Info,
-						ctxout.ForeDarkGrey+ctxout.BackLightGrey,
+						ctxout.ForeDarkGrey,
 						"req",
 						ctxout.ForeBlue,
 					)
@@ -113,9 +110,9 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				case "needs_execute":
 					c.drawRow(
 						tm.Target,
-						ctxout.ForeYellow+ctxout.BackLightGrey,
+						ctxout.ForeYellow,
 						"request to start ... "+tm.Info,
-						ctxout.ForeBlue+ctxout.BackLightGrey,
+						ctxout.ForeBlue,
 						"launch",
 						ctxout.ForeBlue,
 					)
@@ -125,18 +122,18 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 						tm.Target,
 						ctxout.ForeLightCyan,
 						tm.Info,
-						ctxout.ForeDarkGrey+ctxout.BackLightGrey,
-						"done",
-						ctxout.ForeBlue,
+						ctxout.ForeDarkGrey,
+						ctxout.BaseSignSuccess+ctxout.BaseSignSuccess+ctxout.BaseSignSuccess+" ", // three green success signs for all subneeds done
+						ctxout.ForeGreen,
 					)
 
 				case "wait_next_done":
 					c.drawRow(
-						tm.Target,
-						ctxout.ForeBlue+ctxout.BackLightBlue,
-						"....task finished ..."+tm.Info,
-						ctxout.ForeDarkGrey+ctxout.BackLightGrey,
-						"done",
+						ctxout.BaseSignSuccess+tm.Target,
+						ctxout.ForeLightGreen,
+						" ..back from need ..."+tm.Info,
+						ctxout.ForeDarkGrey,
+						ctxout.BaseSignSuccess+" ",
 						ctxout.ForeBlue,
 					)
 
@@ -201,19 +198,19 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				c.drawTwoRow(
 					systools.AnyToStrNoTabs(tm),
 					ctxout.CleanTag,
-					"cmd",
-					ctxout.ForeLightCyan+ctxout.BackBlue,
+					ctxout.BaseSignDebug,
+					ctxout.ForeLightBlue,
 				)
 
 			default:
 
 				c.drawRow(
-					"?",
-					ctxout.ForeWhite+ctxout.BackBlue,
+					ctxout.BaseSignWarning+" ",
+					ctxout.ForeWhite,
 					systools.AnyToStrNoTabs(tm),
-					ctxout.ForeDarkGrey+ctxout.BackLightGrey,
-					"<<<",
-					ctxout.ForeLightCyan+ctxout.BackBlue,
+					ctxout.ForeLightGrey,
+					ctxout.BaseSignDebug+" ",
+					ctxout.ForeLightBlue,
 				)
 
 			}

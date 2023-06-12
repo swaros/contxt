@@ -22,8 +22,14 @@
 package runner
 
 import (
+	"fmt"
+	"os"
+	"runtime"
+
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/ctxout"
+	"github.com/swaros/contxt/module/systools"
+	"github.com/swaros/contxt/module/tasks"
 )
 
 // Init initializes the application
@@ -35,6 +41,43 @@ func Init() error {
 	app.Log.Logger.SetLevel(logrus.ErrorLevel)
 	// create the the command executor instance
 	functions := NewCmd(app)
+
+	// add support for utf-8 signs
+	glyps := ctxout.NewSignFilter(nil)
+	ctxout.AddPostFilter(glyps)
+
+	// enable the sign filter if possible
+	// in current ctxout version, must be done before NewTabOut
+	fmt.Println("checking for unicode support")
+	if runtime.GOOS != "windows" && systools.IsStdOutTerminal() {
+		// check if unicode is supported. if not, disable the sign filter
+		// this is the only way i see to check for unicode support
+		code1, code2, errorEx := tasks.Execute("bash", []string{"-c"}, "echo -e $TERM", func(s string, err error) bool {
+			if err == nil {
+				terminalsTheyNotSupportUt8Chars := []string{"xterm", "screen", "tmux"}
+				// if one of these terminals is used, we do not enable the sign filter
+				for _, term := range terminalsTheyNotSupportUt8Chars {
+					if s == term {
+						return false
+					}
+				}
+			}
+			glyps.Enable()
+			return true
+		}, func(p *os.Process) {
+
+		})
+		// just to be sure, if anything gos wrong by checking the terminal, we disable the sign filter
+		if errorEx != nil && code1 == 0 && code2 == 0 {
+			glyps.Disable()
+		} else {
+			glyps.AddSign(ctxout.Sign{Glyph: "🭬", Name: "runident", Fallback: ">"})
+			glyps.AddSign(ctxout.Sign{Glyph: "🭮", Name: "stopident", Fallback: ">"})
+		}
+	} else {
+		fmt.Println("no unicode support")
+	}
+
 	// set the default output filter
 	ctxout.AddPostFilter(ctxout.NewTabOut())
 
