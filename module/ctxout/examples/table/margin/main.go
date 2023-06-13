@@ -4,8 +4,8 @@ import (
 	"github.com/swaros/contxt/module/ctxout"
 )
 
-// the tables are mainly ment to create output that is aligned in columns
-// without any magic tabledrawings. so this table is just a collection of rows without any visible borders.
+// the tables are mainly ment to create output that is aligned in columns on screen, without floating around.
+// the goal is not to create nice terminal sheets. so this table is just a collection of rows without any visible borders.
 // or in other words, this kind of table, is focused to print data on screen and keep control of the output.
 // all of them depends on the terminal size and how the content fits into it, depending on the settings.
 // so if you like to have some static visuals in between, then you have to add them by yourself, and tell
@@ -13,9 +13,15 @@ import (
 
 // thats what this example is all about. we create a table with 2 cells per row and add a border sign between them.
 // and second we add a margin to the cells, so that the border sign has some space to be printed.
+// in the next example we add also a border sign to the left and right of the table.
+
+// in the last example we create a full table with border signs on all sides, and between the cells.
+// including a header and a footer.
+// so this is something like a real table. but keep in mind, that this is not the goal of this table.
+// if you just like to have a nice table on screen, in the easiest way possible, then you should maybe use an different approach or library.
 
 func main() {
-	// here the same as i the simple example. so the commented lines are the difference
+	// here the same as in the simple example (../simple/main.go). so the commented lines are the difference
 	text := " -just-to-fill-some-space- "
 	for i := 0; i < 5; i++ {
 		text += text
@@ -79,35 +85,35 @@ func main() {
 
 	table = ctxout.Table(
 		ctxout.Row(
-			rowSep, // here we add the row sign
+			rowSep, // the left border sign
 			ctxout.TD(
 				"hello"+text,
 				ctxout.Size(50),
-				ctxout.Margin(3), // the margin of the cell in percent of the cell width. this is used to reserve space for the border sign
+				ctxout.Margin(3), // left + middle + right = 3 ...so we need to reserve space for 3 border signs
 			),
-			rowSep, // the border sign. we reserved space for it with the margin
+			rowSep, // the middle border sign
 			ctxout.TD(
 				"world"+text,
 				ctxout.Size(50),
 			),
-			rowSep, // here again we add the row sign
+			rowSep, // the right border sign
 		),
 		ctxout.Row(
-			rowSep, // here we add the row sign
+			rowSep,
 			ctxout.TD(
 				"hola"+text,
 				ctxout.Size(50),
-				ctxout.Margin(3), // again first row spend space for the border sign
+				ctxout.Margin(3),
 			),
-			rowSep, // the border sign. we reserved space for it with the margin
+			rowSep,
 			ctxout.TD(
 				"mundo"+text,
 				ctxout.Size(50),
 			),
-			rowSep, // here again we add the row sign
-		), // and so on...
+			rowSep,
+		),
 		ctxout.Row(
-			rowSep, // here we add the row sign
+			rowSep,
 			ctxout.TD(
 				"hallo"+text,
 				ctxout.Size(50),
@@ -118,7 +124,7 @@ func main() {
 				"welt"+text,
 				ctxout.Size(50),
 			),
-			rowSep, // here again we add the row sign
+			rowSep,
 		),
 	)
 	ctxout.PrintLn(table) // print the table
@@ -143,6 +149,7 @@ func main() {
 		{"salut", "monde"},
 		{"ahoj", "světe"},
 	}
+	// all the chars we need to draw a nice bordered table
 	hline := "─"
 	tLeft := "├"
 	tRight := "┤"
@@ -155,96 +162,96 @@ func main() {
 	tTopMiddle := "┬"
 
 	tabContent := ""
+	// create the table content and and a row separator after each row
 	for _, d := range data {
 
 		tabContent = tabContent +
-			ctxout.Row(
-				tLeft, // here we add the row sign
+			ctxout.Row( // this is the row with the border signs
+				ctxout.ForeLightBlue+tLeft,
 				ctxout.TD(
 					hline,
 					ctxout.Size(50),
 					ctxout.Fill(hline),
-					ctxout.Margin(3), // the margin of the cell in percent of the cell width. this is used to reserve space for the border sign
+					ctxout.Margin(3),
 				),
-				tMiddle, // the border sign. we reserved space for it with the margin
+				tMiddle,
 				ctxout.TD(
 					hline,
 					ctxout.Fill(hline),
 					ctxout.Size(50),
 				),
-				tRight, // here again we add the row sign
-			) +
+				tRight,
+			) + // here we add the row data
 			ctxout.Row(
-				rowSep, // here we add the row sign
+				rowSep+ctxout.ForeLightYellow,
 				ctxout.TD(
 					d.left+text,
 					ctxout.Size(50),
-					ctxout.Margin(3), // the margin of the cell in percent of the cell width. this is used to reserve space for the border sign
+					ctxout.Margin(3),
 				),
-				rowSep, // the border sign. we reserved space for it with the margin
+				ctxout.ForeLightBlue+rowSep+ctxout.ForeLightYellow,
 				ctxout.TD(
 					d.right+text,
 					ctxout.Size(50),
 				),
-				rowSep, // here again we add the row sign
+				ctxout.ForeLightBlue+rowSep+ctxout.ForeLightYellow,
 			)
 
 	}
 
-	// how coud this looks like in an program, if we would cretae the table with a loop? and with a nice border?
+	// now create the table with header, data content as rows and footer
 	table = ctxout.Table(
 		ctxout.Row(
-			ctxout.ForeLightBlue+tTopLeft, // here we add the row sign
+			ctxout.ForeLightBlue+tTopLeft,
 			ctxout.TD(
 				hline,
 				ctxout.Size(50),
 				ctxout.Fill(hline),
-				ctxout.Margin(3), // the margin of the cell in percent of the cell width. this is used to reserve space for the border sign
+				ctxout.Margin(3),
 			),
-			tTopMiddle, // the border sign. we reserved space for it with the margin
+			tTopMiddle,
 			ctxout.TD(
 				hline,
 				ctxout.Fill(hline),
 				ctxout.Size(50),
 			),
-			tTopRight, // here again we add the row sign
-
+			tTopRight,
 		),
 
 		ctxout.Row(
-			rowSep, // here we add the row sign
+			rowSep,
 			ctxout.TD(
 				"left word",
 				ctxout.Size(50),
-				ctxout.Margin(3), // the margin of the cell in percent of the cell width. this is used to reserve space for the border sign
+				ctxout.Margin(3),
 			),
-			rowSep, // the border sign. we reserved space for it with the margin
+			rowSep,
 			ctxout.TD(
 				"right word",
 				ctxout.Size(50),
 			),
-			rowSep+ctxout.ForeYellow, // here again we add the row sign
+			rowSep+ctxout.ForeYellow,
 		),
 
 		tabContent,
 
 		ctxout.Row(
-			tBottomLeft, // here we add the row sign
+			ctxout.ForeLightBlue+tBottomLeft,
 			ctxout.TD(
 				hline,
 				ctxout.Size(50),
 				ctxout.Fill(hline),
-				ctxout.Margin(3), // the margin of the cell in percent of the cell width. this is used to reserve space for the border sign
+				ctxout.Margin(3),
 			),
-			tBottomMiddle, // the border sign. we reserved space for it with the margin
+			tBottomMiddle,
 			ctxout.TD(
 				hline,
 				ctxout.Fill(hline),
 				ctxout.Size(50),
 			),
-			tBottomRight, // here again we add the row sign
+			tBottomRight,
 		),
 	)
-	ctxout.PrintLn(ctxout.NewMOWrap(), table) // print the table. this time we need the colored output, so we use the MOWrap
+	ctxout.PrintLn(ctxout.NewMOWrap(), table, ctxout.CleanTag) // print the table. this time we need the colored output, so we use the MOWrap
 
 }
