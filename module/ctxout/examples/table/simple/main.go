@@ -5,6 +5,13 @@ import (
 )
 
 func main() {
+	// first we need an logn text to show the wrapping
+	text := " -just-to-fill-some-space- "
+	for i := 0; i < 10; i++ {
+		text += text
+	}
+	text = " : " + text
+
 	// add table filter to ctxout
 	ctxout.AddPostFilter(ctxout.NewTabOut())
 
@@ -13,32 +20,33 @@ func main() {
 	table := ctxout.Table( // new table
 		ctxout.Row( // new row
 			ctxout.TD( // new cell
-				"hello",         // the text content, must be a string and the first argument
+				"hello"+text,    // the text content, must be a string and the first argument
 				ctxout.Size(50), // the size of the cell in percent of the table width
+
 			),
 			ctxout.TD( // the next cell
-				"world",
+				"world"+text,
 				ctxout.Size(50),
 			),
 		),
 		ctxout.Row( // the next row
 			ctxout.TD(
-				"hola",
+				"hola"+text,
 				ctxout.Size(50),
 			),
 			ctxout.TD(
-				"mundo",
+				"mundo"+text,
 				ctxout.Size(50),
 			),
 		), // and so on...
 		ctxout.Row(
 			ctxout.TD(
-				"hallo",
+				"hallo"+text,
 				ctxout.Size(50),
 			),
 			ctxout.TD(
-				"welt",
-				ctxout.Size(40),
+				"welt"+text,
+				ctxout.Size(50),
 			),
 		),
 	)

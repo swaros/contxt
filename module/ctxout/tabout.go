@@ -32,7 +32,8 @@ const (
 	ATTR_SUFFIX = "suffix"
 	// this is the prefix for the cell that will be placed in front of the content all the time. is ment for colorcodes
 	ATTR_PREFIX = "prefix"
-
+	// additonal margin for the cell. this will be subtracted from the cell size
+	ATTR_MARGIN = "margin"
 	// the content will be shown, cuttet and alligned depending the origin value
 	OVERFLOW_ANY = "any"
 	// we will keep the content and wrap it. this will increase the height of the row if we need more space
@@ -146,6 +147,7 @@ func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 				tabCell.overflowMode = token.GetProperty(ATTR_OVERFLOW, "ignore").(string)
 				tabCell.anySuffix = token.GetProperty(ATTR_SUFFIX, "").(string)
 				tabCell.anyPrefix = token.GetProperty(ATTR_PREFIX, "").(string)
+				tabCell.margin = token.GetProperty(ATTR_MARGIN, 0).(int)
 			} else if strings.HasPrefix(token.Text, "</tab>") {
 				t.rows = append(t.rows, *tabCell)
 				tabCell = NewTabCell(tabRow)
@@ -230,7 +232,7 @@ func (t *TabOut) TableParse(text string) string {
 		}
 		return ""
 
-	} else if t.IsRow(text) {
+	} else if t.IsRow(text) { // row mode. so we do not in the table mode
 		if t.tableMode {
 			t.updateRows(&t.table, t.markup.Parse(text))
 			return ""

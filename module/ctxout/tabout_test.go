@@ -630,6 +630,7 @@ func (test *testSetups) assertContent(t *testing.T, expected string) *testSetups
 	return test
 }
 
+// compare the created markup with the expected markup
 func (test *testSetups) assertTableSource(t *testing.T, expected string) *testSetups {
 	t.Helper()
 	if test.tableSource != expected {
@@ -637,6 +638,35 @@ func (test *testSetups) assertTableSource(t *testing.T, expected string) *testSe
 		t.Errorf(test.tableSource)
 		t.Errorf("---------- expectation -------------")
 		t.Errorf(expected)
+	}
+	return test
+}
+
+// compare if the output, split by an sperator, have allways the same length for all rows
+func (test *testSetups) assertRowLength(t *testing.T, separator string) *testSetups {
+	t.Helper()
+	t.Helper()
+	to := ctxout.NewTabOut()
+
+	info := &ctxout.PostFilterInfo{
+		Width:      test.terminalWith,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	to.Update(*info)
+
+	result := to.Command(test.tableSource)
+	rows := strings.Split(result, separator)
+	firstRowSize := -1
+	for _, row := range rows {
+		if firstRowSize == -1 {
+			firstRowSize = ctxout.LenPrintable(row)
+		} else {
+			if firstRowSize != ctxout.LenPrintable(row) && ctxout.LenPrintable(row) != 0 {
+				t.Errorf("row length is not matching the expectation. fist row size is %d but one of the next row size is %d", firstRowSize, ctxout.LenPrintable(row))
+
+			}
+		}
 	}
 	return test
 }
@@ -707,43 +737,69 @@ func TestSizes(t *testing.T) {
 
 }
 
-// this test contains the last TDD cycle
-// so it was used to have one test failing
-// and the debugger was not running in other context
-func TestSizesOnce(t *testing.T) {
-	t.Skip("this test contains the last TDD cycle so it was used to have one test failing and the debugger was not running in other context")
+func TestMarginExample(t *testing.T) {
+
+	// here the same as i the simple example. so the commented lines are the difference
+	text := " -just-to-fill-some-space- "
+	for i := 0; i < 10; i++ {
+		text += text
+	}
+	text = " : " + text
+
+	//row separator is char alt + 186
+	rowSep := "│"
+
+	ctxout.AddPostFilter(ctxout.NewTabOut())
+
+	// create a table that will have 2 cells per row
+	// and sperate them with the vertical line char, between the cells
 	table := ctxout.Table(
 		ctxout.Row(
 			ctxout.TD(
-				"this will be the text for the first row what should be a long text",
-				ctxout.Size(75),
-				ctxout.Fill("+"),
-				ctxout.Content(),
+				"hello"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1), // the margin of the cell in percent of the cell width. this is used to reserve space for the border sign
+
 			),
+			rowSep, // the border sign. we reserved space for it with the margin
 			ctxout.TD(
-				"this is the second row and have also a long text to check if we still get the right size",
-				ctxout.Size(25),
-				ctxout.Fill("-"),
-				ctxout.Extend(),
+				"world"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1),
 			),
-		), ctxout.Row(
+			rowSep, // the border sign
+		),
+		ctxout.Row(
 			ctxout.TD(
-				"a small text",
-				ctxout.Size(75),
-				ctxout.Fill("+"),
-				ctxout.Content(),
+				"hola"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1), // again first row spend space for the border sign
 			),
+			rowSep, // here again we add the row sign
 			ctxout.TD(
-				"this is the second row and have also a long text to check if we still get the right size",
-				ctxout.Size(25),
-				ctxout.Fill("-"),
-				ctxout.Extend(),
+				"mundo"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1),
 			),
+			rowSep,
+		), // and so on...
+		ctxout.Row(
+			ctxout.TD(
+				"hallo"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1),
+			),
+			rowSep,
+			ctxout.TD(
+				"welt"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1),
+			),
+			rowSep,
 		),
 	)
-	new100Setup(table, 100).
+	new100Setup(table, 300).
 		assertSize(t).
-		//assertTableSource(t, "<row><tab size='75' fill='+' draw='content'>this will be the text for the first row what should be a long text</tab><tab size='25' fill='-' draw='extend'>this is the second row and have also a long text to check if we still get the right size</tab></row>").
-		assertContent(t, "this will be the text for the first row what should be a long textthis is the second row and have...")
+		assertRowLength(t, rowSep)
 
 }

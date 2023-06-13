@@ -86,6 +86,10 @@ func Size(size int) string {
 	return "size='" + fmt.Sprintf("%v", size) + "'"
 }
 
+func Margin(margin int) string {
+	return "margin='" + fmt.Sprintf("%v", margin) + "'"
+}
+
 func Origin(origin int) string {
 	return "origin='" + fmt.Sprintf("%v", origin) + "'"
 }

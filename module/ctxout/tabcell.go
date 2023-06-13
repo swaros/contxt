@@ -22,6 +22,7 @@ type tabCell struct {
 	overflowContent      string // if the text is cutted, then this will be set to the cutted content
 	overflowMode         string // this is the mode how the overflow is handled. ignore = the text is ignored, wrap = wrap the text
 	anyPrefix, anySuffix string // this is the prefix and postfix for the cell that will be added all the time. is ment for colorcodes
+	margin               int    // this is the margin for the cell. that means an absolute amout of space that will subtracted from the cell size
 }
 
 func NewTabCell(parent *tabRow) *tabCell {
@@ -115,6 +116,7 @@ func (td *tabCell) Copy() *tabCell {
 	newCell.overflowMode = td.overflowMode
 	newCell.overflow = td.overflow
 	newCell.overflowContent = td.overflowContent
+	newCell.margin = td.margin
 	return newCell
 }
 
@@ -139,6 +141,9 @@ func (td *tabCell) CutString(max int) string {
 	}
 	originMax := max
 	tSize := LenPrintable(td.Text)
+	if td.margin > 0 {
+		max = max - td.margin
+	}
 	if tSize == max {
 		return td.Text
 	}
