@@ -7,26 +7,26 @@ import (
 
 // just shortcuts for table tags
 const (
-	OPEN_TABLE          = "<table>"
-	OT                  = "<table>"
-	CLOSE_TABLE         = "</table>"
-	CT                  = "</table>"
-	OPEN_ROW            = "<row>"
-	OR                  = "<row>"
-	CLOSE_ROW           = "</row>"
-	CR                  = "</row>"
-	OPEN_TAB            = "<tab>"
-	OTB                 = "<tab>"
-	CLOSE_TAB           = "</tab>"
-	CTB                 = "</tab>"
-	CLOSE_TAB_ROW       = "</tab></row>"
-	CTR                 = "</tab></row>"
-	CLOSE_TAB_ROW_TABLE = "</tab></row></table>"
-	CTRT                = "</tab></row></table>"
-	OPEN_TABLE_ROW      = "<table><row>"
-	OTR                 = "<table><row>"
-	CLOSE_ROW_TABLE     = "</row></table>"
-	CRT                 = "</row></table>"
+	OpenTable        = "<table>"
+	TO               = "<table>"
+	CloseTable       = "</table>"
+	TC               = "</table>"
+	OpenRow          = "<row>"
+	RO               = "<row>"
+	CloseRow         = "</row>"
+	CR               = "</row>"
+	OpenTab          = "<tab>"
+	OTB              = "<tab>"
+	CloseTab         = "</tab>"
+	CTB              = "</tab>"
+	CloseTabRow      = "</tab></row>"
+	CTR              = "</tab></row>"
+	CloseTabRowTable = "</tab></row></table>"
+	CTRT             = "</tab></row></table>"
+	OpenTableRow     = "<table><row>"
+	OTR              = "<table><row>"
+	CloseRowTable    = "</row></table>"
+	CRT              = "</row></table>"
 )
 
 // Table provides a way to create a table with size <table size='X'>
@@ -62,9 +62,9 @@ func Prop(name string, value interface{}) string {
 }
 
 func Row(cells ...string) string {
-	return OPEN_ROW + strings.Join(cells, "") + CLOSE_ROW
+	return OpenRow + strings.Join(cells, "") + CloseRow
 }
 
 func Table(rows ...string) string {
-	return OPEN_TABLE + strings.Join(rows, "") + CLOSE_TABLE
+	return OpenTable + strings.Join(rows, "") + CloseTable
 }

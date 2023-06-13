@@ -78,19 +78,19 @@ func tableFilter() {
 
 	// or by using the constants that are defined in the tabconst.go file
 	ctxout.PrintLn(
-		ctxout.OPEN_TABLE,
-		ctxout.OPEN_ROW,
+		ctxout.OpenTable,
+		ctxout.OpenRow,
 		"<tab size='50'>",
 		"hello",
-		ctxout.CLOSE_TAB,
+		ctxout.CloseTab,
 		"<tab size='50'>",
 		"world",
-		ctxout.CLOSE_TAB,
-		ctxout.CLOSE_ROW,
-		ctxout.CLOSE_TABLE,
+		ctxout.CloseTab,
+		ctxout.CloseRow,
+		ctxout.CloseTable,
 	)
 	// also there are some helper functions that can be used to set the size of an tab
-	ctxout.PrintLn(ctxout.OPEN_TABLE_ROW, ctxout.Tab(50), "hello", ctxout.CLOSE_TAB, ctxout.Tab(50), "world", ctxout.CLOSE_TAB_ROW_TABLE)
+	ctxout.PrintLn(ctxout.OpenTableRow, ctxout.Tab(50), "hello", ctxout.CloseTab, ctxout.Tab(50), "world", ctxout.CloseTabRowTable)
 
 	// we can use the ctxout.TabF function to format the tabs
 	// here we use the fill and origin attributes to define how the tabs should be filled
@@ -247,7 +247,7 @@ func tableFilter() {
 	// here we use the table right
 	// and as long as the table is not closed, the content is not printed
 	ctxout.PrintLn("wait for it ...")
-	ctxout.PrintLn(ctxout.OPEN_TABLE)
+	ctxout.PrintLn(ctxout.OpenTable)
 	for i := 0; i < 20; i++ {
 		rndWord1 := createRandomWords(90)
 		rndWord2 := createRandomWords(90)
@@ -264,7 +264,7 @@ func tableFilter() {
 		time.Sleep(time.Millisecond * 100)
 	}
 	// close the table
-	ctxout.PrintLn(ctxout.CLOSE_TABLE)
+	ctxout.PrintLn(ctxout.CloseTable)
 	ctxout.PrintLn(" ---- TADAAAAA")
 	// wait a second
 	time.Sleep(time.Second)

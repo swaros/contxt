@@ -526,12 +526,11 @@ func TestSizeCalculation(t *testing.T) {
 
 }
 
-type utfTesting struct {
-	left  string
-	right string
-}
-
 func TestUtf8Chars(t *testing.T) {
+	type utfTesting struct {
+		left  string
+		right string
+	}
 	to := ctxout.NewTabOut()
 
 	info := &ctxout.PostFilterInfo{

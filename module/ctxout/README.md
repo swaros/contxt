@@ -47,13 +47,13 @@ once added, it will be called on every output, until it is removed.
 ````go
 ctxout.AddPostFilter(ctxout.NewTabOut())
 ctxout.PrintLn(
-			ctxout.Table(
-				ctxout.Row(
-					ctxout.TD("hello", "size=50", "origin=2"),
-					ctxout.TD("world", "size=50", "origin=1"),
-				),
-			),
-		)
+	ctxout.Table(
+		ctxout.Row(
+			ctxout.TD("hello", "size=50", "origin=2"),
+			ctxout.TD("world", "size=50", "origin=1"),
+		),
+	),
+)
 
 ````
 
@@ -83,6 +83,5 @@ go run ./module/ctxout/examples/base.go
 
 this example is made like an little on screen demo app, to show how the output handler behaves.
 so the delay is done by an timer and it is not a performance issue.
-
 
 
