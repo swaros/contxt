@@ -68,3 +68,60 @@ func Row(cells ...string) string {
 func Table(rows ...string) string {
 	return OpenTable + strings.Join(rows, "") + CloseTable
 }
+
+// little helpers to set properties
+func Right() string {
+	return "origin='2'"
+}
+
+func Left() string {
+	return "origin='1'"
+}
+
+func Fill(with string) string {
+	return "fill='" + with + "'"
+}
+
+func Size(size int) string {
+	return "size='" + fmt.Sprintf("%v", size) + "'"
+}
+
+func Origin(origin int) string {
+	return "origin='" + fmt.Sprintf("%v", origin) + "'"
+}
+
+func Fixed() string {
+	return "draw='fixed'"
+}
+
+func Relative() string {
+	return "draw='relative'"
+}
+
+func Content() string {
+	return "draw='content'"
+}
+
+func Extend() string {
+	return "draw='extend'"
+}
+
+func CutNotifier(notifier string) string {
+	return "cut='" + notifier + "'"
+}
+
+func Overflow(mode string) string {
+	return "overflow='" + mode + "'"
+}
+
+func OverflowIgnore() string {
+	return "overflow='ignore'"
+}
+
+func OverflowWrap() string {
+	return "overflow='wrap'"
+}
+
+func OverflowContent(content string) string {
+	return "overflow-content='" + content + "'"
+}

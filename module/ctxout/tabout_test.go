@@ -564,3 +564,186 @@ func TestUtf8Chars(t *testing.T) {
 		}
 	}
 }
+
+// here we are testing the size of the table
+// depending on different terminal sizes
+// and table render options
+
+type testSetups struct {
+	terminalWith int
+	tableSource  string
+	expectedSize int
+}
+
+func newTestSetup(terminalWith int, tableSource string, expectedSize int) *testSetups {
+	return &testSetups{
+		terminalWith: terminalWith,
+		tableSource:  tableSource,
+		expectedSize: expectedSize,
+	}
+}
+
+func new100Setup(tableSource string, expectedSize int) *testSetups {
+	return &testSetups{
+		terminalWith: 100,
+		tableSource:  tableSource,
+		expectedSize: expectedSize,
+	}
+}
+
+func (test *testSetups) assertSize(t *testing.T) *testSetups {
+	t.Helper()
+	to := ctxout.NewTabOut()
+
+	info := &ctxout.PostFilterInfo{
+		Width:      test.terminalWith,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	to.Update(*info)
+
+	result := to.Command(test.tableSource)
+	if ctxout.LenPrintable(result) != test.expectedSize {
+		t.Errorf("Expected length %d but got %d", test.expectedSize, ctxout.LenPrintable(result))
+	}
+	return test
+}
+
+func (test *testSetups) assertContent(t *testing.T, expected string) *testSetups {
+	t.Helper()
+	to := ctxout.NewTabOut()
+
+	info := &ctxout.PostFilterInfo{
+		Width:      test.terminalWith,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	to.Update(*info)
+
+	result := to.Command(test.tableSource)
+	if result != expected {
+		t.Errorf("content is not matching the expectation")
+		t.Errorf(result)
+		t.Errorf("----------- expectation ------------")
+		t.Errorf(expected)
+	}
+	return test
+}
+
+func (test *testSetups) assertTableSource(t *testing.T, expected string) *testSetups {
+	t.Helper()
+	if test.tableSource != expected {
+		t.Errorf("table source is not matching the expectation")
+		t.Errorf(test.tableSource)
+		t.Errorf("---------- expectation -------------")
+		t.Errorf(expected)
+	}
+	return test
+}
+
+func TestSizes(t *testing.T) {
+
+	table := ctxout.Row(
+		ctxout.TD(
+			"hello",
+			ctxout.Prop("size", 50),
+			ctxout.Prop("fill", "+"),
+			ctxout.Prop("origin", 1),
+		),
+	)
+	new100Setup(table, 50).
+		assertSize(t).
+		assertTableSource(t, "<row><tab size='50' fill='+' origin='1'>hello</tab></row>")
+	newTestSetup(50, table, 25).
+		assertSize(t).
+		assertContent(t, "hello++++++++++++++++++++")
+
+	table = ctxout.Row(
+		ctxout.TD(
+			"this will be the text for the first row what should be a long text",
+			ctxout.Size(75),
+			ctxout.Fill("+"),
+			ctxout.Right(),
+		),
+		ctxout.TD(
+			"this is the second row and have also a long text to check if we still get the right size",
+			ctxout.Size(25),
+			ctxout.Fill("-"),
+			ctxout.Left(),
+		),
+	)
+	new100Setup(table, 100).
+		assertSize(t).
+		assertTableSource(t, "<row><tab size='75' fill='+' origin='2'>this will be the text for the first row what should be a long text</tab><tab size='25' fill='-' origin='1'>this is the second row and have also a long text to check if we still get the right size</tab></row>").
+		assertContent(t, "+++++++++this will be the text for the first row what should be a long text...ill get the right size")
+
+	newTestSetup(50, table, 50).
+		assertSize(t).
+		assertContent(t, "this will be the text for the first......ight size")
+
+	newTestSetup(25, table, 25).
+		assertSize(t).
+		assertContent(t, "this will be the......ize")
+
+	// test combination of content size and extended size
+	table = ctxout.Row(
+		ctxout.TD(
+			"this will be the text for the first row what should be a long text",
+			ctxout.Size(75),
+			ctxout.Fill("+"),
+			ctxout.Content(),
+		),
+		ctxout.TD(
+			"this is the second row and have also a long text to check if we still get the right size",
+			ctxout.Size(25),
+			ctxout.Fill("-"),
+			ctxout.Extend(),
+		),
+	)
+	new100Setup(table, 100).
+		assertSize(t).
+		assertTableSource(t, "<row><tab size='75' fill='+' draw='content'>this will be the text for the first row what should be a long text</tab><tab size='25' fill='-' draw='extend'>this is the second row and have also a long text to check if we still get the right size</tab></row>").
+		assertContent(t, "this will be the text for the first row what should be a long textthis is the second row and have...")
+
+}
+
+// this test contains the last TDD cycle
+// so it was used to have one test failing
+// and the debugger was not running in other context
+func TestSizesOnce(t *testing.T) {
+	t.Skip("this test contains the last TDD cycle so it was used to have one test failing and the debugger was not running in other context")
+	table := ctxout.Table(
+		ctxout.Row(
+			ctxout.TD(
+				"this will be the text for the first row what should be a long text",
+				ctxout.Size(75),
+				ctxout.Fill("+"),
+				ctxout.Content(),
+			),
+			ctxout.TD(
+				"this is the second row and have also a long text to check if we still get the right size",
+				ctxout.Size(25),
+				ctxout.Fill("-"),
+				ctxout.Extend(),
+			),
+		), ctxout.Row(
+			ctxout.TD(
+				"a small text",
+				ctxout.Size(75),
+				ctxout.Fill("+"),
+				ctxout.Content(),
+			),
+			ctxout.TD(
+				"this is the second row and have also a long text to check if we still get the right size",
+				ctxout.Size(25),
+				ctxout.Fill("-"),
+				ctxout.Extend(),
+			),
+		),
+	)
+	new100Setup(table, 100).
+		assertSize(t).
+		//assertTableSource(t, "<row><tab size='75' fill='+' draw='content'>this will be the text for the first row what should be a long text</tab><tab size='25' fill='-' draw='extend'>this is the second row and have also a long text to check if we still get the right size</tab></row>").
+		assertContent(t, "this will be the text for the first row what should be a long textthis is the second row and have...")
+
+}

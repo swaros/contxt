@@ -55,6 +55,7 @@ func (th *tableHandle) GetRow(index int) *tabRow {
 	return nil
 }
 
+// remember the calculated size of a column
 func (tb *tableHandle) SetSizeCalculation(index int, size int) {
 	tb.sizeCalculations[index] = size
 }
