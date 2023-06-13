@@ -12,32 +12,32 @@ const (
 	TabStart   = "<tab"
 	TabEnd     = "</tab>"
 	// defines the size of the cell in relation to the max length of the screen. 10 means 10% of the screen
-	ATTR_SIZE = "size"
+	AttrSize = "size"
 	// defines the char if the cell should fill the remaining space of the cell
 	// default is  " " (space)
 	ATTR_FILL = "fill"
 	// defines how the cell should be aligned
 	// 1 = left, 2 = right
-	ATTR_ORIGIN = "origin"
+	AttrOrigin = "origin"
 	// defines how the space is calculated.
 	// fixed = if the calculated size is bigger than the cell size, then we will use the cell size
 	// extend = fill the rest of the row with the space if prevoius fixed or content cells are smaller than the calculated size
 	// content = we will use the max size of the content if they is smaller than the calculated size
-	ATTR_DRAW = "draw"
+	AttrDraw = "draw"
 	// if the text is cutted, then this string will be added to the end of the text
-	ATTR_CUT_ADD = "cut-add"
+	AttrCutAdd = "cut-add"
 	// this is the mode how the overflow is handled. ignore = the text is ignored, wrap = wrap the text
-	ATTR_OVERFLOW = "overflow"
+	AttrOverflow = "overflow"
 	// this is the suffix for the cell that will be added to the content all the time. is ment for colorcodes. here and clear code is usually used
-	ATTR_SUFFIX = "suffix"
+	AttrSuffix = "suffix"
 	// this is the prefix for the cell that will be placed in front of the content all the time. is ment for colorcodes
-	ATTR_PREFIX = "prefix"
+	AttrPrefix = "prefix"
 	// additonal margin for the cell. this will be subtracted from the cell size
-	ATTR_MARGIN = "margin"
+	AttrMargin = "margin"
 	// the content will be shown, cuttet and alligned depending the origin value
-	OVERFLOW_ANY = "any"
+	OverflowAny = "any"
 	// we will keep the content and wrap it. this will increase the height of the row if we need more space
-	OVERFLOW_WORDWRAP = "wordwrap"
+	OverflowWordWrap = "wordwrap"
 )
 
 type TabOut struct {
@@ -140,14 +140,14 @@ func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 			if strings.HasPrefix(token.Text, "<tab") {
 				tSize = 0 // markup have no text length
 				tabCell.fillChar = token.GetProperty(ATTR_FILL, " ").(string)
-				tabCell.Size = token.GetProperty(ATTR_SIZE, 0).(int)
-				tabCell.Origin = token.GetProperty(ATTR_ORIGIN, 0).(int)
-				tabCell.drawMode = token.GetProperty(ATTR_DRAW, "relative").(string)
-				tabCell.cutNotifier = token.GetProperty(ATTR_CUT_ADD, "...").(string)
-				tabCell.overflowMode = token.GetProperty(ATTR_OVERFLOW, "ignore").(string)
-				tabCell.anySuffix = token.GetProperty(ATTR_SUFFIX, "").(string)
-				tabCell.anyPrefix = token.GetProperty(ATTR_PREFIX, "").(string)
-				tabCell.margin = token.GetProperty(ATTR_MARGIN, 0).(int)
+				tabCell.Size = token.GetProperty(AttrSize, 0).(int)
+				tabCell.Origin = token.GetProperty(AttrOrigin, 0).(int)
+				tabCell.drawMode = token.GetProperty(AttrDraw, "relative").(string)
+				tabCell.cutNotifier = token.GetProperty(AttrCutAdd, "...").(string)
+				tabCell.overflowMode = token.GetProperty(AttrOverflow, "ignore").(string)
+				tabCell.anySuffix = token.GetProperty(AttrSuffix, "").(string)
+				tabCell.anyPrefix = token.GetProperty(AttrPrefix, "").(string)
+				tabCell.margin = token.GetProperty(AttrMargin, 0).(int)
 			} else if strings.HasPrefix(token.Text, "</tab>") {
 				t.rows = append(t.rows, *tabCell)
 				tabCell = NewTabCell(tabRow)

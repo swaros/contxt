@@ -15,25 +15,26 @@ func (c *CmdExecutorImpl) drawRow(label, labelColor, content, contentColor, info
 			ctxout.ForeYellow, "<sign runident> ", ctxout.CleanTag,
 			ctxout.TD(
 				label,
-				ctxout.Prop(ctxout.ATTR_SIZE, 11),
-				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
-				ctxout.Prop(ctxout.ATTR_PREFIX, labelColor),
-				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+				ctxout.Prop(ctxout.AttrSize, 15),
+				ctxout.Prop(ctxout.AttrOrigin, 2),
+				ctxout.Prop(ctxout.AttrPrefix, labelColor),
+				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+				ctxout.Margin(4), // runundten 4 spaces (run + space * 2 )
 			),
 			ctxout.ForeYellow, "<sign stopident> ", ctxout.CleanTag,
 			ctxout.TD(
 				content,
-				ctxout.Prop(ctxout.ATTR_SIZE, 80),
-				ctxout.Prop(ctxout.ATTR_PREFIX, contentColor),
-				ctxout.Prop(ctxout.ATTR_OVERFLOW, "wordwrap"),
-				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+				ctxout.Prop(ctxout.AttrSize, 80),
+				ctxout.Prop(ctxout.AttrPrefix, contentColor),
+				ctxout.Prop(ctxout.AttrOverflow, "wordwrap"),
+				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
 			),
 			ctxout.TD(
 				info,
-				ctxout.Prop(ctxout.ATTR_SIZE, 5),
-				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
-				ctxout.Prop(ctxout.ATTR_PREFIX, infoColor),
-				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+				ctxout.Prop(ctxout.AttrSize, 5),
+				ctxout.Prop(ctxout.AttrOrigin, 2),
+				ctxout.Prop(ctxout.AttrPrefix, infoColor),
+				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
 			),
 		),
 	)
@@ -44,24 +45,24 @@ func (c *CmdExecutorImpl) drawTwoRow(content, contentColor, info, infoColor stri
 		ctxout.Row(
 			ctxout.TD(
 				ctxout.BaseSignScreen+" > ",
-				ctxout.Prop(ctxout.ATTR_SIZE, "5"),
-				ctxout.Prop(ctxout.ATTR_PREFIX, ctxout.ForeBlue),
-				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
-				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+				ctxout.Prop(ctxout.AttrSize, "5"),
+				ctxout.Prop(ctxout.AttrPrefix, ctxout.ForeBlue),
+				ctxout.Prop(ctxout.AttrOrigin, 2),
+				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
 			),
 			ctxout.TD(
 				content,
-				ctxout.Prop(ctxout.ATTR_SIZE, "90"),
-				ctxout.Prop(ctxout.ATTR_PREFIX, contentColor),
-				ctxout.Prop(ctxout.ATTR_OVERFLOW, "wordwrap"),
-				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+				ctxout.Prop(ctxout.AttrSize, "90"),
+				ctxout.Prop(ctxout.AttrPrefix, contentColor),
+				ctxout.Prop(ctxout.AttrOverflow, "wordwrap"),
+				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
 			),
 			ctxout.TD(
 				"| "+info,
-				ctxout.Prop(ctxout.ATTR_SIZE, "4"),
-				ctxout.Prop(ctxout.ATTR_ORIGIN, 2),
-				ctxout.Prop(ctxout.ATTR_PREFIX, infoColor),
-				ctxout.Prop(ctxout.ATTR_SUFFIX, ctxout.CleanTag),
+				ctxout.Prop(ctxout.AttrSize, "4"),
+				ctxout.Prop(ctxout.AttrOrigin, 2),
+				ctxout.Prop(ctxout.AttrPrefix, infoColor),
+				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
 			),
 		),
 	)
@@ -89,7 +90,7 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				switch tm.Context {
 				case "command":
 					c.drawRow(
-						tm.Target+" "+ctxout.BaseSignScreen+" ",
+						tm.Target,
 						ctxout.ForeYellow+ctxout.BoldTag,
 						tm.Info,
 						ctxout.ForeDarkGrey,
@@ -99,11 +100,11 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 
 				case "needs_required":
 					c.drawRow(
-						tm.Target+" "+ctxout.BaseSignDebug+" ",
+						tm.Target,
 						ctxout.ForeLightCyan,
 						tm.Info,
 						ctxout.ForeDarkGrey,
-						"req",
+						ctxout.BaseSignDebug,
 						ctxout.ForeBlue,
 					)
 
