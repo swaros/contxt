@@ -18,11 +18,13 @@ config:
     - ./imports/vscode.workspace.yml vscode-ws
     - ./imports/go_build.tpl build-action
     - ./imports/go_test.tpl test-action
+    - ./imports/codehead.tpl codehead
   variables:
       include-dev-externals: ""
       configmodul: github.com/swaros/contxt/module/configure
       coverage-report: ""
       depbot-file: .github/dependabot.yml
+      licence_keyword: "MIT License"
 
 ###### contxt welcome message
 ###### just to display default variables
@@ -479,3 +481,22 @@ task:
       - echo "check versions"
       - contxt version
 
+### licence check
+  - id: licence-header-check
+    options:
+      displaycmd: false
+      invisible: false
+    require:
+      system: linux        
+    script:
+      - |
+       GOFILES=$(find . -type f -name "*.go" ! -name "*_test.go" ! -path "./vendor/*" ! -path "./bin/*")
+       while IFS= read -r gfile; do
+          #echo "... $gfile ..."
+          # check if file has licence header
+          if ! grep -q "${licence_keyword}" "$gfile"; then
+            echo "ERROR: $gfile is missing licence header"
+          else
+            echo "OK: $gfile"            
+          fi
+       done <<< "$GOFILES"
