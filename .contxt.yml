@@ -487,7 +487,9 @@ task:
       displaycmd: false
       invisible: false
     require:
-      system: linux        
+      system: linux
+    next:
+      - test-each       
     script:
       - |
        GOFILES=$(find . -type f -name "*.go" ! -name "*_test.go" ! -path "./vendor/*" ! -path "./bin/*")
@@ -495,7 +497,9 @@ task:
           #echo "... $gfile ..."
           # check if file has licence header
           if ! grep -q "${licence_keyword}" "$gfile"; then
-            echo "ERROR: $gfile is missing licence header"
+            echo "MISSING: $gfile is missing licence header"
+            FCNT=$(cat $gfile)
+            echo "${codehead} $FCNT" > $gfile
           else
             echo "OK: $gfile"            
           fi
