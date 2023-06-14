@@ -1,5 +1,5 @@
 // MIT License
-// 
+//
 // Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
