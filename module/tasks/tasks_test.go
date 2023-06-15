@@ -59,7 +59,7 @@ func TestWithRequirementCheck(t *testing.T) {
 		for _, m := range msg {
 			switch t := m.(type) {
 			case tasks.MsgExecOutput: // this will be the output of the command
-				messages = append(messages, string(t))
+				messages = append(messages, string(t.Output))
 			}
 		}
 
@@ -113,7 +113,7 @@ func TestMultipleTask(t *testing.T) {
 			switch mt := m.(type) {
 			case tasks.MsgExecOutput: // this will be the output of the command
 				t.Logf("cmd output: %v", msg)
-				messages = append(messages, string(mt))
+				messages = append(messages, string(mt.Output))
 			}
 		}
 
@@ -205,7 +205,7 @@ task:
 			switch mt := m.(type) {
 			case tasks.MsgExecOutput: // this will be the output of the command
 				t.Logf("cmd output: %v", msg)
-				messages = append(messages, string(mt))
+				messages = append(messages, string(mt.Output))
 			}
 		}
 
@@ -259,7 +259,7 @@ task:
 				switch mt := m.(type) {
 				case tasks.MsgExecOutput: // this will be the output of the command
 					t.Logf("cmd output: %v", msg)
-					messages = append(messages, string(mt))
+					messages = append(messages, string(mt.Output))
 				}
 			}
 
@@ -313,7 +313,7 @@ task:
 				switch mt := m.(type) {
 				case tasks.MsgExecOutput: // this will be the output of the command
 					t.Logf("cmd output: %v", msg)
-					messages = append(messages, string(mt))
+					messages = append(messages, string(mt.Output))
 				}
 			}
 
@@ -372,7 +372,7 @@ task:
 				switch mt := m.(type) {
 				case tasks.MsgExecOutput: // this will be the output of the command
 					t.Logf("cmd output: %v", msg)
-					messages = append(messages, string(mt))
+					messages = append(messages, string(mt.Output))
 				}
 			}
 
@@ -437,7 +437,7 @@ task:
 				switch mt := m.(type) {
 				case tasks.MsgExecOutput: // this will be the output of the command
 					t.Logf("cmd output: %v", msg)
-					messages = append(messages, string(mt))
+					messages = append(messages, string(mt.Output))
 				}
 			}
 
@@ -497,7 +497,7 @@ task:
 				switch mt := m.(type) {
 				case tasks.MsgExecOutput: // this will be the output of the command
 					t.Logf("cmd output: %v", msg)
-					messages = append(messages, string(mt))
+					messages = append(messages, string(mt.Output))
 				}
 			}
 

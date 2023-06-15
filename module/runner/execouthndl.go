@@ -33,9 +33,19 @@ import (
 )
 
 func (c *CmdExecutorImpl) drawRow(label, labelColor, content, contentColor, info, infoColor string) {
+	c.drawRowWithLabels("", "", label, labelColor, content, contentColor, info, infoColor)
+}
+
+func (c *CmdExecutorImpl) drawRowWithLabels(leftLabel, rightLabel, label, labelColor, content, contentColor, info, infoColor string) {
+	if leftLabel == "" {
+		leftLabel = "<sign runident> "
+	}
+	if rightLabel == "" {
+		rightLabel = "<sign stopident> "
+	}
 	c.Println(
 		ctxout.Row(
-			ctxout.ForeYellow, "<sign runident> ", ctxout.CleanTag,
+			ctxout.ForeYellow, leftLabel, ctxout.CleanTag,
 			ctxout.TD(
 				label,
 				ctxout.Prop(ctxout.AttrSize, 10),
@@ -44,45 +54,17 @@ func (c *CmdExecutorImpl) drawRow(label, labelColor, content, contentColor, info
 				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
 				ctxout.Margin(4), // 4 spaces (run + space * 2 )
 			),
-			ctxout.ForeYellow, "<sign stopident> ", ctxout.CleanTag,
+			ctxout.ForeYellow, rightLabel, ctxout.CleanTag,
 			ctxout.TD(
 				content,
 				ctxout.Prop(ctxout.AttrSize, 85),
 				ctxout.Prop(ctxout.AttrPrefix, contentColor),
-				//ctxout.Prop(ctxout.AttrOverflow, "wrap"),
+				ctxout.Prop(ctxout.AttrOverflow, "wrap"),
 				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
 			),
 			ctxout.TD(
 				info,
 				ctxout.Prop(ctxout.AttrSize, 5),
-				ctxout.Prop(ctxout.AttrOrigin, 2),
-				ctxout.Prop(ctxout.AttrPrefix, infoColor),
-				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
-			),
-		),
-	)
-}
-
-func (c *CmdExecutorImpl) drawTwoRow(content, contentColor, info, infoColor string) {
-	c.Println(
-		ctxout.Row(
-			ctxout.TD(
-				ctxout.BaseSignScreen+" > ",
-				ctxout.Prop(ctxout.AttrSize, "5"),
-				ctxout.Prop(ctxout.AttrPrefix, ctxout.ForeBlue),
-				ctxout.Prop(ctxout.AttrOrigin, 2),
-				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
-			),
-			ctxout.TD(
-				content,
-				ctxout.Prop(ctxout.AttrSize, "90"),
-				ctxout.Prop(ctxout.AttrPrefix, contentColor),
-				ctxout.Prop(ctxout.AttrOverflow, "wordwrap"),
-				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
-			),
-			ctxout.TD(
-				"| "+info,
-				ctxout.Prop(ctxout.AttrSize, "4"),
 				ctxout.Prop(ctxout.AttrOrigin, 2),
 				ctxout.Prop(ctxout.AttrPrefix, infoColor),
 				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
@@ -155,10 +137,10 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 
 				case "wait_next_done":
 					c.drawRow(
-						ctxout.BaseSignSuccess+" DONE",
+						ctxout.BaseSignSuccess+" "+tm.Target,
+						ctxout.ForeGreen,
+						"DONE ...",
 						ctxout.ForeLightGreen,
-						tm.Target,
-						ctxout.ForeLightYellow,
 						ctxout.BaseSignSuccess+" ",
 						ctxout.ForeBlue,
 					)
@@ -224,10 +206,14 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					ctxout.CleanTag,
 				)
 			case tasks.MsgExecOutput:
-				c.drawTwoRow(
-					systools.AnyToStrNoTabs(tm),
-					ctxout.CleanTag,
-					ctxout.BaseSignDebug,
+				c.drawRowWithLabels(
+					" ",
+					ctxout.ForeBlue+"<sign runident> ",
+					tm.Target,
+					ctxout.ForeWhite+ctxout.BackBlue,
+					systools.AnyToStrNoTabs(tm.Output),
+					ctxout.ResetCode,
+					ctxout.BaseSignScreen+" ",
 					ctxout.ForeLightBlue,
 				)
 

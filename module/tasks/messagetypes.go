@@ -52,5 +52,8 @@ type MsgError struct {
 	Target    string
 	Reference string
 }
-type MsgExecOutput string
+type MsgExecOutput struct {
+	Target string
+	Output string
+}
 type MsgStickCursor bool

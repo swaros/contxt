@@ -28,7 +28,7 @@ func createRuntimeByYamlStringWithAllMsg(yamlString string, messages *[]string, 
 			for _, m := range msg {
 				switch mt := m.(type) {
 				case tasks.MsgExecOutput: // this will be the output of the command
-					*messages = append(*messages, string(mt))
+					*messages = append(*messages, string(mt.Output))
 				case tasks.MsgError: // this will be the error of the command
 					if errors != nil {
 						*errors = append(*errors, mt.Err)

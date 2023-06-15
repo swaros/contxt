@@ -72,11 +72,11 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 				}
 
 				if err != nil { // if we have an error we print it
-					t.out(MsgError(MsgError{Err: err, Reference: codeLine, Target: t.target}))
+					t.out(MsgError(MsgError{Err: err, Reference: codeLine, Target: currentTask.ID}))
 				}
 
-				t.out(MsgExecOutput(outStr))         // prints the output from the running process
-				if currentTask.Options.Stickcursor { // cursor stick handling
+				t.out(MsgExecOutput(MsgExecOutput{Target: currentTask.ID, Output: outStr})) // prints the output from the running process
+				if currentTask.Options.Stickcursor {                                        // cursor stick handling
 					t.out(MsgStickCursor(false)) // trigger the stick cursor after output
 				}
 			}
@@ -101,7 +101,7 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 	// check execution codes from the executer
 	if execErr != nil {
 		if currentTask.Options.Displaycmd {
-			t.out(MsgError(MsgError{Err: execErr, Reference: codeLine, Target: t.target}))
+			t.out(MsgError(MsgError{Err: execErr, Reference: codeLine, Target: currentTask.ID}))
 		}
 
 	}
@@ -113,7 +113,7 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 		if currentTask.Options.IgnoreCmdError {
 			if currentTask.Stopreasons.Onerror {
 				t.out(
-					MsgError(MsgError{Err: execErr, Reference: codeLine, Target: t.target}),
+					MsgError(MsgError{Err: execErr, Reference: codeLine, Target: currentTask.ID}),
 					MsgCommand(codeLine),
 					MsgNumber(realExitCode),
 				)
@@ -124,7 +124,7 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 			t.getLogger().WithFields(logrus.Fields{"processCode": realExitCode, "error": execErr}).Error("task exection error")
 			ErrorMsg := errors.New(codeLine + " fails with error: " + execErr.Error())
 			t.out(
-				MsgError(MsgError{Err: ErrorMsg, Reference: codeLine, Target: t.target}),
+				MsgError(MsgError{Err: ErrorMsg, Reference: codeLine, Target: currentTask.ID}),
 				MsgCommand(codeLine),
 				MsgNumber(realExitCode),
 			)
