@@ -222,13 +222,15 @@ task:
        - "#@var-to-file depandabot ${depbot-file}"
 
 #### update dependencies for all modules
-  - id: cleanup-dependencies
+  - id: update-dependencies
     script:
     {{- range $k, $test := $.module }}
     {{- if $test.local}}
       - |
-       cd {{ $test.modul }}
+       cd ${CTX_PWD}/module/{{ $test.modul }}
        go mod tidy
+       cd ${CTX_PWD}
+       go test  -failfast ./module/{{ $test.modul }}/./...
     {{- end }}
     {{- end }}
       - git status
