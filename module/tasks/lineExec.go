@@ -42,15 +42,20 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 	if t.phHandler != nil {
 		replacedLine = t.phHandler.HandlePlaceHolderWithScope(codeLine, t.arguments) // placeholders
 	}
-	t.out(MsgTarget{Target: currentTask.ID, Context: "command", Info: replacedLine}) // output the command
-	t.setPh("RUN."+currentTask.ID+".CMD.LAST", replacedLine)                         // set or overwrite the last script command for the target
-	t.setPh("RUN.SCRIPT_LINE", replacedLine)                                         // set or overwrite the last script command for the target
+	if currentTask.Options.Displaycmd {
+		t.out(MsgTarget{Target: currentTask.ID, Context: "command", Info: replacedLine}) // output the command
+	}
+	t.setPh("RUN."+currentTask.ID+".CMD.LAST", replacedLine) // set or overwrite the last script command for the target
+	t.setPh("RUN.SCRIPT_LINE", replacedLine)                 // set or overwrite the last script command for the target
 
 	runCmd, runArgs := t.commandFallback.GetMainCmd(currentTask.Options) // get the main command and arguments
 	t.SetMainCmd(runCmd, runArgs...)                                     // set the main command and arguments
 
 	// here we execute the current script line
-	execCode, realExitCode, execErr := t.ExecuteScriptLine(runCmd, runArgs, replacedLine,
+	execCode, realExitCode, execErr := t.ExecuteScriptLine(
+		runCmd,
+		runArgs,
+		replacedLine,
 		func(logLine string, err error) bool { // callback for any logline
 			t.setPh("RUN."+currentTask.ID+".LOG.LAST", logLine) // set or overwrite the last script output for the target
 			if currentTask.Listener != nil {                    // do we have listener?
@@ -70,7 +75,7 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 					t.out(MsgError(MsgError{Err: err, Reference: codeLine, Target: t.target}))
 				}
 
-				t.out(MsgExecOutput(outStr))         // prints the codeline
+				t.out(MsgExecOutput(outStr))         // prints the output from the running process
 				if currentTask.Options.Stickcursor { // cursor stick handling
 					t.out(MsgStickCursor(false)) // trigger the stick cursor after output
 				}
