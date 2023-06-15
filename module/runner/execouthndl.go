@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package runner
+package runner
 
 import (
 	"sync"
@@ -34,23 +34,22 @@ import (
 
 func (c *CmdExecutorImpl) drawRow(label, labelColor, content, contentColor, info, infoColor string) {
 	c.Println(
-
 		ctxout.Row(
 			ctxout.ForeYellow, "<sign runident> ", ctxout.CleanTag,
 			ctxout.TD(
 				label,
-				ctxout.Prop(ctxout.AttrSize, 15),
+				ctxout.Prop(ctxout.AttrSize, 10),
 				ctxout.Prop(ctxout.AttrOrigin, 2),
 				ctxout.Prop(ctxout.AttrPrefix, labelColor),
 				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
-				ctxout.Margin(4), // runundten 4 spaces (run + space * 2 )
+				ctxout.Margin(4), // 4 spaces (run + space * 2 )
 			),
 			ctxout.ForeYellow, "<sign stopident> ", ctxout.CleanTag,
 			ctxout.TD(
 				content,
-				ctxout.Prop(ctxout.AttrSize, 80),
+				ctxout.Prop(ctxout.AttrSize, 85),
 				ctxout.Prop(ctxout.AttrPrefix, contentColor),
-				ctxout.Prop(ctxout.AttrOverflow, "wordwrap"),
+				//ctxout.Prop(ctxout.AttrOverflow, "wrap"),
 				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
 			),
 			ctxout.TD(
@@ -103,13 +102,15 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 			switch tm := m.(type) {
 
 			case tasks.MsgCommand:
-				c.Print(
-					ctxout.ForeLightGreen,
-					"COMMAND",
-					ctxout.ForeGreen,
-					tm,
-					ctxout.CleanTag,
+				c.drawRow(
+					"executed command",
+					ctxout.ForeYellow+ctxout.BoldTag,
+					systools.AnyToStrNoTabs(tm),
+					ctxout.ForeDarkGrey,
+					ctxout.BaseSignScreen+" ",
+					ctxout.ForeYellow,
 				)
+
 			case tasks.MsgTarget:
 				switch tm.Context {
 				case "command":
@@ -138,8 +139,8 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 						ctxout.ForeYellow,
 						"request to start ... "+tm.Info,
 						ctxout.ForeBlue,
-						"launch",
-						ctxout.ForeBlue,
+						ctxout.BaseSignScreen+" ",
+						ctxout.ForeMagenta,
 					)
 
 				case "needs_done":
@@ -154,10 +155,10 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 
 				case "wait_next_done":
 					c.drawRow(
-						ctxout.BaseSignSuccess+tm.Target,
+						ctxout.BaseSignSuccess+" DONE",
 						ctxout.ForeLightGreen,
-						" ..back from need ..."+tm.Info,
-						ctxout.ForeDarkGrey,
+						tm.Target,
+						ctxout.ForeLightYellow,
 						ctxout.BaseSignSuccess+" ",
 						ctxout.ForeBlue,
 					)
@@ -204,13 +205,16 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					ctxout.CleanTag,
 				)
 			case tasks.MsgError:
-				c.Println(
+				c.drawRow(
+					tm.Target,
+					ctxout.ForeLightYellow+ctxout.BoldTag+ctxout.BackRed,
+					tm.Err.Error(),
 					ctxout.ForeLightRed,
-					"ERROR",
-					ctxout.ForeRed,
-					tm.Error(),
-					ctxout.CleanTag,
+					" "+ctxout.BaseSignError+" ",
+					//"error",
+					ctxout.ForeYellow+ctxout.BoldTag+ctxout.BackRed,
 				)
+
 			case tasks.MsgInfo:
 				c.Println(
 					ctxout.ForeYellow,

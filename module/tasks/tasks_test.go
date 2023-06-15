@@ -934,11 +934,11 @@ task:
 	}
 }
 
-func assertErrormsgContains(t *testing.T, expected string, actual []error) {
+func assertErrormsgContains(t *testing.T, expected string, actual []error) bool {
 	t.Helper()
 	for _, msg := range actual {
 		if strings.Contains(msg.Error(), expected) {
-			return
+			return true // all fine
 		}
 	}
 	formsg := []string{}
@@ -947,7 +947,8 @@ func assertErrormsgContains(t *testing.T, expected string, actual []error) {
 	}
 	_, file, line, _ := runtime.Caller(1)
 	label := fmt.Sprintf("%s:%d", file, line)
-	t.Errorf(label+"Error message not found: %s in [%s]", expected, strings.Join(formsg, ", "))
+	t.Errorf(label+" Error message not found:\n%s\nin\n[%s]", expected, strings.Join(formsg, ", "))
+	return false
 }
 
 func TestTriggerError(t *testing.T) {
@@ -1157,6 +1158,11 @@ task:
         - will not work anyway
         
 `
+	// the whitelist is used to linit the tests to some targets for debugging.
+	// if some api changes happens, it is hard to step through all tests.
+	// so this list should not have any content if this file is checked in.
+	// (if this slice is empty, it will be ignored)
+	whiteList := []string{}
 	messages := []string{}
 	errorMsg := []error{}
 	targetUpdates := []string{}
@@ -1175,36 +1181,51 @@ task:
 		testRuns := []TestRuns{
 			{target: "base1", expectedCode: 0, expectInMessages: "reaction"},
 			{target: "base2", expectedCode: 0, expectInMessages: "reaction"},
-			{target: "base3", expectedCode: 0, expectedError: "trigger-defined-without-action"},
+			{target: "base3", expectedCode: 0, expectedError: "trigger defined without any action"},
 			{target: "base4", expectedCode: 0, targetUpdate: "notExists:not_found[]"},
 			{target: "base5", expectedCode: 0, expectInMessages: "reaction"},
-			{target: "base6", expectedCode: 101, targetUpdate: "base6:error-catch-by-onerror[exit status 1]", expectInMessages: "exit status 1", expectedError: "exit status 1", linuxOnly: true},
-			{target: "base7", expectedCode: 102, targetUpdate: "base7:execution-error-ignored[exec: \"not-existing-command\": executable file not found in $PATH]", expectedError: "exec: \"not-existing-command\": executable file not found in $PATH", linuxOnly: true},
+			{target: "base6", expectedCode: 101, expectInMessages: "exit status 1", expectedError: "exit status 1", linuxOnly: true},
+			{target: "base7", expectedCode: 102, expectedError: "exec: \"not-existing-command\": executable file not found in $PATH", linuxOnly: true},
 		}
-
+		taskMain.SetHardExistToAllTasks(false) // we set the hard exit to false, so we can test the exit codes
 		for _, testRun := range testRuns {
+			if len(whiteList) == 0 || systools.StringInSlice(testRun.target, whiteList) {
+				if (testRun.linuxOnly && runtime.GOOS == "linux") || !testRun.linuxOnly {
+					// reset the messages and error messages
+					messages = []string{}
+					errorMsg = []error{}
+					targetUpdates = []string{}
 
-			if (testRun.linuxOnly && runtime.GOOS == "linux") || !testRun.linuxOnly {
-				// reset the messages and error messages
-				messages = []string{}
-				errorMsg = []error{}
-				targetUpdates = []string{}
+					code := taskMain.RunTarget(testRun.target, true) // we run the task
+					if code != testRun.expectedCode {                // we expect a code 0
+						t.Errorf("Expected code %d, got %d", testRun.expectedCode, code)
+					}
+					// if we expect a error message, we check if it is in the error messages
+					if testRun.expectedError != "" {
+						if alfine := assertErrormsgContains(t, testRun.expectedError, errorMsg); !alfine {
+							t.Errorf("Failed Test for Target [%s] (check expected error message)", testRun.target)
+						}
+					}
+					// if we expect a message, we check if it is in the messages
+					if testRun.expectInMessages != "" {
+						if allFine := assert.Contains(
+							t,
+							messages,
+							testRun.expectInMessages,
+							testRun.expectInMessages+" not found in messages ["+strings.Join(messages, ",")+"]"); !allFine {
+							t.Errorf("Failed Test for Target [%s] (check expected message)", testRun.target)
+						}
+					}
 
-				code := taskMain.RunTarget(testRun.target, true) // we run the task
-				if code != testRun.expectedCode {                // we expect a code 0
-					t.Errorf("Expected code %d, got %d", testRun.expectedCode, code)
-				}
-				// if we expect a error message, we check if it is in the error messages
-				if testRun.expectedError != "" {
-					assertErrormsgContains(t, testRun.expectedError, errorMsg)
-				}
-				// if we expect a message, we check if it is in the messages
-				if testRun.expectInMessages != "" {
-					assert.Contains(t, messages, testRun.expectInMessages, testRun.expectInMessages+" not found in messages ["+strings.Join(messages, ",")+"]")
-				}
-
-				if testRun.targetUpdate != "" {
-					assert.Contains(t, targetUpdates, testRun.targetUpdate, testRun.targetUpdate+" not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+					if testRun.targetUpdate != "" {
+						if allFine := assert.Contains(
+							t,
+							targetUpdates,
+							testRun.targetUpdate,
+							testRun.targetUpdate+" not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]"); !allFine {
+							t.Errorf("Failed Test for Target [%s] (check expected target Update)", testRun.target)
+						}
+					}
 				}
 			}
 		}

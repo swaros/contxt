@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package systools
+package systools
 
 import (
 	"errors"
@@ -84,9 +84,9 @@ func Exists(path string) (bool, error) {
 	return false, err
 }
 
-// updateExistingFileIfNotContains updates a file if it does not contain a string
+// UpdateExistingFileIfNotContains updates a file if it does not contain a string
 // this is made to avoid multiple updates of the same file
-func updateExistingFileIfNotContains(filename, content, doNotContain string) (bool, error) {
+func UpdateExistingFileIfNotContains(filename, content, doNotContain string) (bool, error) {
 	ok, errDh := Exists(filename)
 	errmsg := ""
 	if errDh == nil && ok {

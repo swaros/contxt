@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package systools
+package systools
 
 import "sort"
 
@@ -33,6 +33,11 @@ func SliceContains(slice []string, search string) bool {
 		}
 	}
 	return false
+}
+
+// Alias for SliceContains
+func StringInSlice(search string, slice []string) bool {
+	return SliceContains(slice, search)
 }
 
 func MapRangeSortedFn(m map[string]any, fn func(key string, value any)) {

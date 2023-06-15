@@ -23,7 +23,6 @@ package tasks
 
 import (
 	"context"
-	"errors"
 	"os"
 	"strings"
 	"time"
@@ -36,11 +35,12 @@ import (
 )
 
 type TaskListExec struct {
-	config   configure.RunConfig
-	watch    *Watchman
-	subTasks map[string]*targetExecuter
-	args     []interface{}
-	logger   *logrus.Logger
+	config                 configure.RunConfig
+	watch                  *Watchman
+	subTasks               map[string]*targetExecuter
+	args                   []interface{}
+	logger                 *logrus.Logger
+	presetHardExistOnError bool
 }
 
 func NewTaskListExec(config configure.RunConfig, adds ...interface{}) *TaskListExec {
@@ -115,11 +115,20 @@ func (e *TaskListExec) findOrCreateTask(target string, scopeVars map[string]stri
 			if task.ID == target {
 				e.args = append(e.args, e.config) // add the config to the args
 				tExec = New(target, scopeVars, e.args...)
+				// take the preset also for any new task
+				tExec.SetHardExitOnError(e.presetHardExistOnError)
 				e.subTasks[target] = tExec
 			}
 		}
 	}
 	return e.applyLogger(tExec)
+}
+
+func (e *TaskListExec) SetHardExistToAllTasks(exitOnErr bool) {
+	e.presetHardExistOnError = exitOnErr
+	for _, task := range e.subTasks {
+		task.SetHardExitOnError(exitOnErr)
+	}
 }
 
 func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars map[string]string) int {
@@ -246,7 +255,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 				}
 				chDirError := os.Chdir(wDir)
 				if chDirError != nil {
-					t.out(MsgError(errors.New("workspace setting seems invalid " + chDirError.Error())))
+					t.out(MsgTarget{Target: target, Context: "workspace-setting-invalid", Info: chDirError.Error()})
 					systools.Exit(systools.ErrorBySystem)
 				}
 			}

@@ -45,6 +45,7 @@ type targetExecuter struct {
 	dataHandler     DataMapHandler
 	watch           *Watchman
 	commandFallback MainCmdSetter
+	hardExitOnError bool
 }
 
 type emptyCmd struct{}
@@ -56,8 +57,9 @@ func (e emptyCmd) GetMainCmd(cfg configure.Options) (string, []string) {
 func New(target string, arguments map[string]string, any ...interface{}) *targetExecuter {
 
 	t := &targetExecuter{
-		target:    target,
-		arguments: arguments,
+		target:          target,
+		arguments:       arguments,
+		hardExitOnError: true,
 	}
 
 	for i := 0; i < len(any); i++ {
@@ -104,6 +106,11 @@ func New(target string, arguments map[string]string, any ...interface{}) *target
 	}
 
 	t.reInitialize()
+	return t
+}
+
+func (t *targetExecuter) SetHardExitOnError(hardExit bool) *targetExecuter {
+	t.hardExitOnError = hardExit
 	return t
 }
 

@@ -48,7 +48,6 @@ func Init() error {
 
 	// enable the sign filter if possible
 	// in current ctxout version, must be done before NewTabOut
-	fmt.Println("checking for unicode support")
 	if runtime.GOOS != "windows" && systools.IsStdOutTerminal() {
 		// check if unicode is supported. if not, disable the sign filter
 		// this is the only way i see to check for unicode support

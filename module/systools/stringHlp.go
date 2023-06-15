@@ -22,7 +22,9 @@
 
 // AINC-NOTE-0815
 
- package systools
+// a collection of string helper functions
+
+package systools
 
 import (
 	"errors"

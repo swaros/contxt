@@ -92,11 +92,11 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 						inIfState = true
 						ifState = leftEq == rightEq
 					} else {
-						t.out(MsgError(errors.New("invalid usage " + equalsMark + " need: str1 str2")))
+						t.out(MsgError(MsgError{Err: errors.New("invalid usage " + equalsMark + " need: str1 str2"), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + equalsMark + " can not be used in another if")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + equalsMark + " can not be used in another if"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 
@@ -109,12 +109,12 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 						ifState = leftEq == rightEq
 						t.getLogger().WithFields(logrus.Fields{"condition": ifState, "left": leftEq, "right": rightEq}).Debug(equalsMark)
 					} else {
-						t.out(MsgError(errors.New("invalid usage " + equalsMark + " need: str1 str2")))
+						t.out(MsgError(MsgError{Err: errors.New("invalid usage " + equalsMark + " need: str1 str2"), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + equalsMark + " can not be used in another if")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + equalsMark + " can not be used in another if"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 
@@ -127,11 +127,11 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 						ifState = leftEq != rightEq
 						t.getLogger().WithFields(logrus.Fields{"condition": ifState, "left": leftEq, "right": rightEq}).Debug(notEqualsMark)
 					} else {
-						t.out(MsgError(errors.New("invalid usage " + notEqualsMark + " need: str1 str2")))
+						t.out(MsgError(MsgError{Err: errors.New("invalid usage " + notEqualsMark + " need: str1 str2"), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + notEqualsMark + " can not be used in another if")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + notEqualsMark + " can not be used in another if"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 
@@ -140,7 +140,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					iterationLines = append(iterationLines, strings.Replace(line, inlineMark+" ", "", 4))
 					t.getLogger().WithField("code", iterationLines).Debug("append to subscript")
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + inlineMark + " only valid while in iteration")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + inlineMark + " only valid while in iteration"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 
@@ -149,11 +149,11 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				if len(parts) >= 3 {
 					err := t.dataHandler.AddJSON(parts[1], strings.Join(parts[2:], ""))
 					if err != nil {
-						t.out(MsgError(errors.New("error while parsing json: " + err.Error())))
+						t.out(MsgError(MsgError{Err: errors.New("error while parsing json: " + err.Error()), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + fromJSONMark + " needs 2 arguments. <keyname> <json-source-string>")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + fromJSONMark + " needs 2 arguments. <keyname> <json-source-string>"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 
@@ -179,19 +179,19 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 							"process-exit": realExitCode,
 							"key":          keyname,
 							"cmd":          restSlice}).Error("execute for import-json-exec failed")
-						t.out(MsgError(errors.New("error while executing command: " + execErr.Error())))
+						t.out(MsgError(MsgError{Err: errors.New("error while executing command: " + execErr.Error()), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					} else {
 
 						err := t.dataHandler.AddJSON(keyname, returnValue)
 						if err != nil {
 							t.getLogger().WithField("error-on-parsing-string", returnValue).Debug("result of command")
-							t.out(MsgError(errors.New("error while parsing json: " + err.Error())))
+							t.out(MsgError(MsgError{Err: errors.New("error while parsing json: " + err.Error()), Reference: line, Target: t.target}))
 							return true, systools.ErrorCheatMacros, parsedScript
 						}
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + fromJSONCmdMark + " needs 2 arguments at least. <keyname> <bash-command>")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + fromJSONCmdMark + " needs 2 arguments at least. <keyname> <bash-command>"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 			case addvarMark:
@@ -199,11 +199,11 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					setKeyname := parts[1]
 					setValue := strings.Join(parts[2:], " ")
 					if ok := t.phHandler.AppendToPH(setKeyname, t.phHandler.HandlePlaceHolder(setValue)); !ok {
-						t.out(MsgError(errors.New("variable must exists for add " + addvarMark + " " + setKeyname)))
+						t.out(MsgError(MsgError{Err: errors.New("variable must exists for add " + addvarMark + " " + setKeyname), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + addvarMark + " needs 2 arguments at least. <keyname> <value>")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + addvarMark + " needs 2 arguments at least. <keyname> <value>"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 			case setvarMark:
@@ -212,7 +212,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					setValue := strings.Join(parts[2:], " ")
 					t.phHandler.SetPH(setKeyname, t.phHandler.HandlePlaceHolder(setValue))
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + setvarMark + " needs 2 arguments at least. <keyname> <value>")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + setvarMark + " needs 2 arguments at least. <keyname> <value>"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 			case setvarInMap:
@@ -221,11 +221,11 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					path := parts[2]
 					setValue := strings.Join(parts[3:], " ")
 					if err := t.dataHandler.SetJSONValueByPath(mapName, path, setValue); err != nil {
-						t.out(MsgError(errors.New("error while setting value in map: " + err.Error())))
+						t.out(MsgError(MsgError{Err: errors.New("error while setting value in map: " + err.Error()), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + setvarInMap + " needs 3 arguments at least. <mapName> <json.path> <value>")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + setvarInMap + " needs 3 arguments at least. <mapName> <json.path> <value>"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 			case writeVarToFile:
@@ -233,11 +233,11 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					varName := parts[1]
 					fileName := parts[2]
 					if err := t.phHandler.ExportVarToFile(varName, fileName); err != nil {
-						t.out(MsgError(errors.New("error while writing variable to file: " + err.Error())))
+						t.out(MsgError(MsgError{Err: errors.New("error while writing variable to file: " + err.Error()), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + writeVarToFile + " needs 2 arguments at least. <variable> <filename>")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + writeVarToFile + " needs 2 arguments at least. <variable> <filename>"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 			case exportToJson:
@@ -247,11 +247,12 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					if newStr, exists := t.dataHandler.GetDataAsJson(mapKey); exists {
 						t.phHandler.SetPH(varName, t.phHandler.HandlePlaceHolder(newStr))
 					} else {
-						t.out(MsgError(errors.New("map with key " + mapKey + " not exists")))
+						t.out(MsgError(MsgError{Err: errors.New("map with key " + mapKey + " not exists"), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + exportToJson + " needs 2 arguments at least. <map-key> <variable>")))
+					//t.out(MsgError(errors.New("invalid usage " + exportToJson + " needs 2 arguments at least. <map-key> <variable>")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + exportToJson + " needs 2 arguments at least. <map-key> <variable>"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 			case exportToYaml:
@@ -261,11 +262,13 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					if newStr, exists := t.dataHandler.GetDataAsYaml(mapKey); exists {
 						t.phHandler.SetPH(varName, t.phHandler.HandlePlaceHolder(newStr))
 					} else {
-						t.out(MsgError(errors.New("map with key " + mapKey + " not exists")))
+						//t.out(MsgError(errors.New("map with key " + mapKey + " not exists")))
+						t.out(MsgError(MsgError{Err: errors.New("map with key " + mapKey + " not exists"), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + exportToYaml + " needs 2 arguments at least. <map-key> <variable>")))
+					//t.out(MsgError(errors.New("invalid usage " + exportToYaml + " needs 2 arguments at least. <map-key> <variable>")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + exportToYaml + " needs 2 arguments at least. <map-key> <variable>"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 			case parseVarsMark:
@@ -292,12 +295,12 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 							"returnCode": cmdCode,
 							"error":      errorFromCm.Error,
 						}).Error("subcommand failed.")
-						t.out(MsgError(errors.New("error while executing command: " + errorFromCm.Error())))
+						t.out(MsgError(MsgError{Err: errors.New("error while executing command: " + errorFromCm.Error()), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
 
 				} else {
-					t.out(MsgError(errors.New("invalid usage " + parseVarsMark + " needs 2 arguments at least. <varibale-name> <bash-command>")))
+					t.out(MsgError{Err: errors.New("invalid usage " + parseVarsMark + " needs 2 arguments at least. <varibale-name> <bash-command>"), Reference: line, Target: t.target})
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 
@@ -346,19 +349,19 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				if len(parts) == 3 {
 					impMap, found := t.dataHandler.GetJSONPathResult(parts[1], parts[2])
 					if !found {
-						t.out(MsgError(errors.New("undefined data from path " + parts[1] + " " + parts[2])))
+						t.out(MsgError(MsgError{Err: errors.New("undefined data from path " + parts[1] + " " + parts[2]), Reference: line, Target: t.target}))
 					} else {
 						inIteration = true
 						iterationCollect = impMap
 						t.getLogger().WithField("data", impMap).Debug("ITERATION: START")
 					}
 				} else {
-					t.out(MsgError(errors.New("invalid arguments #@iterate needs <name-of-import> <path-to-data>")))
+					t.out(MsgError(MsgError{Err: errors.New("invalid arguments #@iterate needs <name-of-import> <path-to-data>"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 			default:
 				t.getLogger().WithField("unknown", parts[0]).Error("there is no command exists")
-				t.out(MsgError(errors.New("unknown macro " + parts[0])))
+				t.out(MsgError(MsgError{Err: errors.New("unknown macro " + parts[0]), Reference: line, Target: t.target}))
 				return true, systools.ErrorCheatMacros, parsedScript
 			}
 		} else {

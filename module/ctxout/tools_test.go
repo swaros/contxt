@@ -39,22 +39,22 @@ func TestStringLengthPrintable(t *testing.T) {
 		{"this is a test", 14},
 		{"this is a \x1b[31mtest\x1b[0m", 14},
 		{"this is a \x1b[31mtest\x1b[0m\n", 14},
-		{"你好世界", 4},
-		{"你好世界\n", 4},
-		{"你好世界\x1b[31m\n", 4},
+		{"你好世界", 8},
+		{"你好世界\n", 8},
+		{"你好世界\x1b[31m\n", 8},
 		{"🖵", 1},
 		{"🖵\n", 1},
 		{"🖵\x1b[31m\t", 1},
-		{"🌎\x1b[31m\n", 1},
-		{"🌎\x1b[31m\t🌎🖵", 3},
+		{"🌎\x1b[31m\n", 2},
+		{"🌎\x1b[31m\t🌎🖵", 5},
 		{"\u2588", 1},
 		{"\u2588\n", 1},
 	}
 
-	for _, test := range tests {
+	for rnd, test := range tests {
 		strLen := ctxout.LenPrintable(test.in)
 		if strLen != test.out {
-			t.Errorf("Expected %d but got %d [%s]", test.out, strLen, test.in)
+			t.Errorf("[rnd %d] Expected %d but got %d [%s]", rnd, test.out, strLen, test.in)
 		}
 	}
 }

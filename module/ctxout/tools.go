@@ -22,13 +22,13 @@
 
 // AINC-NOTE-0815
 
- package ctxout
+package ctxout
 
 import (
 	"regexp"
 	"strings"
-	"unicode/utf8"
-	//"github.com/muesli/reflow/ansi"
+
+	"github.com/rivo/uniseg"
 )
 
 // LenPrintable returns the length of a string, but only counts printable characters
@@ -37,7 +37,8 @@ import (
 // also ignores any newlines
 func LenPrintable(s string) int {
 	cleared := StringPure(s)
-	return utf8.RuneCountInString(cleared)
+	return uniseg.StringWidth(cleared)
+
 }
 
 func StringPure(s string) string {

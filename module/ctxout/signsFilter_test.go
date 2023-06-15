@@ -138,3 +138,26 @@ func TestSignAdded(t *testing.T) {
 		t.Errorf("expected '%s' got '%s'", expected, chk)
 	}
 }
+
+func TestSignWithMessure(t *testing.T) {
+	ctxout.ClearPostFilters()
+	// create a new filter
+	sf := ctxout.NewSignFilter(nil)
+	if sf == nil {
+		t.Error("NewSignFilter should not return nil")
+	}
+
+	source := "hello " + ctxout.BaseSignError
+
+	ctxout.AddPostFilter(sf)
+	sf.Enable()
+	chk := ctxout.ToString(source)
+
+	expecteSize := 8
+	messure := ctxout.LenPrintable(chk)
+	if messure != expecteSize {
+		t.Errorf("expected '%d' got '%d'", expecteSize, messure)
+		t.Log("1234567890")
+		t.Log(chk)
+	}
+}

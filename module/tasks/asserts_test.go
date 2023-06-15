@@ -31,7 +31,7 @@ func createRuntimeByYamlStringWithAllMsg(yamlString string, messages *[]string, 
 					*messages = append(*messages, string(mt))
 				case tasks.MsgError: // this will be the error of the command
 					if errors != nil {
-						*errors = append(*errors, mt)
+						*errors = append(*errors, mt.Err)
 					}
 
 				case tasks.MsgTarget:
@@ -51,13 +51,16 @@ func createRuntimeByYamlStringWithAllMsg(yamlString string, messages *[]string, 
 		dmc := tasks.NewCombinedDataHandler()
 		req := tasks.NewDefaultRequires(dmc, logrus.New())
 
-		return tasks.NewTaskListExec(
+		tsk := tasks.NewTaskListExec(
 			runCfg,
 			dmc,
 			outHandler,
 			tasks.ShellCmd,
 			req,
-		), err
+		)
+		// disbale hard exit for tests
+		tsk.SetHardExistToAllTasks(false)
+		return tsk, err
 	}
 }
 

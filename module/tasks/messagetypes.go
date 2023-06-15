@@ -47,6 +47,10 @@ type MsgArgs []string
 // MsgProcess is the process id that is running
 type MsgProcess string
 type MsgPid int
-type MsgError error
+type MsgError struct {
+	Err       error
+	Target    string
+	Reference string
+}
 type MsgExecOutput string
 type MsgStickCursor bool

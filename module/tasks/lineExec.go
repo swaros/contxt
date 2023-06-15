@@ -66,6 +66,10 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 					t.out(MsgStickCursor(true)) // trigger the stick cursor
 				}
 
+				if err != nil { // if we have an error we print it
+					t.out(MsgError(MsgError{Err: err, Reference: codeLine, Target: t.target}))
+				}
+
 				t.out(MsgExecOutput(outStr))         // prints the codeline
 				if currentTask.Options.Stickcursor { // cursor stick handling
 					t.out(MsgStickCursor(false)) // trigger the stick cursor after output
@@ -92,7 +96,7 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 	// check execution codes from the executer
 	if execErr != nil {
 		if currentTask.Options.Displaycmd {
-			t.out("exec error", MsgError(execErr))
+			t.out(MsgError(MsgError{Err: execErr, Reference: codeLine, Target: t.target}))
 		}
 
 	}
@@ -103,16 +107,27 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 	case systools.ExitCmdError:
 		if currentTask.Options.IgnoreCmdError {
 			if currentTask.Stopreasons.Onerror {
-				t.out(MsgTarget{Target: t.target, Context: "error-catch-by-onerror", Info: "" + execErr.Error()}, MsgError(execErr), MsgCommand(codeLine), MsgNumber(realExitCode))
+				t.out(
+					MsgError(MsgError{Err: execErr, Reference: codeLine, Target: t.target}),
+					MsgCommand(codeLine),
+					MsgNumber(realExitCode),
+				)
 				return systools.ExitByStopReason, true
 			}
-			t.out(MsgTarget{Target: t.target, Context: "execution-error-ignored", Info: execErr.Error()}, MsgError(execErr), MsgCommand(codeLine), MsgNumber(realExitCode))
 
 		} else {
 			t.getLogger().WithFields(logrus.Fields{"processCode": realExitCode, "error": execErr}).Error("task exection error")
 			ErrorMsg := errors.New(codeLine + " fails with error: " + execErr.Error())
-			t.out(MsgTarget{Target: t.target, Context: "execution-error", Info: ErrorMsg.Error()}, MsgError(ErrorMsg), MsgCommand(codeLine), MsgNumber(realExitCode))
-			//systools.Exit(realExitCode) // origin behavior
+			t.out(
+				MsgError(MsgError{Err: ErrorMsg, Reference: codeLine, Target: t.target}),
+				MsgCommand(codeLine),
+				MsgNumber(realExitCode),
+			)
+			// if we have a hard exit on error we exit the whole process,
+			// if the flag 'hardExitOnError' is not set we return the error code
+			if t.hardExitOnError {
+				systools.Exit(realExitCode) // origin behavior
+			}
 
 			// returns the error code
 			return systools.ExitCmdError, true
@@ -222,7 +237,10 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 
 				}
 				if !someReactionTriggered {
-					t.out(MsgError(errors.New("trigger-defined-without-action")), MsgInfo(triggerMessage))
+					t.out(
+						MsgError(MsgError{Err: errors.New("trigger defined without any action"), Reference: triggerMessage, Target: t.target}),
+						MsgInfo(triggerMessage),
+					)
 					t.getLogger().WithFields(logrus.Fields{
 						"trigger": triggerMessage,
 						"output":  logLine,
