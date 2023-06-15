@@ -1,3 +1,7 @@
+github.com/swaros/contxt/module/configure v0.0.0-20230531064521-09943a54576e h1:TZnDdY+9F6sOij5QfOL508UHUj3mWAOzq/cOKmfSWSY=
+github.com/swaros/contxt/module/configure v0.0.0-20230531064521-09943a54576e/go.mod h1:ELBh1Lf8n9iVF4foYiK73gJPAHZtDcTc92ZfVLZBXGU=
+github.com/swaros/contxt/module/dirhandle v0.0.0-20230531064521-09943a54576e h1:BXctly7klpnJPOGsXAqXw0Nbc5O32oL9io1FiNVRl4M=
+github.com/swaros/contxt/module/dirhandle v0.0.0-20230531064521-09943a54576e/go.mod h1:uadGIHB1hjP67Fu//UH09imK4xV1HL9edn/GgtGhK2Y=
 github.com/swaros/manout v0.2.0 h1:YiukV36UDKw6bzu+InTnTK9S7RkNgKlLzXZdPUpKvbg=
 github.com/swaros/manout v0.2.0/go.mod h1:uLr3/KG+BKYkuS9egz8yBEI5TVvOJEc4a3LHo87ZnSA=
 github.com/swaros/outinject v0.0.4 h1:i9/qMaUTGaAE3vNU6rStX78eMXnVEtEKfxqR7sgaVLg=
