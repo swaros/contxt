@@ -4,6 +4,7 @@ use (
 	./module/awaitgroup
 	./module/configure
 	./module/ctemplate
+	./module/yaclint
 	./module/ctxout
 	./module/ctxshell
 	./module/ctxtcell

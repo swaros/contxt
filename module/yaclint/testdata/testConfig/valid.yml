@@ -1,0 +1,42 @@
+# matches the following pattern: module/yaclint/linter_test.go:TestLoadConfig
+#
+# type testConfig struct {
+#   SourceCode         string
+#   BuildEngine        string
+#   BuildEngineVersion string
+#   Targets            []string
+#   BuildSteps         []string
+#   IsSystem           bool
+#   IsDefault          bool
+#   mainVersionNr      int
+#   DataSet            []dataSet
+# }
+#
+# type dataSet struct {
+#   TicketNr int
+#   Comment  string
+# }
+
+SourceCode: module/yaclint/linter_test.go
+BuildEngine: go
+BuildEngineVersion: 1.14
+Targets:
+- linux/amd64
+- linux/arm64
+- linux/arm
+- darwin/amd64
+- windows/amd64
+BuildSteps:
+- go test -v -coverprofile=coverage.out -covermode=atomic ./...
+IsSystem: false
+IsDefault: false
+MainVersionNr: 1
+#DataSet:
+#- TicketNr: 1
+#  Comment: "this is a comment"
+#- TicketNr: 2
+#  Comment: "this is another comment"
+#- TicketNr: 3
+#  Comment: "this is yet another comment"
+
+

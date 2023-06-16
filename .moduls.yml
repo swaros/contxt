@@ -96,6 +96,12 @@ module:
     local: true
     test:
       timeout: 30s
+  
+  - 
+    modul: yaclint
+    local: true
+    test:
+      timeout: 30s
 
   -
     modul: manout

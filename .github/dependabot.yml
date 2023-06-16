@@ -116,3 +116,10 @@ updates:
        interval: daily
     assignees:
        - swaros
+### dependencie for /module/yaclint/
+  - package-ecosystem: gomod
+    directory: /module/yaclint/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros

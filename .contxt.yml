@@ -97,6 +97,17 @@ task:
   ##### exists. and if not we create this modul
   ##### by using the regular go tool-set
 
+  ## update mai task
+ 
+  - id: update-all
+    runTargets:
+      - modules-verify
+      - makefile-update
+      - licence-header-check
+      - update-dependencies
+    script:
+      - echo "update all" 
+
   ## update makefile
   - id: makefile-update
     needs:
@@ -230,7 +241,6 @@ task:
        cd ${CTX_PWD}/module/{{ $test.modul }}
        go mod tidy
        cd ${CTX_PWD}
-       go test  -failfast ./module/{{ $test.modul }}/./...
     {{- end }}
     {{- end }}
       - git status
@@ -491,7 +501,7 @@ task:
     require:
       system: linux
     next:
-      - test-each       
+      - test-each
     script:
       - |
        GOFILES=$(find . -type f -name "*.go" ! -name "*_test.go" ! -path "./vendor/*" ! -path "./bin/*")
