@@ -16,27 +16,28 @@ const (
 )
 
 type MatchToken struct {
-	UuId        string
-	KeyWord     string
-	Value       interface{}
-	Type        string
-	Added       bool
-	SeqneceNr   int
-	Status      int
-	PairMatchId string
-	PairToken   *MatchToken
-	ParentLint  *LintMap
+	UuId       string
+	KeyWord    string
+	Value      interface{}
+	Type       string
+	Added      bool
+	SequenceNr int
+	indexNr    int
+	Status     int
+	PairToken  *MatchToken
+	ParentLint *LintMap
 }
 
-func NewMatchToken(parent *LintMap, line string, SeqneceNr int, added bool) MatchToken {
+func NewMatchToken(parent *LintMap, line string, indexNr int, seqNr int, added bool) MatchToken {
 	var matchToken MatchToken
 	matchToken.ParentLint = parent
 	matchToken.UuId = uuid.New().String()
 	matchToken.Type = "undefined"
 	matchToken.Added = added
-	matchToken.SeqneceNr = SeqneceNr
+	matchToken.SequenceNr = seqNr
+	matchToken.indexNr = indexNr
+
 	matchToken.Status = -1
-	matchToken.PairMatchId = ""
 	jsonLineParts := strings.Split(line, ":")
 	if len(jsonLineParts) > 1 {
 		matchToken.KeyWord = jsonLineParts[0]
@@ -52,9 +53,7 @@ func NewMatchToken(parent *LintMap, line string, SeqneceNr int, added bool) Matc
 
 func (m *MatchToken) IsPair(token *MatchToken) bool {
 	if m.KeyWord == token.KeyWord && m.Added != token.Added {
-		m.PairMatchId = token.UuId
 		m.PairToken = token
-		token.PairMatchId = m.UuId
 		return true
 	}
 	return false
@@ -65,10 +64,10 @@ func (m *MatchToken) VerifyValue() int {
 		return m.Status
 	}
 	m.detectValueType()
-	if m.PairMatchId == "" {
+	if m.PairToken == nil {
 		m.Status = MissingEntry
 	} else {
-		pairMatch := m.ParentLint.GetMatchById(m.PairMatchId)
+		pairMatch := m.PairToken
 		if pairMatch == nil {
 			m.Status = MissingEntry
 		} else {

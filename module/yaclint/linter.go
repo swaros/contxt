@@ -61,18 +61,18 @@ func (l *Linter) Verify() error {
 		bytes, err := yamcLoader.Marshal(m) // encode the generic map to source
 		if err == nil {
 			freeStyle := string(bytes) // the source as string
-			fmt.Println(freeStyle)
+			//fmt.Println(freeStyle)
 			cYamc, cerr := l.config.GetAsYmac() // get the configuration as yamc object
 			if cerr == nil {
-				fmt.Println("-----------------")
+				//fmt.Println("-----------------")
 				configStyle := cYamc.GetData()                   // get the source as string from the yamc object
 				cbytes, ccerr := yamcLoader.Marshal(configStyle) // encode the source to bytes
 				if ccerr == nil {
-					fmt.Println(string(cbytes))
-					differ := diff.Diff(freeStyle, string(cbytes))
-					fmt.Println("-----------------")
-					fmt.Println(differ)
-					fmt.Println("-----------------")
+					//fmt.Println(string(cbytes))
+					//differ := diff.Diff(freeStyle, string(cbytes))
+					//fmt.Println("-----------------")
+					//fmt.Println(differ)
+					//fmt.Println("-----------------")
 
 					freeChnk := strings.Split(freeStyle, "\n")
 					orgiChnk := strings.Split(string(cbytes), "\n")
@@ -101,37 +101,50 @@ func (l *Linter) Verify() error {
 func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 	lintResult := LintMap{}
 	foundDiff := false
-	for fg, c := range chunks {
-		sequenceNr := 0 // this number is inreased for any matching line. so we are able to find the line in the original file.
+	// the diff package reports any change as an added and a removed line.
+	// thats fine for printing a diff, but not for our needs.
+	// we need to get the context what add and remove is just a change.
+	// for this we need to count the changes over all chunks.
+	// in the end, we have an safe match, if we have the same sequence number and the same change number.
+
+	sequenceNr := 0
+	changeNr4Add := 0 // track the index of added lines
+	changeNr4Rm := 0  // track the index of removed lines
+
+	// iterate over all chunks.
+	for chunkIndex, c := range chunks {
 		temporaryChunk := LintChunk{}
 		needToBeAdded := false
-		for sg, line := range c.Added {
 
-			fmt.Println("ADDED:"+line, " --->", fg, sequenceNr)
+		for _, line := range c.Added {
+			changeNr4Add++
+			//fmt.Println("ADDED:"+line, " ---> index[", indexNr, "] seq[", sequenceNr, "]", "chunk[", chunkIndex, "]", "change[", changeNr4Add, "]")
 
-			addToken := NewMatchToken(&l.lMap, line, sg, true)
+			addToken := NewMatchToken(&l.lMap, line, changeNr4Add, sequenceNr, true)
 			temporaryChunk.Added = append(temporaryChunk.Added, &addToken)
 			needToBeAdded = true
 		}
-		for sg, line := range c.Deleted {
+		for _, line := range c.Deleted {
+			changeNr4Rm++
+			//fmt.Println("DELETED:"+line, " --->index[", indexNr, "] seq[", sequenceNr, "]", "chunk[", chunkIndex, "]", "change[", changeNr4Rm, "]")
 
-			fmt.Println("DELETED:"+line, " --->", fg, sequenceNr)
-
-			rmToken := NewMatchToken(&l.lMap, line, sg, false)
+			rmToken := NewMatchToken(&l.lMap, line, changeNr4Rm, sequenceNr, false)
 			temporaryChunk.Removed = append(temporaryChunk.Removed, &rmToken)
 			needToBeAdded = true
 		}
 
-		for _, line := range c.Equal {
-			sequenceNr++ // anytime a match is reported, we are out of any add remove section
-
-			fmt.Println("EQUAL:"+line, " --->", fg, sequenceNr)
-
+		// on equal we need to reset the indices for removed and added changes, so we can track the
+		// changes in the next chunk, and get the context what of these removas and adds are just changes
+		if len(c.Equal) > 0 {
+			changeNr4Add = 0
+			changeNr4Rm = 0
+			sequenceNr += len(c.Equal)
 		}
+
 		if needToBeAdded {
-			temporaryChunk.ChunkNr = fg
+			temporaryChunk.ChunkNr = chunkIndex
 			lintResult.Chunks = append(lintResult.Chunks, &LintChunk{
-				ChunkNr: fg,
+				ChunkNr: chunkIndex,
 				Added:   temporaryChunk.Added,
 				Removed: temporaryChunk.Removed,
 			})
@@ -152,18 +165,31 @@ func (l *Linter) FindPairs() {
 		// in the diff chunks. and they have the matching part in the previous diff chunk.
 		// so we need to find the matching part in the previous chunk.
 
-		lastChunk := &LintChunk{}
 		for _, chunk := range l.lMap.Chunks {
 			for _, add := range chunk.Added {
-				if lastChunk.ChunkNr+1 == chunk.ChunkNr {
-					for _, rm := range lastChunk.Removed {
-						if add.IsPair(rm) {
-							fmt.Println("FOUND PAIR: ", add.KeyWord, " ---> ", add.KeyWord)
+				foundmatch := false
+				bestmatchTokens := l.lMap.GetTokensFromSequenceAndIndex(add.SequenceNr, add.indexNr)
+				if len(bestmatchTokens) > 0 {
+					for _, bestmatch := range bestmatchTokens {
+						if bestmatch.Added != add.Added {
+							if add.IsPair(bestmatch) {
+								fmt.Println("FOUND PAIR: ", add.KeyWord, " ---> ", bestmatch.KeyWord)
+								foundmatch = true
+							}
 						}
 					}
 				}
+				if !foundmatch {
+					// fallback.
+					for _, seqTkn := range l.lMap.GetTokensFromSequence(add.SequenceNr) {
+						if add.IsPair(seqTkn) {
+							fmt.Println("fallback .... FOUND PAIR IN SEQUENCE: ", add.KeyWord, " ---> ", add.KeyWord)
+						}
+					}
+				}
+
 			}
-			lastChunk = chunk
+
 		}
 	}
 }
@@ -183,10 +209,10 @@ func (l *Linter) PrintDiff() {
 			if added {
 				switch token.Status {
 				case ValueMatchButTypeDiffers:
-					fmt.Println("ValueMatchButTypeDiffers: ", token.Type, " ---> ", token.PairToken.Type)
+					fmt.Println("   ValueMatchButTypeDiffers: ", token.Type, " ---> ", token.PairToken.Type)
 
 				case MissingEntry:
-					fmt.Println("MissingEntry: ", token.KeyWord)
+					fmt.Println("   MissingEntry: ", token.KeyWord)
 
 				}
 			}
@@ -194,14 +220,7 @@ func (l *Linter) PrintDiff() {
 	}
 }
 
-// helper function to walk all tokens without writeing the same loop again and again
+// proxy to walk all
 func (l *Linter) walkAll(hndl func(token *MatchToken, added bool)) {
-	for _, chunk := range l.lMap.Chunks {
-		for _, add := range chunk.Added {
-			hndl(add, true)
-		}
-		for _, rm := range chunk.Removed {
-			hndl(rm, false)
-		}
-	}
+	l.lMap.walkAll(hndl)
 }

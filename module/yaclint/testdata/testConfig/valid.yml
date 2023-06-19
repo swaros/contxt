@@ -31,12 +31,12 @@ BuildSteps:
 IsSystem: false
 IsDefault: false
 MainVersionNr: 1
-#DataSet:
-#- TicketNr: 1
-#  Comment: "this is a comment"
-#- TicketNr: 2
-#  Comment: "this is another comment"
-#- TicketNr: 3
-#  Comment: "this is yet another comment"
+DataSet:
+- TicketNr: 1
+  Comment: "this is a comment"
+- TicketNr: 2
+  Comment: "this is another comment"
+- TicketNr: 3
+  Comment: "this is yet another comment"
 
 

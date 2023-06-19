@@ -24,7 +24,7 @@ func TestLintOkSimple(t *testing.T) {
 		IsSystem           bool      `yaml:"IsSystem"`
 		IsDefault          bool      `yaml:"IsDefault"`
 		MainVersionNr      int       `yaml:"MainVersionNr"`
-		DataSet            []dataSet `yaml:"DataSet"`
+		DataSet            []dataSet `yaml:"DataSet,omitempty"`
 	}
 	// here we load the config.
 	// lint depends on a yacl instance, so we need to create one first
