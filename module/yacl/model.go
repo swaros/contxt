@@ -47,7 +47,8 @@ type ConfigModel struct {
 	setFile          string                             // sets a specific filename. so this is the only one that will be loaded
 	useSpecialDir    int                                // defines the behavior og the paths used like config, user home or none a simple path (relative or absolute)
 	structure        any                                // points to the config struct
-	reader           []yamc.DataReader                  // list of used readers
+	reader           []yamc.DataReader                  // list of posible readers
+	lastUsedReader   yamc.DataReader                    // the last used reader
 	subDirs          []string                           // subdirectories relative to the basedir (defined by useSpecialDir behavior)
 	usedFile         string                             // the last used configFile that is parsed
 	loadedFiles      []string                           // list of all files they processed
@@ -453,6 +454,7 @@ func (c *ConfigModel) tryLoad(path, ext string) error {
 		for _, ex := range loader.SupportsExt() {
 			if strings.EqualFold("."+ex, ext) {
 				if err := loader.FileDecode(path, c.structure); err == nil {
+					c.lastUsedReader = loader
 					if c.supportMigrate { // migrate the config
 						c.fileLoadCallback(path, c.structure)
 					}
@@ -466,6 +468,12 @@ func (c *ConfigModel) tryLoad(path, ext string) error {
 		}
 	}
 	return nil
+}
+
+// return the last used reader for loading the configuration
+// this is nil, if no configuration was loaded
+func (c *ConfigModel) GetLastUsedReader() yamc.DataReader {
+	return c.lastUsedReader
 }
 
 // GetLoadedFile returns the used configuration filename

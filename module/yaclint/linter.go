@@ -30,23 +30,12 @@ import (
 
 	"github.com/kylelemons/godebug/diff"
 	"github.com/swaros/contxt/module/yacl"
-	"github.com/swaros/contxt/module/yamc"
 )
 
 type Linter struct {
 	config    yacl.ConfigModel // the config model that we need to verify
-	diffCunks LintMap          // contains the diff chunks
+	lMap      LintMap          // contains the diff chunks
 	diffFound bool             // true if we found a diff. that is just a sign, that an SOME diff is found, not that the config is invalid
-}
-
-type LintChunk struct {
-	ChunkNr int
-	Removed []MatchToken
-	Added   []MatchToken
-}
-
-type LintMap struct {
-	Chunks []LintChunk
 }
 
 func NewLinter(config yacl.ConfigModel) *Linter {
@@ -57,24 +46,27 @@ func NewLinter(config yacl.ConfigModel) *Linter {
 
 }
 
-func (l *Linter) Verify() {
+func (l *Linter) Verify() error {
 	fileName := l.config.GetLoadedFile()
 
-	m := make(map[string]interface{})
-	yamcLoader := yamc.NewYamlReader()
-	if err := yamcLoader.FileDecode(fileName, &m); err != nil {
-		panic(err)
+	m := make(map[string]interface{})          // generic map to load the file for comparison
+	yamcLoader := l.config.GetLastUsedReader() // the last used reader from the config
+	if yamcLoader == nil {
+		return fmt.Errorf("no reader found. the config needs to be loaded first")
+
+	}
+	if err := yamcLoader.FileDecode(fileName, &m); err != nil { // decode the file to the generic map
+		return err
 	} else {
-		source := m
-		bytes, err := yamcLoader.Marshal(source)
+		bytes, err := yamcLoader.Marshal(m) // encode the generic map to source
 		if err == nil {
-			freeStyle := string(bytes)
+			freeStyle := string(bytes) // the source as string
 			fmt.Println(freeStyle)
-			cYamc, cerr := l.config.GetAsYmac()
+			cYamc, cerr := l.config.GetAsYmac() // get the configuration as yamc object
 			if cerr == nil {
 				fmt.Println("-----------------")
-				configStyle := cYamc.GetData()
-				cbytes, ccerr := yamcLoader.Marshal(configStyle)
+				configStyle := cYamc.GetData()                   // get the source as string from the yamc object
+				cbytes, ccerr := yamcLoader.Marshal(configStyle) // encode the source to bytes
 				if ccerr == nil {
 					fmt.Println(string(cbytes))
 					differ := diff.Diff(freeStyle, string(cbytes))
@@ -87,10 +79,19 @@ func (l *Linter) Verify() {
 
 					chunk := diff.DiffChunks(freeChnk, orgiChnk)
 					l.chunkWorker(chunk)
+					l.FindPairs()
+					l.ValueVerify()
+				} else {
+					return ccerr
 				}
+			} else {
+				return cerr
 			}
+		} else {
+			return err
 		}
 	}
+	return nil
 }
 
 // chunkWorker is a worker that is called for each chunk that is found.
@@ -106,30 +107,34 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 		needToBeAdded := false
 		for sg, line := range c.Added {
 
-			fmt.Println("ADDED:"+line, " --->", fg)
+			fmt.Println("ADDED:"+line, " --->", fg, sequenceNr)
 
-			addToken := NewMatchToken(line, sg, true)
-			temporaryChunk.Added = append(temporaryChunk.Added, addToken)
+			addToken := NewMatchToken(&l.lMap, line, sg, true)
+			temporaryChunk.Added = append(temporaryChunk.Added, &addToken)
 			needToBeAdded = true
 		}
 		for sg, line := range c.Deleted {
 
-			fmt.Println("DELETED:"+line, " --->", fg)
+			fmt.Println("DELETED:"+line, " --->", fg, sequenceNr)
 
-			rmToken := NewMatchToken(line, sg, false)
-			temporaryChunk.Removed = append(temporaryChunk.Removed, rmToken)
+			rmToken := NewMatchToken(&l.lMap, line, sg, false)
+			temporaryChunk.Removed = append(temporaryChunk.Removed, &rmToken)
 			needToBeAdded = true
 		}
 
 		for _, line := range c.Equal {
 			sequenceNr++ // anytime a match is reported, we are out of any add remove section
 
-			fmt.Println("EQUAL:"+line, " --->", fg)
+			fmt.Println("EQUAL:"+line, " --->", fg, sequenceNr)
 
 		}
 		if needToBeAdded {
 			temporaryChunk.ChunkNr = fg
-			lintResult.Chunks = append(lintResult.Chunks, temporaryChunk)
+			lintResult.Chunks = append(lintResult.Chunks, &LintChunk{
+				ChunkNr: fg,
+				Added:   temporaryChunk.Added,
+				Removed: temporaryChunk.Removed,
+			})
 			foundDiff = true
 		}
 	}
@@ -137,6 +142,66 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 	// only if we found a diff, we need to store the chunks
 	// so we can verify the if the diffs matter
 	if foundDiff {
-		l.diffCunks = lintResult
+		l.lMap = lintResult
+	}
+}
+
+func (l *Linter) FindPairs() {
+	if l.diffFound {
+		// depends on the reult of the diff, we need to find the pairs
+		// in the diff chunks. and they have the matching part in the previous diff chunk.
+		// so we need to find the matching part in the previous chunk.
+
+		lastChunk := &LintChunk{}
+		for _, chunk := range l.lMap.Chunks {
+			for _, add := range chunk.Added {
+				if lastChunk.ChunkNr+1 == chunk.ChunkNr {
+					for _, rm := range lastChunk.Removed {
+						if add.IsPair(rm) {
+							fmt.Println("FOUND PAIR: ", add.KeyWord, " ---> ", add.KeyWord)
+						}
+					}
+				}
+			}
+			lastChunk = chunk
+		}
+	}
+}
+
+func (l *Linter) ValueVerify() {
+	if l.diffFound {
+		l.walkAll(func(token *MatchToken, added bool) {
+			token.VerifyValue()
+		})
+	}
+
+}
+
+func (l *Linter) PrintDiff() {
+	if l.diffFound {
+		l.walkAll(func(token *MatchToken, added bool) {
+			if added {
+				switch token.Status {
+				case ValueMatchButTypeDiffers:
+					fmt.Println("ValueMatchButTypeDiffers: ", token.Type, " ---> ", token.PairToken.Type)
+
+				case MissingEntry:
+					fmt.Println("MissingEntry: ", token.KeyWord)
+
+				}
+			}
+		})
+	}
+}
+
+// helper function to walk all tokens without writeing the same loop again and again
+func (l *Linter) walkAll(hndl func(token *MatchToken, added bool)) {
+	for _, chunk := range l.lMap.Chunks {
+		for _, add := range chunk.Added {
+			hndl(add, true)
+		}
+		for _, rm := range chunk.Removed {
+			hndl(rm, false)
+		}
 	}
 }

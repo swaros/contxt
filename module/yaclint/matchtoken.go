@@ -1,20 +1,42 @@
 package yaclint
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/google/uuid"
+)
+
+const (
+	Unset                    = -1 // the value is not set
+	PerfectMatch             = 0  // the value and type matches
+	ValueMatchButTypeDiffers = 1  // the value matches butin different type like "1.4" and 1.4 (valid because of yaml parser type conversion)
+	MissingEntry             = 2  // the entry is missing. this entry is defined in struct but not in config. als no omitempty tag is set in struct
+	UnknownEntry             = 3  // the entry is is in the config but not in the struct
+	WrongType                = 4  // the type is wrong. different from the strct definition, and also no type conversion is possible
+)
 
 type MatchToken struct {
-	KeyWord   string
-	Value     interface{}
-	Type      string
-	Added     bool
-	SeqneceNr int
+	UuId        string
+	KeyWord     string
+	Value       interface{}
+	Type        string
+	Added       bool
+	SeqneceNr   int
+	Status      int
+	PairMatchId string
+	PairToken   *MatchToken
+	ParentLint  *LintMap
 }
 
-func NewMatchToken(line string, SeqneceNr int, added bool) MatchToken {
+func NewMatchToken(parent *LintMap, line string, SeqneceNr int, added bool) MatchToken {
 	var matchToken MatchToken
+	matchToken.ParentLint = parent
+	matchToken.UuId = uuid.New().String()
 	matchToken.Type = "undefined"
 	matchToken.Added = added
 	matchToken.SeqneceNr = SeqneceNr
+	matchToken.Status = -1
+	matchToken.PairMatchId = ""
 	jsonLineParts := strings.Split(line, ":")
 	if len(jsonLineParts) > 1 {
 		matchToken.KeyWord = jsonLineParts[0]
@@ -28,18 +50,41 @@ func NewMatchToken(line string, SeqneceNr int, added bool) MatchToken {
 	return matchToken
 }
 
-func (m *MatchToken) Compare(token MatchToken) bool {
-	if m.KeyWord == token.KeyWord && m.Type == token.Type {
+func (m *MatchToken) IsPair(token *MatchToken) bool {
+	if m.KeyWord == token.KeyWord && m.Added != token.Added {
+		m.PairMatchId = token.UuId
+		m.PairToken = token
+		token.PairMatchId = m.UuId
 		return true
 	}
 	return false
 }
 
-func (m *MatchToken) CompareValue(token MatchToken) bool {
-	if m.KeyWord == token.KeyWord && m.Type == token.Type && m.Value == token.Value {
-		return true
+func (m *MatchToken) VerifyValue() int {
+	if m.Status != -1 {
+		return m.Status
 	}
-	return false
+	m.detectValueType()
+	if m.PairMatchId == "" {
+		m.Status = MissingEntry
+	} else {
+		pairMatch := m.ParentLint.GetMatchById(m.PairMatchId)
+		if pairMatch == nil {
+			m.Status = MissingEntry
+		} else {
+			if m.Type == pairMatch.Type {
+				if m.Value == pairMatch.Value {
+					m.Status = PerfectMatch
+				} else {
+					m.Status = ValueMatchButTypeDiffers
+				}
+			} else {
+				m.Status = WrongType
+			}
+		}
+	}
+
+	return m.Status
 }
 
 func (m *MatchToken) IsValid() bool {

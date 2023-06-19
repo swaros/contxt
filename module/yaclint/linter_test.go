@@ -48,6 +48,7 @@ func TestLintOkSimple(t *testing.T) {
 	}
 
 	chck.Verify()
+	chck.PrintDiff()
 	t.Error("not implemented")
 
 }
