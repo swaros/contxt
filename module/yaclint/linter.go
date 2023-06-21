@@ -30,68 +30,106 @@ import (
 
 	"github.com/kylelemons/godebug/diff"
 	"github.com/swaros/contxt/module/yacl"
+	"github.com/swaros/contxt/module/yamc"
 )
 
 type Linter struct {
-	config    yacl.ConfigModel // the config model that we need to verify
-	lMap      LintMap          // contains the diff chunks
-	diffFound bool             // true if we found a diff. that is just a sign, that an SOME diff is found, not that the config is invalid
+	config            yacl.ConfigModel // the config model that we need to verify
+	lMap              LintMap          // contains the diff chunks
+	diffFound         bool             // true if we found a diff. that is just a sign, that an SOME diff is found, not that the config is invalid
+	highestIssueLevel int              // the highest issue level found
 }
 
 func NewLinter(config yacl.ConfigModel) *Linter {
-
 	return &Linter{
-		config: config,
+		config:            config,
+		highestIssueLevel: 0,
 	}
+
+}
+
+// getUnstructMap loads the config file as generic map and returns it
+// as map[string]interface{} and as string (the yaml/json representation)
+func (l *Linter) getUnstructMap(loader yamc.DataReader) (map[string]interface{}, string, error) {
+	fileName := l.config.GetLoadedFile() // the file name of the config file
+	m := make(map[string]interface{})    // generic map to load the file for comparison
+	err := loader.FileDecode(fileName, &m)
+	if err != nil {
+		return nil, "", err
+	}
+	bytes, err := loader.Marshal(m)
+	if err != nil {
+		return nil, "", err
+	}
+	return m, string(bytes), nil
+}
+
+// getStructSource creates the yaml/json representation of the config file
+func (l *Linter) getStructSource(loader yamc.DataReader) (string, error) {
+	cYamc, cerr := l.config.GetAsYmac() // get the configuration as yamc object
+	if cerr != nil {
+		return "", cerr
+	}
+
+	structData := cYamc.GetData()               // get the source as string from the yamc object
+	cbytes, ccerr := loader.Marshal(structData) // encode the source to bytes
+	if ccerr != nil {
+		return "", ccerr
+	}
+	return string(cbytes), nil
+}
+
+// init4read is a helper function that initializes the linter for reading the config file.
+func (l *Linter) init4read() (yamc.DataReader, string, string, error) {
+	yamcLoader := l.config.GetLastUsedReader() // the last used reader from the config
+	if yamcLoader == nil {
+		return nil, "", "", fmt.Errorf("no reader found. the config needs to be loaded first")
+	}
+
+	_, unstructSource, err1 := l.getUnstructMap(yamcLoader)
+	if err1 != nil {
+		return nil, "", "", err1
+	}
+
+	structSource, err2 := l.getStructSource(yamcLoader)
+	if err2 != nil {
+		return nil, "", "", err2
+	}
+	return yamcLoader, unstructSource, structSource, nil
+}
+
+// GetDiff returns the diff between the config file and the structed config file.
+// The diff is returned as string.
+func (l *Linter) GetDiff() (string, error) {
+	_, unstructedSrc, structedSrc, err := l.init4read()
+	if err != nil {
+		return "", err
+	}
+	return diff.Diff(unstructedSrc, structedSrc), nil
 
 }
 
 func (l *Linter) Verify() error {
-	fileName := l.config.GetLoadedFile()
 
-	m := make(map[string]interface{})          // generic map to load the file for comparison
-	yamcLoader := l.config.GetLastUsedReader() // the last used reader from the config
-	if yamcLoader == nil {
-		return fmt.Errorf("no reader found. the config needs to be loaded first")
-
-	}
-	if err := yamcLoader.FileDecode(fileName, &m); err != nil { // decode the file to the generic map
+	_, unstructSource, structSource, err := l.init4read()
+	if err != nil {
 		return err
-	} else {
-		bytes, err := yamcLoader.Marshal(m) // encode the generic map to source
-		if err == nil {
-			freeStyle := string(bytes) // the source as string
-			//fmt.Println(freeStyle)
-			cYamc, cerr := l.config.GetAsYmac() // get the configuration as yamc object
-			if cerr == nil {
-				//fmt.Println("-----------------")
-				configStyle := cYamc.GetData()                   // get the source as string from the yamc object
-				cbytes, ccerr := yamcLoader.Marshal(configStyle) // encode the source to bytes
-				if ccerr == nil {
-					//fmt.Println(string(cbytes))
-					//differ := diff.Diff(freeStyle, string(cbytes))
-					//fmt.Println("-----------------")
-					//fmt.Println(differ)
-					//fmt.Println("-----------------")
-
-					freeChnk := strings.Split(freeStyle, "\n")
-					orgiChnk := strings.Split(string(cbytes), "\n")
-
-					chunk := diff.DiffChunks(freeChnk, orgiChnk)
-					l.chunkWorker(chunk)
-					l.FindPairs()
-					l.ValueVerify()
-				} else {
-					return ccerr
-				}
-			} else {
-				return cerr
-			}
-		} else {
-			return err
-		}
 	}
+
+	freeChnk := strings.Split(unstructSource, "\n")
+	orgiChnk := strings.Split(structSource, "\n")
+
+	chunk := diff.DiffChunks(freeChnk, orgiChnk)
+	l.chunkWorker(chunk)
+	l.findPairs()
+	l.valueVerify()
+
 	return nil
+}
+
+// GetHighestIssueLevel returns the highest issue level found.
+func (l *Linter) GetHighestIssueLevel() int {
+	return l.highestIssueLevel
 }
 
 // chunkWorker is a worker that is called for each chunk that is found.
@@ -159,7 +197,7 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 	}
 }
 
-func (l *Linter) FindPairs() {
+func (l *Linter) findPairs() {
 	if l.diffFound {
 		// depends on the reult of the diff, we need to find the pairs
 		// in the diff chunks. and they have the matching part in the previous diff chunk.
@@ -167,57 +205,90 @@ func (l *Linter) FindPairs() {
 
 		for _, chunk := range l.lMap.Chunks {
 			for _, add := range chunk.Added {
-				foundmatch := false
+				//foundmatch := false
 				bestmatchTokens := l.lMap.GetTokensFromSequenceAndIndex(add.SequenceNr, add.indexNr)
 				if len(bestmatchTokens) > 0 {
 					for _, bestmatch := range bestmatchTokens {
 						if bestmatch.Added != add.Added {
-							if add.IsPair(bestmatch) {
-								fmt.Println("FOUND PAIR: ", add.KeyWord, " ---> ", bestmatch.KeyWord)
-								foundmatch = true
+							add.IsPair(bestmatch) // {
+							//fmt.Println("FOUND PAIR: ", add.KeyWord, " ---> ", bestmatch.KeyWord)
+
+							//foundmatch = true
+							//}
+						}
+					}
+				}
+				/*
+					if !foundmatch {
+						// fallback.
+						// TODO: if there is an case we need an fallback?
+						// TODO: is this safe? in terms of getting the right pair?
+						for _, seqTkn := range l.lMap.GetTokensFromSequence(add.SequenceNr) {
+							if add.IsPair(seqTkn) {
+								//fmt.Println("fallback .... FOUND PAIR IN SEQUENCE: ", add.KeyWord, " ---> ", add.KeyWord)
+								if l.highestIssueLevel < add.Status {
+									l.highestIssueLevel = add.Status
+								}
 							}
 						}
 					}
-				}
-				if !foundmatch {
-					// fallback.
-					for _, seqTkn := range l.lMap.GetTokensFromSequence(add.SequenceNr) {
-						if add.IsPair(seqTkn) {
-							fmt.Println("fallback .... FOUND PAIR IN SEQUENCE: ", add.KeyWord, " ---> ", add.KeyWord)
-						}
-					}
-				}
-
+				*/
 			}
 
 		}
 	}
 }
 
-func (l *Linter) ValueVerify() {
+func (l *Linter) valueVerify() {
 	if l.diffFound {
 		l.walkAll(func(token *MatchToken, added bool) {
 			token.VerifyValue()
+			if added {
+				if l.highestIssueLevel < token.Status {
+					l.highestIssueLevel = token.Status
+				}
+			}
 		})
 	}
 
 }
 
-func (l *Linter) PrintDiff() {
+func (l *Linter) ReportDiffStartedAt(level int, reportFn func(token *MatchToken)) {
+	if l.diffFound {
+		l.walkAll(func(token *MatchToken, added bool) {
+			if added {
+				if token.Status >= level {
+					reportFn(token)
+				}
+			}
+		})
+	}
+}
+
+func (l *Linter) PrintIssues() string {
+	outPut := ""
 	if l.diffFound {
 		l.walkAll(func(token *MatchToken, added bool) {
 			if added {
 				switch token.Status {
 				case ValueMatchButTypeDiffers:
-					fmt.Println("   ValueMatchButTypeDiffers: ", token.Type, " ---> ", token.PairToken.Type)
+					//fmt.Println(token.Status, "   ValueMatchButTypeDiffers: [", token.Value, "]\t[", token.PairToken.Value, "]\t@ ", token.KeyWord, "("+token.Type+")")
+					outPut += fmt.Sprintf("ValueMatchButTypeDiffers: %d\t%s\t%s\t%s\t%s\n", token.Status, token.Value, token.PairToken.Value, token.KeyWord, token.Type)
+				case ValueNotMatch:
+					//fmt.Println(token.Status, "   ValueNotMatch: [", token.Value, "]\t[", token.PairToken.Value, "]\t@ ", token.KeyWord, "("+token.Type+")")
+					outPut += fmt.Sprintf("ValuesNotMatching %d\t%s\t%s\t%s\t%s\n", token.Status, token.Value, token.PairToken.Value, token.KeyWord, token.Type)
 
 				case MissingEntry:
-					fmt.Println("   MissingEntry: ", token.KeyWord)
-
+					//fmt.Println(token.Status, "   MissingEntry: ", token.KeyWord)
+					outPut += fmt.Sprintf("MissingEntry: %d\t%s\n", token.Status, token.KeyWord)
+				default:
+					//fmt.Println(token.Status, "   ", token.KeyWord)
+					outPut += fmt.Sprintf("%d\t%s\n", token.Status, token.KeyWord)
 				}
 			}
 		})
 	}
+	return outPut
 }
 
 // proxy to walk all

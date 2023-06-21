@@ -13,17 +13,6 @@
 #
 
 SourceCode: module/yaclint/linter_test.go
-BuildEngine: go
-BuildEngineVersion: 1.14
-Targets:
-- linux/amd64
-- linux/arm64
-- linux/arm
-- darwin/amd64
-- windows/amd64
-BuildSteps:
-- go test -v -coverprofile=coverage.out -covermode=atomic ./...
-IsSystem: "this is not a bool"
-IsDefault: false
-MainVersionNr: 1
+AEngine: "hubert"
+
 

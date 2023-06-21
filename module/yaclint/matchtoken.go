@@ -7,12 +7,19 @@ import (
 )
 
 const (
-	Unset                    = -1 // the value is not set
-	PerfectMatch             = 0  // the value and type matches
-	ValueMatchButTypeDiffers = 1  // the value matches butin different type like "1.4" and 1.4 (valid because of yaml parser type conversion)
-	MissingEntry             = 2  // the entry is missing. this entry is defined in struct but not in config. als no omitempty tag is set in struct
-	UnknownEntry             = 3  // the entry is is in the config but not in the struct
-	WrongType                = 4  // the type is wrong. different from the strct definition, and also no type conversion is possible
+	Unset                    = -1 // the value is not set. the initial value. nothing was tryed to match
+	PerfectMatch             = 0  // the value and type matches. should most times not happen, because we compare the default values with actual values. so a diff is common
+	ValueMatchButTypeDiffers = 1  // the value matches but in different type like "1.4" and 1.4 (valid because of yaml parser type conversion)
+	ValueNotMatch            = 2  // the value is not matching (still valid because of yaml parser type conversion. we compare the default values with actual values. so a diff is common)
+
+	// now the  types they are mostly real issues in the config (they should be greater then 9)
+	// the default issue Errorlevel is 10. so we can use the default errorlevel for the most common issues
+	IssueLevelError = 10
+
+	MissingEntry = 10 // the entry is missing. this entry is defined in struct but not in config. als no omitempty tag is set in struct
+	WrongType    = 11 // the type is wrong. different from the strct definition, and also no type conversion is possible
+	UnknownEntry = 12 // the entry is is in the config but not in the struct
+
 )
 
 type MatchToken struct {
@@ -75,7 +82,7 @@ func (m *MatchToken) VerifyValue() int {
 				if m.Value == pairMatch.Value {
 					m.Status = PerfectMatch
 				} else {
-					m.Status = ValueMatchButTypeDiffers
+					m.Status = ValueNotMatch
 				}
 			} else {
 				m.Status = WrongType
