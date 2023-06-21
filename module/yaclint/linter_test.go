@@ -142,7 +142,7 @@ func TestConfigNo1(t *testing.T) {
 	}
 	var testConf testConfig
 
-	assertIssueLevelByConfig(t, "testConfig", "valid.yml", &testConf, ctxlint.IssueLevelError, FailIfHigher)
+	assertIssueLevelByConfig(t, "testConfig", "valid.yml", &testConf, ctxlint.ValueNotMatch, FailIfNotEqual)
 }
 
 func TestConfigNo2(t *testing.T) {
@@ -164,6 +164,6 @@ func TestConfigNo2(t *testing.T) {
 	}
 	var testConf tConfig
 	// we expect to fail, because the config file contains unknown fields
-	assertIssueLevelByConfig(t, "testConfig", "invalid_types.yml", &testConf, ctxlint.UnknownEntry, FailIfLower)
+	assertIssueLevelByConfig(t, "testConfig", "invalid_types.yml", &testConf, ctxlint.UnknownEntry, FailIfNotEqual)
 
 }

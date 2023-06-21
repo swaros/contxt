@@ -58,14 +58,20 @@ func NewMatchToken(parent *LintMap, line string, indexNr int, seqNr int, added b
 	return matchToken
 }
 
+// IsPair checks if the given token is a pair to this token
+// it checks if the keyword is the same and the added flag is different
+// if so it sets the pair token property and returns true
 func (m *MatchToken) IsPair(token *MatchToken) bool {
-	if m.KeyWord == token.KeyWord && m.Added != token.Added {
+	if m.IsValid() && token.IsValid() && m.KeyWord == token.KeyWord && m.Added != token.Added {
 		m.PairToken = token
 		return true
 	}
 	return false
 }
 
+// VerifyValue checks if the value is matching the pair token
+// if so it sets the status property and returns the status
+// the status represents the issue level
 func (m *MatchToken) VerifyValue() int {
 	if m.Status != -1 {
 		return m.Status
@@ -93,15 +99,9 @@ func (m *MatchToken) VerifyValue() int {
 	return m.Status
 }
 
+// IsValid checks if the token is valid and can be used for further processing
 func (m *MatchToken) IsValid() bool {
 	if m.KeyWord != "" && m.Type != "" {
-		return true
-	}
-	return false
-}
-
-func (m *MatchToken) IsCounterPart(token *MatchToken) bool {
-	if token.IsValid() && m.KeyWord == token.KeyWord && m.Type == token.Type && m.Added != token.Added {
 		return true
 	}
 	return false

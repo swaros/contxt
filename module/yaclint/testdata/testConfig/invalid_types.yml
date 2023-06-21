@@ -13,6 +13,6 @@
 #
 
 SourceCode: module/yaclint/linter_test.go
-AEngine: "hubert"
+Engine: "hubert"
 
 

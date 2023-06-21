@@ -10,10 +10,12 @@ type LintMap struct {
 	Chunks []*LintChunk
 }
 
+// AddChunk adds a new chunk to the lint map
 func (l *LintMap) AddChunk(chunk LintChunk) {
 	l.Chunks = append(l.Chunks, &chunk)
 }
 
+// GetTokensFromSequence returns all tokens from the given sequence
 func (l *LintMap) GetTokensFromSequence(seq int) []*MatchToken {
 	var tokens []*MatchToken
 	l.walkAll(func(token *MatchToken, added bool) {
@@ -24,6 +26,7 @@ func (l *LintMap) GetTokensFromSequence(seq int) []*MatchToken {
 	return tokens
 }
 
+// GetTokensFromSequenceAndIndex returns all tokens from the given sequence and index
 func (l *LintMap) GetTokensFromSequenceAndIndex(seq int, index int) []*MatchToken {
 	var tokens []*MatchToken
 	for _, token := range l.GetTokensFromSequence(seq) {
@@ -35,6 +38,7 @@ func (l *LintMap) GetTokensFromSequenceAndIndex(seq int, index int) []*MatchToke
 	return tokens
 }
 
+// GetMatchById returns the match token with the given id
 func (l *LintMap) GetMatchById(id string) *MatchToken {
 	for _, chunk := range l.Chunks {
 		for _, add := range chunk.Added {
@@ -51,6 +55,7 @@ func (l *LintMap) GetMatchById(id string) *MatchToken {
 	return nil
 }
 
+// walkAll walks through all tokens and calls the given handler
 func (l *LintMap) walkAll(hndl func(token *MatchToken, added bool)) {
 	for _, chunk := range l.Chunks {
 		for _, add := range chunk.Added {

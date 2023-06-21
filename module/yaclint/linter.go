@@ -109,6 +109,9 @@ func (l *Linter) GetDiff() (string, error) {
 
 }
 
+// Verify is the main function of the linter. It will verify the config file
+// against the structed config file. It will return an error if the config file
+// is not valid.
 func (l *Linter) Verify() error {
 
 	_, unstructSource, structSource, err := l.init4read()
@@ -121,6 +124,9 @@ func (l *Linter) Verify() error {
 
 	chunk := diff.DiffChunks(freeChnk, orgiChnk)
 	l.chunkWorker(chunk)
+	if !l.diffFound { // no diff found, so no need to go further
+		return nil
+	}
 	l.findPairs()
 	l.valueVerify()
 
@@ -197,6 +203,22 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 	}
 }
 
+// find the token that is the pair of the current token
+// so it must be deleted in the previous chunk with the same sequence number
+func (l *Linter) findPairsHelper(tkn *MatchToken) {
+	bestmatchTokens := l.lMap.GetTokensFromSequenceAndIndex(tkn.SequenceNr, tkn.indexNr)
+	if len(bestmatchTokens) > 0 {
+		for _, bestmatch := range bestmatchTokens {
+			if bestmatch.Added != tkn.Added {
+				tkn.IsPair(bestmatch) // {bestmatch, tkn}
+			}
+		}
+	}
+}
+
+// findPairs is a worker that is called if a diff is found.
+// it will find the pairs of the diff chunks.
+// a pair is a removed and an added line that are the same.
 func (l *Linter) findPairs() {
 	if l.diffFound {
 		// depends on the reult of the diff, we need to find the pairs
@@ -205,19 +227,23 @@ func (l *Linter) findPairs() {
 
 		for _, chunk := range l.lMap.Chunks {
 			for _, add := range chunk.Added {
+				l.findPairsHelper(add)
 				//foundmatch := false
-				bestmatchTokens := l.lMap.GetTokensFromSequenceAndIndex(add.SequenceNr, add.indexNr)
-				if len(bestmatchTokens) > 0 {
-					for _, bestmatch := range bestmatchTokens {
-						if bestmatch.Added != add.Added {
-							add.IsPair(bestmatch) // {
-							//fmt.Println("FOUND PAIR: ", add.KeyWord, " ---> ", bestmatch.KeyWord)
+				// find the token that is the pair of the current token
+				// so it must be deleted in the previous chunk with the same sequence number
+				/*
+					bestmatchTokens := l.lMap.GetTokensFromSequenceAndIndex(add.SequenceNr, add.indexNr)
+					if len(bestmatchTokens) > 0 {
+						for _, bestmatch := range bestmatchTokens {
+							if bestmatch.Added != add.Added {
+								add.IsPair(bestmatch) // {
+								//fmt.Println("FOUND PAIR: ", add.KeyWord, " ---> ", bestmatch.KeyWord)
 
-							//foundmatch = true
-							//}
+								//foundmatch = true
+								//}
+							}
 						}
-					}
-				}
+					}*/
 				/*
 					if !foundmatch {
 						// fallback.
@@ -234,11 +260,20 @@ func (l *Linter) findPairs() {
 					}
 				*/
 			}
+			// the deletes
+			for _, rm := range chunk.Removed {
+				l.findPairsHelper(rm)
+			}
 
 		}
 	}
 }
 
+// verify the values of the tokens.
+// if the values are not the same, we have an issue.
+// this is done after all pairs are found.
+// so we can verify the values of the pairs.
+// also we detect the highest issue level.
 func (l *Linter) valueVerify() {
 	if l.diffFound {
 		l.walkAll(func(token *MatchToken, added bool) {
@@ -247,7 +282,17 @@ func (l *Linter) valueVerify() {
 				if l.highestIssueLevel < token.Status {
 					l.highestIssueLevel = token.Status
 				}
+			} else {
+				// no pair on the removed side.
+				// so we have an entry that is not defined in the struct.
+				if token.PairToken == nil {
+					token.Status = UnknownEntry
+				}
+				if l.highestIssueLevel < token.Status {
+					l.highestIssueLevel = token.Status
+				}
 			}
+
 		})
 	}
 
@@ -265,6 +310,8 @@ func (l *Linter) ReportDiffStartedAt(level int, reportFn func(token *MatchToken)
 	}
 }
 
+// PrintIssues will print the issues found in the diff.
+// This is an report function.
 func (l *Linter) PrintIssues() string {
 	outPut := ""
 	if l.diffFound {
@@ -272,18 +319,14 @@ func (l *Linter) PrintIssues() string {
 			if added {
 				switch token.Status {
 				case ValueMatchButTypeDiffers:
-					//fmt.Println(token.Status, "   ValueMatchButTypeDiffers: [", token.Value, "]\t[", token.PairToken.Value, "]\t@ ", token.KeyWord, "("+token.Type+")")
-					outPut += fmt.Sprintf("ValueMatchButTypeDiffers: %d\t%s\t%s\t%s\t%s\n", token.Status, token.Value, token.PairToken.Value, token.KeyWord, token.Type)
+					outPut += fmt.Sprintf("ValueMatchButTypeDiffers: [%d]\t%s\t%s\t%s\t%s\n", token.Status, token.Value, token.PairToken.Value, token.KeyWord, token.Type)
 				case ValueNotMatch:
-					//fmt.Println(token.Status, "   ValueNotMatch: [", token.Value, "]\t[", token.PairToken.Value, "]\t@ ", token.KeyWord, "("+token.Type+")")
-					outPut += fmt.Sprintf("ValuesNotMatching %d\t%s\t%s\t%s\t%s\n", token.Status, token.Value, token.PairToken.Value, token.KeyWord, token.Type)
+					outPut += fmt.Sprintf("ValuesNotMatching [%d]\t%s\t%s\t%s\t%s\n", token.Status, token.Value, token.PairToken.Value, token.KeyWord, token.Type)
 
 				case MissingEntry:
-					//fmt.Println(token.Status, "   MissingEntry: ", token.KeyWord)
-					outPut += fmt.Sprintf("MissingEntry: %d\t%s\n", token.Status, token.KeyWord)
+					outPut += fmt.Sprintf("MissingEntry: [%d]\t%s\n", token.Status, token.KeyWord)
 				default:
-					//fmt.Println(token.Status, "   ", token.KeyWord)
-					outPut += fmt.Sprintf("%d\t%s\n", token.Status, token.KeyWord)
+					outPut += fmt.Sprintf("issue Level[%d]\t%s\n", token.Status, token.KeyWord)
 				}
 			}
 		})
