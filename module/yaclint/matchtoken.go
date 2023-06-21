@@ -1,6 +1,7 @@
 package yaclint
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -97,6 +98,32 @@ func (m *MatchToken) VerifyValue() int {
 	}
 
 	return m.Status
+}
+
+// ToIssueString returns a string representation of the issue
+func (m *MatchToken) ToIssueString() string {
+
+	switch m.Status {
+	case ValueMatchButTypeDiffers:
+		return fmt.Sprintf("ValueMatchButTypeDiffers: [%d]\t%s\t%s\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
+
+	case ValueNotMatch:
+		return fmt.Sprintf("ValuesNotMatching [%d]\t%s\t%s\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
+
+	case MissingEntry:
+		return fmt.Sprintf("MissingEntry: [%d]\t%s\n", m.Status, m.KeyWord)
+
+	case WrongType:
+		return fmt.Sprintf("WrongType: [%d]\t%s\t%s\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
+
+	case UnknownEntry:
+		return fmt.Sprintf("UnknownEntry: [%d]\t%s\n", m.Status, m.KeyWord)
+
+	default:
+		return fmt.Sprintf("generic issue Level[%d]\t%s\n", m.Status, m.KeyWord)
+
+	}
+
 }
 
 // IsValid checks if the token is valid and can be used for further processing

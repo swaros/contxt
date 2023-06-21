@@ -167,3 +167,59 @@ func TestConfigNo2(t *testing.T) {
 	assertIssueLevelByConfig(t, "testConfig", "invalid_types.yml", &testConf, ctxlint.UnknownEntry, FailIfNotEqual)
 
 }
+
+// same as TestConfigNo2, but we check more than the issue level
+func TestConfigNo2MoreChecks(t *testing.T) {
+	type dataSet struct {
+		TicketNr int
+		Comment  string
+	}
+
+	type tConfig struct {
+		SourceCode         string    `yaml:"SourceCode"`
+		BuildEngine        string    `yaml:"BuildEngine"`
+		BuildEngineVersion string    `yaml:"BuildEngineVersion"`
+		Targets            []string  `yaml:"Targets"`
+		BuildSteps         []string  `yaml:"BuildSteps"`
+		IsSystem           bool      `yaml:"IsSystem"`
+		IsDefault          bool      `yaml:"IsDefault"`
+		MainVersionNr      int       `yaml:"MainVersionNr"`
+		DataSet            []dataSet `yaml:"DataSet,omitempty"`
+	}
+	var testConf tConfig
+	// we expect to fail, because the config file contains unknown fields
+	verifier := assertIssueLevelByConfig(t, "testConfig", "invalid_types.yml", &testConf, ctxlint.UnknownEntry, FailIfNotEqual)
+
+	HitUnkonwnEntryCount := 0
+	MissingEntryCount := 0
+	UnexpectedEntryCount := 0
+	verifier.WalkIssues(func(token *ctxlint.MatchToken, added bool) {
+
+		if token.Status == ctxlint.UnknownEntry {
+			HitUnkonwnEntryCount++
+		} else if token.Status == ctxlint.MissingEntry {
+			MissingEntryCount++
+		} else {
+			UnexpectedEntryCount++
+		}
+
+	})
+
+	ExpectHitUnkonwnEntryCount := 1
+	if HitUnkonwnEntryCount != ExpectHitUnkonwnEntryCount {
+		t.Error("expected to find ", ExpectHitUnkonwnEntryCount, "unknown entries. got", HitUnkonwnEntryCount)
+		t.Log("\n" + verifier.PrintIssues())
+	}
+
+	ExpectMissingEntryCount := 8
+	if MissingEntryCount != ExpectMissingEntryCount {
+		t.Error("expected to find ", ExpectMissingEntryCount, "missing entries. got", MissingEntryCount)
+		t.Log("\n" + verifier.PrintIssues())
+	}
+
+	ExpectUnexpectedEntryCount := 0
+	if UnexpectedEntryCount != ExpectUnexpectedEntryCount {
+		t.Error("expected to find ", ExpectUnexpectedEntryCount, "unexpected entries. got", UnexpectedEntryCount)
+		t.Log("\n" + verifier.PrintIssues())
+	}
+}

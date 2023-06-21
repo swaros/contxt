@@ -316,22 +316,20 @@ func (l *Linter) PrintIssues() string {
 	outPut := ""
 	if l.diffFound {
 		l.walkAll(func(token *MatchToken, added bool) {
-			if added {
-				switch token.Status {
-				case ValueMatchButTypeDiffers:
-					outPut += fmt.Sprintf("ValueMatchButTypeDiffers: [%d]\t%s\t%s\t%s\t%s\n", token.Status, token.Value, token.PairToken.Value, token.KeyWord, token.Type)
-				case ValueNotMatch:
-					outPut += fmt.Sprintf("ValuesNotMatching [%d]\t%s\t%s\t%s\t%s\n", token.Status, token.Value, token.PairToken.Value, token.KeyWord, token.Type)
-
-				case MissingEntry:
-					outPut += fmt.Sprintf("MissingEntry: [%d]\t%s\n", token.Status, token.KeyWord)
-				default:
-					outPut += fmt.Sprintf("issue Level[%d]\t%s\n", token.Status, token.KeyWord)
-				}
-			}
+			outPut += token.ToIssueString()
 		})
 	}
 	return outPut
+}
+
+func (l *Linter) WalkIssues(hndlFn func(token *MatchToken, added bool)) {
+	if l.diffFound {
+		l.walkAll(func(token *MatchToken, added bool) {
+			if token.Status > 0 {
+				hndlFn(token, added)
+			}
+		})
+	}
 }
 
 // proxy to walk all
