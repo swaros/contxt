@@ -206,7 +206,7 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 // find the token that is the pair of the current token
 // so it must be deleted in the previous chunk with the same sequence number
 func (l *Linter) findPairsHelper(tkn *MatchToken) {
-	bestmatchTokens := l.lMap.GetTokensFromSequenceAndIndex(tkn.SequenceNr, tkn.indexNr)
+	bestmatchTokens := l.lMap.GetTokensFromSequenceAndIndex(tkn.SequenceNr, tkn.IndexNr)
 	if len(bestmatchTokens) > 0 {
 		for _, bestmatch := range bestmatchTokens {
 			if bestmatch.Added != tkn.Added {
@@ -228,37 +228,6 @@ func (l *Linter) findPairs() {
 		for _, chunk := range l.lMap.Chunks {
 			for _, add := range chunk.Added {
 				l.findPairsHelper(add)
-				//foundmatch := false
-				// find the token that is the pair of the current token
-				// so it must be deleted in the previous chunk with the same sequence number
-				/*
-					bestmatchTokens := l.lMap.GetTokensFromSequenceAndIndex(add.SequenceNr, add.indexNr)
-					if len(bestmatchTokens) > 0 {
-						for _, bestmatch := range bestmatchTokens {
-							if bestmatch.Added != add.Added {
-								add.IsPair(bestmatch) // {
-								//fmt.Println("FOUND PAIR: ", add.KeyWord, " ---> ", bestmatch.KeyWord)
-
-								//foundmatch = true
-								//}
-							}
-						}
-					}*/
-				/*
-					if !foundmatch {
-						// fallback.
-						// TODO: if there is an case we need an fallback?
-						// TODO: is this safe? in terms of getting the right pair?
-						for _, seqTkn := range l.lMap.GetTokensFromSequence(add.SequenceNr) {
-							if add.IsPair(seqTkn) {
-								//fmt.Println("fallback .... FOUND PAIR IN SEQUENCE: ", add.KeyWord, " ---> ", add.KeyWord)
-								if l.highestIssueLevel < add.Status {
-									l.highestIssueLevel = add.Status
-								}
-							}
-						}
-					}
-				*/
 			}
 			// the deletes
 			for _, rm := range chunk.Removed {
@@ -298,13 +267,12 @@ func (l *Linter) valueVerify() {
 
 }
 
+// walkAll will walk over all tokens in the diff they have equal or higher level as the given level.
 func (l *Linter) ReportDiffStartedAt(level int, reportFn func(token *MatchToken)) {
 	if l.diffFound {
 		l.walkAll(func(token *MatchToken, added bool) {
-			if added {
-				if token.Status >= level {
-					reportFn(token)
-				}
+			if token.Status >= level {
+				reportFn(token)
 			}
 		})
 	}

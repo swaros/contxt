@@ -30,7 +30,7 @@ type MatchToken struct {
 	Type       string
 	Added      bool
 	SequenceNr int
-	indexNr    int
+	IndexNr    int
 	Status     int
 	PairToken  *MatchToken
 	ParentLint *LintMap
@@ -43,7 +43,7 @@ func NewMatchToken(parent *LintMap, line string, indexNr int, seqNr int, added b
 	matchToken.Type = "undefined"
 	matchToken.Added = added
 	matchToken.SequenceNr = seqNr
-	matchToken.indexNr = indexNr
+	matchToken.IndexNr = indexNr
 
 	matchToken.Status = -1
 	jsonLineParts := strings.Split(line, ":")
@@ -124,6 +124,36 @@ func (m *MatchToken) ToIssueString() string {
 
 	}
 
+}
+
+func (m *MatchToken) ToString() string {
+	return fmt.Sprintf("MatchToken(%s): [%d] val[%s] pval[%s] indx[%d] seq[%d] (%s)",
+		m.KeyWord,
+		m.Status,
+		m.Value,
+		m.PairToken.Value,
+		m.IndexNr,
+		m.SequenceNr,
+		m.Type)
+}
+
+// CleanValue returns the value as interface
+// trimed and cleaned
+func (m *MatchToken) CleanValue() interface{} {
+	switch m.Type {
+	case "string":
+		escaped := strings.Replace(m.Value.(string), "\"", "", -1)
+		trmmed := strings.Trim(escaped, " ")
+		return trmmed
+	case "int":
+		return m.Value.(int)
+	case "bool":
+		return m.Value.(bool)
+	case "float64":
+		return m.Value.(float64)
+	default:
+		return m.Value
+	}
 }
 
 // IsValid checks if the token is valid and can be used for further processing

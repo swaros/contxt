@@ -2,6 +2,7 @@ package yaclint_test
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/swaros/contxt/module/yacl"
@@ -221,5 +222,145 @@ func TestConfigNo2MoreChecks(t *testing.T) {
 	if UnexpectedEntryCount != ExpectUnexpectedEntryCount {
 		t.Error("expected to find ", ExpectUnexpectedEntryCount, "unexpected entries. got", UnexpectedEntryCount)
 		t.Log("\n" + verifier.PrintIssues())
+	}
+}
+
+func TestLoadFailure(t *testing.T) {
+	type dataSet struct {
+		TicketNr int
+		Comment  string
+	}
+
+	type tConfig struct {
+		SourceCode         string    `yaml:"SourceCode"`
+		BuildEngine        string    `yaml:"BuildEngine"`
+		BuildEngineVersion string    `yaml:"BuildEngineVersion"`
+		Targets            []string  `yaml:"Targets"`
+		BuildSteps         []string  `yaml:"BuildSteps"`
+		IsSystem           bool      `yaml:"IsSystem"`
+		IsDefault          bool      `yaml:"IsDefault"`
+		MainVersionNr      int       `yaml:"MainVersionNr"`
+		DataSet            []dataSet `yaml:"DataSet,omitempty"`
+	}
+	var testConf tConfig
+	configHndl := yacl.New(
+		&testConf,
+		yamc.NewYamlReader(),
+	).SetSubDirs("testdata", "testConfig").
+		SetSingleFile("valid.yml").
+		UseRelativeDir()
+
+	// using linter without loading the config should fail
+	chck := ctxlint.NewLinter(*configHndl)
+	if chck == nil {
+		t.Error("failed to create linter")
+	}
+
+	if vErr := chck.Verify(); vErr == nil {
+		t.Error("expected to fail, because config was not loaded")
+	} else {
+		if vErr.Error() != "no reader found. the config needs to be loaded first" {
+			t.Error("we expected a different error message then: ", vErr.Error())
+		}
+	}
+
+}
+
+// similar to MatchToken, but with less fields that we can use as expected values
+type assertTokenSimplify struct {
+	KeyWord    string
+	Value      interface{}
+	Type       string
+	Added      bool
+	IndexNr    int
+	SequenceNr int
+	Status     int
+	IsChecked  bool // true if the token was checked
+}
+
+// helper function to get the expected token from a slice
+// the token have to match on keyword, added, Indexnr, sequenceNr and ischecked.
+// isChecked is set to any token that is already checked.
+func helperGetExpectedFromSlice(name string, added bool, indexNr int, sequenceNr int, from []*assertTokenSimplify) *assertTokenSimplify {
+	for _, v := range from {
+		if v.KeyWord == name && v.Added == added && indexNr == v.IndexNr && sequenceNr == v.SequenceNr && v.IsChecked == false {
+			return v
+		}
+	}
+	return nil
+}
+
+func TestReportDiffStartedAt(t *testing.T) {
+
+	type dataSet struct {
+		TicketNr int
+		Comment  string
+	}
+
+	type tConfig struct {
+		SourceCode         string    `yaml:"SourceCode"`
+		BuildEngine        string    `yaml:"BuildEngine"`
+		BuildEngineVersion string    `yaml:"BuildEngineVersion"`
+		Targets            []string  `yaml:"Targets"`
+		BuildSteps         []string  `yaml:"BuildSteps"`
+		IsSystem           bool      `yaml:"IsSystem"`
+		IsDefault          bool      `yaml:"IsDefault"`
+		MainVersionNr      int       `yaml:"MainVersionNr"`
+		DataSet            []dataSet `yaml:"DataSet,omitempty"`
+	}
+	var testConf tConfig
+	// we expect to fail, because the config file contains unknown fields
+	linter := assertIssueLevelByConfig(t, "testConfig", "valid.yml", &testConf, ctxlint.ValueNotMatch, FailIfNotEqual)
+
+	expectedTokens := []*assertTokenSimplify{
+		{"BuildEngineVersion", "1.14", "string", false, 1, 1, ctxlint.ValueNotMatch, false},
+		{"BuildEngineVersion", "1.14", "string", true, 1, 1, ctxlint.ValueNotMatch, false},
+		{"    - Comment", "", "string", true, 1, 4, ctxlint.ValueNotMatch, false},
+		{"    - Comment", "this is a comment", "string", false, 1, 4, ctxlint.ValueNotMatch, false},
+		//{"      TicketNr", 1, "string", false, 2, 4, ctxlint.ValueNotMatch, false},
+	}
+
+	checkIndex := 0
+	reportNotFound := false // report all tokens that are not found. this helps while setting up the test to focus on value that are found but differs
+	linter.ReportDiffStartedAt(0, func(token *ctxlint.MatchToken) {
+		assertToken := helperGetExpectedFromSlice(token.KeyWord, token.Added, token.IndexNr, token.SequenceNr, expectedTokens)
+		if assertToken == nil {
+			if reportNotFound {
+				t.Error("unexpected token", token.ToString())
+			}
+			return
+		}
+		assertToken.IsChecked = true
+		indexIdent := strconv.Itoa(checkIndex) + "/" + strconv.Itoa(len(expectedTokens)) + " [" + assertToken.KeyWord + "] "
+		if token.KeyWord != assertToken.KeyWord {
+			t.Error(indexIdent, "expected keyword to be [", assertToken.KeyWord, "] got [", token.KeyWord, "]")
+			t.Log(" <-- skip the rest of the test because the keyword is already wrong")
+			return // no need to check the rest because if the keyword is already wrong, the other fields are also wrong
+		}
+		if token.CleanValue() != assertToken.Value {
+			t.Error(indexIdent, "expected value to be (", assertToken.Value, ") got (", token.CleanValue(), ")")
+		}
+		if token.Type != assertToken.Type {
+			t.Error(indexIdent, "expected type to be ", assertToken.Type, "got", token.Type)
+		}
+
+		if token.Added != assertToken.Added {
+			t.Error(indexIdent, "expected added to be ", assertToken.Added, "got", token.Added)
+		}
+		if token.SequenceNr != assertToken.SequenceNr {
+			t.Error(indexIdent, "expected sequenceNr to be ", assertToken.SequenceNr, "got", token.SequenceNr)
+		}
+		if token.Status != assertToken.Status {
+			t.Error(indexIdent, "expected status to be ", assertToken.Status, "got", token.Status)
+		}
+
+		checkIndex++
+
+	})
+	// now check if we do not check all tokens
+	for _, v := range expectedTokens {
+		if !v.IsChecked {
+			t.Error("we did not found token", v.KeyWord, "added", v.Added, " sequence", v.SequenceNr, " seems it is not reported in the the diff")
+		}
 	}
 }

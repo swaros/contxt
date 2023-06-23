@@ -30,7 +30,7 @@ func (l *LintMap) GetTokensFromSequence(seq int) []*MatchToken {
 func (l *LintMap) GetTokensFromSequenceAndIndex(seq int, index int) []*MatchToken {
 	var tokens []*MatchToken
 	for _, token := range l.GetTokensFromSequence(seq) {
-		if token.indexNr == index {
+		if token.IndexNr == index {
 			tokens = append(tokens, token)
 		}
 
