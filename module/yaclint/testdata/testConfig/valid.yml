@@ -19,7 +19,7 @@
 
 SourceCode: module/yaclint/linter_test.go
 BuildEngine: go
-BuildEngineVersion: 1.14
+BuildEngineVersion: "1.14"
 Targets:
 - linux/amd64
 - linux/arm64

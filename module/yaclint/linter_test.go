@@ -310,11 +310,15 @@ func TestReportDiffStartedAt(t *testing.T) {
 	}
 	var testConf tConfig
 	// we expect to fail, because the config file contains unknown fields
-	linter := assertIssueLevelByConfig(t, "testConfig", "valid.yml", &testConf, ctxlint.ValueNotMatch, FailIfNotEqual)
+	linter := assertIssueLevelByConfig(t, "testConfig", "some_fails.yml", &testConf, ctxlint.WrongType, FailIfNotEqual)
+	if linter == nil {
+		t.Error("failed to create linter")
+		return
+	}
 
 	expectedTokens := []*assertTokenSimplify{
-		{"BuildEngineVersion", "1.14", "string", false, 1, 1, ctxlint.ValueNotMatch, false},
-		{"BuildEngineVersion", "1.14", "string", true, 1, 1, ctxlint.ValueNotMatch, false},
+		{"BuildEngineVersion", 1.14, "float64", false, 1, 1, ctxlint.WrongType, false},
+		{"BuildEngineVersion", 1.14, "float64", true, 1, 1, ctxlint.PerfectMatch, false},
 		{"    - Comment", "", "string", true, 1, 4, ctxlint.ValueNotMatch, false},
 		{"    - Comment", "this is a comment", "string", false, 1, 4, ctxlint.ValueNotMatch, false},
 		//{"      TicketNr", 1, "string", false, 2, 4, ctxlint.ValueNotMatch, false},
@@ -338,7 +342,7 @@ func TestReportDiffStartedAt(t *testing.T) {
 			return // no need to check the rest because if the keyword is already wrong, the other fields are also wrong
 		}
 		if token.CleanValue() != assertToken.Value {
-			t.Error(indexIdent, "expected value to be (", assertToken.Value, ") got (", token.CleanValue(), ")")
+			t.Error(indexIdent, "expected value to be (", assertToken.Value, ") got (", token.CleanValue(), ") ", token.ToString())
 		}
 		if token.Type != assertToken.Type {
 			t.Error(indexIdent, "expected type to be ", assertToken.Type, "got", token.Type)
@@ -351,7 +355,7 @@ func TestReportDiffStartedAt(t *testing.T) {
 			t.Error(indexIdent, "expected sequenceNr to be ", assertToken.SequenceNr, "got", token.SequenceNr)
 		}
 		if token.Status != assertToken.Status {
-			t.Error(indexIdent, "expected status to be ", assertToken.Status, "got", token.Status)
+			t.Error(indexIdent, "expected status to be ", assertToken.Status, "got", token.Status, "(", token.ToString(), ")")
 		}
 
 		checkIndex++

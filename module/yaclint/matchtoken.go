@@ -2,6 +2,7 @@ package yaclint
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -105,19 +106,22 @@ func (m *MatchToken) ToIssueString() string {
 
 	switch m.Status {
 	case ValueMatchButTypeDiffers:
-		return fmt.Sprintf("ValueMatchButTypeDiffers: [%d]\t%s\t%s\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
+		return fmt.Sprintf("ValueMatchButTypeDiffers: [%d]\t%v\t%v\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
 
 	case ValueNotMatch:
-		return fmt.Sprintf("ValuesNotMatching [%d]\t%s\t%s\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
+		return fmt.Sprintf("ValuesNotMatching [%d]\t%v\t%v\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
 
 	case MissingEntry:
 		return fmt.Sprintf("MissingEntry: [%d]\t%s\n", m.Status, m.KeyWord)
 
 	case WrongType:
-		return fmt.Sprintf("WrongType: [%d]\t%s\t%s\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
+		return fmt.Sprintf("WrongType: [%d]\t%v\t%v\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
 
 	case UnknownEntry:
 		return fmt.Sprintf("UnknownEntry: [%d]\t%s\n", m.Status, m.KeyWord)
+
+	case PerfectMatch:
+		return fmt.Sprintf("PerfectMatch: [%d]\t%s\n", m.Status, m.KeyWord)
 
 	default:
 		return fmt.Sprintf("generic issue Level[%d]\t%s\n", m.Status, m.KeyWord)
@@ -127,7 +131,7 @@ func (m *MatchToken) ToIssueString() string {
 }
 
 func (m *MatchToken) ToString() string {
-	return fmt.Sprintf("MatchToken(%s): [%d] val[%s] pval[%s] indx[%d] seq[%d] (%s)",
+	return fmt.Sprintf("MatchToken(%s): [%d] val[%v] pval[%v] indx[%d] seq[%d] (%s)",
 		m.KeyWord,
 		m.Status,
 		m.Value,
@@ -156,6 +160,12 @@ func (m *MatchToken) CleanValue() interface{} {
 	}
 }
 
+func (m *MatchToken) trimString() {
+	escaped := strings.Replace(m.Value.(string), "\"", "", -1)
+	m.Value = strings.Trim(escaped, " ")
+
+}
+
 // IsValid checks if the token is valid and can be used for further processing
 func (m *MatchToken) IsValid() bool {
 	if m.KeyWord != "" && m.Type != "" {
@@ -166,7 +176,14 @@ func (m *MatchToken) IsValid() bool {
 
 func (m *MatchToken) detectValueType() {
 	switch m.Value.(type) {
+	case string: // this is the case most of the time, because we do not parse the data. we parse the diff report
+		m.Value = DetectedValueFromString(m.Value.(string))
+	}
+
+	// and again after the conversion
+	switch m.Value.(type) {
 	case string:
+		m.trimString()
 		m.Type = "string"
 	case int:
 		m.Type = "int"
@@ -177,4 +194,26 @@ func (m *MatchToken) detectValueType() {
 	default:
 		m.Type = "undefined"
 	}
+}
+
+func DetectedValueFromString(str string) interface{} {
+	// if the value contains \" it is a string. we need to remove the \"
+	if strings.Contains(str, "\\\"") {
+		return strings.Replace(str, "\\\"", "", -1)
+	}
+
+	str = strings.TrimLeft(str, " ")
+	if str == "true" {
+		return true
+	}
+	if str == "false" {
+		return false
+	}
+	if i, err := strconv.Atoi(str); err == nil {
+		return i
+	}
+	if f, err := strconv.ParseFloat(str, 64); err == nil {
+		return f
+	}
+	return str
 }
