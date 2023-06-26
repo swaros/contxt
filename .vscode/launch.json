@@ -32,7 +32,7 @@
             "args": ["dir"]
         },
         {
-            "name": "v2 run test (on regular contxt tasks)",            
+            "name": "v2 run test (on regular contxt tasks)",
             "type": "go",
             "request": "launch",
             "cwd": "${workspaceFolder}",
@@ -49,6 +49,24 @@
             "program": "${workspaceFolder}/cmd/v2/main.go",
             "env": {},
             "args": ["interactive"]
+        },
+        {
+            "name": "v2 EXAMPLE yacl - current dir",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/module/yacl/example/current/main.go",
+            "env": {},
+            "args": [""]
+        },
+        {
+            "name": "v2 EXAMPLE yacl - overwrite config",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/module/yacl/example/overwrite/main.go",
+            "env": {},
+            "args": [""]
         },
         {
             "name": "plain start",
