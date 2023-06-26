@@ -47,3 +47,67 @@ func TestMultiple(t *testing.T) {
 	}
 
 }
+
+func TestMatchToString(t *testing.T) {
+	match := yaclint.MatchToken{
+		UuId:       "test1234567",
+		KeyWord:    "test",
+		Value:      "test",
+		SequenceNr: 1,
+		Type:       "string",
+	}
+
+	str := match.ToString()
+	if str != "MatchToken(test): [0] val[test] indx[0] seq[1] (string)" {
+		t.Errorf("unexpected string: %s", str)
+	}
+
+	pairToken := yaclint.MatchToken{
+		UuId:       "test1234567_2",
+		KeyWord:    "test2",
+		Value:      "test2",
+		SequenceNr: 1,
+		Type:       "string",
+	}
+
+	match.PairToken = &pairToken
+	str = match.ToString()
+	if str != "MatchToken(test): [0] val[test] pval[test2] indx[0] seq[1] (string)" {
+		t.Errorf("unexpected string: %s", str)
+	}
+
+	match.Value = 1
+	match.VerifyValue()
+	str = match.ToString()
+	if str != "MatchToken(test): [0] val[1] pval[test2] indx[0] seq[1] (string)" {
+		t.Errorf("unexpected string: %s", str)
+	}
+
+	match.Value = 1.44
+	match.VerifyValue()
+	str = match.ToString()
+	if str != "MatchToken(test): [0] val[1.44] pval[test2] indx[0] seq[1] (string)" {
+		t.Errorf("unexpected string: %s", str)
+	}
+
+	match.Value = true
+	match.VerifyValue()
+	str = match.ToString()
+	if str != "MatchToken(test): [0] val[true] pval[test2] indx[0] seq[1] (string)" {
+		t.Errorf("unexpected string: %s", str)
+	}
+
+	match.Value = false
+	match.VerifyValue()
+	str = match.ToString()
+	if str != "MatchToken(test): [0] val[false] pval[test2] indx[0] seq[1] (string)" {
+		t.Errorf("unexpected string: %s", str)
+	}
+
+	match.Value = "1.44"
+	match.VerifyValue()
+	str = match.ToString()
+	if str != "MatchToken(test): [0] val[1.44] pval[test2] indx[0] seq[1] (string)" {
+		t.Errorf("unexpected string: %s", str)
+	}
+}

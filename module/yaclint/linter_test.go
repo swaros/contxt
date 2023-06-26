@@ -367,4 +367,21 @@ func TestReportDiffStartedAt(t *testing.T) {
 			t.Error("we did not found token", v.KeyWord, "added", v.Added, " sequence", v.SequenceNr, " seems it is not reported in the the diff")
 		}
 	}
+
+	diff, linErr := linter.GetDiff()
+	if linErr != nil {
+		t.Error("failed to get diff", linErr)
+		return
+	}
+	// we did not check the diff, because we are not the diff package. but we can check if the diff is empty
+	if diff == "" {
+		t.Error("diff is empty")
+		return
+	}
+
+	reportOut := linter.PrintIssues()
+	if reportOut == "" {
+		t.Error("report is empty")
+		return
+	}
 }

@@ -10,11 +10,6 @@ type LintMap struct {
 	Chunks []*LintChunk
 }
 
-// AddChunk adds a new chunk to the lint map
-func (l *LintMap) AddChunk(chunk LintChunk) {
-	l.Chunks = append(l.Chunks, &chunk)
-}
-
 // GetTokensFromSequence returns all tokens from the given sequence
 func (l *LintMap) GetTokensFromSequence(seq int) []*MatchToken {
 	var tokens []*MatchToken
@@ -36,23 +31,6 @@ func (l *LintMap) GetTokensFromSequenceAndIndex(seq int, index int) []*MatchToke
 
 	}
 	return tokens
-}
-
-// GetMatchById returns the match token with the given id
-func (l *LintMap) GetMatchById(id string) *MatchToken {
-	for _, chunk := range l.Chunks {
-		for _, add := range chunk.Added {
-			if add.UuId == id {
-				return add
-			}
-		}
-		for _, rm := range chunk.Removed {
-			if rm.UuId == id {
-				return rm
-			}
-		}
-	}
-	return nil
 }
 
 // walkAll walks through all tokens and calls the given handler

@@ -131,6 +131,15 @@ func (m *MatchToken) ToIssueString() string {
 }
 
 func (m *MatchToken) ToString() string {
+	if m.PairToken == nil {
+		return fmt.Sprintf("MatchToken(%s): [%d] val[%v] indx[%d] seq[%d] (%s)",
+			m.KeyWord,
+			m.Status,
+			m.Value,
+			m.IndexNr,
+			m.SequenceNr,
+			m.Type)
+	}
 	return fmt.Sprintf("MatchToken(%s): [%d] val[%v] pval[%v] indx[%d] seq[%d] (%s)",
 		m.KeyWord,
 		m.Status,
@@ -197,9 +206,9 @@ func (m *MatchToken) detectValueType() {
 }
 
 func DetectedValueFromString(str string) interface{} {
-	// if the value contains \" it is a string. we need to remove the \"
-	if strings.Contains(str, "\\\"") {
-		return strings.Replace(str, "\\\"", "", -1)
+	// we keep the quotes if the string contains quotes. to get the right value, CleanValue() should be used
+	if strings.Contains(str, "\"") {
+		return str
 	}
 
 	str = strings.TrimLeft(str, " ")
