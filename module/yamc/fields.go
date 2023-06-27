@@ -65,6 +65,7 @@ func (s *StructDef) ignoreField(field string) bool {
 	ignores := []string{
 		"map[string]interface {}",
 		"[]interface {}",
+		"interface {}",
 	}
 	for _, ignore := range ignores {
 		if field == ignore {
@@ -91,7 +92,11 @@ func (s *StructDef) ignoreField(field string) bool {
 // by an specialized data reader, so the reader can solve the tag.
 // the tagparser can be nil, if you don't need it.
 func (s *StructDef) readStruct(strct interface{}, tagparser reftagFunc) error {
+	if strct == nil {
+		return fmt.Errorf("structRead: given struct is nil")
+	}
 	refMap := reflect.TypeOf(strct)
+
 	if refMap.Kind() != reflect.Ptr {
 		return fmt.Errorf("structRead: given struct is not a pointer")
 	}

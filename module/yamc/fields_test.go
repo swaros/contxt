@@ -25,6 +25,56 @@ func parseJsonFn(info yamc.StructField) yamc.ReflectTagRef {
 	return yamc.ReflectTagRef{}
 }
 
+func TestNotInitialized(t *testing.T) {
+	var data interface{}
+	fields := yamc.NewStructDef(&data)
+	if fields.Init {
+		t.Error("expected fields not to be initialized")
+	}
+
+	_, err := fields.GetField("test")
+	if err == nil {
+		t.Error("expected error, because we do not have any fields")
+	}
+}
+
+func TestNilInterface(t *testing.T) {
+	var data interface{}
+	fields := yamc.NewStructDef(data)
+	if err := fields.ReadStruct(parseJsonFn); err == nil {
+		t.Error("expected error, because we do not have a pointer")
+	} else {
+		expectedError := "structRead: given struct is nil"
+		if err.Error() != expectedError {
+			t.Errorf("expected error [%s], got [%s]", expectedError, err.Error())
+		}
+	}
+
+}
+
+func TestNonPointer(t *testing.T) {
+	type testData struct {
+		Name    string `json:"name"`
+		Age     int    `json:"age"`
+		Contact struct {
+			Email string `json:"email"`
+			Phone string `json:"phone"`
+		} `json:"contact"`
+
+		Subs []string `json:"subs"`
+	}
+	var data testData
+	fields := yamc.NewStructDef(data)
+	if err := fields.ReadStruct(parseJsonFn); err == nil {
+		t.Error("expected error, because we do not have a pointer")
+	} else {
+		expectedError := "structRead: given struct is not a pointer"
+		if err.Error() != expectedError {
+			t.Errorf("expected error [%s], got [%s]", expectedError, err.Error())
+		}
+	}
+}
+
 func TestFieldGetField(t *testing.T) {
 	type testData struct {
 		Name    string `json:"name"`
