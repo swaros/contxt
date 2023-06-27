@@ -34,15 +34,16 @@ import (
 )
 
 type Linter struct {
-	config            yacl.ConfigModel // the config model that we need to verify
-	lMap              LintMap          // contains the diff chunks
-	diffFound         bool             // true if we found a diff. that is just a sign, that an SOME diff is found, not that the config is invalid
-	highestIssueLevel int              // the highest issue level found
+	config            *yacl.ConfigModel // the config model that we need to verify
+	lMap              LintMap           // contains the diff chunks
+	diffFound         bool              // true if we found a diff. that is just a sign, that an SOME diff is found, not that the config is invalid
+	highestIssueLevel int               // the highest issue level found
+	structhandler     yamc.StructDef    // the struct handler for the config file. keeps the struct definition
 }
 
 func NewLinter(config yacl.ConfigModel) *Linter {
 	return &Linter{
-		config:            config,
+		config:            &config,
 		highestIssueLevel: 0,
 	}
 
@@ -85,7 +86,7 @@ func (l *Linter) init4read() (yamc.DataReader, string, string, error) {
 	if yamcLoader == nil {
 		return nil, "", "", fmt.Errorf("no reader found. the config needs to be loaded first")
 	}
-
+	l.structhandler = *yamcLoader.GetFields() // get the struct handler from the reader. must be done before the unstructed map is loaded
 	_, unstructSource, err1 := l.getUnstructMap(yamcLoader)
 	if err1 != nil {
 		return nil, "", "", err1
@@ -138,6 +139,18 @@ func (l *Linter) GetHighestIssueLevel() int {
 	return l.highestIssueLevel
 }
 
+// if the lint fails and do not report any error, the config could be just invalid for structure parsing.
+// this can happen while the config file is tryed to be loaded, but it is not readable.
+// this can be the case if the config is injected with an reference of an pointer,
+// or it is an array, a map[string]string or an interface{}.
+// if this was happens, this function will return the reason why the parsing failed.
+func (l *Linter) HaveParsingError() (string, bool) {
+	if l.structhandler.IgnoredBecauseOf != "" {
+		return l.structhandler.IgnoredBecauseOf, true
+	}
+	return "", false
+}
+
 // chunkWorker is a worker that is called for each chunk that is found.
 // in the diff. It will create a LintMap that contains the chunks
 // for later investigation, if needed.
@@ -164,7 +177,7 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 			changeNr4Add++
 			//fmt.Println("ADDED:"+line, " ---> index[", indexNr, "] seq[", sequenceNr, "]", "chunk[", chunkIndex, "]", "change[", changeNr4Add, "]")
 
-			addToken := NewMatchToken(&l.lMap, line, changeNr4Add, sequenceNr, true)
+			addToken := NewMatchToken(l.structhandler, &l.lMap, line, changeNr4Add, sequenceNr, true)
 			temporaryChunk.Added = append(temporaryChunk.Added, &addToken)
 			needToBeAdded = true
 		}
@@ -172,7 +185,7 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 			changeNr4Rm++
 			//fmt.Println("DELETED:"+line, " --->index[", indexNr, "] seq[", sequenceNr, "]", "chunk[", chunkIndex, "]", "change[", changeNr4Rm, "]")
 
-			rmToken := NewMatchToken(&l.lMap, line, changeNr4Rm, sequenceNr, false)
+			rmToken := NewMatchToken(l.structhandler, &l.lMap, line, changeNr4Rm, sequenceNr, false)
 			temporaryChunk.Removed = append(temporaryChunk.Removed, &rmToken)
 			needToBeAdded = true
 		}

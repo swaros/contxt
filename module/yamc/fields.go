@@ -12,6 +12,8 @@ type StructDef struct {
 	Struct interface{}
 	// the fields of the struct
 	Fields map[string]StructField
+	// if the struct is ignored, we store the reason here
+	IgnoredBecauseOf string
 }
 
 type StructField struct {
@@ -69,19 +71,23 @@ func (s *StructDef) ignoreField(field string) bool {
 	}
 	for _, ignore := range ignores {
 		if field == ignore {
+			s.IgnoredBecauseOf = ignore + " is not supported"
 			return true
 		}
 	}
 	// we ignore pointers
 	if field[0] == '*' {
+		s.IgnoredBecauseOf = "pointers are not supported"
 		return true
 	}
 	// we ignore slices
 	if field[0] == '[' {
+		s.IgnoredBecauseOf = "slices are not supported"
 		return true
 	}
 	// we ignore arrays
 	if field[0] == '{' {
+		s.IgnoredBecauseOf = "arrays are not supported"
 		return true
 	}
 	return false

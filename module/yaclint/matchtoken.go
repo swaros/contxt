@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/swaros/contxt/module/yamc"
 )
 
 const (
@@ -37,7 +38,7 @@ type MatchToken struct {
 	ParentLint *LintMap
 }
 
-func NewMatchToken(parent *LintMap, line string, indexNr int, seqNr int, added bool) MatchToken {
+func NewMatchToken(structDef yamc.StructDef, parent *LintMap, line string, indexNr int, seqNr int, added bool) MatchToken {
 	var matchToken MatchToken
 	matchToken.ParentLint = parent
 	matchToken.UuId = uuid.New().String()
@@ -49,15 +50,24 @@ func NewMatchToken(parent *LintMap, line string, indexNr int, seqNr int, added b
 	matchToken.Status = -1
 	jsonLineParts := strings.Split(line, ":")
 	if len(jsonLineParts) > 1 {
-		matchToken.KeyWord = jsonLineParts[0]
+		matchToken.KeyWord = getNameOf(structDef, jsonLineParts[0])
 		matchToken.Value = jsonLineParts[1]
 		matchToken.detectValueType()
 	} else {
-		matchToken.KeyWord = line
+		matchToken.KeyWord = getNameOf(structDef, line)
 		matchToken.Value = ""
 
 	}
 	return matchToken
+}
+
+func getNameOf(structDef yamc.StructDef, check string) string {
+	if structDef.Fields != nil && len(structDef.Fields) > 0 {
+		if field, err := structDef.GetField(check); err == nil {
+			return field.OrginalTag.TagRenamed
+		}
+	}
+	return check
 }
 
 // IsPair checks if the given token is a pair to this token
@@ -78,7 +88,7 @@ func (m *MatchToken) VerifyValue() int {
 	if m.Status != -1 {
 		return m.Status
 	}
-	m.detectValueType()
+	//m.detectValueType()
 	if m.PairToken == nil {
 		m.Status = MissingEntry
 	} else {

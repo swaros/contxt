@@ -47,7 +47,7 @@ type ConfigModel struct {
 	setFile          string                             // sets a specific filename. so this is the only one that will be loaded
 	useSpecialDir    int                                // defines the behavior og the paths used like config, user home or none a simple path (relative or absolute)
 	structure        any                                // points to the config struct
-	reader           []yamc.DataReader                  // list of posible readers
+	reader           *[]yamc.DataReader                 // list of posible readers
 	lastUsedReader   yamc.DataReader                    // the last used reader
 	subDirs          []string                           // subdirectories relative to the basedir (defined by useSpecialDir behavior)
 	usedFile         string                             // the last used configFile that is parsed
@@ -71,7 +71,7 @@ func New(structure any, read ...yamc.DataReader) *ConfigModel {
 		useSpecialDir: PATH_UNSET,
 		expectNoFiles: false,
 		structure:     structure,
-		reader:        read,
+		reader:        &read,
 		allowSubDirs:  false,
 	}
 }
@@ -266,7 +266,7 @@ func (c *ConfigModel) Load() error {
 	c.Empty()
 
 	// do we have loaders?
-	if len(c.reader) == 0 {
+	if len(*c.reader) == 0 {
 		return errors.New("no loaders assigned. add add least one Reader on New(&cf, ...)")
 	}
 	dir := c.GetConfigPath()
@@ -337,7 +337,7 @@ func (c *ConfigModel) detectFilename() string {
 // IF we have setup a SingleFile and do not have a usage while loading, then this will be used instead.
 // anything else will report an error
 func (c *ConfigModel) Save() error {
-	if len(c.reader) < 1 {
+	if len(*c.reader) < 1 {
 		return errors.New("we need at least one DataReader. the fist assigned will be used for write operations")
 	}
 	filename := c.detectFilename()
@@ -346,7 +346,8 @@ func (c *ConfigModel) Save() error {
 	}
 
 	if ym, err := c.GetAsYmac(); err == nil {
-		if str, sErr := ym.ToString(c.reader[0]); sErr == nil {
+		reader := *c.reader
+		if str, sErr := ym.ToString(reader[0]); sErr == nil {
 			data := []byte(str)
 			if err := os.WriteFile(filename, data, 0644); err != nil {
 				return err
@@ -450,7 +451,7 @@ func (c *ConfigModel) CreateYamc(reader yamc.DataReader) (*yamc.Yamc, error) {
 }
 
 func (c *ConfigModel) tryLoad(path, ext string) error {
-	for _, loader := range c.reader {
+	for _, loader := range *c.reader {
 		for _, ex := range loader.SupportsExt() {
 			if strings.EqualFold("."+ex, ext) {
 				if err := loader.FileDecode(path, c.structure); err == nil {

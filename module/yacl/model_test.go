@@ -557,3 +557,60 @@ func TestOneFileNameUsage(t *testing.T) {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 }
+
+func TestGetLastLoader(t *testing.T) {
+	var cfg chainConfig
+
+	yamlLoader := yamc.NewYamlReader()
+	chainCfg := yacl.New(&cfg, yamlLoader).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml")
+
+	loadErr := chainCfg.Load()
+	if loadErr != nil {
+		t.Error(loadErr)
+	}
+
+	loader := chainCfg.GetLastUsedReader()
+	if loader == nil {
+		t.Error("we should have a reader here")
+	}
+
+	if loader != yamlLoader {
+		t.Error("we should have the same reader")
+	}
+
+	loader.GetFields().Init = false
+
+	if loader != yamlLoader {
+		t.Error("we should have the same reader")
+	}
+}
+
+func TestGetLastLoaderNew(t *testing.T) {
+	var cfg chainConfig
+
+	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml")
+
+	loadErr := chainCfg.Load()
+	if loadErr != nil {
+		t.Error(loadErr)
+	}
+
+	loader := chainCfg.GetLastUsedReader()
+	if loader == nil {
+		t.Error("we should have a reader here")
+	}
+
+	if loader.HaveFields() == false {
+		t.Error("we should have fields here")
+	}
+
+	if loader.GetFields().Init == false {
+		t.Error("the loader should be initialized")
+	}
+}

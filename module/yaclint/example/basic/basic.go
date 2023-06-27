@@ -15,9 +15,9 @@ type Config struct {
 
 func main() {
 	// create a new yacl instance
-	config := Config{}
+	config := &Config{}
 	cfgApp := yacl.New(
-		&config,
+		config,
 		yamc.NewYamlReader(),
 	)
 	// load the config file. must be done before the linter can be used
@@ -34,7 +34,12 @@ func main() {
 
 	// if we found any issues, then the issuelevel is not 0
 	if linter.GetHighestIssueLevel() > 0 {
-		// just print the issues
+		// just print the issues. right now this should not be the case
 		fmt.Println(linter.PrintIssues())
 	}
+
+	// now we can use the config
+	fmt.Println(config.Name)
+	fmt.Println(config.Age)
+
 }

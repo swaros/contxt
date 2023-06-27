@@ -25,6 +25,23 @@ func parseJsonFn(info yamc.StructField) yamc.ReflectTagRef {
 	return yamc.ReflectTagRef{}
 }
 
+func parseYamlTagfunc(info yamc.StructField) yamc.ReflectTagRef {
+	if info.Tag.Get("yaml") != "" {
+		all := info.Tag.Get("yaml")
+		parts := strings.Split(all, ",")
+		adds := []string{}
+		if len(parts) > 1 {
+			adds = parts[1:]
+		}
+		return yamc.ReflectTagRef{
+			TagRenamed:    parts[0],
+			TagAdditional: adds,
+		}
+	}
+
+	return yamc.ReflectTagRef{}
+}
+
 func TestNotInitialized(t *testing.T) {
 	var data interface{}
 	fields := yamc.NewStructDef(&data)
@@ -241,5 +258,114 @@ func TestFieldGetFieldDeep(t *testing.T) {
 		if err.Error() != expectedError {
 			t.Errorf("expected error [%s], got [%s]", expectedError, err.Error())
 		}
+	}
+}
+
+func TestYamlTest0003Load(t *testing.T) {
+	type testData struct {
+		Name      string            `yaml:"name"`
+		Job       string            `yaml:"job"`
+		Skill     string            `yaml:"skill"`
+		Foods     []string          `yaml:"foods"`
+		Languages map[string]string `yaml:"languages"`
+		Education string            `yaml:"education"`
+	}
+	var data testData
+	fields := yamc.NewStructDef(&data)
+
+	// verify all fields
+	if err := fields.ReadStruct(parseYamlTagfunc); err != nil {
+		t.Error(err)
+	}
+
+	// test to get a field with children
+	if languageField, err := fields.GetField("Languages"); err == nil {
+		if languageField.Name != "Languages" {
+			t.Errorf("expected languages field, got %s", languageField.Name)
+		}
+
+		if languageField.Type != "map[string]string" {
+			t.Errorf("expected map[string]string type, got %s", languageField.Type)
+		}
+
+		if languageField.OrginalTag.TagRenamed != "languages" {
+			t.Errorf("expected tag languages, got [%s]", languageField.OrginalTag.TagRenamed)
+		}
+	} else {
+		t.Error(err)
+	}
+}
+
+func TestYamlTest0004Load(t *testing.T) {
+	type subData struct {
+		Header  string `yaml:"header"`
+		Content string `yaml:"content"`
+	}
+	type testData struct {
+		Name      string            `yaml:"name"`
+		Job       string            `yaml:"job"`
+		Skill     string            `yaml:"skill"`
+		Foods     []string          `yaml:"foods"`
+		Languages map[string]string `yaml:"languages"`
+		Education string            `yaml:"education"`
+		SubInfo   subData           `yaml:"subinfo"`
+	}
+	var data testData
+	fields := yamc.NewStructDef(&data)
+
+	// verify all fields
+	if err := fields.ReadStruct(parseYamlTagfunc); err != nil {
+		t.Error(err)
+	}
+
+	// test to get a field with children
+	if languageField, err := fields.GetField("Languages"); err == nil {
+		if languageField.Name != "Languages" {
+			t.Errorf("expected languages field, got %s", languageField.Name)
+		}
+
+		if languageField.Type != "map[string]string" {
+			t.Errorf("expected map[string]string type, got %s", languageField.Type)
+		}
+
+		if languageField.OrginalTag.TagRenamed != "languages" {
+			t.Errorf("expected tag languages, got [%s]", languageField.OrginalTag.TagRenamed)
+		}
+	} else {
+		t.Error(err)
+	}
+
+	// test to get a field with children
+	if subInfoField, err := fields.GetField("SubInfo"); err == nil {
+		if subInfoField.Name != "SubInfo" {
+			t.Errorf("expected SubInfo field, got %s", subInfoField.Name)
+		}
+
+		if subInfoField.Type != "yamc_test.subData" {
+			t.Errorf("expected yamc_test.subData type, got %s", subInfoField.Type)
+		}
+
+		if subInfoField.OrginalTag.TagRenamed != "subinfo" {
+			t.Errorf("expected tag subinfo, got [%s]", subInfoField.OrginalTag.TagRenamed)
+		}
+	} else {
+		t.Error(err)
+	}
+
+	// test to get a child from a existing field
+	if subInfoField, err := fields.GetField("SubInfo.Header"); err == nil {
+		if subInfoField.Name != "Header" {
+			t.Errorf("expected Header field, got %s", subInfoField.Name)
+		}
+
+		if subInfoField.Type != "string" {
+			t.Errorf("expected string type, got %s", subInfoField.Type)
+		}
+
+		if subInfoField.OrginalTag.TagRenamed != "header" {
+			t.Errorf("expected tag header, got [%s]", subInfoField.OrginalTag.TagRenamed)
+		}
+	} else {
+		t.Error(err)
 	}
 }
