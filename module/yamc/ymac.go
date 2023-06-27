@@ -38,11 +38,26 @@ const (
 	UNSET           = 0 // initial status
 )
 
+// DataReader is the interface for the data reader
+// the data reader have to support the regular unmarshal and marshal.
+// additionally it have to support the file decode.
+// the filedecode is as shortcut for read the file and decode it.
+// this part of the  interface is used to get the data from the file
+// depending on the file extension.
+// for this, the SupportsExt returns a list of supported file extensions.
+//
+// the HaveFields is used to tell the caller if the data reader have
+// fields they can report. this can be used to work with data tags for validateing data.
+// depending on the type of the source structure, it is not guaranteed that the data reader
+// have fields they can report.
+// if we have fields to report, read them with GetFields.
 type DataReader interface {
-	Unmarshal(in []byte, out interface{}) (err error)
-	Marshal(in interface{}) (out []byte, err error)
-	FileDecode(path string, decodeInterface interface{}) (err error)
-	SupportsExt() []string
+	Unmarshal(in []byte, out interface{}) (err error)                // Unmarshal is used to decode the data
+	Marshal(in interface{}) (out []byte, err error)                  // Marshal is used to encode the data
+	FileDecode(path string, decodeInterface interface{}) (err error) // FileDecode is used to decode the data from a file
+	SupportsExt() []string                                           // SupportsExt returns a list of supported file extensions
+	HaveFields() bool                                                // HaveFields returns true if the data reader have fields they can report
+	GetFields() *StructDef                                           // GetFields returns the fields of the data reader
 }
 
 type Yamc struct {
