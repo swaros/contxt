@@ -26,12 +26,19 @@ package yaclint
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
 	"github.com/kylelemons/godebug/diff"
 	"github.com/swaros/contxt/module/yacl"
 	"github.com/swaros/contxt/module/yamc"
+)
+
+const (
+	IssueLevelInfo  = 2
+	IssueLevelWarn  = 5
+	IssueLevelError = 10
 )
 
 type Linter struct {
@@ -55,7 +62,8 @@ func NewLinter(config yacl.ConfigModel) *Linter {
 // as map[string]interface{} and as string (the yaml/json representation)
 func (l *Linter) getUnstructMap(loader yamc.DataReader) (map[string]interface{}, string, error) {
 	fileName := l.config.GetLoadedFile() // the file name of the config file
-	m := make(map[string]interface{})    // generic map to load the file for comparison
+	l.Trace("(re)Loading file:", fileName)
+	m := make(map[string]interface{}) // generic map to load the file for comparison
 	err := loader.FileDecode(fileName, &m)
 	if err != nil {
 		return nil, "", err
@@ -88,6 +96,7 @@ func (l *Linter) init4read() (yamc.DataReader, string, string, error) {
 	if yamcLoader == nil {
 		return nil, "", "", fmt.Errorf("no reader found. the config needs to be loaded first")
 	}
+	l.Trace("found used data reader: ", reflect.TypeOf(yamcLoader))
 	l.structhandler = *yamcLoader.GetFields() // get the struct handler from the reader. must be done before the unstructed map is loaded
 
 	l.Trace("init4read: structhandler Init: ", l.structhandler.Init)
@@ -144,6 +153,21 @@ func (l *Linter) Verify() error {
 // GetHighestIssueLevel returns the highest issue level found.
 func (l *Linter) GetHighestIssueLevel() int {
 	return l.highestIssueLevel
+}
+
+// report if we found an issue with the config file, that should not be ignored.
+func (l *Linter) HasError() bool {
+	return l.highestIssueLevel >= IssueLevelError
+}
+
+// report if we found an issue with the config file, that is not so important, but be warned.
+func (l *Linter) HasWarning() bool {
+	return l.highestIssueLevel >= IssueLevelWarn
+}
+
+// report if we found an issue with the config file, that is most usual, like type conversion. (what is difficult to avoid)
+func (l *Linter) HasInfo() bool {
+	return l.highestIssueLevel >= IssueLevelInfo
 }
 
 // if the lint fails and do not report any error, the config could be just invalid for structure parsing.
@@ -373,7 +397,7 @@ func (l *Linter) PrintIssues() string {
 				if added {
 					add = "[+]"
 				}
-				outPut += add + token.ToIssueString()
+				outPut += add + token.ToIssueString() + "\n"
 			}
 		})
 	}

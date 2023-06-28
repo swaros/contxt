@@ -17,7 +17,6 @@ const (
 
 	// now the  types they are mostly real issues in the config (they should be greater then 9)
 	// the default issue Errorlevel is 10. so we can use the default errorlevel for the most common issues
-	IssueLevelError = 10
 
 	MissingEntry = 10 // the entry is missing. this entry is defined in struct but not in config. als no omitempty tag is set in struct
 	WrongType    = 11 // the type is wrong. different from the strct definition, and also no type conversion is possible
@@ -111,14 +110,20 @@ func (m *MatchToken) VerifyValue() int {
 		if pairMatch == nil {
 			m.Status = MissingEntry
 		} else {
-			if m.Type == pairMatch.Type {
-				if m.Value == pairMatch.Value {
-					m.Status = PerfectMatch
+			// values matching are difficult, because of the type conversion of the yaml parser
+			if m.Value == pairMatch.Value {
+				m.Status = PerfectMatch
+			} else {
+				// if the value is a string and the pair token is a number, we try to convert the string to a number
+				// so we do the lazy way and convert all values to string and compare them
+				mStr := fmt.Sprintf("%v", m.Value)
+				pairStr := fmt.Sprintf("%v", pairMatch.Value)
+				if mStr == pairStr {
+					m.Status = ValueMatchButTypeDiffers
 				} else {
 					m.Status = ValueNotMatch
 				}
-			} else {
-				m.Status = WrongType
+
 			}
 		}
 	}
@@ -129,30 +134,32 @@ func (m *MatchToken) VerifyValue() int {
 // ToIssueString returns a string representation of the issue
 func (m *MatchToken) ToIssueString() string {
 
+	// compose a readable string
+	// depending on the issue level
+	// the issue level is the status property
 	switch m.Status {
 	case ValueMatchButTypeDiffers:
-		return fmt.Sprintf("ValueMatchButTypeDiffers: [%d]\t%v\t%v\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
+		return fmt.Sprintf("ValueMatchButTypeDiffers: level[%d] @%s ['%s' != '%s']", m.Status, m.KeyWord, m.Type, m.PairToken.Type)
 
 	case ValueNotMatch:
-		return fmt.Sprintf("ValuesNotMatching [%d]\t%v\t%v\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
+		return fmt.Sprintf("ValuesNotMatching: level[%d] @%s ['%v' != '%v']", m.Status, m.KeyWord, m.Value, m.PairToken.Value)
 
 	case MissingEntry:
-		return fmt.Sprintf("MissingEntry: [%d]\t[%s]\n", m.Status, m.KeyWord)
+		return fmt.Sprintf("MissingEntry: level[%d] @%s", m.Status, m.KeyWord)
 
 	case WrongType:
-		return fmt.Sprintf("WrongType: [%d]\t%v\t%v\t[%s]\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
+		return fmt.Sprintf("WrongType: level[%d] @%s ['%s' != '%s']", m.Status, m.KeyWord, m.Type, m.PairToken.Type)
 
 	case UnknownEntry:
-		return fmt.Sprintf("UnknownEntry: [%d]\t[%s]\n", m.Status, m.KeyWord)
+		return fmt.Sprintf("UnknownEntry: level[%d] @%s", m.Status, m.KeyWord)
 
 	case PerfectMatch:
-		return fmt.Sprintf("PerfectMatch: [%d]\t%s\n", m.Status, m.KeyWord)
+		return fmt.Sprintf("PerfectMatch: level[%d] @%s", m.Status, m.KeyWord)
 
 	default:
-		return fmt.Sprintf("generic issue Level[%d]\t%s\n", m.Status, m.KeyWord)
+		return fmt.Sprintf("Unknown: level[%d] @%s", m.Status, m.KeyWord)
 
 	}
-
 }
 
 func (m *MatchToken) ToString() string {

@@ -25,10 +25,23 @@ func main() {
 		config,
 		yamc.NewYamlReader(),
 	)
-	if err := cfgApp.LoadFile("contact2.yaml"); err != nil {
+	if err := cfgApp.LoadFile("contact.yaml"); err != nil {
 		panic(err)
 	}
 
+	// so we loaded the contact.yaml file
+	/*
+		name: john
+		lastname: doe
+		age: 60
+		email: jdoe@example.com
+	*/
+	// as you can se, there is no contact section. so we expect an error
+	// the email is there, but in the wrong section.
+	// the config is did not complain about the missing contact section, because
+	// there is no invalid type or something that would trigger an error.
+
+	// so we need to use the linter to find this issue
 	// now the linter
 	linter := yaclint.NewLinter(*cfgApp)
 	if err := linter.Verify(); err != nil {
@@ -36,25 +49,26 @@ func main() {
 	}
 
 	// do we have any issues?
-	if linter.GetHighestIssueLevel() > 0 {
-		// we can start with printing the diff as a string
-		fmt.Println(linter.GetDiff())
-		fmt.Println("\n\t-----------------------")
-
-		// we can print the trace
-		fmt.Println(linter.GetTrace())
-		fmt.Println("\n\t-----------------------")
-
-		// we can print the issues
+	// we do! beaucse WE know already about the wrong email property
+	if linter.HasError() {
+		// first, let us show what issues we have
 		fmt.Println(linter.PrintIssues())
-		fmt.Println("\n\t-----------------------")
 
-		// we can look at any token
-		linter.ReportDiffStartedAt(0, func(token *yaclint.MatchToken) {
-			fmt.Println(token.ToString())
-		})
+		// the output is:
+		/*
+			[-]ValuesNotMatching: level[2] @email ['jdoe@example.com' != '']
+			[+]MissingEntry: level[10] @contact
+			[+]ValuesNotMatching: level[2] @email ['' != 'jdoe@example.com']
+			[+]MissingEntry: level[10] @phone
+		*/
+
+		// the most important issues have the highest level. anything above 9 is a real issue
+		// we got 2 MissingEntry issues. one for the contact section and one for the phone property.
+		// booth are level 10. so this is something that can lead to errors in the application.
+		// so here we should tell the user that he needs to fix the configuration file.
+
 	} else {
-		fmt.Println("no issues found")
+		fmt.Println("no issues found. (but you shold not see this message)")
 	}
 
 }

@@ -169,6 +169,16 @@ func TestConfigLower(t *testing.T) {
 		t.Log(chck.PrintIssues())
 	}
 
+	if chck.HasWarning() {
+		t.Error("found warnings in valid config. expected no warnings")
+		t.Log(chck.PrintIssues())
+	}
+
+	if !chck.HasInfo() {
+		t.Error("found no info in valid config. expected info")
+		t.Log(chck.PrintIssues())
+	}
+
 }
 
 func TestConfigNo1(t *testing.T) {
@@ -552,7 +562,7 @@ func TestUnexpectedExample(t *testing.T) {
 	}
 
 	// do we have any issues?
-	if linter.GetHighestIssueLevel() > 0 {
+	if linter.GetHighestIssueLevel() > 1 {
 		t.Error("we found issues. but we did not expect any")
 		// first we can print the issues
 		fmt.Println(linter.PrintIssues())
