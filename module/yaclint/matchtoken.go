@@ -36,10 +36,12 @@ type MatchToken struct {
 	Status     int
 	PairToken  *MatchToken
 	ParentLint *LintMap
+	TraceFunc  func(args ...interface{})
 }
 
-func NewMatchToken(structDef yamc.StructDef, parent *LintMap, line string, indexNr int, seqNr int, added bool) MatchToken {
+func NewMatchToken(structDef yamc.StructDef, traceFn func(args ...interface{}), parent *LintMap, line string, indexNr int, seqNr int, added bool) MatchToken {
 	var matchToken MatchToken
+	matchToken.TraceFunc = traceFn
 	matchToken.ParentLint = parent
 	matchToken.UuId = uuid.New().String()
 	matchToken.Type = "undefined"
@@ -48,25 +50,38 @@ func NewMatchToken(structDef yamc.StructDef, parent *LintMap, line string, index
 	matchToken.IndexNr = indexNr
 
 	matchToken.Status = -1
-	jsonLineParts := strings.Split(line, ":")
-	if len(jsonLineParts) > 1 {
-		matchToken.KeyWord = getNameOf(structDef, jsonLineParts[0])
-		matchToken.Value = jsonLineParts[1]
-		matchToken.detectValueType()
-	} else {
-		matchToken.KeyWord = getNameOf(structDef, line)
-		matchToken.Value = ""
 
+	rKeyWod, rValue, rWithValue := getTokenParts(line)
+	matchToken.Value = rValue
+	matchToken.KeyWord = matchToken.getNameOf(structDef, rKeyWod)
+	if rWithValue {
+		matchToken.detectValueType()
 	}
 	return matchToken
 }
 
-func getNameOf(structDef yamc.StructDef, check string) string {
+func getTokenParts(token string) (string, string, bool) {
+	parts := strings.Split(token, ":")
+	if len(parts) > 1 {
+		return parts[0], parts[1], true
+	}
+	return parts[0], "", false
+}
+
+func (m *MatchToken) trace(args ...interface{}) {
+	if m.TraceFunc != nil {
+		m.TraceFunc(args...)
+	}
+}
+
+func (m *MatchToken) getNameOf(structDef yamc.StructDef, check string) string {
 	if structDef.Fields != nil && len(structDef.Fields) > 0 {
 		if field, err := structDef.GetField(check); err == nil {
+			m.trace("MatchToken:", m, " [", check, "] RENAMED [", field.Name, "] into [", field.OrginalTag.TagRenamed, "]")
 			return field.OrginalTag.TagRenamed
 		}
 	}
+	m.trace("MatchToken:", m, " [", check, "] !NOT RENAMED")
 	return check
 }
 
@@ -122,13 +137,13 @@ func (m *MatchToken) ToIssueString() string {
 		return fmt.Sprintf("ValuesNotMatching [%d]\t%v\t%v\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
 
 	case MissingEntry:
-		return fmt.Sprintf("MissingEntry: [%d]\t%s\n", m.Status, m.KeyWord)
+		return fmt.Sprintf("MissingEntry: [%d]\t[%s]\n", m.Status, m.KeyWord)
 
 	case WrongType:
-		return fmt.Sprintf("WrongType: [%d]\t%v\t%v\t%s\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
+		return fmt.Sprintf("WrongType: [%d]\t%v\t%v\t[%s]\t%s\n", m.Status, m.Value, m.PairToken.Value, m.KeyWord, m.Type)
 
 	case UnknownEntry:
-		return fmt.Sprintf("UnknownEntry: [%d]\t%s\n", m.Status, m.KeyWord)
+		return fmt.Sprintf("UnknownEntry: [%d]\t[%s]\n", m.Status, m.KeyWord)
 
 	case PerfectMatch:
 		return fmt.Sprintf("PerfectMatch: [%d]\t%s\n", m.Status, m.KeyWord)

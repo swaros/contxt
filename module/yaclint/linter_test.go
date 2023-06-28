@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/swaros/contxt/module/yacl"
-	ctxlint "github.com/swaros/contxt/module/yaclint"
+	"github.com/swaros/contxt/module/yaclint"
 	"github.com/swaros/contxt/module/yamc"
 )
 
@@ -22,7 +22,7 @@ const (
 // config: the config struct. the config have to be a pointer to a struct
 // expectedLevel: the expected issue level. if the highest issue level is higher than expectedLevel, the test fails
 // mode: the mode to use. 0 = value must be equal, 1 = value must be higher or equal, 2 = value must be lower or equal
-func assertIssueLevelByConfig(t *testing.T, subdir, file string, config interface{}, expectedLevel int, mode int) *ctxlint.Linter {
+func assertIssueLevelByConfig(t *testing.T, subdir, file string, config interface{}, expectedLevel int, mode int) *yaclint.Linter {
 	t.Helper()
 	configHndl := yacl.New(
 		config,
@@ -36,7 +36,7 @@ func assertIssueLevelByConfig(t *testing.T, subdir, file string, config interfac
 		return nil
 	}
 
-	chck := ctxlint.NewLinter(*configHndl)
+	chck := yaclint.NewLinter(*configHndl)
 	if chck == nil {
 		t.Error("failed to create linter")
 		return nil
@@ -109,7 +109,7 @@ func TestConfig1(t *testing.T) {
 
 	}
 
-	chck := ctxlint.NewLinter(*configHndl)
+	chck := yaclint.NewLinter(*configHndl)
 	if chck == nil {
 		t.Error("failed to create linter")
 	}
@@ -156,7 +156,7 @@ func TestConfigLower(t *testing.T) {
 
 	}
 
-	chck := ctxlint.NewLinter(*configHndl)
+	chck := yaclint.NewLinter(*configHndl)
 	if chck == nil {
 		t.Error("failed to create linter")
 	}
@@ -190,7 +190,7 @@ func TestConfigNo1(t *testing.T) {
 	}
 	var testConf testConfig
 
-	assertIssueLevelByConfig(t, "testConfig", "valid.yml", &testConf, ctxlint.ValueNotMatch, FailIfNotEqual)
+	assertIssueLevelByConfig(t, "testConfig", "valid.yml", &testConf, yaclint.ValueNotMatch, FailIfNotEqual)
 }
 
 func TestConfigNo1DifferentYamlKeywords(t *testing.T) {
@@ -211,7 +211,7 @@ func TestConfigNo1DifferentYamlKeywords(t *testing.T) {
 		DataSet            []dataSet `yaml:"dataSet,omitempty"`
 	}
 	var testConf testConfig
-	assertIssueLevelByConfig(t, "testConfig", "valid_lowercase.yml", &testConf, ctxlint.ValueNotMatch, FailIfNotEqual)
+	assertIssueLevelByConfig(t, "testConfig", "valid_lowercase.yml", &testConf, yaclint.ValueNotMatch, FailIfNotEqual)
 }
 
 func TestConfigNo2(t *testing.T) {
@@ -233,7 +233,7 @@ func TestConfigNo2(t *testing.T) {
 	}
 	var testConf tConfig
 	// we expect to fail, because the config file contains unknown fields
-	assertIssueLevelByConfig(t, "testConfig", "invalid_types.yml", &testConf, ctxlint.UnknownEntry, FailIfNotEqual)
+	assertIssueLevelByConfig(t, "testConfig", "invalid_types.yml", &testConf, yaclint.UnknownEntry, FailIfNotEqual)
 
 }
 
@@ -257,16 +257,16 @@ func TestConfigNo2MoreChecks(t *testing.T) {
 	}
 	var testConf tConfig
 	// we expect to fail, because the config file contains unknown fields
-	verifier := assertIssueLevelByConfig(t, "testConfig", "invalid_types.yml", &testConf, ctxlint.UnknownEntry, FailIfNotEqual)
+	verifier := assertIssueLevelByConfig(t, "testConfig", "invalid_types.yml", &testConf, yaclint.UnknownEntry, FailIfNotEqual)
 
 	HitUnkonwnEntryCount := 0
 	MissingEntryCount := 0
 	UnexpectedEntryCount := 0
-	verifier.WalkIssues(func(token *ctxlint.MatchToken, added bool) {
+	verifier.WalkIssues(func(token *yaclint.MatchToken, added bool) {
 
-		if token.Status == ctxlint.UnknownEntry {
+		if token.Status == yaclint.UnknownEntry {
 			HitUnkonwnEntryCount++
-		} else if token.Status == ctxlint.MissingEntry {
+		} else if token.Status == yaclint.MissingEntry {
 			MissingEntryCount++
 		} else {
 			UnexpectedEntryCount++
@@ -319,7 +319,7 @@ func TestLoadFailure(t *testing.T) {
 		UseRelativeDir()
 
 	// using linter without loading the config should fail
-	chck := ctxlint.NewLinter(*configHndl)
+	chck := yaclint.NewLinter(*configHndl)
 	if chck == nil {
 		t.Error("failed to create linter")
 	}
@@ -358,6 +358,10 @@ func helperGetExpectedFromSlice(name string, added bool, indexNr int, sequenceNr
 	return nil
 }
 
+// this test SHOULD check the callback function of the linter.
+// but it seems not the best idea to start such a test, with
+// a config that have a lot of fields, and loosing overview.
+// TODO: split this test into smaller tests and use an easier config
 func TestReportDiffStartedAt(t *testing.T) {
 	t.Skip("not implemented yet. have to think about it")
 	type dataSet struct {
@@ -378,23 +382,23 @@ func TestReportDiffStartedAt(t *testing.T) {
 	}
 	var testConf tConfig
 	// we expect to fail, because the config file contains unknown fields
-	linter := assertIssueLevelByConfig(t, "testConfig", "some_fails.yml", &testConf, ctxlint.WrongType, FailIfNotEqual)
+	linter := assertIssueLevelByConfig(t, "testConfig", "some_fails.yml", &testConf, yaclint.WrongType, FailIfNotEqual)
 	if linter == nil {
 		t.Error("failed to create linter")
 		return
 	}
 
 	expectedTokens := []*assertTokenSimplify{
-		{"BuildEngineVersion", " 1.14", "float64", false, 1, 1, ctxlint.WrongType, false},
-		{"BuildEngineVersion", 1.14, "float64", true, 1, 1, ctxlint.PerfectMatch, false},
-		{"    - Comment", "", "string", true, 1, 4, ctxlint.ValueNotMatch, false},
-		{"    - Comment", "this is a comment", "string", false, 1, 4, ctxlint.ValueNotMatch, false},
-		//{"      TicketNr", 1, "string", false, 2, 4, ctxlint.ValueNotMatch, false},
+		{"BuildEngineVersion", " 1.14", "float64", false, 1, 1, yaclint.WrongType, false},
+		{"BuildEngineVersion", 1.14, "float64", true, 1, 1, yaclint.PerfectMatch, false},
+		{"    - Comment", "", "string", true, 1, 4, yaclint.ValueNotMatch, false},
+		{"    - Comment", "this is a comment", "string", false, 1, 4, yaclint.ValueNotMatch, false},
+		//{"      TicketNr", 1, "string", false, 2, 4, yaclint.ValueNotMatch, false},
 	}
 
 	checkIndex := 0
-	reportNotFound := false // report all tokens that are not found. this helps while setting up the test to focus on value that are found but differs
-	linter.ReportDiffStartedAt(0, func(token *ctxlint.MatchToken) {
+	reportNotFound := true // report all tokens that are not found. this helps while setting up the test to focus on value that are found but differs
+	linter.ReportDiffStartedAt(0, func(token *yaclint.MatchToken) {
 		assertToken := helperGetExpectedFromSlice(token.KeyWord, token.Added, token.IndexNr, token.SequenceNr, expectedTokens)
 		if assertToken == nil {
 			if reportNotFound {
@@ -470,7 +474,7 @@ func TestBasicExample(t *testing.T) {
 	}
 
 	// create a new linter instance
-	linter := ctxlint.NewLinter(*cfgApp)
+	linter := yaclint.NewLinter(*cfgApp)
 	// error if remapping is not possible. so no linting error
 	if err := linter.Verify(); err != nil {
 		t.Error(err)
@@ -493,7 +497,7 @@ func TestBasicExamplePointerError(t *testing.T) {
 	}
 	config := &Config{}
 	cfgApp := yacl.New(
-		config,
+		&config,
 		yamc.NewYamlReader(),
 	)
 	// load the config file. must be done before the linter can be used
@@ -502,22 +506,61 @@ func TestBasicExamplePointerError(t *testing.T) {
 	}
 
 	// create a new linter instance
-	linter := ctxlint.NewLinter(*cfgApp)
+	linter := yaclint.NewLinter(*cfgApp)
 	// error if remapping is not possible. so no linting error
 	if err := linter.Verify(); err != nil {
 		t.Error(err)
 	}
 
-	// if we found any issues, then the issuelevel is not 0
-	if linter.GetHighestIssueLevel() > 0 {
-		// just print the issues
-		if reason, haveError := linter.HaveParsingError(); haveError {
-			expectedReason := "pointer to struct is not allowed"
-			if reason != expectedReason {
-				t.Error("we expected to find a parsing error with reason", expectedReason, "got", reason)
-			}
-		} else {
-			t.Error("we expected to find a parsing error")
+	// just print the issues
+	if reason, haveError := linter.HaveParsingError(); haveError {
+		expectedReason := "pointers are not supported"
+		if reason != expectedReason {
+			t.Error("we expected to find a parsing error with reason", expectedReason, "got", reason)
 		}
+	} else {
+		t.Error("we expected to find a parsing error")
+	}
+
+}
+
+func TestUnexpectedExample(t *testing.T) {
+	type Config struct {
+		Name    string `yaml:"name"`
+		Contact struct {
+			Email string `yaml:"email"`
+			Phone string `yaml:"phone"`
+		} `yaml:"contact"`
+		LastName string `yaml:"lastname"`
+		Age      int    `yaml:"age"`
+	}
+
+	// usual yacl stuff
+	config := &Config{}
+	cfgApp := yacl.New(
+		config,
+		yamc.NewYamlReader(),
+	)
+	if err := cfgApp.SetSubDirs("example", "unexpected01").LoadFile("contact2.yaml"); err != nil {
+		panic(err)
+	}
+
+	// now the linter
+	linter := yaclint.NewLinter(*cfgApp)
+	if err := linter.Verify(); err != nil {
+		panic(err)
+	}
+
+	// do we have any issues?
+	if linter.GetHighestIssueLevel() > 0 {
+		t.Error("we found issues. but we did not expect any")
+		// first we can print the issues
+		fmt.Println(linter.PrintIssues())
+
+		linter.ReportDiffStartedAt(0, func(token *yaclint.MatchToken) {
+			fmt.Println(token.ToString())
+		})
+	} else {
+		fmt.Println("no issues found")
 	}
 }

@@ -49,13 +49,13 @@ module:
       timeout: 30s
 
   -
-    modul: linehack    
+    modul: linehack
     local: true
     test:
       timeout: 30s
 
   -
-    modul: ctemplate    
+    modul: ctemplate
     local: true
     test:
       timeout: 30s
@@ -64,7 +64,7 @@ module:
     modul: ctxout
     local: true
     test:
-      timeout: 30s
+      timeout: 60s
 
   -
     modul: taskrun

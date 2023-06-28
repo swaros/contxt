@@ -1,0 +1,6 @@
+name: john
+lastname: doe
+age: 60
+contact:
+  phone: 123456789
+  email: jdoe@example.com

@@ -7,7 +7,7 @@ import (
 	"github.com/swaros/contxt/module/yamc"
 )
 
-// jsontag parser. copied from jsonreader.go beaucause it is not exported
+// jsontag parser. copied from jsonreader. because it is not exported
 func parseJsonFn(info yamc.StructField) yamc.ReflectTagRef {
 	if info.Tag.Get("json") != "" {
 		all := info.Tag.Get("json")
@@ -258,6 +258,138 @@ func TestFieldGetFieldDeep(t *testing.T) {
 		if err.Error() != expectedError {
 			t.Errorf("expected error [%s], got [%s]", expectedError, err.Error())
 		}
+	}
+}
+
+func TestGetFieldDeepByIntentList(t *testing.T) {
+	type testData struct {
+		Name    string `json:"name"`
+		Age     int    `json:"age"`
+		Contact struct {
+			Email string `json:"email"`
+			Phone string `json:"phone"`
+			Addr  struct {
+				Street string `json:"street"`
+				City   string `json:"city"`
+			} `json:"addr"`
+		} `json:"contact"`
+
+		Subs []string `json:"subs"`
+	}
+	var data testData
+	fields := yamc.NewStructDef(&data)
+
+	// verify all fields
+	if err := fields.ReadStruct(parseJsonFn); err != nil {
+		t.Error(err)
+	}
+
+	// add fields to index
+	fields.AddToIndex("prevoius", "    data", "contact", "    Email", "    Phone")
+
+	fields.SetAllowedTagSearch(true)
+
+	expectedLevel := 4 // chars of leading spaces
+	if fields.DetectIndentCount("") != expectedLevel {
+		t.Errorf("expected indent level [%d], got [%d]", expectedLevel, fields.DetectIndentCount(""))
+	}
+
+	if contactField, err := fields.GetField("    Email"); err == nil {
+		if contactField.Name != "Email" {
+			t.Errorf("expected email field, got %s", contactField.Name)
+		}
+
+		if contactField.Type != "string" {
+			t.Errorf("expected string type, got %s", contactField.Type)
+		}
+
+		if contactField.OrginalTag.TagRenamed != "email" {
+			t.Errorf("expected tag email, got [%s]", contactField.OrginalTag.TagRenamed)
+		}
+	} else {
+		t.Error(err)
+	}
+
+	if contactField, err := fields.GetField("    Phone"); err == nil {
+		if contactField.Name != "Phone" {
+			t.Errorf("expected phone field, got %s", contactField.Name)
+		}
+
+		if contactField.Type != "string" {
+			t.Errorf("expected string type, got %s", contactField.Type)
+		}
+
+		if contactField.OrginalTag.TagRenamed != "phone" {
+			t.Errorf("expected tag phone, got [%s]", contactField.OrginalTag.TagRenamed)
+		}
+	} else {
+		t.Error(err)
+	}
+}
+
+func TestGetFieldDeepByIntentListOnlyRootKnow(t *testing.T) {
+	type testData struct {
+		Name    string `json:"name"`
+		Age     int    `json:"age"`
+		Contact struct {
+			Email string `json:"email"`
+			Phone string `json:"phone"`
+			Addr  struct {
+				Street string `json:"street"`
+				City   string `json:"city"`
+			} `json:"addr"`
+		} `json:"contact"`
+
+		Subs []string `json:"subs"`
+	}
+	var data testData
+	fields := yamc.NewStructDef(&data)
+
+	// verify all fields
+	if err := fields.ReadStruct(parseJsonFn); err != nil {
+		t.Error(err)
+	}
+
+	// add fields to index
+	fields.AddToIndex("contact")
+
+	fields.SetAllowedTagSearch(true)
+
+	expectedLevel := 4 // chars of leading spaces
+	if fields.DetectIndentCount("    Email") != expectedLevel {
+		t.Errorf("expected indent level [%d], got [%d]", expectedLevel, fields.DetectIndentCount("    Email"))
+	}
+
+	if contactField, err := fields.GetField("    Email"); err == nil {
+		if contactField.Name != "Email" {
+			t.Errorf("expected email field, got %s", contactField.Name)
+		}
+
+		if contactField.Type != "string" {
+			t.Errorf("expected string type, got %s", contactField.Type)
+		}
+
+		if contactField.OrginalTag.TagRenamed != "email" {
+			t.Errorf("expected tag email, got [%s]", contactField.OrginalTag.TagRenamed)
+		}
+	} else {
+		t.Error(err)
+	}
+
+	if contactField, err := fields.GetField("    Phone"); err == nil {
+		if contactField.Name != "Phone" {
+			t.Errorf("expected phone field, got %s", contactField.Name)
+		}
+
+		if contactField.Type != "string" {
+			t.Errorf("expected string type, got %s", contactField.Type)
+		}
+
+		if contactField.OrginalTag.TagRenamed != "phone" {
+			t.Errorf("expected tag phone, got [%s]", contactField.OrginalTag.TagRenamed)
+		}
+	} else {
+		t.Error(err)
 	}
 }
 

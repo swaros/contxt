@@ -27,6 +27,7 @@ package yaclint
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/kylelemons/godebug/diff"
 	"github.com/swaros/contxt/module/yacl"
@@ -39,6 +40,7 @@ type Linter struct {
 	diffFound         bool              // true if we found a diff. that is just a sign, that an SOME diff is found, not that the config is invalid
 	highestIssueLevel int               // the highest issue level found
 	structhandler     yamc.StructDef    // the struct handler for the config file. keeps the struct definition
+	traceLog          []string          // the trace log. contains anything that happened during the verification
 }
 
 func NewLinter(config yacl.ConfigModel) *Linter {
@@ -87,6 +89,9 @@ func (l *Linter) init4read() (yamc.DataReader, string, string, error) {
 		return nil, "", "", fmt.Errorf("no reader found. the config needs to be loaded first")
 	}
 	l.structhandler = *yamcLoader.GetFields() // get the struct handler from the reader. must be done before the unstructed map is loaded
+
+	l.Trace("init4read: structhandler Init: ", l.structhandler.Init)
+
 	_, unstructSource, err1 := l.getUnstructMap(yamcLoader)
 	if err1 != nil {
 		return nil, "", "", err1
@@ -124,7 +129,9 @@ func (l *Linter) Verify() error {
 	orgiChnk := strings.Split(structSource, "\n")
 
 	chunk := diff.DiffChunks(freeChnk, orgiChnk)
+	l.Trace("Verify: chunk count:", len(chunk))
 	l.chunkWorker(chunk)
+	l.Trace("Verify: diff found:", l.diffFound)
 	if !l.diffFound { // no diff found, so no need to go further
 		return nil
 	}
@@ -156,6 +163,14 @@ func (l *Linter) HaveParsingError() (string, bool) {
 // for later investigation, if needed.
 // if no diff found at all, that is all what we need to do.
 func (l *Linter) chunkWorker(chunks []diff.Chunk) {
+	l.Trace("chunkWorker: chunk count:", len(chunks))
+
+	// we need to remember all the keys that are found in the config file.
+	// so we can build a ordered list of keys.
+	// this is needed to get the full path of the key. including the parent keys.
+	var keysAdded []string
+	var keysRemoved []string
+
 	lintResult := LintMap{}
 	foundDiff := false
 	// the diff package reports any change as an added and a removed line.
@@ -168,24 +183,41 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 	changeNr4Add := 0 // track the index of added lines
 	changeNr4Rm := 0  // track the index of removed lines
 
+	l.structhandler.SetAllowedTagSearch(true)
 	// iterate over all chunks.
 	for chunkIndex, c := range chunks {
 		temporaryChunk := LintChunk{}
 		needToBeAdded := false
+		if len(keysAdded) > 0 {
+			l.Trace("chunkWorker: -- index -- add - (", len(keysAdded), ")", keysAdded)
+		}
+
+		if len(keysAdded) > 0 {
+			l.Trace("chunkWorker: -- index -- rm - (", len(keysRemoved), ")", keysRemoved)
+		}
 
 		for _, line := range c.Added {
+			keyStr, _, _ := getTokenParts(line)
+			keysAdded = append(keysAdded, keyStr)
+			l.structhandler.SetIndexSlice(keysAdded)
+
 			changeNr4Add++
 			//fmt.Println("ADDED:"+line, " ---> index[", indexNr, "] seq[", sequenceNr, "]", "chunk[", chunkIndex, "]", "change[", changeNr4Add, "]")
 
-			addToken := NewMatchToken(l.structhandler, &l.lMap, line, changeNr4Add, sequenceNr, true)
+			addToken := NewMatchToken(l.structhandler, l.Trace, &l.lMap, line, changeNr4Add, sequenceNr, true)
 			temporaryChunk.Added = append(temporaryChunk.Added, &addToken)
 			needToBeAdded = true
 		}
 		for _, line := range c.Deleted {
+			keyStr, _, _ := getTokenParts(line)
+			keysRemoved = append(keysRemoved, keyStr)
+			l.structhandler.SetIndexSlice(keysRemoved)
+
 			changeNr4Rm++
 			//fmt.Println("DELETED:"+line, " --->index[", indexNr, "] seq[", sequenceNr, "]", "chunk[", chunkIndex, "]", "change[", changeNr4Rm, "]")
 
-			rmToken := NewMatchToken(l.structhandler, &l.lMap, line, changeNr4Rm, sequenceNr, false)
+			rmToken := NewMatchToken(l.structhandler, l.Trace, &l.lMap, line, changeNr4Rm, sequenceNr, false)
+			rmToken.TraceFunc = l.Trace
 			temporaryChunk.Removed = append(temporaryChunk.Removed, &rmToken)
 			needToBeAdded = true
 		}
@@ -196,6 +228,14 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 			changeNr4Add = 0
 			changeNr4Rm = 0
 			sequenceNr += len(c.Equal)
+			// we need to add the equal lines to the keys, so we can track the context of the keys
+			// this needs to be done for booth. added and removed keys.
+			for _, line := range c.Equal {
+				keyStr, _, _ := getTokenParts(line)
+				keysAdded = append(keysAdded, keyStr)
+				keysRemoved = append(keysRemoved, keyStr)
+			}
+
 		}
 
 		if needToBeAdded {
@@ -219,11 +259,42 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 // find the token that is the pair of the current token
 // so it must be deleted in the previous chunk with the same sequence number
 func (l *Linter) findPairsHelper(tkn *MatchToken) {
+	// first we try to find the pair in the best case. that means, we do not have a match depending the keyword.
+	// we also are in the same chunk, so we be sure, this keyword is the pair.
 	bestmatchTokens := l.lMap.GetTokensFromSequenceAndIndex(tkn.SequenceNr, tkn.IndexNr)
-	if len(bestmatchTokens) > 0 {
-		for _, bestmatch := range bestmatchTokens {
+	l.findPairInPairMap(tkn, bestmatchTokens, "findPairsHelper: try optimal case. compare ")
+	/*
+		if len(bestmatchTokens) > 0 {
+			for _, bestmatch := range bestmatchTokens {
+				if bestmatch.Added != tkn.Added {
+					match := tkn.IsPair(bestmatch) // {bestmatch, tkn}
+					l.Trace("findPairsHelper: try optimal case. compare ", tkn, " and ", bestmatch, " (", match, ")")
+
+				}
+			}
+		}
+	*/
+	// we did not find a pair in the best case, so we need to find a pair in the worst case.
+	// that means we have to seach in all other chunks, if we find a pair.
+	// that can be lead to false positives, but we can not do anything else.
+	if tkn.PairToken == nil {
+		// for the trace, we try so intent the output, so it is more readable
+		//l.Trace("findPairsHelper:    try fallback", tkn, " in best case search, try to find a pair without sequence number")
+		moreTokens := l.lMap.GetTokensFromSequence(tkn.SequenceNr)
+		l.findPairInPairMap(tkn, moreTokens, "findPairsHelper:    retry with sequence only. ")
+
+	}
+}
+
+func (l *Linter) findPairInPairMap(tkn *MatchToken, tkns []*MatchToken, traceMsg string) {
+	if len(tkns) > 0 {
+		for _, bestmatch := range tkns {
 			if bestmatch.Added != tkn.Added {
-				tkn.IsPair(bestmatch) // {bestmatch, tkn}
+				match := tkn.IsPair(bestmatch) // {bestmatch, tkn}
+				if traceMsg != "" {
+					l.Trace(traceMsg, tkn, " and ", bestmatch, " (", match, ")")
+				}
+
 			}
 		}
 	}
@@ -297,7 +368,13 @@ func (l *Linter) PrintIssues() string {
 	outPut := ""
 	if l.diffFound {
 		l.walkAll(func(token *MatchToken, added bool) {
-			outPut += token.ToIssueString()
+			if token.Status > 0 {
+				add := "[-]"
+				if added {
+					add = "[+]"
+				}
+				outPut += add + token.ToIssueString()
+			}
 		})
 	}
 	return outPut
@@ -316,4 +393,41 @@ func (l *Linter) WalkIssues(hndlFn func(token *MatchToken, added bool)) {
 // proxy to walk all
 func (l *Linter) walkAll(hndl func(token *MatchToken, added bool)) {
 	l.lMap.walkAll(hndl)
+}
+
+// Trace is a helper function to trace the linter workflow.
+// this might help to debug the linter.
+func (l *Linter) Trace(arg ...interface{}) {
+	addStr := ""
+	// add the current time first
+	addStr += time.Now().Format("[15:04:05.000] - ")
+
+	for _, a := range arg {
+		switch a := a.(type) {
+		case string:
+			addStr += a
+		case MatchToken:
+		case *MatchToken:
+			addorRm := "-"
+			if a.Added {
+				addorRm = "+"
+			}
+			addStr += "[" + addorRm + a.KeyWord + "] "
+		case []string: // better readable instead of the fmt.Sprint
+			addStr += "["
+			for _, s := range a {
+				addStr += "'" + s + "',"
+			}
+			addStr += "]"
+		default:
+			addStr += fmt.Sprintf("%v", a)
+		}
+	}
+	if addStr != "" {
+		l.traceLog = append(l.traceLog, addStr)
+	}
+}
+
+func (l *Linter) GetTrace() string {
+	return strings.Join(l.traceLog, "\n")
 }

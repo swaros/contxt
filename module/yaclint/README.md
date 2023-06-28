@@ -1,7 +1,15 @@
 # YACLINT
 yaclint is a simple linter for configurations loaded by using the yacl library.
 
+the concept is simple. you have a struct that represents your configuration. you load the configuration from a file and then you can use the linter to check if the configuration contains all the fields that are needed, or if there are unexpected fields.
+
+it is then up to you, how critical the issues are. if a field is missing, then the issue level is 1. if a field is unexpected, then the issue level is 2. and so on.
+
+> **NOTE:** invalid types and values, and any other source related issues are not checked by this linter. this is still done by the yacl library. (and there, of course, by the source reader). so an tab in a yaml file is an Error and not an Linter Issue.
+
+
 ## Example
+simple example of how to use the linter and just make sure there is no lint issue at all. what means we already blame the user on issue level 0
 ```go
 package main
 
@@ -49,3 +57,16 @@ func main() {
 
 }
 ```
+
+### Limitations
+focus is on simplicity and ease of use. it is not meant to be a full blown linter.
+it is also limited to a couple of source formats they mostly used for configuration files.
+
+it dos not support the following data structures (_right now_):
+- `map[string]string`
+- `[]whatever`
+- `{}`
+- `*Struct`
+
+this linter is about checking if the configuration contains all the fields that are needed, or if there are unexpected fields.
+and anything is done depending go code. so no external configuration files.
