@@ -32,14 +32,30 @@ func main() {
 		panic(err)
 	}
 
-	// if we found any issues, then the issuelevel is not 0
-	if linter.GetHighestIssueLevel() > 0 {
+	// anything that seems totally wrong is an error
+	if linter.HasError() {
 		// just print the issues. right now this should not be the case
+		fmt.Println(`Error! 
+		Sorry!
+			but it seems you did something wrong
+			in the config file`)
 		fmt.Println(linter.PrintIssues())
+	} else if linter.HasWarning() {
+		// print the issues. right now this should not be the case
+		fmt.Println(`Warning!
+		You should check the config file
+		`)
+		fmt.Println(linter.PrintIssues())
+	} else {
+		// now we can use the config
+		fmt.Println("hello ", config.Name)
+		fmt.Println("you are ", config.Age, " years old")
+
+		// the output is:
+		/*
+			hello  john
+			you are  60  years old
+		*/
 	}
-
-	// now we can use the config
-	fmt.Println(config.Name)
-	fmt.Println(config.Age)
-
+	fmt.Println(linter.PrintIssues())
 }

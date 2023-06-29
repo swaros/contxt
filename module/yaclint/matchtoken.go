@@ -10,15 +10,18 @@ import (
 )
 
 const (
+	// -- info level --
 	Unset                    = -1 // the value is not set. the initial value. nothing was tryed to match
 	PerfectMatch             = 0  // the value and type matches. should most times not happen, because we compare the default values with actual values. so a diff is common
 	ValueMatchButTypeDiffers = 1  // the value matches but in different type like "1.4" and 1.4 (valid because of yaml parser type conversion)
 	ValueNotMatch            = 2  // the value is not matching (still valid because of yaml parser type conversion. we compare the default values with actual values. so a diff is common)
 
-	// now the  types they are mostly real issues in the config (they should be greater then 9)
+	// now the  types they are mostly real issues in the config (they should be greater then 5)
 	// the default issue Errorlevel is 10. so we can use the default errorlevel for the most common issues
 
-	MissingEntry = 10 // the entry is missing. this entry is defined in struct but not in config. als no omitempty tag is set in struct
+	// -- warning level --
+	MissingEntry = 5 // the entry is missing. this entry is defined in struct but not in config. depends on the implementation if this is an issue.
+	// -- error level --
 	WrongType    = 11 // the type is wrong. different from the strct definition, and also no type conversion is possible
 	UnknownEntry = 12 // the entry is is in the config but not in the struct
 
@@ -27,6 +30,8 @@ const (
 type MatchToken struct {
 	UuId       string
 	KeyWord    string
+	OrginKey   string
+	KeyPath    string
 	Value      interface{}
 	Type       string
 	Added      bool
@@ -39,6 +44,7 @@ type MatchToken struct {
 }
 
 func NewMatchToken(structDef yamc.StructDef, traceFn func(args ...interface{}), parent *LintMap, line string, indexNr int, seqNr int, added bool) MatchToken {
+	traceFn("NewMatchToken:parse: ", line)
 	var matchToken MatchToken
 	matchToken.TraceFunc = traceFn
 	matchToken.ParentLint = parent
@@ -52,10 +58,12 @@ func NewMatchToken(structDef yamc.StructDef, traceFn func(args ...interface{}), 
 
 	rKeyWod, rValue, rWithValue := getTokenParts(line)
 	matchToken.Value = rValue
-	matchToken.KeyWord = matchToken.getNameOf(structDef, rKeyWod)
+	matchToken.OrginKey = rKeyWod
+	matchToken.KeyWord, matchToken.KeyPath = matchToken.getNameOf(structDef, rKeyWod)
 	if rWithValue {
 		matchToken.detectValueType()
 	}
+	matchToken.trace("NewMatchToken:", matchToken.ToString())
 	return matchToken
 }
 
@@ -73,23 +81,36 @@ func (m *MatchToken) trace(args ...interface{}) {
 	}
 }
 
-func (m *MatchToken) getNameOf(structDef yamc.StructDef, check string) string {
+func (m *MatchToken) getNameOf(structDef yamc.StructDef, check string) (string, string) {
 	if structDef.Fields != nil && len(structDef.Fields) > 0 {
 		if field, err := structDef.GetField(check); err == nil {
-			m.trace("MatchToken:", m, " [", check, "] RENAMED [", field.Name, "] into [", field.OrginalTag.TagRenamed, "]")
-			return field.OrginalTag.TagRenamed
+			m.trace("MatchToken.getNameOf:", m, " [", check, "] => [", field.Name, "] into [", field.OrginalTag.TagRenamed, "] @", field.Path)
+			return field.OrginalTag.TagRenamed, field.Path
 		}
 	}
-	m.trace("MatchToken:", m, " [", check, "] !NOT RENAMED")
-	return check
+	m.trace("MatchToken:", m, " [", check, "] !No Tag found!")
+	return check, check
 }
 
 // IsPair checks if the given token is a pair to this token
 // it checks if the keyword is the same and the added flag is different
 // if so it sets the pair token property and returns true
 func (m *MatchToken) IsPair(token *MatchToken) bool {
-	if m.IsValid() && token.IsValid() && m.KeyWord == token.KeyWord && m.Added != token.Added {
+
+	keyVerified := false
+	// savest way to check if the keypath is the same
+	if m.KeyPath != "" && token.KeyPath != "" && m.KeyPath == token.KeyPath {
+		keyVerified = true
+	} else {
+		// if we do not have a keypath we check if the keyword is the same.
+		// but then the OriginKey must be the also the same, or we mix up keys in a different path (like "a.b" and "b")
+		if m.KeyWord == token.KeyWord && m.OrginKey == token.OrginKey {
+			keyVerified = true
+		}
+	}
+	if m.IsValid() && token.IsValid() && keyVerified && m.Added != token.Added {
 		m.PairToken = token
+		m.trace("MatchToken:", m, " [", m.keyToString(), "] is pair to [", token.keyToString(), "]")
 		return true
 	}
 	return false
@@ -131,6 +152,10 @@ func (m *MatchToken) VerifyValue() int {
 	return m.Status
 }
 
+func (m *MatchToken) keyToString() string {
+	return fmt.Sprintf("%s (%s)", m.KeyWord, m.KeyPath)
+}
+
 // ToIssueString returns a string representation of the issue
 func (m *MatchToken) ToIssueString() string {
 
@@ -139,66 +164,85 @@ func (m *MatchToken) ToIssueString() string {
 	// the issue level is the status property
 	switch m.Status {
 	case ValueMatchButTypeDiffers:
-		return fmt.Sprintf("ValueMatchButTypeDiffers: level[%d] @%s ['%s' != '%s']", m.Status, m.KeyWord, m.Type, m.PairToken.Type)
+		return fmt.Sprintf(
+			"ValueMatchButTypeDiffers: level[%d] @%s ['%s' != '%s']",
+			m.Status,
+			m.keyToString(),
+			m.Type,
+			m.PairToken.Type,
+		)
 
 	case ValueNotMatch:
-		return fmt.Sprintf("ValuesNotMatching: level[%d] @%s ['%v' != '%v']", m.Status, m.KeyWord, m.Value, m.PairToken.Value)
+		return fmt.Sprintf(
+			"ValuesNotMatching: level[%d] @%s vs @%s ['%v' != '%v']",
+			m.Status,
+			m.keyToString(),
+			m.PairToken.keyToString(),
+			m.Value,
+			m.PairToken.Value,
+		)
 
 	case MissingEntry:
-		return fmt.Sprintf("MissingEntry: level[%d] @%s", m.Status, m.KeyWord)
+		return fmt.Sprintf(
+			"MissingEntry: level[%d] @%s",
+			m.Status,
+			m.keyToString(),
+		)
 
 	case WrongType:
-		return fmt.Sprintf("WrongType: level[%d] @%s ['%s' != '%s']", m.Status, m.KeyWord, m.Type, m.PairToken.Type)
+		return fmt.Sprintf(
+			"WrongType: level[%d] @%s ['%s' != '%s']",
+			m.Status,
+			m.keyToString(),
+			m.Type,
+			m.PairToken.Type,
+		)
 
 	case UnknownEntry:
-		return fmt.Sprintf("UnknownEntry: level[%d] @%s", m.Status, m.KeyWord)
+		return fmt.Sprintf(
+			"UnknownEntry: level[%d] @%s",
+			m.Status,
+			m.keyToString(),
+		)
 
 	case PerfectMatch:
-		return fmt.Sprintf("PerfectMatch: level[%d] @%s", m.Status, m.KeyWord)
+		return fmt.Sprintf(
+			"PerfectMatch: level[%d] @%s",
+			m.Status,
+			m.keyToString(),
+		)
 
 	default:
-		return fmt.Sprintf("Unknown: level[%d] @%s", m.Status, m.KeyWord)
+		return fmt.Sprintf("Unknown: level[%d] @%s", m.Status, m.keyToString())
 
 	}
 }
 
 func (m *MatchToken) ToString() string {
+	addStr := "[-]"
+	if m.Added {
+		addStr = "[+]"
+	}
 	if m.PairToken == nil {
-		return fmt.Sprintf("MatchToken(%s): [%d] val[%v] indx[%d] seq[%d] (%s)",
-			m.KeyWord,
+		return fmt.Sprintf("%s %s: [%d] val[%v] indx[%d] seq[%d] (%s)",
+			addStr,
+			m.keyToString(),
 			m.Status,
 			m.Value,
 			m.IndexNr,
 			m.SequenceNr,
 			m.Type)
 	}
-	return fmt.Sprintf("MatchToken(%s): [%d] val[%v] pval[%v] indx[%d] seq[%d] (%s)",
-		m.KeyWord,
+	return fmt.Sprintf("%s %s: [%d] val[%v] (%s)pval[%v] indx[%d] seq[%d] (%s)",
+		addStr,
+		m.keyToString(),
 		m.Status,
 		m.Value,
+		m.PairToken.keyToString(),
 		m.PairToken.Value,
 		m.IndexNr,
 		m.SequenceNr,
 		m.Type)
-}
-
-// CleanValue returns the value as interface
-// trimed and cleaned
-func (m *MatchToken) CleanValue() interface{} {
-	switch m.Type {
-	case "string":
-		escaped := strings.Replace(m.Value.(string), "\"", "", -1)
-		trmmed := strings.Trim(escaped, " ")
-		return trmmed
-	case "int":
-		return m.Value.(int)
-	case "bool":
-		return m.Value.(bool)
-	case "float64":
-		return m.Value.(float64)
-	default:
-		return m.Value
-	}
 }
 
 func (m *MatchToken) trimString() {

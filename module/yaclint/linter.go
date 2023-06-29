@@ -130,6 +130,8 @@ func (l *Linter) GetDiff() (string, error) {
 func (l *Linter) Verify() error {
 
 	_, unstructSource, structSource, err := l.init4read()
+	l.Trace("Verify: unstructSource:\n", unstructSource)
+	l.Trace("Verify: structSource:\n", structSource)
 	if err != nil {
 		return err
 	}
@@ -287,17 +289,7 @@ func (l *Linter) findPairsHelper(tkn *MatchToken) {
 	// we also are in the same chunk, so we be sure, this keyword is the pair.
 	bestmatchTokens := l.lMap.GetTokensFromSequenceAndIndex(tkn.SequenceNr, tkn.IndexNr)
 	l.findPairInPairMap(tkn, bestmatchTokens, "findPairsHelper: try optimal case. compare ")
-	/*
-		if len(bestmatchTokens) > 0 {
-			for _, bestmatch := range bestmatchTokens {
-				if bestmatch.Added != tkn.Added {
-					match := tkn.IsPair(bestmatch) // {bestmatch, tkn}
-					l.Trace("findPairsHelper: try optimal case. compare ", tkn, " and ", bestmatch, " (", match, ")")
 
-				}
-			}
-		}
-	*/
 	// we did not find a pair in the best case, so we need to find a pair in the worst case.
 	// that means we have to seach in all other chunks, if we find a pair.
 	// that can be lead to false positives, but we can not do anything else.
@@ -375,8 +367,8 @@ func (l *Linter) valueVerify() {
 
 }
 
-// walkAll will walk over all tokens in the diff they have equal or higher level as the given level.
-func (l *Linter) ReportDiffStartedAt(level int, reportFn func(token *MatchToken)) {
+// GetIssue will execute the reportFn for all tokens that have the same or higher level as the given level.
+func (l *Linter) GetIssue(level int, reportFn func(token *MatchToken)) {
 	if l.diffFound {
 		l.walkAll(func(token *MatchToken, added bool) {
 			if token.Status >= level {
@@ -386,8 +378,36 @@ func (l *Linter) ReportDiffStartedAt(level int, reportFn func(token *MatchToken)
 	}
 }
 
+func (l *Linter) Errors() []string {
+	return l.filterIssueBylevel(IssueLevelError)
+}
+
+func (l *Linter) Warnings() []string {
+	return l.filterIssueBylevel(IssueLevelWarn)
+}
+
+func (l *Linter) Infos() []string {
+	return l.filterIssueBylevel(IssueLevelInfo)
+}
+
+func (l *Linter) filterIssueBylevel(equalOrHigherLevel int) []string {
+	var out []string
+	if l.diffFound {
+		l.walkAll(func(token *MatchToken, added bool) {
+			if token.Status >= equalOrHigherLevel {
+				add := "[-]"
+				if added {
+					add = "[+]"
+				}
+				out = append(out, add+token.ToIssueString())
+			}
+		})
+	}
+	return out
+}
+
 // PrintIssues will print the issues found in the diff.
-// This is an report function.
+// This is an report function and show any issue greater than 0.
 func (l *Linter) PrintIssues() string {
 	outPut := ""
 	if l.diffFound {
@@ -436,7 +456,7 @@ func (l *Linter) Trace(arg ...interface{}) {
 			if a.Added {
 				addorRm = "+"
 			}
-			addStr += "[" + addorRm + a.KeyWord + "] "
+			addStr += "[" + addorRm + a.keyToString() + "] "
 		case []string: // better readable instead of the fmt.Sprint
 			addStr += "["
 			for _, s := range a {
@@ -452,6 +472,22 @@ func (l *Linter) Trace(arg ...interface{}) {
 	}
 }
 
-func (l *Linter) GetTrace() string {
+func (l *Linter) GetTrace(orFind ...string) string {
+	if len(orFind) > 0 {
+		return l.getTraceWith(orFind...)
+	}
 	return strings.Join(l.traceLog, "\n")
+}
+
+func (l *Linter) getTraceWith(orFind ...string) string {
+	matches := []string{}
+	for _, traceLine := range l.traceLog {
+		for _, find := range orFind {
+			if strings.Contains(strings.ToLower(traceLine), strings.ToLower(find)) {
+				matches = append(matches, traceLine)
+			}
+		}
+	}
+
+	return strings.Join(matches, "\n")
 }

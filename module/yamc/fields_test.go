@@ -372,6 +372,11 @@ func TestGetFieldDeepByIntentListOnlyRootKnow(t *testing.T) {
 		if contactField.OrginalTag.TagRenamed != "email" {
 			t.Errorf("expected tag email, got [%s]", contactField.OrginalTag.TagRenamed)
 		}
+
+		if contactField.Path != "Contact.Email" {
+			t.Errorf("expected parent Contact, got [%s]", contactField.Path)
+		}
+
 	} else {
 		t.Error(err)
 	}
@@ -387,6 +392,9 @@ func TestGetFieldDeepByIntentListOnlyRootKnow(t *testing.T) {
 
 		if contactField.OrginalTag.TagRenamed != "phone" {
 			t.Errorf("expected tag phone, got [%s]", contactField.OrginalTag.TagRenamed)
+		}
+		if contactField.Path != "Contact.Phone" {
+			t.Errorf("expected parent Contact, got [%s]", contactField.Path)
 		}
 	} else {
 		t.Error(err)
@@ -422,6 +430,10 @@ func TestYamlTest0003Load(t *testing.T) {
 
 		if languageField.OrginalTag.TagRenamed != "languages" {
 			t.Errorf("expected tag languages, got [%s]", languageField.OrginalTag.TagRenamed)
+		}
+
+		if languageField.Path != "Languages" {
+			t.Errorf("expected parent Languages, got [%s]", languageField.Path)
 		}
 	} else {
 		t.Error(err)
@@ -499,5 +511,90 @@ func TestYamlTest0004Load(t *testing.T) {
 		}
 	} else {
 		t.Error(err)
+	}
+}
+
+// testing if the SetAllowedTagSearch respects the the level of search.
+// that means if we are looking for the field "Email" but the field is inside a struct
+// it should not be found even if the SetAllowedTagSearch is true, because this search would only
+// match the field "Email" if it is a direct child of the struct.
+// so the tag search only find the nodes at the same level.
+func TestPairPaths(t *testing.T) {
+	type AdressDemo struct {
+		Name    string `yaml:"name"`
+		Contact struct {
+			Email string `yaml:"email"`
+			Phone string `yaml:"phone"`
+		} `yaml:"contact"`
+		LastName string `yaml:"lastname"`
+		Age      int    `yaml:"age"`
+	}
+
+	var data AdressDemo
+	fields := yamc.NewStructDef(&data)
+	if err := fields.ReadStruct(parseYamlTagfunc); err != nil {
+		t.Error(err)
+	}
+	// we enable the possibility to search for tags
+	fields.SetAllowedTagSearch(true)
+
+	fields.AddToIndex("Age", "Contact", "    Email", "    Phone")
+	// here we search for the field "Email", by using the tag "email" (`yaml:"email"`)  but it is inside a struct.
+	// so this should not work
+	_, error := fields.GetField("email")
+	if error == nil {
+		t.Error("that should not work. looking for a field inside a struct by tags needs dot notation, or leading spaces")
+	}
+
+	// we need to search for the field "Email" by using the dot notation
+	// so we need to use the path "Contact.Email"
+	// this should work. here no need for tag search, but for the sake of the test we enable it
+	var prop yamc.StructField
+	prop, error = fields.GetField("Contact.Email")
+	if error != nil {
+		t.Error("that should work. looking for a field inside a struct by PropName.PropName")
+	} else {
+		if prop.Name != "Email" {
+			t.Errorf("expected Email field, got %s", prop.Name)
+		}
+	}
+
+	// here we mix the dot notation with the tag search
+	// so we need to use the path "Contact.email"
+	// this should not work. because the tag search is only for the same level
+	prop, error = fields.GetField("Contact.email")
+	if error != nil {
+		t.Error("that should work. looking for a field inside a struct PropName.tagname")
+	} else {
+		if prop.Name != "Email" {
+			t.Errorf("expected Email field, got %s", prop.Name)
+		}
+	}
+
+	// here we mix the dot notation with the tag search
+	// so we need to use the path "Contact.email"
+	// this should not work. because the tag search is only for the same level
+	prop, error = fields.GetField("    email")
+	if error != nil {
+		t.Error("that should work. looking for a field inside a struct by using leading spaces '    tagname'")
+		t.Error(error)
+	} else {
+		if prop.Name != "Email" {
+			t.Errorf("expected Email field, got %s", prop.Name)
+		}
+	}
+
+	// the same as above but with more leading spaces what should not work
+	_, error = fields.GetField("        email")
+	if error == nil {
+		t.Error("that should not work. looking for a field inside a struct by using leading spaces '    tagname'")
+	} else {
+		// because we indent the tagname with 8 spaces, the error should be
+		expectedError := "structRead: field [Phone] has no children"
+		// ... thats because we asume that we looking in the third level (twise of indentlevel 4) for a field
+		// and the field "Phone" is in the second level. so we get the error that the field "Phone" has no children
+		if error.Error() != expectedError {
+			t.Errorf("expected error [%s], got [%s]", expectedError, error.Error())
+		}
 	}
 }

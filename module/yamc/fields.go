@@ -40,15 +40,17 @@ type StructDef struct {
 type StructField struct {
 	// the name of the field
 	Name string
+	// the path of the field in relation to the struct
+	Path string
 	// the type of the field
 	Type string
 	// the tag of the field
 	Tag reflect.StructTag
 	// reader depending...
 	OrginalTag ReflectTagRef
-	// if we are a node we have children
+	// if we are a node, we have children
 	Children map[string]StructField
-	// for faster access store the length of the children
+	// for faster access store the amount of children
 	ChildLen int
 }
 
@@ -143,7 +145,7 @@ func (s *StructDef) readStruct(strct interface{}, tagparser reftagFunc) error {
 	// build the field information map
 	for i := 0; i < refMap.NumField(); i++ {
 		field := refMap.Field(i)
-		newField := s.createStructField(field, tagparser)
+		newField := s.createStructField(field, tagparser, "")
 		s.Fields[field.Name] = newField
 
 	}
@@ -152,12 +154,22 @@ func (s *StructDef) readStruct(strct interface{}, tagparser reftagFunc) error {
 
 }
 
-func (s *StructDef) createStructField(refStr reflect.StructField, tagparser reftagFunc) StructField {
+func (s *StructDef) createStructField(refStr reflect.StructField, tagparser reftagFunc, parent string) StructField {
+	// compose the path
+	pathStr := refStr.Name
+	if parent != "" {
+
+		pathStr = parent + "." + refStr.Name
+	}
+	// basic information
 	newField := StructField{
 		Name: refStr.Name,
 		Type: refStr.Type.String(),
 		Tag:  refStr.Tag,
+		Path: pathStr,
 	}
+	// structs are more complex.
+	// we need to read the child fields
 	if refStr.Type.Kind() == reflect.Struct {
 		nums := refStr.Type.NumField()
 		newField.ChildLen = nums
@@ -167,12 +179,14 @@ func (s *StructDef) createStructField(refStr reflect.StructField, tagparser reft
 			newField.Children = make(map[string]StructField)
 			for i := 0; i < nums; i++ {
 				field := refStr.Type.Field(i)
-				children := s.createStructField(field, tagparser)
+				children := s.createStructField(field, tagparser, newField.Path)
 				newField.Children[field.Name] = children
 			}
 		}
 
 	}
+	// the optional tagparser to resolve the tag information.
+	// this is done by the reader.
 	if tagparser != nil {
 		newField.OrginalTag = tagparser(newField)
 	}
@@ -219,6 +233,8 @@ func (s *StructDef) GetField(field string) (StructField, error) {
 	if s.haveIntend(field) {
 		// if we have an intend level of 0, we have to run the auto detect
 		if s.indentLevel == 0 {
+			// we using the current field to detect the indent level too
+			// this could be the only source we have
 			s.DetectIndentCount(field)
 		}
 		returnField, returnErr = s.getField(s.getChainByIndex(field), s.Fields)
@@ -340,8 +356,24 @@ func (s *StructDef) getFieldByTag(tag string, from map[string]StructField) (Stru
 		if field.OrginalTag.TagRenamed == tag {
 			return field, nil
 		}
+		if s.haveIntend(tag) {
+			if field.Children != nil {
+				if f, err := s.getFieldByTag(tag, field.Children); err == nil {
+					return f, nil
+				}
+			}
+		}
+	}
+	return StructField{}, fmt.Errorf("structRead: field with tag [%s] not found", tag)
+}
+
+func (s *StructDef) GetFirstFieldByTag(tag string, from map[string]StructField) (StructField, error) {
+	for _, field := range from {
+		if field.OrginalTag.TagRenamed == tag {
+			return field, nil
+		}
 		if field.Children != nil {
-			if f, err := s.getFieldByTag(tag, field.Children); err == nil {
+			if f, err := s.GetFirstFieldByTag(tag, field.Children); err == nil {
 				return f, nil
 			}
 		}
