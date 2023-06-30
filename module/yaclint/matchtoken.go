@@ -140,7 +140,7 @@ func (m *MatchToken) trace(args ...interface{}) {
 func (m *MatchToken) getNameOf(structDef yamc.StructDef, check string) (string, string) {
 	if structDef.Fields != nil && len(structDef.Fields) > 0 {
 		if field, err := structDef.GetField(check); err == nil {
-			m.trace("MatchToken.getNameOf:", m, " [", check, "] => [", field.Name, "] into [", field.OrginalTag.TagRenamed, "] @", field.Path)
+			m.trace("MatchToken.getNameOf: [", check, "] => [", field.Name, "] into [", field.OrginalTag.TagRenamed, "] @", field.Path)
 			return field.OrginalTag.TagRenamed, field.Path
 		}
 	}

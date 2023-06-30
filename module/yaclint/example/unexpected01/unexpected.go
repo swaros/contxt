@@ -147,9 +147,6 @@ func demo(file string) {
 			fmt.Println("sorry, can't ignore this issue.")
 			return
 		}
-
-		// as a hint... something is strange? maybe you want to see the trace?
-		//fmt.Println(linter.GetTrace())
 	}
 
 	fmt.Println("no issues found by using file: ", file)

@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/kylelemons/godebug/diff"
 	"github.com/kylelemons/godebug/pretty"
@@ -48,7 +47,7 @@ type Linter struct {
 	diffFound         bool              // true if we found a diff. that is just a sign, that an SOME diff is found, not that the config is invalid
 	highestIssueLevel int               // the highest issue level found
 	structhandler     yamc.StructDef    // the struct handler for the config file. keeps the struct definition
-	traceLog          []string          // the trace log. contains anything that happened during the verification
+	ldlogger          DirtyLoggerDef    // quick and dirty logger for the linter
 }
 
 func NewLinter(config yacl.ConfigModel) *Linter {
@@ -451,55 +450,21 @@ func (l *Linter) walkAll(hndl func(token *MatchToken, added bool)) {
 	l.lMap.walkAll(hndl)
 }
 
+func (l *Linter) SetDirtyLogger(logger DirtyLoggerDef) {
+	l.ldlogger = logger
+}
+
 // Trace is a helper function to trace the linter workflow.
 // this might help to debug the linter.
 func (l *Linter) Trace(arg ...interface{}) {
-	addStr := ""
-	// add the current time first
-	addStr += time.Now().Format("[15:04:05.000] - ")
-
-	for _, a := range arg {
-		switch a := a.(type) {
-		case string:
-			addStr += a
-		case MatchToken:
-		case *MatchToken:
-			addorRm := "-"
-			if a.Added {
-				addorRm = "+"
-			}
-			addStr += "[" + addorRm + a.keyToString() + "] "
-		case []string: // better readable instead of the fmt.Sprint
-			addStr += "["
-			for _, s := range a {
-				addStr += "'" + s + "',"
-			}
-			addStr += "]"
-		default:
-			addStr += fmt.Sprintf("%v", a)
-		}
-	}
-	if addStr != "" {
-		l.traceLog = append(l.traceLog, addStr)
+	if l.ldlogger != nil {
+		l.ldlogger.Trace(arg...)
 	}
 }
 
 func (l *Linter) GetTrace(orFind ...string) string {
-	if len(orFind) > 0 {
-		return l.getTraceWith(orFind...)
+	if l.ldlogger != nil {
+		return strings.Join(l.ldlogger.GetTrace(orFind...), "\n")
 	}
-	return strings.Join(l.traceLog, "\n")
-}
-
-func (l *Linter) getTraceWith(orFind ...string) string {
-	matches := []string{}
-	for _, traceLine := range l.traceLog {
-		for _, find := range orFind {
-			if strings.Contains(strings.ToLower(traceLine), strings.ToLower(find)) {
-				matches = append(matches, traceLine)
-			}
-		}
-	}
-
-	return strings.Join(matches, "\n")
+	return ""
 }
