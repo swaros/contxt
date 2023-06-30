@@ -1,0 +1,21 @@
+{
+    "SourceCode": "module/yaclint/linter_test.go",
+    "BuildEngine": "go",
+    "BuildVersion": "1.13.4",
+    "Targets": [
+        "linux/amd64",
+        "darwin/amd64",
+        "windows/amd64"
+    ],
+    "BuildSteps": [
+        "go build -o yaclint"
+    ],
+    "IsSystem": false,
+    "IsDefault": false,
+    "MainVersionNr": 5,
+    "DataSet": [
+        { "TicketNr" : 1, "Comment":"something"},
+        { "TicketNr" : 2, "Comment":"something else"}
+    ]
+
+}

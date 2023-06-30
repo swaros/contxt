@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/kylelemons/godebug/diff"
+	"github.com/kylelemons/godebug/pretty"
 	"github.com/swaros/contxt/module/yacl"
 	"github.com/swaros/contxt/module/yamc"
 )
@@ -76,18 +77,18 @@ func (l *Linter) getUnstructMap(loader yamc.DataReader) (map[string]interface{},
 }
 
 // getStructSource creates the yaml/json representation of the config file
-func (l *Linter) getStructSource(loader yamc.DataReader) (string, error) {
+func (l *Linter) getStructSource(loader yamc.DataReader) (map[string]interface{}, string, error) {
 	cYamc, cerr := l.config.GetAsYmac() // get the configuration as yamc object
 	if cerr != nil {
-		return "", cerr
+		return nil, "", cerr
 	}
 
 	structData := cYamc.GetData()               // get the source as string from the yamc object
 	cbytes, ccerr := loader.Marshal(structData) // encode the source to bytes
 	if ccerr != nil {
-		return "", ccerr
+		return nil, "", ccerr
 	}
-	return string(cbytes), nil
+	return structData, string(cbytes), nil
 }
 
 // init4read is a helper function that initializes the linter for reading the config file.
@@ -101,16 +102,21 @@ func (l *Linter) init4read() (yamc.DataReader, string, string, error) {
 
 	l.Trace("init4read: structhandler Init: ", l.structhandler.Init)
 
-	_, unstructSource, err1 := l.getUnstructMap(yamcLoader)
+	unStructData, _, err1 := l.getUnstructMap(yamcLoader)
 	if err1 != nil {
 		return nil, "", "", err1
 	}
 
-	structSource, err2 := l.getStructSource(yamcLoader)
+	structData, _, err2 := l.getStructSource(yamcLoader)
 	if err2 != nil {
 		return nil, "", "", err2
 	}
-	return yamcLoader, unstructSource, structSource, nil
+
+	niceUnstructed := pretty.CompareConfig.Sprint(unStructData)
+	niceStructed := pretty.CompareConfig.Sprint(structData)
+	//l.Trace("init4read: niceUnstructed:\n", niceUnstructed)
+	//l.Trace("init4read: niceStructed:\n", niceStructed)
+	return yamcLoader, niceUnstructed, niceStructed, nil
 }
 
 // GetDiff returns the diff between the config file and the structed config file.
@@ -223,20 +229,29 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 		}
 
 		for _, line := range c.Added {
+			// ignore any single open or close bracket
+			if isDelimerType(line) != ValueString {
+				continue
+			}
+
 			keyStr, _, _ := getTokenParts(line)
 			keysAdded = append(keysAdded, keyStr)
+
 			l.structhandler.SetIndexSlice(keysAdded)
 
 			changeNr4Add++
-			//fmt.Println("ADDED:"+line, " ---> index[", indexNr, "] seq[", sequenceNr, "]", "chunk[", chunkIndex, "]", "change[", changeNr4Add, "]")
-
 			addToken := NewMatchToken(l.structhandler, l.Trace, &l.lMap, line, changeNr4Add, sequenceNr, true)
 			temporaryChunk.Added = append(temporaryChunk.Added, &addToken)
 			needToBeAdded = true
 		}
 		for _, line := range c.Deleted {
+			// ignore any single open or close bracket
+			if isDelimerType(line) != ValueString {
+				continue
+			}
 			keyStr, _, _ := getTokenParts(line)
 			keysRemoved = append(keysRemoved, keyStr)
+
 			l.structhandler.SetIndexSlice(keysRemoved)
 
 			changeNr4Rm++
@@ -256,7 +271,11 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 			sequenceNr += len(c.Equal)
 			// we need to add the equal lines to the keys, so we can track the context of the keys
 			// this needs to be done for booth. added and removed keys.
+			// ignore any single open or close bracket
 			for _, line := range c.Equal {
+				if isDelimerType(line) != ValueString {
+					continue
+				}
 				keyStr, _, _ := getTokenParts(line)
 				keysAdded = append(keysAdded, keyStr)
 				keysRemoved = append(keysRemoved, keyStr)

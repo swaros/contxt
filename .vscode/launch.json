@@ -69,6 +69,15 @@
             "args": [""]
         },
         {
+            "name": "LOCAL-DEBUG",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/module/yaclint/example/check_local.only_check/test.go",
+            "env": {},
+            "args": [""]
+        },
+        {
             "name": "plain start",
             "type": "go",
             "request": "launch",

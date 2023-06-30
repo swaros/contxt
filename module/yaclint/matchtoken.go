@@ -25,6 +25,16 @@ const (
 	WrongType    = 11 // the type is wrong. different from the strct definition, and also no type conversion is possible
 	UnknownEntry = 12 // the entry is is in the config but not in the struct
 
+	IdentObject = 1 // the token is an object
+	IdentArray  = 2 // the token is an array
+	IdentValue  = 3 // the token is a value
+
+	ValueString = 0 // the token is not Open or Close Object or Array
+	OpenObject  = 1 // the token is an object like "{"
+	CloseObject = 2 // the token is an object like "}"
+	OpenArray   = 3 // the token is an object like "["
+	CloseArray  = 4 // the token is an object like "]"
+
 )
 
 type MatchToken struct {
@@ -67,12 +77,58 @@ func NewMatchToken(structDef yamc.StructDef, traceFn func(args ...interface{}), 
 	return matchToken
 }
 
+// we will read the keyname and the value from the line
+// they comes as  string. that is "nicely" formated.
+// so we have to deal with any sinlgle line and do not have an context.
+// so {key:"value"} will be come in 3 lines, and we handle any line as a single line
+// we will get as line argument:
+// 1. : {
+// 2.  key: "value"
+// 3. }
+// any key have a leading space, also if they are in the root of the struct
+// so this one space have to removed anytime
+// then we have to take care about the colon. the colon is the separator between key and value
+// the value itself can have a comma as separator. but the comma is not part of the value
+// so we have to deal with the comma as separator and the colon as separator
 func getTokenParts(token string) (string, string, bool) {
-	parts := strings.Split(token, ":")
-	if len(parts) > 1 {
-		return parts[0], parts[1], true
+	if strings.Contains(token, ":") {
+		parts := strings.Split(token, ":")
+		// we only remove the ONE leading space. no trim here
+		key := strings.TrimPrefix(parts[0], " ")
+		value := strings.TrimSpace(parts[1])
+		value = strings.TrimSuffix(value, ",")
+		// if we have a value, that is equal "{" we found an object
+		// so there is no value
+		if value == "{" {
+			return key, "", false
+		}
+		// if we have a value, that is equal "[" we found an array
+		// so there is no value
+		if value == "[" {
+			return key, "", false
+		}
+		return key, value, true
 	}
-	return parts[0], "", false
+	return token, "", false
+
+}
+
+func isDelimerType(str string) int {
+	// first trim the string
+	str = strings.TrimSpace(str)
+	if str == "{" {
+		return OpenObject
+	}
+	if str == "}" || str == "}," {
+		return CloseObject
+	}
+	if str == "[" {
+		return OpenArray
+	}
+	if str == "]" || str == "]," {
+		return CloseArray
+	}
+	return 0
 }
 
 func (m *MatchToken) trace(args ...interface{}) {

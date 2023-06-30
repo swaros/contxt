@@ -2,6 +2,7 @@ package yaclint_test
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"testing"
 
@@ -182,6 +183,64 @@ func TestConfigLower(t *testing.T) {
 
 }
 
+func TestConfigValidJson(t *testing.T) {
+	type dataSet struct {
+		TicketNr int
+		Comment  string
+	}
+
+	type mConfig struct {
+		SourceCode    string    `json:"SourceCode"`
+		BuildEngine   string    `json:"BuildEngine"`
+		BuildVersion  string    `json:"BuildVersion"`
+		Targets       []string  `json:"Targets"`
+		BuildSteps    []string  `json:"BuildSteps"`
+		IsSystem      bool      `json:"IsSystem"`
+		IsDefault     bool      `json:"IsDefault"`
+		MainVersionNr int       `json:"MainVersionNr"`
+		DataSet       []dataSet `json:"DataSet,omitempty"`
+	}
+	var testConf mConfig
+
+	yLoader := yamc.NewJsonReader()
+	configHndl := yacl.New(
+		&testConf,
+		yLoader,
+	).SetSubDirs("testdata", "testConfig").
+		SetSingleFile("valid.json").
+		UseRelativeDir()
+
+	if err := configHndl.Load(); err != nil {
+		t.Error(err)
+
+	}
+
+	chck := yaclint.NewLinter(*configHndl)
+	if chck == nil {
+		t.Error("failed to create linter")
+	}
+
+	if err := chck.Verify(); err != nil {
+		t.Error(err)
+	}
+
+	if chck.GetHighestIssueLevel() > 0 {
+		t.Error("found errors in valid config. expected issue level not higher than 0. got", chck.GetHighestIssueLevel())
+		t.Log(chck.PrintIssues())
+
+		t.Log(chck.GetTrace())
+	}
+
+	if testConf.SourceCode != "module/yaclint/linter_test.go" {
+		t.Error("expected SourceCode to be 'module/yaclint/linter_test.go'. got", testConf.SourceCode)
+	}
+
+	if testConf.BuildEngine != "go" {
+		t.Error("expected BuildEngine to be 'go'. got", testConf.BuildEngine)
+	}
+
+}
+
 func TestConfigNo1(t *testing.T) {
 	type dataSet struct {
 		TicketNr int
@@ -357,6 +416,13 @@ type assertTokenSimplify struct {
 	IsChecked  bool // true if the token was checked
 }
 
+func (a *assertTokenSimplify) String() string {
+	typeOfValue := reflect.TypeOf(a.Value)
+	return fmt.Sprintf(
+		"KeyWord: '%s', Value: %v[%v], Type: %s, Added: %v, IndexNr: %d, SequenceNr: %d, Status: %d, IsChecked: %v",
+		a.KeyWord, a.Value, typeOfValue, a.Type, a.Added, a.IndexNr, a.SequenceNr, a.Status, a.IsChecked)
+}
+
 // helper function to get the expected token from a slice
 // the token have to match on keyword, added, Indexnr, sequenceNr and ischecked.
 // isChecked is set to any token that is already checked.
@@ -367,6 +433,16 @@ func helperGetExpectedFromSlice(name string, added bool, indexNr int, sequenceNr
 		}
 	}
 	return nil
+}
+
+func helperGetExpectedFromSliceBynameAnAdded(name string, added bool, from []*assertTokenSimplify) *[]assertTokenSimplify {
+	var result []assertTokenSimplify
+	for _, v := range from {
+		if v.KeyWord == name && v.Added == added && v.IsChecked == false {
+			result = append(result, *v)
+		}
+	}
+	return &result
 }
 
 // Testing some results in the ReportDiff callback.
@@ -402,16 +478,31 @@ func TestReportDiffStartedAt(t *testing.T) {
 	}
 
 	expectedTokens := []*assertTokenSimplify{
-		{"BuildEngineVersion", 1.14, "float64", false, 1, 1, yaclint.ValueMatchButTypeDiffers, false},
-		{"BuildEngineVersion", "1.14", "string", true, 1, 1, yaclint.ValueMatchButTypeDiffers, false},
-		{"    - Comment", "", "string", true, 1, 4, yaclint.ValueNotMatch, false},
-		{"    - Comment", "this is a comment", "string", false, 1, 4, yaclint.ValueNotMatch, false},
-		{"      TicketNr", 1, "int", false, 2, 4, yaclint.ValueNotMatch, false},
+		{"BuildEngineVersion", 1.14, "float64", false, 1, 2, yaclint.ValueMatchButTypeDiffers, false},
+		{"BuildEngineVersion", "1.14", "string", true, 1, 2, yaclint.ValueMatchButTypeDiffers, false},
+		{"  Comment", "", "string", true, 1, 7, yaclint.ValueNotMatch, false},
+		{"  Comment", "this is a comment", "string", false, 1, 7, yaclint.ValueNotMatch, false},
+		{"  TicketNr", 1, "int", false, 2, 7, yaclint.ValueNotMatch, false},
+		{"  TicketNr", 0, "int", true, 2, 7, yaclint.ValueNotMatch, false},
 	}
 
 	checkIndex := 0
 	reportNotFound := false // report all tokens that are not found. this helps while setting up the test to focus on value that are found but differs
+	reportedTokens := []*assertTokenSimplify{}
 	linter.GetIssue(0, func(token *yaclint.MatchToken) {
+
+		reportToken := &assertTokenSimplify{
+			KeyWord:    token.KeyWord,
+			Value:      token.Value,
+			Type:       token.Type,
+			Added:      token.Added,
+			IndexNr:    token.IndexNr,
+			SequenceNr: token.SequenceNr,
+			Status:     token.Status,
+			IsChecked:  false,
+		}
+		reportedTokens = append(reportedTokens, reportToken)
+
 		assertToken := helperGetExpectedFromSlice(token.KeyWord, token.Added, token.IndexNr, token.SequenceNr, expectedTokens)
 		if assertToken == nil {
 			if reportNotFound {
@@ -449,7 +540,26 @@ func TestReportDiffStartedAt(t *testing.T) {
 	// now check if we do not check all tokens
 	for _, v := range expectedTokens {
 		if !v.IsChecked {
-			t.Error("we did not found token", v.KeyWord, "added", v.Added, " sequence", v.SequenceNr, " seems it is not reported in the the diff")
+			closestToken := helperGetExpectedFromSliceBynameAnAdded(v.KeyWord, v.Added, reportedTokens)
+			if closestToken == nil || len(*closestToken) == 0 {
+				t.Log(" >> no possible match found")
+				outStr := ""
+				for _, v := range reportedTokens {
+					outStr += v.String() + "\n"
+				}
+				t.Log(" >> reported tokens:\n", outStr)
+			} else {
+				for _, v := range *closestToken {
+					t.Log(" >> possible match:\n", v.String())
+				}
+			}
+
+			t.Error(
+				"we did not found token\n", v.String(),
+				"\nseems it is not reported in the the diff. ARE YOU SURE this token should be have an diff?\n",
+				"reported diffs:\n", linter.PrintIssues(),
+			)
+
 		}
 	}
 

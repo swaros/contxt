@@ -24,3 +24,6 @@ docs/test/coverage/*
 #auto generated files
 contxt.code-workspace
 
+#any directory callec xxx_local.only_xxx
+*_local.only_*
+
