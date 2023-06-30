@@ -72,6 +72,9 @@ first to understand what is happens in the background, here is a short overview 
 2. the linter now reloads the configuration wthout any struct mapping
 3. the linter now checks what fields are missing and what fields are unexpected, because they are not defined in the struct
 
+it would not help to panic out if there are any differences. a difference is expected. so the linter just reports the issues and it is up to the application to decide what to do.
+
+but there are of course some types of issues that are more critical than others. so the linter has 3 different levels of issues.
 
 #### information level
 in the **best case**, there is no different between the struct and the map. so the linter will not find any issues.
@@ -130,7 +133,7 @@ is reported as issue in **warning** level.
 ```
 
 #### error level
-the other case is, that there are fields in the config file, they are not defined in the struct. this is an issue, because the configuration is not used as expected.
+the other case is, there are fields in the config file, they are not defined in the struct. this is an issue, because the configuration is not used as expected.
 
 ```yaml
 name: john
@@ -167,4 +170,117 @@ is reported as issue in **error** level.
 none of these issues can be seen just by using the yacl library (or by using the yaml or json libs). so the linter is used to check if the configuration is used as expected.
 **so the linter will find this issues and print it out.**
 
+### implementation
+
+#### yaclint.NewLinter()
+the linter is created by using the yaclint.NewLinter() function. it takes a yacl instance as parameter. this is used to get the configuration and the reader.
+
+```go
+func NewLinter(yacl yacl.Yacl) *Linter
+```
+
+#### linter.Verify()
+the linter is used by calling the Verify() function. this will reload the configuration and check for any issues.
+
+```go
+func (l *Linter) Verify() error
+```
+
+the error that might be returned is related to the yacl library. so if there is an issue with the reader, this will be reported as error.
+
+the issues from the Verify itself are reported in different ways.
+
+#### linter.HasError()
+checks if any of the issues at least has an error level.
+
+```go
+func (l *Linter) HasError() bool
+```
+
+#### linter.HasWarning()
+checks if any of the issues at least has an warning level.
+
+```go
+func (l *Linter) HasWarning() bool
+```
+
+#### linter.HasInfo()
+checks if any of the issues at least has an info level.
+
+```go
+func (l *Linter) HasInfo() bool
+```
+
+#### linter.GetIssue()
+the linter has a function to get all the issues equal or higher a specific level. this is ment to react on the issues programmatically.
+ 
+```go
+func (l *Linter) GetIssue(level int, reportFn func(token *MatchToken))
+```
+
+for example:
+```go
+cantIgnore := linter.HasError() // error can not (or should not) be ignored at all
+linter.GetIssue(yaclint.IssueLevelWarn, func(token *yaclint.MatchToken) {	 
+	switch token.KeyPath {
+	case "Contact":
+		fmt.Println("The contact section is required.")
+		cantIgnore = true
+	case "Contact.Email":
+		fmt.Println("The email is required. this is used for the authentication.")
+		cantIgnore = true
+	case "Contact.Phone":
+		fmt.Println("no phone?. okay, fine...we can ignore this")
+	}
+
+})
+// getting out if we found an issue that we can not ignore
+if cantIgnore {
+	fmt.Println("sorry, can't ignore this issue.")
+	exit(1)
+}
+```
+
+
+#### linter.PrintIssues()
+the linter has a function to print out the issues. this is used to print out **all** the issues if there are any.
+
+```go
+func (l *Linter) PrintIssues() string
+```
+
+this is ment for report the issue to the user. the output is a string conversation of the issues.
+
+```bash
+[-]UnknownEntry: level[12] @    emil (    emil)
+[+]MissingEntry: level[5] @email (Contact.Email)
+```
+
+for each level, we have also a function to get these outputs as string slices depending on the level.
+(see below)
+
+#### linter.Errors()
+the linter has a function to get all the issues with an error level. this is used to print out the issues if there are any.
+these are string conversations of the issues. it is ment for report the issue to the user.
+
+
+```go
+func (l *Linter) Errors() []String
+```
+
+#### linter.Warnings()
+the linter has a function to get all the issues with an warning level. this is used to print out the issues if there are any.
+similar to the GetErrors() function, these are string conversations of the issues. it is ment for report the issue to the user.
+
+```go
+func (l *Linter) Warnings() []String
+```
+
+#### linter.Infos()
+the linter has a function to get all the issues with an info level. this is used to print out the issues if there are any.
+similar to the GetErrors() function, these are string conversations of the issues. it is ment for report the issue to the user.
+
+```go
+func (l *Linter) Infos() []String
+```
 
