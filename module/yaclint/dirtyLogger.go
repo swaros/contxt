@@ -38,12 +38,19 @@ const (
 type DirtyLogger struct {
 	traceFn  TraceFn
 	logStuff []string
+	addTime  bool
 }
 
 func NewDirtyLogger() *DirtyLogger {
 	return &DirtyLogger{
 		traceFn: nil,
+		addTime: true,
 	}
+}
+
+func (dl *DirtyLogger) SetAddTime(addTime bool) *DirtyLogger {
+	dl.addTime = addTime
+	return dl
 }
 
 func (dl *DirtyLogger) Trace(args ...interface{}) {
@@ -64,7 +71,7 @@ func (dl *DirtyLogger) GetTrace(find ...string) []string {
 	var ret []string
 	for _, s := range dl.logStuff {
 		for _, f := range find {
-			if f == s {
+			if strings.Contains(strings.ToLower(s), strings.ToLower(f)) {
 				ret = append(ret, s)
 			}
 		}
@@ -84,7 +91,9 @@ func (dl *DirtyLogger) CreateSimpleTracer() *DirtyLogger {
 	dl.traceFn = func(args ...interface{}) {
 		addStr := ""
 		// add the current time first
-		addStr += time.Now().Format("[15:04:05.000] - ")
+		if dl.addTime {
+			addStr += time.Now().Format("[15:04:05.000] - ")
+		}
 
 		for _, a := range args {
 			switch a := a.(type) {
@@ -123,9 +132,11 @@ func (dl *DirtyLogger) CreateSimpleTracer() *DirtyLogger {
 
 func (dl *DirtyLogger) CreateCtxoutTracer() *DirtyLogger {
 	dl.traceFn = func(args ...interface{}) {
-		addStr := ctxout.ForeDarkGrey + ctxout.BackWhite
+		addStr := ""
 		// add the current time first
-		addStr += time.Now().Format("[15:04:05.000]") + ctxout.CleanTag + " - "
+		if dl.addTime {
+			addStr += ctxout.ForeDarkGrey + ctxout.BackWhite + time.Now().Format("[15:04:05.000]") + ctxout.CleanTag + " - "
+		}
 
 		for _, a := range args {
 			switch a := a.(type) {
