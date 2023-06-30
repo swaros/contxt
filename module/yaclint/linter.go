@@ -61,68 +61,62 @@ func NewLinter(config yacl.ConfigModel) *Linter {
 
 // getUnstructMap loads the config file as generic map and returns it
 // as map[string]interface{} and as string (the yaml/json representation)
-func (l *Linter) getUnstructMap(loader yamc.DataReader) (map[string]interface{}, string, error) {
+func (l *Linter) getUnstructMap(loader yamc.DataReader) (map[string]interface{}, error) {
 	fileName := l.config.GetLoadedFile() // the file name of the config file
 	l.Trace("(re)Loading file:", fileName)
 	m := make(map[string]interface{}) // generic map to load the file for comparison
 	err := loader.FileDecode(fileName, &m)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	bytes, err := loader.Marshal(m)
+	_, err = loader.Marshal(m)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	return m, string(bytes), nil
+	return m, nil
 }
 
 // getStructSource creates the yaml/json representation of the config file
-func (l *Linter) getStructSource(loader yamc.DataReader) (map[string]interface{}, string, error) {
+func (l *Linter) getStructSource(loader yamc.DataReader) (map[string]interface{}, error) {
 	cYamc, cerr := l.config.GetAsYmac() // get the configuration as yamc object
 	if cerr != nil {
-		return nil, "", cerr
+		return nil, cerr
 	}
 
-	structData := cYamc.GetData()               // get the source as string from the yamc object
-	cbytes, ccerr := loader.Marshal(structData) // encode the source to bytes
-	if ccerr != nil {
-		return nil, "", ccerr
-	}
-	return structData, string(cbytes), nil
+	structData := cYamc.GetData() // get the source as map[string]interface{}
+	return structData, nil
 }
 
 // init4read is a helper function that initializes the linter for reading the config file.
-func (l *Linter) init4read() (yamc.DataReader, string, string, error) {
+func (l *Linter) init4read() (string, string, error) {
 	yamcLoader := l.config.GetLastUsedReader() // the last used reader from the config
 	if yamcLoader == nil {
-		return nil, "", "", fmt.Errorf("no reader found. the config needs to be loaded first")
+		return "", "", fmt.Errorf("no reader found. the config needs to be loaded first")
 	}
 	l.Trace("found used data reader: ", reflect.TypeOf(yamcLoader))
 	l.structhandler = *yamcLoader.GetFields() // get the struct handler from the reader. must be done before the unstructed map is loaded
 
 	l.Trace("init4read: structhandler Init: ", l.structhandler.Init)
 
-	unStructData, _, err1 := l.getUnstructMap(yamcLoader)
+	unStructData, err1 := l.getUnstructMap(yamcLoader)
 	if err1 != nil {
-		return nil, "", "", err1
+		return "", "", err1
 	}
 
-	structData, _, err2 := l.getStructSource(yamcLoader)
+	structData, err2 := l.getStructSource(yamcLoader)
 	if err2 != nil {
-		return nil, "", "", err2
+		return "", "", err2
 	}
 
 	niceUnstructed := pretty.CompareConfig.Sprint(unStructData)
 	niceStructed := pretty.CompareConfig.Sprint(structData)
-	//l.Trace("init4read: niceUnstructed:\n", niceUnstructed)
-	//l.Trace("init4read: niceStructed:\n", niceStructed)
-	return yamcLoader, niceUnstructed, niceStructed, nil
+	return niceUnstructed, niceStructed, nil
 }
 
 // GetDiff returns the diff between the config file and the structed config file.
 // The diff is returned as string.
 func (l *Linter) GetDiff() (string, error) {
-	_, unstructedSrc, structedSrc, err := l.init4read()
+	unstructedSrc, structedSrc, err := l.init4read()
 	if err != nil {
 		return "", err
 	}
@@ -134,8 +128,7 @@ func (l *Linter) GetDiff() (string, error) {
 // against the structed config file. It will return an error if the config file
 // is not valid.
 func (l *Linter) Verify() error {
-
-	_, unstructSource, structSource, err := l.init4read()
+	unstructSource, structSource, err := l.init4read()
 	l.Trace("Verify: unstructSource:\n", unstructSource)
 	l.Trace("Verify: structSource:\n", structSource)
 	if err != nil {
@@ -224,7 +217,7 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 			l.Trace("chunkWorker: -- index -- add - (", len(keysAdded), ")", keysAdded)
 		}
 
-		if len(keysAdded) > 0 {
+		if len(keysRemoved) > 0 {
 			l.Trace("chunkWorker: -- index -- rm - (", len(keysRemoved), ")", keysRemoved)
 		}
 
