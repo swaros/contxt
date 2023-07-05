@@ -971,7 +971,7 @@ func TestConfigGetter(t *testing.T) {
 		t.Error("we should have a config here")
 	} else {
 		val := cfg2.(bool)
-		if val != false {
+		if val != true {
 			t.Errorf("we should have the expected value %v", val)
 		}
 	}

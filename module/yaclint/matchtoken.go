@@ -205,7 +205,7 @@ func (m *MatchToken) IsPair(token *MatchToken) bool {
 	}
 	if keyVerified && m.Added != token.Added {
 		m.PairToken = token
-		m.trace("MatchToken:", m, " [", m.keyToString(), "] is pair to [", token.keyToString(), "]")
+		m.trace("MatchToken:", m, " [", m.keyToString(), "] is pair to [", token.keyToString(), "] index ", token.IndexNr, " sequence ", token.SequenceNr)
 		return true
 	}
 	return false

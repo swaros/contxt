@@ -23,6 +23,7 @@ package runner
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
+	"github.com/swaros/contxt/module/yaclint"
 )
 
 type CmdExecutorImpl struct {
@@ -364,7 +366,7 @@ func TemplateTargetsAsMap(template configure.RunConfig, showInvTarget bool) ([]s
 	return targets, found
 }
 
-func (c *CmdExecutorImpl) Lint() error {
+func (c *CmdExecutorImpl) Lint(showAll bool) error {
 	c.Println("linting...")
 	c.session.TemplateHndl.SetLinting(true)
 	if _, exists, err := c.session.TemplateHndl.Load(); err != nil {
@@ -378,13 +380,63 @@ func (c *CmdExecutorImpl) Lint() error {
 				return lErr
 			}
 			if linter.HasWarning() {
-				c.Println(ctxout.ForeYellow, "linting warnings: ", ctxout.CleanTag, linter.Warnings())
-			} else {
-				c.Println("...warnings ", ctxout.ForeGreen, "no warnings", ctxout.CleanTag)
-				if linter.HasInfo() {
-					c.Println(ctxout.ForeYellow, "linting info: ", ctxout.CleanTag, linter.Infos())
+				if showAll {
+					c.Println(" ")
+					c.Println("  you see all the unset fields, which are not set in the config")
+					c.Println("  these are shown as", ctxout.ForeDarkGrey, " MissingEntry: level[5]", ctxout.CleanTag)
+					c.Println("  this do not mean, that you have to set them, but it is a hint, that you can set them")
+					c.Println("  and how they are named")
+					c.Println(" ")
+					c.Println(" ")
+					// we just print all warnings once per keypath
+					alreadyPrinted := make(map[string]bool)
+
+					linter.GetIssue(yaclint.IssueLevelWarn, func(token *yaclint.MatchToken) {
+						//c.Println(ctxout.ForeYellow, "linting warning: ", ctxout.CleanTag, token.ToIssueString())
+						propColor := ctxout.ForeYellow
+						if token.Added {
+							propColor = ctxout.ForeGreen
+						}
+
+						canPrint := true
+						if _, ok := alreadyPrinted[token.KeyPath]; ok {
+							canPrint = false
+						}
+						if canPrint {
+							valueStr := fmt.Sprintf(" %v ", token.Value)
+							c.Println(
+								ctxout.Row(
+									ctxout.TD(token.KeyPath, ctxout.Size(20), ctxout.Prop(ctxout.AttrPrefix, propColor)),
+									ctxout.TD(valueStr, ctxout.Size(20), ctxout.Prop(ctxout.AttrPrefix, ctxout.ForeYellow)),
+									ctxout.TD(token.ToIssueString(), ctxout.Size(40), ctxout.Prop(ctxout.AttrPrefix, ctxout.ForeDarkGrey)),
+									ctxout.TD(token.Type, ctxout.Size(20), ctxout.Prop(ctxout.AttrPrefix, ctxout.ForeLightCyan)),
+								),
+							)
+							alreadyPrinted[token.KeyPath] = true
+						}
+
+					})
 				} else {
-					c.Println("...info ", ctxout.ForeGreen, "no info", ctxout.CleanTag)
+					if linter.HasError() {
+						c.Println(ctxout.ForeRed, "...linting errors: ", ctxout.CleanTag, len(linter.Errors()))
+						c.Println(" ")
+						linter.GetIssue(yaclint.IssueLevelError, func(token *yaclint.MatchToken) {
+							c.Println(
+								ctxout.ForeRed,
+								"linting error: ", ctxout.ForeYellow, token.ToIssueString(),
+								ctxout.CleanTag, " check entry: ",
+								ctxout.ForeBlue, token.KeyPath, ctxout.CleanTag, ":", ctxout.ForeLightBlue, token.Value, ctxout.CleanTag)
+						})
+						c.Println(" ")
+					} else {
+						c.Println(ctxout.ForeLightGreen, "...linter findings : ", ctxout.CleanTag, len(linter.Warnings()))
+						c.Println(" ")
+						c.Println(ctxout.ForeLightBlue,
+							"linter findings are usual and expected, because there are fields not set, the ",
+							ctxout.BoldTag, "could", ctxout.CleanTag, ctxout.ForeLightBlue, " be set, but it is not necessary.")
+						c.Println(ctxout.ForeLightBlue, "if you like to see all of this findings, use the flag show-issues")
+						c.Println(" ")
+					}
 				}
 			}
 		} else {

@@ -128,6 +128,11 @@ func (t *Template) LoadV2() (configure.RunConfig, error) {
 			}
 			return []byte(parsedContent), nil
 		})
+
+	// if linting is enabled we need to track the files
+	if t.linting {
+		confLoader.SetTrackFiles()
+	}
 	if err := confLoader.Load(); err != nil {
 		return template, err
 	}
@@ -173,18 +178,6 @@ func (t *Template) Load() (configure.RunConfig, bool, error) {
 	} else {
 		return Template, true, nil
 	}
-	/*
-		if templateParsed, err := t.readAsTemplate(); err != nil {
-			return configure.RunConfig{}, false, err
-		} else {
-			var template configure.RunConfig
-			// now we just use the plain yaml unmarshal to parse the template
-			if err := yaml.Unmarshal([]byte(templateParsed), &template); err != nil {
-				return configure.RunConfig{}, false, err
-			} else {
-				return template, true, nil
-			}
-		}*/
 }
 
 func (t *Template) LoadInclude() (configure.IncludePaths, bool, error) {

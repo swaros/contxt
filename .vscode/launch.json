@@ -57,7 +57,9 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/v2/main.go",
             "env": {},
+            "cwd": "${workspaceFolder}",
             "args": ["lint"]
+            
         },
         {
             "name": "v2 EXAMPLE yacl - current dir",

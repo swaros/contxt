@@ -47,5 +47,5 @@ type CmdExecutor interface {
 	DirFindApplyAndSave(args []string) (string, error) // find pathbay arguments,save the current path print the path
 	InteractiveScreen()                                // interactive screen
 	GetCurrentWorkSpace() string                       // get current workspace
-	Lint() error                                       // lint the current workspace
+	Lint(bool) error                                   // lint the current workspace
 }

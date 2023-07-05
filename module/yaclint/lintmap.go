@@ -33,6 +33,17 @@ func (l *LintMap) GetTokensFromSequenceAndIndex(seq int, index int) []*MatchToke
 	return tokens
 }
 
+// find tokens by keypath over all chunks
+func (l *LintMap) GetTokensByTokenPath(fromToken *MatchToken) []*MatchToken {
+	var tokens []*MatchToken
+	l.walkAll(func(token *MatchToken, added bool) {
+		if token.KeyPath != "" && token.KeyPath == fromToken.KeyPath {
+			tokens = append(tokens, token)
+		}
+	})
+	return tokens
+}
+
 // walkAll walks through all tokens and calls the given handler
 func (l *LintMap) walkAll(hndl func(token *MatchToken, added bool)) {
 	for _, chunk := range l.Chunks {

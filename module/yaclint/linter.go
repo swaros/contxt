@@ -61,16 +61,47 @@ func NewLinter(config yacl.ConfigModel) *Linter {
 // getUnstructMap loads the config file as generic map and returns it
 // as map[string]interface{} and as string (the yaml/json representation)
 func (l *Linter) getUnstructMap(loader yamc.DataReader) (map[string]interface{}, error) {
+	// right now we use the last used file only. support fpor chainloading comes later
 	fileName := l.config.GetLoadedFile() // the file name of the config file
-	l.Trace("(re)Loading file:", fileName)
-	m := make(map[string]interface{}) // generic map to load the file for comparison
-	err := loader.FileDecode(fileName, &m)
-	if err != nil {
-		return nil, err
+
+	if fileName == "" {
+		return nil, fmt.Errorf("no file name found. the config needs to be loaded first. also chainload fom yacl not supported right now")
 	}
-	_, err = loader.Marshal(m)
-	if err != nil {
-		return nil, err
+
+	l.Trace("(re)Loading file:", fileName)
+	// generic map to load the file for comparison
+	m := make(map[string]interface{})
+
+	// first we need to make sure to get the right way to load the file.
+	// so if yacl is using a costum loader, we need to get the content by the loader.
+	// but this is possible only, if the tracking of the loaded file is enabled.
+	if l.config.GetConfig(yacl.ConfigHaveCustomLoader).(bool) {
+		// okay there is a custom loader. we are f... up if the tracking is not enabled
+		if !l.config.GetConfig(yacl.ConfigTrackFiles).(bool) {
+			return nil, fmt.Errorf("custom loader is used, but tracking of loaded file is not enabled")
+		}
+
+		// okay, we have a custom loader and the tracking is enabled. so we can get the content
+		// by the loader
+		content, err := l.config.GetFileContent(fileName)
+		if err != nil {
+			return nil, err
+		}
+		if mErr := loader.Unmarshal(content, &m); mErr != nil {
+			return nil, mErr
+		}
+
+	} else {
+		err := loader.FileDecode(fileName, &m)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// now we need to marshal the map to get the yaml/json representation
+	_, lerr := loader.Marshal(m)
+	if lerr != nil {
+		return nil, lerr
 	}
 	return m, nil
 }
@@ -307,16 +338,26 @@ func (l *Linter) findPairsHelper(tkn *MatchToken) {
 	bestmatchTokens := l.lMap.GetTokensFromSequenceAndIndex(tkn.SequenceNr, tkn.IndexNr)
 	l.findPairInPairMap(tkn, bestmatchTokens, "findPairsHelper: try optimal case. compare ")
 
+	if tkn.PairToken == nil {
+		// did not found a pair in the best case, so we do not loger stick to the sequence and index
+		// and just compare the path of the token.
+		pathToken := l.lMap.GetTokensByTokenPath(tkn)
+		l.findPairInPairMap(tkn, pathToken, "findPairsHelper:    try path only. compare ")
+	}
+
+	// TODO: make this still sence?
+
 	// we did not find a pair in the best case, so we need to find a pair in the worst case.
 	// that means we have to seach in all other chunks, if we find a pair.
 	// that can be lead to false positives, but we can not do anything else.
-	if tkn.PairToken == nil {
-		// for the trace, we try so intent the output, so it is more readable
-		//l.Trace("findPairsHelper:    try fallback", tkn, " in best case search, try to find a pair without sequence number")
-		moreTokens := l.lMap.GetTokensFromSequence(tkn.SequenceNr)
-		l.findPairInPairMap(tkn, moreTokens, "findPairsHelper:    retry with sequence only. ")
+	/*
+		if tkn.PairToken == nil {
+			// for the trace, we try so intent the output, so it is more readable
+			//l.Trace("findPairsHelper:    try fallback", tkn, " in best case search, try to find a pair without sequence number")
+			moreTokens := l.lMap.GetTokensFromSequence(tkn.SequenceNr)
+			l.findPairInPairMap(tkn, moreTokens, "findPairsHelper:    retry with sequence only. ")
 
-	}
+		}*/
 }
 
 func (l *Linter) findPairInPairMap(tkn *MatchToken, tkns []*MatchToken, traceMsg string) {

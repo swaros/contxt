@@ -3,9 +3,9 @@ version: "{{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.min
 
 # define ours workspace
 workspace:
-   project: contxt
-   role: root
-   version: "{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}"
+  project: contxt
+  role: root
+  version: "{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}"
 
 # we need a couple of imports to create some
 # content depending the values we imported

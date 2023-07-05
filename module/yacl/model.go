@@ -135,7 +135,7 @@ func (c *ConfigModel) GetConfig(what int) interface{} {
 	case ConfigSupportMigrate:
 		return c.supportMigrate
 	case ConfigHaveCustomLoader:
-		return c.customFileLoader == nil
+		return c.customFileLoader != nil
 	}
 	return nil
 }

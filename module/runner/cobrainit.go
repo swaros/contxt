@@ -352,14 +352,20 @@ scan for new projects in the workspace 'ctx workspace scan'`,
 // -- lint cmd
 
 func (c *SessionCobra) GetLintCmd() *cobra.Command {
+	var showAll bool
 	lCmd := &cobra.Command{
 		Use:   "lint",
 		Short: "lint the .contxt.yaml file",
 		Long:  "lint the .contxt.yaml and shows unexpected fields",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return c.ExternalCmdHndl.Lint()
+			c.checkDefaultFlags(cmd, args)
+
+			return c.ExternalCmdHndl.Lint(showAll)
 		},
 	}
+
+	lCmd.Flags().BoolVarP(&showAll, "show-issues", "i", false, "show all issues")
+
 	return lCmd
 }
 
