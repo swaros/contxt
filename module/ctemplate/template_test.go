@@ -97,8 +97,8 @@ func TestTemplateWithLinter(t *testing.T) {
 			assert.Equal(t, "echo hello", ctxTmpl.Task[0].Script[0], "Task 1")
 		}
 
-		if linter := tmplte.GetLinter(); linter == nil {
-			t.Error("Linter should not be nil")
+		if linter, err := tmplte.GetLinter(); err != nil {
+			t.Error(err)
 		} else {
 			if linter.HasError() {
 				t.Error("Linter should not have errors")

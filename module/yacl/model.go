@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -41,6 +42,17 @@ const (
 	PATH_ABSOLUTE         = 3
 	ERROR_PATH_NOT_EXISTS = 101
 	NO_CONFIG_FILES_FOUND = 102
+
+	// Flags to get config entries
+	ConfigUseSpecialDir    = 1
+	ConfigAllowSubDirs     = 2
+	ConfigExpectNoFiles    = 4
+	ConfigAllowDirPattern  = 8
+	ConfigFilesPattern     = 16
+	ConfigTrackFiles       = 32
+	ConfigDirBlackList     = 64
+	ConfigSupportMigrate   = 128
+	ConfigHaveCustomLoader = 256
 )
 
 type ConfigModel struct {
@@ -64,6 +76,8 @@ type ConfigModel struct {
 	errorHappened    bool                               // flag to indicate, that an error happened while loading the configuration
 	chainError       error                              // the last error that happened while loading the configuration
 	customFileLoader func(path string) ([]byte, error)  // a custom file loader. if this is set, it will be used instead of the default file loader
+	trackFiles       bool                               // flag to enable the tracking of loaded files
+	fileContent      map[string][]byte                  // map of file contents. if trackFiles is enabled, this will be filled
 }
 
 // New creates a New yacl ConfigModel with default properties
@@ -91,6 +105,55 @@ func (c *ConfigModel) Init(initFn func(strct *any), noConfigFn func(errCode int)
 func (c *ConfigModel) SetCustomFileLoader(fn func(path string) ([]byte, error)) *ConfigModel {
 	c.customFileLoader = fn
 	return c
+}
+
+// SetTrackFiles enables the tracking of loaded files. so the file content will be stored in the ConfigModel
+// and can be accessed by GetFileContent
+func (c *ConfigModel) SetTrackFiles() *ConfigModel {
+	c.trackFiles = true
+	c.fileContent = make(map[string][]byte)
+	return c
+}
+
+// GetConfig returns the value of the given config entry
+func (c *ConfigModel) GetConfig(what int) interface{} {
+	switch what {
+	case ConfigUseSpecialDir:
+		return c.useSpecialDir
+	case ConfigAllowSubDirs:
+		return c.allowSubDirs
+	case ConfigExpectNoFiles:
+		return c.expectNoFiles
+	case ConfigAllowDirPattern:
+		return c.allowDirPattern
+	case ConfigFilesPattern:
+		return c.filesPattern
+	case ConfigTrackFiles:
+		return c.trackFiles
+	case ConfigDirBlackList:
+		return c.dirBlackList
+	case ConfigSupportMigrate:
+		return c.supportMigrate
+	case ConfigHaveCustomLoader:
+		return c.customFileLoader == nil
+	}
+	return nil
+}
+
+// GetFileContent returns the file content of the given file path
+// if trackFiles is not enabled, this will return an error
+func (c *ConfigModel) GetFileContent(path string) ([]byte, error) {
+	absolutePath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	if !c.trackFiles {
+		return nil, errors.New("trackFiles is not enabled")
+	}
+	if content, ok := c.fileContent[absolutePath]; ok {
+		return content, nil
+	}
+	return nil, errors.New("file not found:" + path + " (absolute:" + absolutePath + ")")
 }
 
 // SetExpectNoConfigFiles disable the behavior, not existing config files will be handled as error.
@@ -297,7 +360,9 @@ func (c *ConfigModel) Load() error {
 					return c.tryLoad(path, extension)
 
 				} else if c.setFile == "" { // loading all files and override anything by the last used config. but not if we expect a single file is used
-					c.tryLoad(path, extension)
+					if err := c.tryLoad(path, extension); err != nil {
+						return err
+					}
 				}
 			}
 		} else {
@@ -321,7 +386,7 @@ func (c *ConfigModel) Load() error {
 		if c.noConfigFilesFn != nil {
 			return c.noConfigFilesFn(NO_CONFIG_FILES_FOUND)
 		}
-		return errors.New("at least one Configuration should exists. but found nothing")
+		return errors.New("at least one Configuration should exists. but found nothing. check loaders,paths and filenames")
 	}
 	return err
 }
@@ -462,18 +527,44 @@ func (c *ConfigModel) CreateYamc(reader yamc.DataReader) (*yamc.Yamc, error) {
 func (c *ConfigModel) tryLoad(path, ext string) error {
 	for _, loader := range *c.reader {
 		for _, ex := range loader.SupportsExt() {
-			if strings.EqualFold("."+ex, ext) { // fine the matching loader by extension
+			if strings.EqualFold("."+ex, ext) { // find the matching loader by extension
 				if c.customFileLoader != nil {
 					if content, err := c.customFileLoader(path); err != nil {
 						return err
 					} else {
+						if c.trackFiles {
+							absolutPath, err := filepath.Abs(path)
+							if err != nil {
+								return err
+							}
+							c.fileContent[absolutPath] = content
+						}
 						if err := loader.Unmarshal(content, c.structure); err != nil {
 							return err
 						}
 					}
 				} else {
-					if err := loader.FileDecode(path, c.structure); err != nil {
-						return err
+					if c.trackFiles {
+						absolutPath, err := filepath.Abs(path)
+						if err != nil {
+							return err
+						}
+						// we need to load the content for tracking
+						// so instead of using loader.FileDecode, we use the ioutil
+						// to get the the content and store them.
+						// and then we use the loader.Unmarshal to decode the content
+						content, err := ioutil.ReadFile(path)
+						if err != nil {
+							return err
+						}
+						c.fileContent[absolutPath] = content
+						if err := loader.Unmarshal(content, c.structure); err != nil {
+							return err
+						}
+					} else {
+						if err := loader.FileDecode(path, c.structure); err != nil {
+							return err
+						}
 					}
 				}
 				c.lastUsedReader = loader
@@ -504,6 +595,7 @@ func (c *ConfigModel) GetLoadedFile() string {
 func (c *ConfigModel) Reset() {
 	c.usedFile = ""
 	c.loadedFiles = []string{}
+	c.fileContent = map[string][]byte{}
 }
 
 // GetAllParsedFiles returns all parsed configuration filenames

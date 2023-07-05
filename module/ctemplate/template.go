@@ -64,8 +64,11 @@ func (t *Template) SetLinting(linting bool) {
 	t.linting = linting
 }
 
-func (t *Template) GetLinter() *yaclint.Linter {
-	return t.linter
+func (t *Template) GetLinter() (*yaclint.Linter, error) {
+	if t.linter == nil {
+		return nil, errors.New("linter not initialized. You need to call SetLinting(true) first")
+	}
+	return t.linter, nil
 }
 
 func (t *Template) SetIncludeFile(file string) {

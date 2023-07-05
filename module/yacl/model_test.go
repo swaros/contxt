@@ -1,6 +1,7 @@
 package yacl_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -165,7 +166,7 @@ func TestPropertieFailLoads(t *testing.T) {
 	if err := cfgv1Handl.Load(); err == nil {
 		t.Error("the file not exists. this should result in a error")
 	} else {
-		if err.Error() != "at least one Configuration should exists. but found nothing" {
+		if !strings.Contains(err.Error(), "at least one Configuration should exists.") {
 			t.Error("we expected a different error message then ", err.Error())
 		}
 	}
@@ -672,4 +673,311 @@ func TestWithCustomLoaderFails(t *testing.T) {
 		t.Error("we should have an error here. the yaml reader can not parse the file")
 	}
 
+}
+
+func TestWithCustomLoaderAndGetFileContent(t *testing.T) {
+	var cfg chainConfig
+
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetTrackFiles().
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			replaced := `config:
+   host: southamerica.deploy.gov`
+			return []byte(replaced), nil
+		})
+
+	loadErr := loadConfig.Load()
+	if loadErr != nil {
+		t.Error(loadErr)
+	}
+
+	fileContent, err := loadConfig.GetFileContent("data/v2/deployEu/001-test.base.yml")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if string(fileContent) != "config:\n   host: southamerica.deploy.gov" {
+		t.Error("we should have the expected content")
+		t.Log(string(fileContent))
+	}
+
+	// we should get an error if we try to get the content of a file that was not loaded
+	_, err = loadConfig.GetFileContent("data/v2/deployEu/002-test.base.yml")
+	if err == nil {
+		t.Error("we should have an error here")
+	}
+}
+
+// simple load error by not existing directory
+func TestLoadingErrors1(t *testing.T) {
+	var cfg chainConfig
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("weird", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetTrackFiles()
+
+	loadErr := loadConfig.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here")
+	}
+
+}
+
+// load error by using a custom loader that fails
+func TestLoadingErrors2(t *testing.T) {
+	var cfg chainConfig
+	// load error by using file tracking.
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			return nil, errors.New("custom loader error")
+		})
+
+	loadErr := loadConfig.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here")
+	} else {
+		expectedErr := "custom loader error"
+		if loadErr.Error() != expectedErr {
+			t.Error("we should have the expected error message", expectedErr, "but we have", loadErr.Error())
+		}
+	}
+}
+
+// loading error by using a custom loader that return invalid yaml
+func TestLoadingErrors3(t *testing.T) {
+	var cfg chainConfig
+	// load error by using file tracking.
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			return []byte("not a yaml file"), nil
+
+		})
+
+	loadErr := loadConfig.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here")
+	} else {
+		expectedErr := "unmarshal errors:"
+		if strings.Contains(loadErr.Error(), expectedErr) == false {
+			t.Error("we should have the expected error message", expectedErr, " contains in ", loadErr.Error())
+		}
+	}
+
+}
+
+// loading error by using a wrong loader
+func TestLoadingErrors4(t *testing.T) {
+	var cfg chainConfig
+	// load error by using file tracking.
+	loadConfig := yacl.New(&cfg, yamc.NewJsonReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		UseRelativeDir().
+		SetSingleFile("001-test.base.yml")
+
+	loadErr := loadConfig.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here")
+	} else {
+		expectedErr := "at least one Configuration should exists. but found nothing"
+		if strings.Contains(loadErr.Error(), expectedErr) == false {
+			t.Error("we should have the expected error message", expectedErr, " contains in ", loadErr.Error())
+		}
+	}
+
+	// we use this test to cover
+	// the GetFileContent Error without having tracking files enabled
+	_, err := loadConfig.GetFileContent("data/v2/deployEu/001-test.base.yml")
+	if err == nil {
+		t.Error("we should have an error here")
+	}
+
+}
+
+// loading error wrong file name
+func TestLoadingErrors5(t *testing.T) {
+	var cfg chainConfig
+	// load error by using file tracking.
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("XXX001-test.base.yml")
+
+	loadErr := loadConfig.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here")
+	} else {
+		expectedErr := "at least one Configuration should exists. but found nothing"
+		if strings.Contains(loadErr.Error(), expectedErr) == false {
+			t.Error("we should have the expected error message", expectedErr, " contains in ", loadErr.Error())
+		}
+	}
+
+}
+
+func TestOneFileNameUsageAndContent(t *testing.T) {
+	var cfg chainConfig
+
+	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetTrackFiles().
+		SetSingleFile("001-test.base.yml")
+
+	loadErr := chainCfg.Load()
+	if loadErr != nil {
+		t.Error(loadErr)
+	}
+
+	filesAll := chainCfg.GetAllParsedFiles()
+	if len(filesAll) != 3 {
+		t.Error("we should have 3 files here")
+		t.SkipNow()
+	}
+
+	if filesAll[0] != filepath.FromSlash("data/v2/001-test.base.yml") {
+		t.Error("we should have the expected file name")
+	} else {
+		fileContent, err := chainCfg.GetFileContent(filesAll[0])
+		if err != nil {
+			t.Error(err)
+		}
+		expected := `config:
+  loglevel: ERROR
+  env:
+    target: production
+  users:
+     - root
+  host: project.deploy.com
+  inport: 8089
+  outport: 7001`
+		if string(fileContent) != expected {
+			t.Error("we should have the expected content")
+			t.Log(string(fileContent))
+		}
+	}
+	chainCfg.Reset()
+	filesAll = chainCfg.GetAllParsedFiles()
+	if len(filesAll) != 0 {
+		t.Error("we should have 0 files here")
+	}
+
+}
+
+func TestConfigGetter(t *testing.T) {
+	var cfg chainConfig
+	// load error by using file tracking.
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetTrackFiles().
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			return []byte("not a yaml file"), nil
+		}).
+		SetSingleFile("001-test.base.yml").
+		SetFilePattern("*.yml")
+
+	cgf := loadConfig.GetConfig(yacl.ConfigFilesPattern)
+	if cgf == nil {
+		t.Error("we should have a config here")
+	} else {
+		if cgf.(string) != "*.yml" {
+			t.Error("we should have the expected value ", cfg)
+		}
+	}
+
+	cgf = loadConfig.GetConfig(yacl.ConfigUseSpecialDir)
+	if cgf == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cgf.(int)
+		if val != 0 {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cgf = loadConfig.GetConfig(yacl.ConfigAllowSubDirs)
+	if cgf == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cgf.(bool)
+		if val != true {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cgf = loadConfig.GetConfig(yacl.ConfigTrackFiles)
+	if cgf == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cgf.(bool)
+		if val != true {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 := loadConfig.GetConfig(yacl.ConfigDirBlackList)
+	if cfg2 == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cfg2.([]string)
+		if len(val) != 0 {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 = loadConfig.GetConfig(yacl.ConfigExpectNoFiles)
+	if cfg2 == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cfg2.(bool)
+		if val != false {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 = loadConfig.GetConfig(yacl.ConfigAllowDirPattern)
+	if cfg2 == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cfg2.(string)
+		if val != "" {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 = loadConfig.GetConfig(yacl.ConfigSupportMigrate)
+	if cfg2 == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cfg2.(bool)
+		if val != false {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 = loadConfig.GetConfig(yacl.ConfigHaveCustomLoader)
+	if cfg2 == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cfg2.(bool)
+		if val != false {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 = loadConfig.GetConfig(99)
+	if cfg2 != nil {
+		t.Error("we should have no config here")
+	}
 }

@@ -22,6 +22,7 @@
 package runner
 
 import (
+	"errors"
 	"os"
 	"sort"
 	"strings"
@@ -365,26 +366,32 @@ func TemplateTargetsAsMap(template configure.RunConfig, showInvTarget bool) ([]s
 
 func (c *CmdExecutorImpl) Lint() error {
 	c.Println("linting...")
-	/*
-		linter := yaclint.NewLinter(*configure.GetGlobalConfig().DefaultV2Yacl)
-		if err := linter.Verify(); err != nil {
-			c.Println(ctxout.ForeRed, "linting failed: ", ctxout.CleanTag, err.Error())
-			return err
-		}
-		c.Println("...loading config ", ctxout.ForeGreen, "ok", ctxout.CleanTag)
-		if linter.HasWarning() {
-			c.Println(ctxout.ForeYellow, "linting warnings: ", ctxout.CleanTag, linter.Warnings())
-		} else {
-			c.Println("...warnings ", ctxout.ForeGreen, "no warnings", ctxout.CleanTag)
-			if linter.HasInfo() {
-				c.Println(ctxout.ForeYellow, "linting info: ", ctxout.CleanTag, linter.Infos())
-			} else {
-				c.Println("...info ", ctxout.ForeGreen, "no info", ctxout.CleanTag)
+	c.session.TemplateHndl.SetLinting(true)
+	if _, exists, err := c.session.TemplateHndl.Load(); err != nil {
+		c.Println(ctxout.ForeRed, "linting failed: ", ctxout.CleanTag, err.Error())
+		return err
+	} else {
+		if exists {
+			c.Println("...loading config ", ctxout.ForeGreen, "ok", ctxout.CleanTag)
+			linter, lErr := c.session.TemplateHndl.GetLinter()
+			if lErr != nil {
+				return lErr
 			}
-			c.Println("result:", ctxout.ForeGreen, " the current config is valid", ctxout.CleanTag)
+			if linter.HasWarning() {
+				c.Println(ctxout.ForeYellow, "linting warnings: ", ctxout.CleanTag, linter.Warnings())
+			} else {
+				c.Println("...warnings ", ctxout.ForeGreen, "no warnings", ctxout.CleanTag)
+				if linter.HasInfo() {
+					c.Println(ctxout.ForeYellow, "linting info: ", ctxout.CleanTag, linter.Infos())
+				} else {
+					c.Println("...info ", ctxout.ForeGreen, "no info", ctxout.CleanTag)
+				}
+			}
+		} else {
+			c.Println(ctxout.ForeRed, "linting failed: ", ctxout.CleanTag, "no template found")
+			return errors.New("no template found")
 		}
-		return nil*/
-
+	}
 	return nil
 
 }
