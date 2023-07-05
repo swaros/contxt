@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/swaros/contxt/module/yamc"
 )
 
@@ -29,16 +28,18 @@ const (
 	IdentArray  = 2 // the token is an array
 	IdentValue  = 3 // the token is a value
 
-	ValueString = 0 // the token is not Open or Close Object or Array
-	OpenObject  = 1 // the token is an object like "{"
-	CloseObject = 2 // the token is an object like "}"
-	OpenArray   = 3 // the token is an object like "["
-	CloseArray  = 4 // the token is an object like "]"
+	ValueString     = 0 // the token is not Open or Close Object or Array and not KeyValue
+	KeyValue        = 1 // the token is a key value pair like "key: value"
+	OpenObject      = 2 // the token is an object like "{"
+	CloseObject     = 3 // the token is an object like "}"
+	OpenArray       = 4 // the token is an object like "["
+	CloseArray      = 5 // the token is an object like "]"
+	KeyedOpenObject = 6 // the token is an object like "key: {"
+	KeyedOpenArray  = 7 // the token is an object like "key: ["
 
 )
 
 type MatchToken struct {
-	UuId       string
 	KeyWord    string
 	OrginKey   string
 	KeyPath    string
@@ -58,7 +59,6 @@ func NewMatchToken(structDef yamc.StructDef, traceFn func(args ...interface{}), 
 	var matchToken MatchToken
 	matchToken.TraceFunc = traceFn
 	matchToken.ParentLint = parent
-	matchToken.UuId = uuid.New().String()
 	matchToken.Type = "undefined"
 	matchToken.Added = added
 	matchToken.SequenceNr = seqNr
@@ -113,8 +113,33 @@ func getTokenParts(token string) (string, string, bool) {
 
 }
 
-func isDelimerType(str string) int {
+func isJustAToken(str string) bool {
+	typed := detectTypeFromString(str)
+	if typed == OpenArray || typed == OpenObject || typed == CloseArray || typed == CloseObject {
+		return true
+	}
+	return false
+}
+
+func isObjectOrArray(str string) bool {
+	typed := detectTypeFromString(str)
+	if typed == OpenObject ||
+		typed == OpenArray ||
+		typed == KeyedOpenObject ||
+		typed == CloseArray ||
+		typed == CloseObject ||
+		typed == KeyedOpenArray {
+		return true
+	}
+	return false
+}
+
+// we will detect the type of the value
+// return the type as int flag
+// OpenObject, CloseObject, OpenArray, CloseArray, KeyValue, ValueString
+func detectTypeFromString(str string) int {
 	// first trim the string
+	haveSep := strings.Contains(str, ":")
 	str = strings.TrimSpace(str)
 	if str == "{" {
 		return OpenObject
@@ -128,7 +153,18 @@ func isDelimerType(str string) int {
 	if str == "]" || str == "]," {
 		return CloseArray
 	}
-	return 0
+
+	if haveSep && strings.Contains(str, " {") {
+		return KeyedOpenObject
+	}
+	if haveSep && strings.Contains(str, " [") {
+		return KeyedOpenArray
+	}
+
+	if haveSep {
+		return KeyValue
+	}
+	return ValueString
 }
 
 func (m *MatchToken) trace(args ...interface{}) {
@@ -141,6 +177,9 @@ func (m *MatchToken) getNameOf(structDef yamc.StructDef, check string) (string, 
 	if structDef.Fields != nil && len(structDef.Fields) > 0 {
 		if field, err := structDef.GetField(check); err == nil {
 			m.trace("MatchToken.getNameOf: [", check, "] => [", field.Name, "] into [", field.OrginalTag.TagRenamed, "] @", field.Path)
+			if field.OrginalTag.TagRenamed == "" {
+				return field.Name, field.Path
+			}
 			return field.OrginalTag.TagRenamed, field.Path
 		}
 	}
@@ -164,7 +203,7 @@ func (m *MatchToken) IsPair(token *MatchToken) bool {
 			keyVerified = true
 		}
 	}
-	if m.IsValid() && token.IsValid() && keyVerified && m.Added != token.Added {
+	if keyVerified && m.Added != token.Added {
 		m.PairToken = token
 		m.trace("MatchToken:", m, " [", m.keyToString(), "] is pair to [", token.keyToString(), "]")
 		return true

@@ -42,6 +42,45 @@ func parseYamlTagfunc(info yamc.StructField) yamc.ReflectTagRef {
 	return yamc.ReflectTagRef{}
 }
 
+type assertStruct struct {
+	Name               string
+	Type               string
+	Path               string
+	OriginalTagRenamed string
+}
+
+func assertPathResult(t *testing.T, fields *yamc.StructDef, path string, expected assertStruct) {
+	t.Helper()
+	field, err := fields.GetField(path)
+	if err != nil {
+		t.Error(err, "path", path)
+	} else {
+		// we assert the field if we have one
+		// so we don't spam the output with errors
+		assertStructField(t, field, expected)
+	}
+}
+
+func assertStructField(t *testing.T, field yamc.StructField, expected assertStruct) {
+	t.Helper()
+	if expected.Name != "" && field.Name != expected.Name {
+		t.Errorf("expected name [%s], got [%s]", expected.Name, field.Name)
+	}
+
+	if expected.Type != "" && field.Type != expected.Type {
+		t.Errorf("expected type [%s], got [%s]", expected.Type, field.Type)
+	}
+
+	if expected.Path != "" && field.Path != expected.Path {
+		t.Errorf("expected path [%s], got [%s]", expected.Path, field.Path)
+	}
+
+	if expected.OriginalTagRenamed != "" && field.OrginalTag.TagRenamed != expected.OriginalTagRenamed {
+		t.Errorf("expected tag [%s], got [%s]", expected.OriginalTagRenamed, field.OrginalTag.TagRenamed)
+	}
+
+}
+
 func TestNotInitialized(t *testing.T) {
 	var data interface{}
 	fields := yamc.NewStructDef(&data)
@@ -438,6 +477,12 @@ func TestYamlTest0003Load(t *testing.T) {
 	} else {
 		t.Error(err)
 	}
+	assertPathResult(t, fields, "Languages", assertStruct{
+		Name:               "Languages",
+		Type:               "map[string]string",
+		OriginalTagRenamed: "languages",
+		Path:               "Languages",
+	})
 }
 
 func TestYamlTest0004Load(t *testing.T) {
@@ -461,57 +506,27 @@ func TestYamlTest0004Load(t *testing.T) {
 	if err := fields.ReadStruct(parseYamlTagfunc); err != nil {
 		t.Error(err)
 	}
+	assertPathResult(t, fields, "Languages", assertStruct{
+		Name:               "Languages",
+		Type:               "map[string]string",
+		OriginalTagRenamed: "languages",
+		Path:               "Languages",
+	})
 
-	// test to get a field with children
-	if languageField, err := fields.GetField("Languages"); err == nil {
-		if languageField.Name != "Languages" {
-			t.Errorf("expected languages field, got %s", languageField.Name)
-		}
+	assertPathResult(t, fields, "SubInfo", assertStruct{
+		Name:               "SubInfo",
+		Type:               "yamc_test.subData",
+		Path:               "SubInfo",
+		OriginalTagRenamed: "subinfo",
+	})
 
-		if languageField.Type != "map[string]string" {
-			t.Errorf("expected map[string]string type, got %s", languageField.Type)
-		}
+	assertPathResult(t, fields, "SubInfo.Header", assertStruct{
+		Name:               "Header",
+		Type:               "string",
+		Path:               "SubInfo.Header",
+		OriginalTagRenamed: "header",
+	})
 
-		if languageField.OrginalTag.TagRenamed != "languages" {
-			t.Errorf("expected tag languages, got [%s]", languageField.OrginalTag.TagRenamed)
-		}
-	} else {
-		t.Error(err)
-	}
-
-	// test to get a field with children
-	if subInfoField, err := fields.GetField("SubInfo"); err == nil {
-		if subInfoField.Name != "SubInfo" {
-			t.Errorf("expected SubInfo field, got %s", subInfoField.Name)
-		}
-
-		if subInfoField.Type != "yamc_test.subData" {
-			t.Errorf("expected yamc_test.subData type, got %s", subInfoField.Type)
-		}
-
-		if subInfoField.OrginalTag.TagRenamed != "subinfo" {
-			t.Errorf("expected tag subinfo, got [%s]", subInfoField.OrginalTag.TagRenamed)
-		}
-	} else {
-		t.Error(err)
-	}
-
-	// test to get a child from a existing field
-	if subInfoField, err := fields.GetField("SubInfo.Header"); err == nil {
-		if subInfoField.Name != "Header" {
-			t.Errorf("expected Header field, got %s", subInfoField.Name)
-		}
-
-		if subInfoField.Type != "string" {
-			t.Errorf("expected string type, got %s", subInfoField.Type)
-		}
-
-		if subInfoField.OrginalTag.TagRenamed != "header" {
-			t.Errorf("expected tag header, got [%s]", subInfoField.OrginalTag.TagRenamed)
-		}
-	} else {
-		t.Error(err)
-	}
 }
 
 // testing if the SetAllowedTagSearch respects the the level of search.
@@ -569,7 +584,15 @@ func TestPairPaths(t *testing.T) {
 		if prop.Name != "Email" {
 			t.Errorf("expected Email field, got %s", prop.Name)
 		}
+
 	}
+
+	assertPathResult(t, fields, "Contact.email", assertStruct{
+		Name:               "Email",
+		Type:               "string",
+		Path:               "Contact.Email",
+		OriginalTagRenamed: "email",
+	})
 
 	// here we mix the dot notation with the tag search
 	// so we need to use the path "Contact.email"
@@ -578,11 +601,14 @@ func TestPairPaths(t *testing.T) {
 	if error != nil {
 		t.Error("that should work. looking for a field inside a struct by using leading spaces '    tagname'")
 		t.Error(error)
-	} else {
-		if prop.Name != "Email" {
-			t.Errorf("expected Email field, got %s", prop.Name)
-		}
 	}
+
+	assertPathResult(t, fields, "    email", assertStruct{
+		Name:               "Email",
+		Type:               "string",
+		Path:               "Contact.Email",
+		OriginalTagRenamed: "email",
+	})
 
 	// the same as above but with more leading spaces what should not work
 	_, error = fields.GetField("        email")
@@ -597,4 +623,463 @@ func TestPairPaths(t *testing.T) {
 			t.Errorf("expected error [%s], got [%s]", expectedError, error.Error())
 		}
 	}
+}
+
+func TestSliceProperty(t *testing.T) {
+	type targets struct {
+		Name     string `yaml:"name"`
+		SureName string `yaml:"surename"`
+	}
+
+	type slConfig struct {
+		Main    string    `yaml:"main"`
+		Targets []targets `yaml:"targets"`
+	}
+	var data slConfig
+
+	fields := yamc.NewStructDef(&data)
+	if err := fields.ReadStruct(parseYamlTagfunc); err != nil {
+		t.Error(err)
+	}
+	// we enable the possibility to search for tags
+	fields.SetAllowedTagSearch(true)
+
+	assertPathResult(t, fields, "main", assertStruct{
+		Name:               "Main",
+		Type:               "string",
+		Path:               "Main",
+		OriginalTagRenamed: "main",
+	},
+	)
+
+	assertPathResult(t, fields, "targets", assertStruct{
+		Name:               "Targets",
+		Type:               "[]yamc_test.targets",
+		Path:               "Targets",
+		OriginalTagRenamed: "targets",
+	},
+	)
+
+	assertPathResult(t, fields, "targets.name", assertStruct{
+		Name:               "Name",
+		Type:               "string",
+		Path:               "Targets.Name",
+		OriginalTagRenamed: "name",
+	},
+	)
+
+	assertPathResult(t, fields, "targets.surename", assertStruct{
+		Name:               "SureName",
+		Type:               "string",
+		Path:               "Targets.SureName",
+		OriginalTagRenamed: "surename",
+	},
+	)
+
+}
+
+func TestDeepStruct(t *testing.T) {
+	type worker struct {
+		Name     string `yaml:"name"`
+		SureName string `yaml:"surename"`
+	}
+
+	type targets struct {
+		Worker []worker `yaml:"worker"`
+		Labels []string `yaml:"labels"`
+	}
+
+	type testConfig struct {
+		Main    string  `yaml:"main"`
+		Targets targets `yaml:"targets"`
+	}
+	var testConf testConfig
+
+	fields := yamc.NewStructDef(&testConf)
+	if err := fields.ReadStruct(parseYamlTagfunc); err != nil {
+		t.Error(err)
+	}
+
+	assertPathResult(t, fields, "Main", assertStruct{
+		Name:               "Main",
+		Type:               "string",
+		Path:               "Main",
+		OriginalTagRenamed: "main",
+	},
+	)
+
+	assertPathResult(t, fields, "Targets", assertStruct{
+		Name:               "Targets",
+		Type:               "yamc_test.targets",
+		Path:               "Targets",
+		OriginalTagRenamed: "targets",
+	},
+	)
+
+	assertPathResult(t, fields, "Targets.Worker", assertStruct{
+		Name:               "Worker",
+		Type:               "[]yamc_test.worker",
+		Path:               "Targets.Worker",
+		OriginalTagRenamed: "worker",
+	},
+	)
+
+	assertPathResult(t, fields, "Targets.Worker.Name", assertStruct{
+		Name:               "Name",
+		Type:               "string",
+		Path:               "Targets.Worker.Name",
+		OriginalTagRenamed: "name",
+	},
+	)
+
+	assertPathResult(t, fields, "Targets.Worker.SureName", assertStruct{
+		Name:               "SureName",
+		Type:               "string",
+		Path:               "Targets.Worker.SureName",
+		OriginalTagRenamed: "surename",
+	},
+	)
+
+	assertPathResult(t, fields, "Targets.Labels", assertStruct{
+		Name:               "Labels",
+		Type:               "[]string",
+		Path:               "Targets.Labels",
+		OriginalTagRenamed: "labels",
+	},
+	)
+
+	slice := fields.GetOrderedIndexSlice()
+	if len(slice) != 0 {
+		t.Errorf("expected 0 fields, got %d", len(slice))
+	}
+
+}
+
+func TestDeepStructWithTagSearch(t *testing.T) {
+	type worker struct {
+		Name     string `yaml:"name"`
+		SureName string `yaml:"surename"`
+	}
+
+	type targets struct {
+		Worker []worker `yaml:"worker"`
+		Labels []string `yaml:"labels"`
+	}
+
+	type testConfig struct {
+		Main    string  `yaml:"main"`
+		Targets targets `yaml:"targets"`
+	}
+	var testConf testConfig
+
+	fields := yamc.NewStructDef(&testConf)
+	if err := fields.ReadStruct(parseYamlTagfunc); err != nil {
+		t.Error(err)
+	}
+	// we enable the possibility to search for tags
+	fields.SetAllowedTagSearch(true)
+
+	assertPathResult(t, fields, "main", assertStruct{
+		Name:               "Main",
+		Type:               "string",
+		Path:               "Main",
+		OriginalTagRenamed: "main",
+	},
+	)
+
+	assertPathResult(t, fields, "targets", assertStruct{
+		Name:               "Targets",
+		Type:               "yamc_test.targets",
+		Path:               "Targets",
+		OriginalTagRenamed: "targets",
+	},
+	)
+
+	assertPathResult(t, fields, "targets.worker", assertStruct{
+		Name:               "Worker",
+		Type:               "[]yamc_test.worker",
+		Path:               "Targets.Worker",
+		OriginalTagRenamed: "worker",
+	},
+	)
+
+	assertPathResult(t, fields, "targets.worker.name", assertStruct{
+		Name:               "Name",
+		Type:               "string",
+		Path:               "Targets.Worker.Name",
+		OriginalTagRenamed: "name",
+	},
+	)
+
+	assertPathResult(t, fields, "targets.worker.surename", assertStruct{
+		Name:               "SureName",
+		Type:               "string",
+		Path:               "Targets.Worker.SureName",
+		OriginalTagRenamed: "surename",
+	},
+	)
+
+	assertPathResult(t, fields, "targets.labels", assertStruct{
+		Name:               "Labels",
+		Type:               "[]string",
+		Path:               "Targets.Labels",
+		OriginalTagRenamed: "labels",
+	},
+	)
+
+}
+
+// testing the indents together with the tag search
+// and adding search index.
+// here we take care on the right intentation
+func TestDeepStructWithTagSearchAndIndents(t *testing.T) {
+	type worker struct {
+		Name     string `yaml:"name"`
+		SureName string `yaml:"surename"`
+	}
+
+	type targets struct {
+		Worker []worker `yaml:"worker"`
+		Labels []string `yaml:"labels"`
+	}
+
+	type testConfig struct {
+		Main    string  `yaml:"main"`
+		Targets targets `yaml:"targets"`
+	}
+	var testConf testConfig
+
+	fields := yamc.NewStructDef(&testConf)
+
+	if err := fields.ReadStruct(parseYamlTagfunc); err != nil {
+		t.Error(err)
+	}
+	// we enable the possibility to search for tags
+	fields.SetAllowedTagSearch(true)
+
+	assertPathResult(t, fields, "Main", assertStruct{
+		Name:               "Main",
+		Type:               "string",
+		Path:               "Main",
+		OriginalTagRenamed: "main",
+	},
+	)
+
+	assertPathResult(t, fields, "Targets", assertStruct{
+		Name:               "Targets",
+		Type:               "yamc_test.targets",
+		Path:               "Targets",
+		OriginalTagRenamed: "targets",
+	},
+	)
+
+	fields.AddToIndex("Main", "Targets", "  Worker")
+	assertPathResult(t, fields, "  Worker", assertStruct{
+		Name:               "Worker",
+		Type:               "[]yamc_test.worker",
+		Path:               "Targets.Worker",
+		OriginalTagRenamed: "worker", // TODO: tag not exists ...investigate
+	},
+	)
+
+	fields.AddToIndex("    Name", "    SureName")
+	assertPathResult(t, fields, "    Name", assertStruct{
+		Name:               "Name",
+		Type:               "string",
+		Path:               "Targets.Worker.Name",
+		OriginalTagRenamed: "name",
+	},
+	)
+
+	assertPathResult(t, fields, "    SureName", assertStruct{
+		Name:               "SureName",
+		Type:               "string",
+		Path:               "Targets.Worker.SureName",
+		OriginalTagRenamed: "surename",
+	},
+	)
+
+	assertPathResult(t, fields, "  Labels", assertStruct{
+		Name:               "Labels",
+		Type:               "[]string",
+		Path:               "Targets.Labels",
+		OriginalTagRenamed: "labels",
+	},
+	)
+
+}
+
+// testing the indents together with the tag search
+// and adding search index.
+// here we have an bigger indent then the regular one
+func TestDeepStructWithTagSearchAndBiggerIndents(t *testing.T) {
+	type worker struct {
+		Name     string `yaml:"name"`
+		SureName string `yaml:"surename"`
+	}
+
+	type targets struct {
+		Worker []worker `yaml:"worker"`
+		Labels []string `yaml:"labels"`
+	}
+
+	type testConfig struct {
+		Main    string  `yaml:"main"`
+		Targets targets `yaml:"targets"`
+	}
+	var testConf testConfig
+
+	fields := yamc.NewStructDef(&testConf)
+
+	if err := fields.ReadStruct(parseYamlTagfunc); err != nil {
+		t.Error(err)
+	}
+	// we enable the possibility to search for tags
+	fields.SetAllowedTagSearch(true)
+
+	assertPathResult(t, fields, "Main", assertStruct{
+		Name:               "Main",
+		Type:               "string",
+		Path:               "Main",
+		OriginalTagRenamed: "main",
+	},
+	)
+
+	assertPathResult(t, fields, "Targets", assertStruct{
+		Name:               "Targets",
+		Type:               "yamc_test.targets",
+		Path:               "Targets",
+		OriginalTagRenamed: "targets",
+	},
+	)
+
+	fields.AddToIndex("Main", "Targets", "  Worker")
+	assertPathResult(t, fields, "  Worker", assertStruct{
+		Name:               "Worker",
+		Type:               "[]yamc_test.worker",
+		Path:               "Targets.Worker",
+		OriginalTagRenamed: "worker", // TODO: tag not exists ...investigate
+	},
+	)
+
+	assertPathResult(t, fields, "      Name", assertStruct{
+		Name:               "Name",
+		Type:               "string",
+		Path:               "Targets.Worker.Name",
+		OriginalTagRenamed: "name",
+	},
+	)
+
+	assertPathResult(t, fields, "    SureName", assertStruct{
+		Name:               "SureName",
+		Type:               "string",
+		Path:               "Targets.Worker.SureName",
+		OriginalTagRenamed: "surename",
+	},
+	)
+
+	assertPathResult(t, fields, "  Labels", assertStruct{
+		Name:               "Labels",
+		Type:               "[]string",
+		Path:               "Targets.Labels",
+		OriginalTagRenamed: "labels",
+	},
+	)
+
+}
+
+// copied logic for faster testing ...yes it is dirty
+func trimAndGetLevel(str string) (string, int) {
+	trimedWord := strings.TrimLeft(str, " ")
+	if trimedWord == "" {
+		return "", 0
+	}
+	level := (len(str) - len(trimedWord)) / len(" ")
+	return trimedWord, level
+}
+
+func filterByIndent(strSlice []string) []string {
+	max := 0
+	// get max needed entries by the indent level
+	for _, str := range strSlice {
+		_, cur := trimAndGetLevel(str)
+		if cur > max {
+			max = cur
+		}
+	}
+
+	var filtered []string
+	// create a slice with the max needed entries
+	for i := 0; i <= max; i++ {
+		filtered = append(filtered, "")
+	}
+	// fill the slice with the entries depending on the level
+	for _, str := range strSlice {
+		trimStr, level := trimAndGetLevel(str)
+		// do we have an entrie already?
+		if filtered[level] != "" {
+			// remove the entries they are deeper
+			for i := level + 1; i <= max; i++ {
+				filtered[i] = ""
+			}
+		}
+		filtered[level] = trimStr
+
+	}
+	cleared := []string{}
+	for _, str := range filtered {
+		if str != "" {
+			cleared = append(cleared, str)
+		}
+	}
+	return cleared
+}
+
+func TestTemporaryFilterFunction(t *testing.T) {
+	testSlice := []string{
+		"Main",
+		"Targets",
+		"  Worker",
+		"    Name",
+		"    SureName",
+		"  CoWorker",
+		"    Company",
+		"Next",
+		"  Labels",
+		"    Test",
+	}
+
+	filtered := filterByIndent(testSlice)
+
+	expected := "Next.Labels.Test"
+
+	dotted := strings.Join(filtered, ".")
+
+	if dotted != expected {
+		t.Errorf("expected %s got %s", expected, dotted)
+	}
+
+	testSlice = []string{
+		"Main",
+		"Targets",
+		"  Worker",
+		"    Name",
+		"    SureName",
+		"  CoWorker",
+		"    Company",
+		"Next",
+		"   Labels", // moved one space to right to have a different level, so it should lead to a different result
+		"     Test",
+	}
+
+	filtered = filterByIndent(testSlice)
+
+	expected = "Next.Labels.Test"
+
+	dotted = strings.Join(filtered, ".")
+
+	if dotted != expected {
+		t.Errorf("expected %s got %s", expected, dotted)
+	}
+
 }

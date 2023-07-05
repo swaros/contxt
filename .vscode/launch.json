@@ -51,6 +51,15 @@
             "args": ["interactive"]
         },
         {
+            "name": "v2 lint",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/v2/main.go",
+            "env": {},
+            "args": ["lint"]
+        },
+        {
             "name": "v2 EXAMPLE yacl - current dir",
             "type": "go",
             "request": "launch",

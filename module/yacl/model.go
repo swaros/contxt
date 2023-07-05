@@ -63,6 +63,7 @@ type ConfigModel struct {
 	filesPattern     string                             // file regex-pattern while looking for config files
 	errorHappened    bool                               // flag to indicate, that an error happened while loading the configuration
 	chainError       error                              // the last error that happened while loading the configuration
+	customFileLoader func(path string) ([]byte, error)  // a custom file loader. if this is set, it will be used instead of the default file loader
 }
 
 // New creates a New yacl ConfigModel with default properties
@@ -82,6 +83,13 @@ func New(structure any, read ...yamc.DataReader) *ConfigModel {
 func (c *ConfigModel) Init(initFn func(strct *any), noConfigFn func(errCode int) error) *ConfigModel {
 	c.initFn = initFn
 	c.noConfigFilesFn = noConfigFn
+	return c
+}
+
+// sets a custome file loader they will be used instead of the default file loader to load the configuration files
+// and return the content as byte array. so some template engines can be used to load the configuration files
+func (c *ConfigModel) SetCustomFileLoader(fn func(path string) ([]byte, error)) *ConfigModel {
+	c.customFileLoader = fn
 	return c
 }
 
@@ -450,21 +458,30 @@ func (c *ConfigModel) CreateYamc(reader yamc.DataReader) (*yamc.Yamc, error) {
 	}
 }
 
+// main function for loading the content from a file.
 func (c *ConfigModel) tryLoad(path, ext string) error {
 	for _, loader := range *c.reader {
 		for _, ex := range loader.SupportsExt() {
-			if strings.EqualFold("."+ex, ext) {
-				if err := loader.FileDecode(path, c.structure); err == nil {
-					c.lastUsedReader = loader
-					if c.supportMigrate { // migrate the config
-						c.fileLoadCallback(path, c.structure)
+			if strings.EqualFold("."+ex, ext) { // fine the matching loader by extension
+				if c.customFileLoader != nil {
+					if content, err := c.customFileLoader(path); err != nil {
+						return err
+					} else {
+						if err := loader.Unmarshal(content, c.structure); err != nil {
+							return err
+						}
 					}
-					c.usedFile = path
-					c.loadedFiles = append(c.loadedFiles, path)
 				} else {
-					return err
+					if err := loader.FileDecode(path, c.structure); err != nil {
+						return err
+					}
 				}
-				return nil
+				c.lastUsedReader = loader
+				if c.supportMigrate { // migrate the config
+					c.fileLoadCallback(path, c.structure)
+				}
+				c.usedFile = path
+				c.loadedFiles = append(c.loadedFiles, path)
 			}
 		}
 	}

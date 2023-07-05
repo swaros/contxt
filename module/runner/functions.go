@@ -363,6 +363,32 @@ func TemplateTargetsAsMap(template configure.RunConfig, showInvTarget bool) ([]s
 	return targets, found
 }
 
+func (c *CmdExecutorImpl) Lint() error {
+	c.Println("linting...")
+	/*
+		linter := yaclint.NewLinter(*configure.GetGlobalConfig().DefaultV2Yacl)
+		if err := linter.Verify(); err != nil {
+			c.Println(ctxout.ForeRed, "linting failed: ", ctxout.CleanTag, err.Error())
+			return err
+		}
+		c.Println("...loading config ", ctxout.ForeGreen, "ok", ctxout.CleanTag)
+		if linter.HasWarning() {
+			c.Println(ctxout.ForeYellow, "linting warnings: ", ctxout.CleanTag, linter.Warnings())
+		} else {
+			c.Println("...warnings ", ctxout.ForeGreen, "no warnings", ctxout.CleanTag)
+			if linter.HasInfo() {
+				c.Println(ctxout.ForeYellow, "linting info: ", ctxout.CleanTag, linter.Infos())
+			} else {
+				c.Println("...info ", ctxout.ForeGreen, "no info", ctxout.CleanTag)
+			}
+			c.Println("result:", ctxout.ForeGreen, " the current config is valid", ctxout.CleanTag)
+		}
+		return nil*/
+
+	return nil
+
+}
+
 func (c *CmdExecutorImpl) InteractiveScreen() {
 
 	if !systools.IsStdOutTerminal() {

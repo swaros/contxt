@@ -221,13 +221,15 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 		}
 
 		for _, line := range c.Added {
-			// ignore any single open or close bracket
-			if isDelimerType(line) != ValueString {
+			// skip anything that do not need to be compared like { [ ] }
+			if isJustAToken(line) {
 				continue
 			}
 
-			keyStr, _, _ := getTokenParts(line)
-			keysAdded = append(keysAdded, keyStr)
+			if isObjectOrArray(line) {
+				keyStr, _, _ := getTokenParts(line)
+				keysAdded = append(keysAdded, keyStr)
+			}
 
 			l.structhandler.SetIndexSlice(keysAdded)
 
@@ -237,17 +239,18 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 			needToBeAdded = true
 		}
 		for _, line := range c.Deleted {
-			// ignore any single open or close bracket
-			if isDelimerType(line) != ValueString {
+			// ignore non object of array lines
+			if isJustAToken(line) {
 				continue
 			}
-			keyStr, _, _ := getTokenParts(line)
-			keysRemoved = append(keysRemoved, keyStr)
+			if isObjectOrArray(line) {
+				keyStr, _, _ := getTokenParts(line)
+				keysRemoved = append(keysRemoved, keyStr)
+			}
 
 			l.structhandler.SetIndexSlice(keysRemoved)
 
 			changeNr4Rm++
-			//fmt.Println("DELETED:"+line, " --->index[", indexNr, "] seq[", sequenceNr, "]", "chunk[", chunkIndex, "]", "change[", changeNr4Rm, "]")
 
 			rmToken := NewMatchToken(l.structhandler, l.Trace, &l.lMap, line, changeNr4Rm, sequenceNr, false)
 			rmToken.TraceFunc = l.Trace
@@ -265,12 +268,15 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 			// this needs to be done for booth. added and removed keys.
 			// ignore any single open or close bracket
 			for _, line := range c.Equal {
-				if isDelimerType(line) != ValueString {
+				// ignore non object of array lines
+				if isJustAToken(line) {
 					continue
 				}
-				keyStr, _, _ := getTokenParts(line)
-				keysAdded = append(keysAdded, keyStr)
-				keysRemoved = append(keysRemoved, keyStr)
+				if isObjectOrArray(line) {
+					keyStr, _, _ := getTokenParts(line)
+					keysAdded = append(keysAdded, keyStr)
+					keysRemoved = append(keysRemoved, keyStr)
+				}
 			}
 
 		}

@@ -7,13 +7,18 @@ import (
 )
 
 type StructDef struct {
+	// if true, the struct is initialized
 	Init bool
+
 	// the struct we want to read
 	Struct interface{}
+
 	// the fields of the struct
 	Fields map[string]StructField
+
 	// if the struct is ignored, we store the reason here
 	IgnoredBecauseOf string
+
 	// the ordered index slice, contains keynames in the order they are defined or read.
 	// this is used, if the struct is have to be read in context of the previous key.
 	// for example if we have a struct like this:
@@ -25,10 +30,18 @@ type StructDef struct {
 	// what is in this case "connection". that have a lower indentation level.
 	// so because of this, it is omportant, that this list is ordered.
 	orderedIndexSlice []string
-	// the indented chars of the struct. like "  " or "    "
+
+	// the indented chars of the struct. mostly it is a space.
 	indentChars string
+
 	// the current indentation level. means how many chars are used as indent
 	indentLevel int
+
+	// for detecting the parent by leading spaces, we have to know the max diff of the indentation level.
+	// by default this is 1. so we can detect the parent by (1 * identLevel) spaces.
+	// for some parsings by json lists of objects, we need to increase this level up to 2 because of the json format.
+	searchIdentMaxDiff int
+
 	// if true, we allow to search by tag. so we can find Email in a struct like this:
 	// type User struct {
 	//   Email string `json:"email"`
@@ -68,11 +81,12 @@ type reftagFunc func(StructField) ReflectTagRef
 // NewStructDef returns a new struct reader
 func NewStructDef(strct interface{}) *StructDef {
 	return &StructDef{
-		Init:        false,
-		Struct:      strct,
-		Fields:      make(map[string]StructField),
-		indentChars: " ",
-		indentLevel: 0,
+		Init:               false,
+		Struct:             strct,
+		Fields:             make(map[string]StructField),
+		indentChars:        " ",
+		indentLevel:        0,
+		searchIdentMaxDiff: 1,
 	}
 }
 
@@ -82,6 +96,32 @@ func NewStructDef(strct interface{}) *StructDef {
 // the tagparser can be nil, if you don't need it.
 func (s *StructDef) ReadStruct(tagparser reftagFunc) error {
 	return s.readStruct(s.Struct, tagparser)
+}
+
+// SetMaxIdentDiff sets the max ident diff.
+// the default is 1.
+// if you have a json struct, you might to set this to 2 depending if you
+// have a json struct like this:
+/*
+   Targets: {
+    Labels: [
+     "payed",
+     "not payed",
+     "important",
+     "not important",
+    ],
+    Worker: [
+     {
+      Name: "hello",
+      SureName: "world",
+     },
+*/
+// because of the json format, the ident level is once added for objects in lists.
+// depends on the list tag [ followed by the object tag {.
+// note: depending on formating of course.
+func (s *StructDef) SetMaxIdentDiff(diff int) *StructDef {
+	s.searchIdentMaxDiff = diff
+	return s
 }
 
 // we ignore some type of base types.
@@ -154,37 +194,52 @@ func (s *StructDef) readStruct(strct interface{}, tagparser reftagFunc) error {
 
 }
 
-func (s *StructDef) createStructField(refStr reflect.StructField, tagparser reftagFunc, parent string) StructField {
+func (s *StructDef) createStructField(fromReflection reflect.StructField, tagparser reftagFunc, parent string) StructField {
 	// compose the path
-	pathStr := refStr.Name
+	pathStr := fromReflection.Name
 	if parent != "" {
-
-		pathStr = parent + "." + refStr.Name
+		pathStr = parent + "." + fromReflection.Name
 	}
+
 	// basic information
 	newField := StructField{
-		Name: refStr.Name,
-		Type: refStr.Type.String(),
-		Tag:  refStr.Tag,
+		Name: fromReflection.Name,
+		Type: fromReflection.Type.String(),
+		Tag:  fromReflection.Tag,
 		Path: pathStr,
 	}
 	// structs are more complex.
 	// we need to read the child fields
-	if refStr.Type.Kind() == reflect.Struct {
-		nums := refStr.Type.NumField()
+	if fromReflection.Type.Kind() == reflect.Struct {
+		nums := fromReflection.Type.NumField()
 		newField.ChildLen = nums
 		if nums > 0 {
 			// we have children
 			// we need to read them
 			newField.Children = make(map[string]StructField)
 			for i := 0; i < nums; i++ {
-				field := refStr.Type.Field(i)
+				field := fromReflection.Type.Field(i)
 				children := s.createStructField(field, tagparser, newField.Path)
 				newField.Children[field.Name] = children
 			}
 		}
 
+	} else if fromReflection.Type.Kind() == reflect.Slice {
+		// we have a slice
+		// we need to read the type of the slice
+		// and create a new struct field
+
+		newField.Type = fromReflection.Type.String()
+		newField.ChildLen = 1
+
+		proxy := reflect.StructField{
+			Name: fromReflection.Name,
+			Type: fromReflection.Type.Elem(),
+		}
+		slicedStruct := s.createStructField(proxy, tagparser, parent)
+		newField.Children = slicedStruct.Children
 	}
+
 	// the optional tagparser to resolve the tag information.
 	// this is done by the reader.
 	if tagparser != nil {
@@ -284,35 +339,68 @@ func (s *StructDef) findField(name string, from map[string]StructField) (StructF
 	return StructField{}, false
 }
 
+func (s *StructDef) filterByIdent(sliceInput []string, level int) []string {
+	var returnSlice []string
+	for _, ent := range sliceInput {
+		_, entLevel := s.trimAndGetLevel(ent)
+		diff := level - entLevel
+		if entLevel < level && diff >= s.searchIdentMaxDiff {
+			returnSlice = append(returnSlice, ent)
+		}
+	}
+	return returnSlice
+}
+
+func (s *StructDef) filterByIntentLevel(strSlice []string) []string {
+	max := 0
+	// get max needed entries by the indent level
+	for _, str := range strSlice {
+		_, cur := s.trimAndGetLevel(str)
+		if cur > max {
+			max = cur
+		}
+	}
+
+	var filtered []string
+	// create a slice with the max needed entries
+	for i := 0; i <= max; i++ {
+		filtered = append(filtered, "")
+	}
+	// fill the slice with the entries depending on the level
+	for _, str := range strSlice {
+		trimStr, level := s.trimAndGetLevel(str)
+		// do we have an entrie already?
+		if filtered[level] != "" {
+			// remove the entries they are deeper
+			for i := level + 1; i <= max; i++ {
+				filtered[i] = ""
+			}
+		}
+		filtered[level] = trimStr
+
+	}
+	cleared := []string{}
+	for _, str := range filtered {
+		if str != "" {
+			cleared = append(cleared, str)
+		}
+	}
+	return cleared
+}
+
+// we will create a dotted chain depending on the leading spaces.
+// so we need to find the parent by the level of the intend
 func (s *StructDef) getChainByIndex(str string) string {
 	// first we get the trimed word, and the level of the intend
 	trimedWord, level := s.trimAndGetLevel(str)
+	// filter anything that is not a parent, and get the entries from parents only
+	allParents := s.filterByIdent(s.orderedIndexSlice, level)
+	// and now we build the chain
+	checks := s.filterByIntentLevel(allParents)
+	// and now we build the chain
+	found2 := strings.Join(checks, ".") + "." + trimedWord // just for set the debug point and see the chain
 
-	// iterate over the ordered index from last to first
-	for i := len(s.orderedIndexSlice) - 1; i >= 0; i-- {
-		// find the next parent by the level that have -1 of the current level
-		// first get entry
-		entry := s.orderedIndexSlice[i]
-		// get the level of the entry
-		trimmedEntry, entryLevel := s.trimAndGetLevel(entry)
-		// if the entry level is one less than the current level
-		if entryLevel == level-s.indentLevel {
-			// we found the parent
-			// we need to check if the parent is the root
-			if entryLevel == 0 {
-				// we are at the root
-				return trimmedEntry + "." + trimedWord
-			} else {
-				// we are not at the root
-				// we need to get the parent
-				// and add the trimed word
-				return s.getChainByIndex(entry) + "." + trimedWord
-			}
-		}
-	}
-	// we did not find a parent
-	// so we are at the root
-	return trimedWord
+	return found2
 }
 
 func (s *StructDef) trimAndGetLevel(str string) (string, int) {
@@ -367,20 +455,11 @@ func (s *StructDef) getFieldByTag(tag string, from map[string]StructField) (Stru
 	return StructField{}, fmt.Errorf("structRead: field with tag [%s] not found", tag)
 }
 
-func (s *StructDef) GetFirstFieldByTag(tag string, from map[string]StructField) (StructField, error) {
-	for _, field := range from {
-		if field.OrginalTag.TagRenamed == tag {
-			return field, nil
-		}
-		if field.Children != nil {
-			if f, err := s.GetFirstFieldByTag(tag, field.Children); err == nil {
-				return f, nil
-			}
-		}
-	}
-	return StructField{}, fmt.Errorf("structRead: field with tag [%s] not found", tag)
-}
-
+// SetAllowedTagSearch allows to search for fields by tag.
+// example:   Username string `json:"username"`
+// will be found by "username" and "Username".
+// This is disabled by default, because it is slower but the only way to find fields
+// if we have the tags only.
 func (s *StructDef) SetAllowedTagSearch(allow bool) {
 	s.allowBytagSearch = allow
 }

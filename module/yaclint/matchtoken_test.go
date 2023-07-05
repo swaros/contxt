@@ -50,7 +50,6 @@ func TestMultiple(t *testing.T) {
 
 func TestMatchToString(t *testing.T) {
 	match := yaclint.MatchToken{
-		UuId:       "test1234567",
 		KeyWord:    "test",
 		Value:      "test",
 		SequenceNr: 1,
@@ -63,7 +62,6 @@ func TestMatchToString(t *testing.T) {
 	}
 
 	pairToken := yaclint.MatchToken{
-		UuId:       "test1234567_2",
 		KeyWord:    "test2",
 		Value:      "test2",
 		SequenceNr: 1,

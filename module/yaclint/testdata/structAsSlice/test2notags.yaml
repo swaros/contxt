@@ -1,0 +1,17 @@
+Main: hello
+Targets:
+  Worker:
+  - Name: hello
+    SureName: world
+
+  - Name: hello2
+    SureName: world2
+
+  - Name: hello3
+    SureName: world3
+  
+  Labels:
+    - payed
+    - not payed
+    - important
+    - not important

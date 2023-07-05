@@ -22,9 +22,10 @@
 
 // AINC-NOTE-0815
 
- package ctemplate
+package ctemplate
 
 import (
+	"errors"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -32,8 +33,8 @@ import (
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/yacl"
+	"github.com/swaros/contxt/module/yaclint"
 	"github.com/swaros/contxt/module/yamc"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -48,6 +49,8 @@ type Template struct {
 	includeConfig configure.IncludePaths
 	dataMap       sync.Map
 	tplParser     CtxTemplate
+	linter        *yaclint.Linter
+	linting       bool
 }
 
 func New() *Template {
@@ -55,6 +58,14 @@ func New() *Template {
 		includeFile: DefaultIncludeFile,
 		tplParser:   CtxTemplate{},
 	}
+}
+
+func (t *Template) SetLinting(linting bool) {
+	t.linting = linting
+}
+
+func (t *Template) GetLinter() *yaclint.Linter {
+	return t.linter
 }
 
 func (t *Template) SetIncludeFile(file string) {
@@ -103,41 +114,74 @@ func (t *Template) FindIncludeFileName() (string, bool) {
 	}
 }
 
-func (t *Template) LoadTemplatePlain(path string) (configure.RunConfig, error) {
+func (t *Template) LoadV2() (configure.RunConfig, error) {
 	var template configure.RunConfig
-	if err := yacl.New(&template, yamc.NewYamlReader()).SetSingleFile(DefaultTemplateFile).Load(); err != nil {
+	confLoader := yacl.New(&template, yamc.NewYamlReader()).
+		SetSingleFile(DefaultTemplateFile).
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			parsedContent, err := t.readAsTemplate()
+			if err != nil {
+				return nil, err
+			}
+			return []byte(parsedContent), nil
+		})
+	if err := confLoader.Load(); err != nil {
 		return template, err
+	}
+
+	if t.linting {
+		t.linter = yaclint.NewLinter(*confLoader)
+		if err := t.linter.Verify(); err != nil {
+			return template, err
+		}
 	}
 	return template, nil
 }
 
-func (t *Template) Load() (configure.RunConfig, bool, error) {
-	// just check if we have a template file
+func (t *Template) readAsTemplate() (string, error) {
 	path, ok := t.FindTemplateFileName()
 	if !ok {
-		return configure.RunConfig{}, false, nil // no template file is also fine. so no error
+		return "", errors.New("no template file found")
 	}
 	templateData, ferr := os.ReadFile(path) // read the content of the file for later use
 	if ferr != nil {
-		return configure.RunConfig{}, false, ferr // this should not happen because we got already the file exists. so that might be a permission issue
+		return "", ferr // this should not happen because we got already the file exists. so that might be a permission issue
 	}
 	if _, _, err := t.LoadInclude(); err != nil { // load the include files
-		return configure.RunConfig{}, false, err // if we have an error here we can not continue
+		return "", err // if we have an error here we can not continue
 	}
 
 	// now use the template parser to parse the template file
 	t.tplParser.SetData(t.GetOriginMap())
 	if templateParsed, err := t.tplParser.ParseTemplateString(string(templateData)); err != nil {
+		return "", err
+	} else {
+		return templateParsed, nil
+	}
+}
+
+func (t *Template) Load() (configure.RunConfig, bool, error) {
+	if _, ok := t.FindTemplateFileName(); !ok {
+		return configure.RunConfig{}, false, nil
+	}
+
+	if Template, err := t.LoadV2(); err != nil {
 		return configure.RunConfig{}, false, err
 	} else {
-		var template configure.RunConfig
-		// now we just use the plain yaml unmarshal to parse the template
-		if err := yaml.Unmarshal([]byte(templateParsed), &template); err != nil {
+		return Template, true, nil
+	}
+	/*
+		if templateParsed, err := t.readAsTemplate(); err != nil {
 			return configure.RunConfig{}, false, err
 		} else {
-			return template, true, nil
-		}
-	}
+			var template configure.RunConfig
+			// now we just use the plain yaml unmarshal to parse the template
+			if err := yaml.Unmarshal([]byte(templateParsed), &template); err != nil {
+				return configure.RunConfig{}, false, err
+			} else {
+				return template, true, nil
+			}
+		}*/
 }
 
 func (t *Template) LoadInclude() (configure.IncludePaths, bool, error) {

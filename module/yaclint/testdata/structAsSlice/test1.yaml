@@ -1,0 +1,10 @@
+main: hello
+targets:
+  - name: hello
+    surename: world
+
+  - name: hello2
+    surename: world2
+
+  - name: hello3
+    surename: world3

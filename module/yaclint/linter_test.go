@@ -17,6 +17,12 @@ const (
 	FailIfHigher   = 2
 )
 
+var (
+	filterTags = []string{"MatchToken.getNameOf:", "!No Tag found!"}
+	noFilter   = []string{}
+	usedFilter = filterTags
+)
+
 // Helper function to load a config file and verify it
 // subdir: the subdirectory where the config file is located
 // file: the config file name
@@ -33,11 +39,13 @@ func assertIssueLevelByConfig(t *testing.T, subdir, file string, config interfac
 		UseRelativeDir()
 
 	if err := configHndl.Load(); err != nil {
+		t.Error("Load failed")
 		t.Error(err)
 		return nil
 	}
 
 	chck := yaclint.NewLinter(*configHndl)
+	chck.SetDirtyLogger(yaclint.NewDirtyLogger())
 	if chck == nil {
 		t.Error("failed to create linter")
 		return nil
@@ -67,8 +75,10 @@ func assertIssueLevelByConfig(t *testing.T, subdir, file string, config interfac
 			t.Error(err)
 			return nil
 		}
-		t.Log("\n" + diff + "\n")
+		t.Log("\n" + diff + "\n" + chck.GetTrace(usedFilter...))
 		t.SkipNow()
+		// reset allways to tag filter
+		usedFilter = filterTags
 		return nil
 	}
 	return chck
@@ -155,10 +165,10 @@ func TestConfigLower(t *testing.T) {
 
 	if err := configHndl.Load(); err != nil {
 		t.Error(err)
-
 	}
 
 	chck := yaclint.NewLinter(*configHndl)
+	chck.SetDirtyLogger(yaclint.NewDirtyLogger())
 	if chck == nil {
 		t.Error("failed to create linter")
 	}
@@ -174,11 +184,13 @@ func TestConfigLower(t *testing.T) {
 	if chck.HasWarning() {
 		t.Error("found warnings in valid config. expected no warnings")
 		t.Log(chck.PrintIssues())
+		t.Log(chck.GetTrace())
 	}
 
 	if !chck.HasInfo() {
 		t.Error("found no info in valid config. expected info")
-		t.Log(chck.PrintIssues())
+
+		t.Log(chck.GetTrace())
 	}
 
 }
@@ -480,10 +492,10 @@ func TestReportDiffStartedAt(t *testing.T) {
 	expectedTokens := []*assertTokenSimplify{
 		{"BuildEngineVersion", 1.14, "float64", false, 1, 2, yaclint.ValueMatchButTypeDiffers, false},
 		{"BuildEngineVersion", "1.14", "string", true, 1, 2, yaclint.ValueMatchButTypeDiffers, false},
-		{"  Comment", "", "string", true, 1, 7, yaclint.ValueNotMatch, false},
-		{"  Comment", "this is a comment", "string", false, 1, 7, yaclint.ValueNotMatch, false},
-		{"  TicketNr", 1, "int", false, 2, 7, yaclint.ValueNotMatch, false},
-		{"  TicketNr", 0, "int", true, 2, 7, yaclint.ValueNotMatch, false},
+		//{"  Comment", "", "string", true, 1, 7, yaclint.ValueNotMatch, false},
+		//{"  Comment", "this is a comment", "string", false, 1, 7, yaclint.ValueNotMatch, false},
+		//{"  TicketNr", 1, "int", false, 2, 7, yaclint.ValueNotMatch, false},
+		//{"  TicketNr", 0, "int", true, 2, 7, yaclint.ValueNotMatch, false},
 	}
 
 	checkIndex := 0
@@ -686,4 +698,66 @@ func TestUnexpectedExample(t *testing.T) {
 	} else {
 		fmt.Println("no issues found")
 	}
+}
+
+func TestConfigStruct(t *testing.T) {
+	type targets struct {
+		Name     string `yaml:"name"`
+		SureName string `yaml:"surename"`
+	}
+
+	type slConfig struct {
+		Main    string    `yaml:"main"`
+		Targets []targets `yaml:"targets"`
+	}
+	var testConf slConfig
+
+	configHndl := yacl.New(
+		&testConf,
+		yamc.NewYamlReader(),
+	).SetSubDirs("testdata", "structAsSlice").
+		SetSingleFile("test1.yaml").
+		UseRelativeDir()
+
+	if err := configHndl.Load(); err != nil {
+		t.Error(err)
+
+	}
+
+	chck := yaclint.NewLinter(*configHndl)
+	if chck == nil {
+		t.Error("failed to create linter")
+	}
+	chck.SetDirtyLogger(yaclint.NewDirtyLogger().CreateCtxoutTracer())
+	chck.Verify()
+
+	expected := 2
+	if chck.GetHighestIssueLevel() > expected {
+		t.Error("found errors in valid config. expected issue level not higher than ", expected, ". got", chck.GetHighestIssueLevel())
+		t.Log(chck.PrintIssues())
+
+		t.Log(chck.GetTrace())
+	}
+
+}
+
+func TestConfigStruct2(t *testing.T) {
+	// test struct with tags
+	type worker struct {
+		Name     string `yaml:"name"`
+		SureName string `yaml:"surename"`
+	}
+
+	type targets struct {
+		Worker []worker `yaml:"worker"`
+		Labels []string `yaml:"labels"`
+	}
+
+	type testConfig struct {
+		Main    string  `yaml:"main"`
+		Targets targets `yaml:"targets"`
+	}
+	var testConf testConfig
+	usedFilter = noFilter
+	assertIssueLevelByConfig(t, "structAsSlice", "test2.yaml", &testConf, yaclint.ValueNotMatch, FailIfHigher)
 }

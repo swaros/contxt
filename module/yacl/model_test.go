@@ -614,3 +614,62 @@ func TestGetLastLoaderNew(t *testing.T) {
 		t.Error("the loader should be initialized")
 	}
 }
+
+func TestWithCustomLoader(t *testing.T) {
+	var cfg chainConfig
+
+	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			replaced := `config:
+   host: southamerica.deploy.gov`
+			return []byte(replaced), nil
+		})
+
+	loadErr := chainCfg.Load()
+	if loadErr != nil {
+		t.Error(loadErr)
+	}
+
+	expected := "southamerica.deploy.gov"
+	if cfg.Config.Host != expected {
+		t.Error("we should have the expected host", expected, "but we have[", cfg.Config.Host, "]")
+	}
+
+	// verify the struct also
+	loader := chainCfg.GetLastUsedReader()
+	if loader == nil {
+		t.Error("we should have a reader here")
+	}
+
+	if loader.HaveFields() == false {
+		t.Error("we should have fields here")
+	}
+
+	if loader.GetFields().Init == false {
+		t.Error("the loader should be initialized")
+	}
+}
+
+func TestWithCustomLoaderFails(t *testing.T) {
+	var cfg chainConfig
+
+	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			replaced := `{not a yaml file{
+				   host: southamerica.deploy.gov
+			}}`
+			return []byte(replaced), nil
+		})
+
+	loadErr := chainCfg.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here. the yaml reader can not parse the file")
+	}
+
+}

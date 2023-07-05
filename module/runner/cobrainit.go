@@ -82,6 +82,7 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 		c.GetDirCmd(),
 		c.GetInteractiveCmd(),
 		c.GetRunCmd(),
+		c.GetLintCmd(),
 	)
 
 	return nil
@@ -346,6 +347,20 @@ scan for new projects in the workspace 'ctx workspace scan'`,
 		c.PrintCurrentWs(),
 	)
 	return wsCmd
+}
+
+// -- lint cmd
+
+func (c *SessionCobra) GetLintCmd() *cobra.Command {
+	lCmd := &cobra.Command{
+		Use:   "lint",
+		Short: "lint the .contxt.yaml file",
+		Long:  "lint the .contxt.yaml and shows unexpected fields",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return c.ExternalCmdHndl.Lint()
+		},
+	}
+	return lCmd
 }
 
 // -- Run cmd
