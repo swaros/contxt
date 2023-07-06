@@ -13,20 +13,19 @@ func GetArgument(ctx context.Context) interface{} {
 }
 
 type Flow struct {
-	function func(args ...interface{}) []interface{} // the logic that should be executed
-	handler  func(args ...interface{})               // the logic that handles the return values
-	args     map[string]ArgContext                   // the arguments they are passed to the function
-	argOrder []string                                // the order of the arguments and also the function execution order and return order
+	function  func(args ...interface{}) []interface{} // the logic that should be executed
+	handler   func(args ...interface{})               // the logic that handles the return values
+	args      map[string]ArgContext                   // the arguments they are passed to the function
+	argOrder  []string                                // the order of the arguments and also the function execution order and return order
+	lastError error                                   // the last error that occured
 }
 
 type ArgContext struct {
 	Arguments []interface{}
-	id        string
 }
 
 type ReturnContexr struct {
 	ReturnValue []interface{}
-	id          string
 }
 
 func NewFlow() *Flow {
@@ -49,11 +48,13 @@ func (f *Flow) Use(fn interface{}) error {
 		f.function = func(args ...interface{}) []interface{} {
 			fVal := reflect.ValueOf(fn)
 			if len(args) != fVal.Type().NumIn() {
+				f.lastError = errors.New("number of arguments does not match")
 				return nil
 			}
 
 			for i := 0; i < fVal.Type().NumIn(); i++ {
 				if reflect.TypeOf(args[i]) != fVal.Type().In(i) {
+					f.lastError = errors.New("argument type does not match")
 					return nil
 				}
 			}
@@ -92,13 +93,16 @@ func (f *Flow) Each(arg ...interface{}) *Flow {
 	uuid := uuid.New().String()
 	f.args[uuid] = ArgContext{
 		Arguments: arg,
-		id:        uuid,
 	}
 	f.argOrder = append(f.argOrder, uuid)
 	return f
 }
 
-func (f *Flow) Run() {
+func (f *Flow) Run() error {
+	f.lastError = nil
+	if f.function == nil {
+		return errors.New("function is not defined")
+	}
 	var allTasks []FutureStack
 	for _, arg := range f.argOrder {
 		allTasks = append(allTasks, FutureStack{
@@ -107,7 +111,6 @@ func (f *Flow) Run() {
 				resturnFromFunc := f.function(arg.Arguments...)
 				return ReturnContexr{
 					ReturnValue: resturnFromFunc,
-					id:          arg.id,
 				}
 			},
 			Argument: f.args[arg],
@@ -120,4 +123,5 @@ func (f *Flow) Run() {
 			f.handler(result.(ReturnContexr).ReturnValue...)
 		}
 	}
+	return f.lastError
 }
