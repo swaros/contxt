@@ -513,6 +513,6 @@ task:
             FCNT=$(cat $gfile)
             echo "${codehead} $FCNT" > $gfile
           else
-            echo "OK: $gfile"            
+            echo "OK: $gfile"
           fi
        done <<< "$GOFILES"
