@@ -2,6 +2,8 @@ package awaitgroup
 
 import (
 	"context"
+	"errors"
+	"reflect"
 
 	"github.com/google/uuid"
 )
@@ -31,6 +33,47 @@ func NewFlow() *Flow {
 	return &Flow{
 		args: make(map[string]ArgContext),
 	}
+}
+
+func (f *Flow) Use(fn interface{}) error {
+	// fn should be a function and we we have to figure out
+	// the arguments and the return values
+	// and then we have to create a new function that will
+	// be used as the function
+
+	if fn != nil {
+		fType := reflect.TypeOf(fn)
+		if fType.Kind() != reflect.Func {
+			return errors.New("argument must be a function")
+		}
+		f.function = func(args ...interface{}) []interface{} {
+			fVal := reflect.ValueOf(fn)
+			if len(args) != fVal.Type().NumIn() {
+				return nil
+			}
+
+			for i := 0; i < fVal.Type().NumIn(); i++ {
+				if reflect.TypeOf(args[i]) != fVal.Type().In(i) {
+					return nil
+				}
+			}
+
+			var arguments []reflect.Value
+			for _, arg := range args {
+				arguments = append(arguments, reflect.ValueOf(arg))
+			}
+			returnValues := fVal.Call(arguments)
+			var returnValuesInterface []interface{}
+			for _, returnValue := range returnValues {
+				returnValuesInterface = append(returnValuesInterface, returnValue.Interface())
+			}
+			return returnValuesInterface
+		}
+	} else {
+		return errors.New("argument must be a function. got nil")
+	}
+
+	return nil
 }
 
 func (f *Flow) Func(fn func(args ...interface{}) []interface{}) *Flow {
