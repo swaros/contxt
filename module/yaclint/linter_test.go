@@ -761,3 +761,57 @@ func TestConfigStruct2(t *testing.T) {
 	usedFilter = noFilter
 	assertIssueLevelByConfig(t, "structAsSlice", "test2.yaml", &testConf, yaclint.ValueNotMatch, FailIfHigher)
 }
+
+func BenchmarkLinterTest(b *testing.B) {
+	// test struct with tags
+	type worker struct {
+		Name     string `yaml:"name"`
+		SureName string `yaml:"surename"`
+	}
+
+	type targets struct {
+		Worker []worker `yaml:"worker"`
+		Labels []string `yaml:"labels"`
+	}
+
+	type testConfig struct {
+		Main    string  `yaml:"main"`
+		Targets targets `yaml:"targets"`
+	}
+	var config testConfig
+
+	configHndl := yacl.New(
+		&config,
+		yamc.NewYamlReader(),
+	).SetSubDirs("testdata", "structAsSlice").
+		SetSingleFile("test2.yaml").
+		UseRelativeDir()
+
+	if err := configHndl.Load(); err != nil {
+		b.Error("Load failed")
+		b.Error(err)
+		return
+	}
+
+	chck := yaclint.NewLinter(*configHndl)
+	chck.SetDirtyLogger(yaclint.NewDirtyLogger())
+	if chck == nil {
+		b.Error("failed to create linter")
+		return
+	}
+
+	if err := chck.Verify(); err != nil {
+		b.Error("Verify failed")
+		b.Error(err)
+		return
+	}
+}
+
+func BenchmarkLinter(b *testing.B) {
+	// benchmark TestConfigStruct2
+	b.Run("TestConfigStruct2", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			BenchmarkLinterTest(b)
+		}
+	})
+}

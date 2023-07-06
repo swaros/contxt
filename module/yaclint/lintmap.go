@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package yaclint
+package yaclint
 
 type LintChunk struct {
 	ChunkNr int
