@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/sirupsen/logrus"
@@ -33,28 +34,90 @@ func NewLogrusLogger() *logrusLogger {
 
 // we need to implement the mimiclog.Logger interface
 
+func (l *logrusLogger) makeNice(level string, args ...interface{}) {
+
+	msg := ""
+	firstIsString := false
+	if len(args) == 0 {
+		return
+	}
+	switch val := args[0].(type) {
+	case string:
+		firstIsString = true
+		msg = val
+	case error:
+		msg = val.Error()
+	default:
+		msg = fmt.Sprintf("%v", val)
+	}
+
+	if firstIsString {
+		if len(args) > 1 {
+			l.logWithLevel(level, msg, args[1:]...)
+		} else {
+			l.logWithLevel(level, msg)
+		}
+	} else {
+		l.logWithLevel(level, msg, args...)
+	}
+}
+
+func (l *logrusLogger) logWithLevel(level string, msg string, args ...interface{}) {
+
+	entry := logrus.NewEntry(l.Logger)
+	if len(args) > 0 {
+		switch argtype := args[0].(type) {
+		case map[string]interface{}:
+			entry = l.Logger.WithFields(argtype)
+		case Fields:
+			entry = l.Logger.WithFields(argtype.ToLogrusFields())
+		case mimiclog.Fields:
+			entry = l.Logger.WithFields(logrus.Fields(argtype))
+		default:
+			entry = l.Logger.WithField("data", args)
+		}
+	}
+
+	switch level {
+	case mimiclog.LevelTrace:
+		entry.Trace(msg)
+	case mimiclog.LevelDebug:
+		entry.Debug(msg)
+	case mimiclog.LevelInfo:
+		entry.Info(msg)
+	case mimiclog.LevelWarn:
+		entry.Warn(msg)
+	case mimiclog.LevelError:
+		entry.Error(msg)
+	case mimiclog.LevelCrit:
+		entry.Fatal(msg)
+	default:
+		entry.Trace(msg)
+	}
+
+}
 func (l *logrusLogger) Trace(args ...interface{}) {
-	l.Logger.Trace(args...)
+	l.makeNice(mimiclog.LevelTrace, args...)
 }
 
 func (l *logrusLogger) Debug(args ...interface{}) {
-	l.Logger.Debug(args...)
+	l.makeNice(mimiclog.LevelDebug, args...)
 }
 
 func (l *logrusLogger) Error(args ...interface{}) {
-	l.Logger.Error(args...)
+	l.makeNice(mimiclog.LevelError, args...)
 }
 
 func (l *logrusLogger) Warn(args ...interface{}) {
-	l.Logger.Warn(args...)
+	l.makeNice(mimiclog.LevelWarn, args...)
 }
 
 func (l *logrusLogger) Info(args ...interface{}) {
-	l.Logger.Info(args...)
+	l.makeNice(mimiclog.LevelInfo, args...)
 }
 
 func (l *logrusLogger) Critical(args ...interface{}) {
-	l.Logger.Fatal(args...)
+	l.makeNice(mimiclog.LevelCrit, args...)
 }
 
 func (l *logrusLogger) IsLevelEnabled(level string) bool {
