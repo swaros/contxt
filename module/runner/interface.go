@@ -22,16 +22,16 @@
 package runner
 
 import (
-	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
+	"github.com/swaros/contxt/module/mimiclog"
 )
 
 type CmdExecutor interface {
 	Print(msg ...interface{})
 	Println(msg ...interface{})
 	PrintPaths(plain bool, showFulltask bool)                         // print out all paths
-	GetLogger() *logrus.Logger                                        // get logger
+	GetLogger() mimiclog.Logger                                       // get logger
 	GetOuputHandler() (ctxout.StreamInterface, ctxout.PrintInterface) // get output handlers
 	SetLogLevel(level string) error                                   // set log level
 	ResetVariables()                                                  // reset old variables while change the workspace. (req for shell mode)

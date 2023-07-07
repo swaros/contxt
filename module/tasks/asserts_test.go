@@ -4,8 +4,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/tasks"
 	"gopkg.in/yaml.v2"
 )
@@ -49,7 +49,7 @@ func createRuntimeByYamlStringWithAllMsg(yamlString string, messages *[]string, 
 		}
 
 		dmc := tasks.NewCombinedDataHandler()
-		req := tasks.NewDefaultRequires(dmc, logrus.New())
+		req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
 
 		tsk := tasks.NewTaskListExec(
 			runCfg,

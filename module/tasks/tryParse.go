@@ -26,8 +26,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/systools"
 	"github.com/tidwall/gjson"
 )
@@ -78,7 +78,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 			//parts := strings.Split(line, inlineCmdSep)
 			parts := systools.SplitQuoted(line, inlineCmdSep)
 
-			t.getLogger().WithField("keywords", parts).Debug("try to parse parts")
+			t.getLogger().Debug("try to parse parts", parts)
 			if len(parts) < 1 {
 				continue
 			}
@@ -107,7 +107,8 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 						rightEq := parts[2]
 						inIfState = true
 						ifState = leftEq == rightEq
-						t.getLogger().WithFields(logrus.Fields{"condition": ifState, "left": leftEq, "right": rightEq}).Debug(equalsMark)
+						logFields := mimiclog.Fields{"condition": ifState, "left": leftEq, "right": rightEq}
+						t.getLogger().Debug(equalsMark, logFields)
 					} else {
 						t.out(MsgError(MsgError{Err: errors.New("invalid usage " + equalsMark + " need: str1 str2"), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
@@ -125,7 +126,8 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 						rightEq := parts[2]
 						inIfState = true
 						ifState = leftEq != rightEq
-						t.getLogger().WithFields(logrus.Fields{"condition": ifState, "left": leftEq, "right": rightEq}).Debug(notEqualsMark)
+						logFields := mimiclog.Fields{"condition": ifState, "left": leftEq, "right": rightEq}
+						t.getLogger().Debug(notEqualsMark, logFields)
 					} else {
 						t.out(MsgError(MsgError{Err: errors.New("invalid usage " + notEqualsMark + " need: str1 str2"), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
@@ -138,7 +140,8 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 			case inlineMark:
 				if inIteration {
 					iterationLines = append(iterationLines, strings.Replace(line, inlineMark+" ", "", 4))
-					t.getLogger().WithField("code", iterationLines).Debug("append to subscript")
+					logFields := mimiclog.Fields{"iterationLines": iterationLines}
+					t.getLogger().Debug("append to subscript", logFields)
 				} else {
 					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + inlineMark + " only valid while in iteration"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
@@ -164,28 +167,28 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					keyname := parts[1]
 					cmd := strings.Join(restSlice, " ")
 					runCmd, runArgs := t.commandFallback.GetMainCmd(configure.Options{})
-					t.getLogger().WithFields(logrus.Fields{"key": keyname, "cmd": restSlice}).Info("execute for import-json-exec")
+					logFields := mimiclog.Fields{"key": keyname, "cmd": restSlice}
+					t.getLogger().Info("execute for import-json-exec", logFields)
 					execCode, realExitCode, execErr := t.ExecuteScriptLine(runCmd, runArgs, cmd, func(output string, e error) bool {
 						returnValue = returnValue + output
-						t.getLogger().WithField("cmd-output", output).Info("result of command")
+						logFields := mimiclog.Fields{"key": keyname, "cmd": restSlice, "output": output}
+						t.getLogger().Info("result of command", logFields)
 						return true
 					}, func(proc *os.Process) {
-						t.getLogger().WithField("import-json-proc", proc).Trace("import-json-process")
+						logFields := mimiclog.Fields{"key": keyname, "cmd": restSlice, "pid": proc.Pid}
+						t.getLogger().Trace("import-json-process", logFields)
 					})
 
 					if execErr != nil {
-						t.getLogger().WithFields(logrus.Fields{
-							"intern":       execCode,
-							"process-exit": realExitCode,
-							"key":          keyname,
-							"cmd":          restSlice}).Error("execute for import-json-exec failed")
+						logFields := mimiclog.Fields{"key": keyname, "cmd": restSlice, "error": execErr, "exit-code": realExitCode, "intern": execCode}
+						t.getLogger().Error("execute for import-json-exec failed", logFields)
 						t.out(MsgError(MsgError{Err: errors.New("error while executing command: " + execErr.Error()), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					} else {
 
 						err := t.dataHandler.AddJSON(keyname, returnValue)
 						if err != nil {
-							t.getLogger().WithField("error-on-parsing-string", returnValue).Debug("result of command")
+							t.getLogger().Debug("result of command", returnValue)
 							t.out(MsgError(MsgError{Err: errors.New("error while parsing json: " + err.Error()), Reference: line, Target: t.target}))
 							return true, systools.ErrorCheatMacros, parsedScript
 						}
@@ -284,17 +287,16 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 						return true
 
 					}, func(proc *os.Process) {
-						t.getLogger().WithField(parseVarsMark, proc).Trace("sub process")
+						logField := mimiclog.Fields{"pid": proc.Pid}
+						t.getLogger().Trace("sub process", logField)
 					})
 
 					if internalCode == systools.ExitOk && errorFromCm == nil && cmdCode == 0 {
-						t.getLogger().WithField("values", returnValues).Trace("got values")
+						t.getLogger().Trace("got values", returnValues)
 						t.phHandler.SetPH(parts[1], t.phHandler.HandlePlaceHolder(strings.Join(returnValues, "\n")))
 					} else {
-						t.getLogger().WithFields(logrus.Fields{
-							"returnCode": cmdCode,
-							"error":      errorFromCm.Error,
-						}).Error("subcommand failed.")
+						logFields := mimiclog.Fields{"returnCode": cmdCode, "error": errorFromCm}
+						t.getLogger().Error("subcommand failed.", logFields)
 						t.out(MsgError(MsgError{Err: errors.New("error while executing command: " + errorFromCm.Error()), Reference: line, Target: t.target}))
 						return true, systools.ErrorCheatMacros, parsedScript
 					}
@@ -324,11 +326,8 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 							iLine = strings.Replace(iLine, codeKeyPH, key.String(), 1)
 							parsedExecLines = append(parsedExecLines, iLine)
 						}
-						t.getLogger().WithFields(logrus.Fields{
-							"key":       key,
-							"value":     value,
-							"subscript": parsedExecLines,
-						}).Debug("... delegate script")
+						logFields := mimiclog.Fields{"key": key, "value": value, "subscript": parsedExecLines}
+						t.getLogger().Debug("... delegate script", logFields)
 						abort, rCode, subs := t.TryParse(parsedExecLines, regularScript)
 						returnCode = rCode
 						parsedScript = append(parsedScript, subs...)
@@ -353,14 +352,15 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					} else {
 						inIteration = true
 						iterationCollect = impMap
-						t.getLogger().WithField("data", impMap).Debug("ITERATION: START")
+						t.getLogger().Debug("ITERATION: START", impMap)
 					}
 				} else {
 					t.out(MsgError(MsgError{Err: errors.New("invalid arguments #@iterate needs <name-of-import> <path-to-data>"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 			default:
-				t.getLogger().WithField("unknown", parts[0]).Error("there is no command exists")
+				logFields := mimiclog.Fields{"code": line, "unknown": parts[0]}
+				t.getLogger().Error("there is no command exists", logFields)
 				t.out(MsgError(MsgError{Err: errors.New("unknown macro " + parts[0]), Reference: line, Target: t.target}))
 				return true, systools.ErrorCheatMacros, parsedScript
 			}
@@ -373,12 +373,10 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					return true, returnCode, parsedScript
 				}
 			} else {
-				t.getLogger().WithField("code", line).Debug("ignored because of if state")
+				t.getLogger().Debug("ignored because of if state", line)
 			}
 		}
 	}
-	t.getLogger().WithFields(logrus.Fields{
-		"parsed": parsedScript,
-	}).Debug("... parsed result")
+	t.getLogger().Debug("... parsed result", parsedScript)
 	return false, systools.ExitOk, parsedScript
 }

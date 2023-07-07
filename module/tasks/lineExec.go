@@ -29,8 +29,8 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/systools"
 )
 
@@ -121,7 +121,11 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 			}
 
 		} else {
-			t.getLogger().WithFields(logrus.Fields{"processCode": realExitCode, "error": execErr}).Error("task exection error")
+			logFields := mimiclog.Fields{
+				"processCode": realExitCode,
+				"error":       execErr,
+			}
+			t.getLogger().Error("task exection error", logFields)
 			ErrorMsg := errors.New(codeLine + " fails with error: " + execErr.Error())
 			t.out(
 				MsgError(MsgError{Err: ErrorMsg, Reference: codeLine, Target: currentTask.ID}),
@@ -209,9 +213,7 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 					someReactionTriggered = true
 					var dummyArgs map[string]string = make(map[string]string) // create empty arguments as scoped values
 					for _, triggerScript := range actionDef.Script {          // run any line of script
-						t.getLogger().WithFields(logrus.Fields{
-							"cmd": triggerScript,
-						}).Debug("TRIGGER SCRIPT ACTION")
+						t.getLogger().Debug("TRIGGER SCRIPT ACTION", triggerScript)
 						subRun := t.CopyToTarget(t.target)
 						subRun.SetArgs(dummyArgs)
 						subRun.lineExecuter(triggerScript, *currentTask)
@@ -221,10 +223,9 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 
 				if actionDef.Target != "" { // here we have a target defined thats needs to be started
 					someReactionTriggered = true
-					t.getLogger().WithFields(logrus.Fields{
-						"target":  actionDef.Target,
-						"trigger": triggerMessage,
-					}).Debug("TRIGGER ACTION")
+
+					logFields := mimiclog.Fields{"target": actionDef.Target, "trigger": triggerMessage}
+					t.getLogger().Debug("TRIGGER ACTION", logFields)
 
 					if currentTask.Options.Displaycmd {
 
@@ -246,15 +247,10 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 						MsgError(MsgError{Err: errors.New("trigger defined without any action"), Reference: triggerMessage, Target: t.target}),
 						MsgInfo(triggerMessage),
 					)
-					t.getLogger().WithFields(logrus.Fields{
-						"trigger": triggerMessage,
-						"output":  logLine,
-					}).Warn("trigger defined without any action")
+					t.getLogger().Warn("trigger defined without any action", triggerMessage, logLine)
 				}
 			} else {
-				t.getLogger().WithFields(logrus.Fields{
-					"output": logLine,
-				}).Debug("no trigger found")
+				t.getLogger().Debug("no trigger found in", logLine)
 			}
 		}
 	}

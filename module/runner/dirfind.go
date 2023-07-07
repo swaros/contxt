@@ -78,12 +78,13 @@ func (c *CmdExecutorImpl) DirFind(args []string) string {
 	})
 
 	if iPath, ok := indexMatchMap[args[0]]; ok {
-		c.GetLogger().WithFields(logrus.Fields{"path": iPath}).Debug("Found match by index")
+		c.GetLogger().Debug("Found match by index:", iPath)
 		return iPath
 	}
 
 	if p, ok := c.DecidePath(args, paths); ok {
-		c.GetLogger().WithFields(logrus.Fields{"path": p}).Debug("Found match by comparing strings")
+		fields := logrus.Fields{"path": p}
+		c.GetLogger().Debug("Found match by comparing strings", fields)
 		return p
 	}
 	return "."

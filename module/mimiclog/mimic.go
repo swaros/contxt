@@ -83,3 +83,6 @@ type MimicLogger interface {
 	Init(args ...interface{}) (*Logger, error)
 	Name() string
 }
+
+// mapppings for the logrus logger fields
+type Fields map[string]interface{}

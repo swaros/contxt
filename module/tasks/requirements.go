@@ -22,16 +22,16 @@
 
 // AINC-NOTE-0815
 
- package tasks
+package tasks
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/mimiclog"
 )
 
 type Requires interface {
@@ -41,12 +41,12 @@ type Requires interface {
 
 type DefaultRequires struct {
 	variables PlaceHolder // taking care about the variables
-	logger    *logrus.Logger
+	logger    mimiclog.Logger
 }
 
 var globalStickerForLastRequirementCheckCreated DefaultRequires
 
-func NewDefaultRequires(variables PlaceHolder, logger *logrus.Logger) *DefaultRequires {
+func NewDefaultRequires(variables PlaceHolder, logger mimiclog.Logger) *DefaultRequires {
 	newReqChk := &DefaultRequires{
 		variables: variables,
 		logger:    logger,
@@ -56,12 +56,7 @@ func NewDefaultRequires(variables PlaceHolder, logger *logrus.Logger) *DefaultRe
 		panic(fmt.Errorf("no variable handler set"))
 	}
 	if newReqChk.logger == nil {
-		newReqChk.logger = logrus.New()
-		newReqChk.logger.SetFormatter(&logrus.TextFormatter{
-			DisableColors: true,
-			FullTimestamp: true,
-		})
-		newReqChk.logger.SetOutput(os.Stdout)
+		newReqChk.logger = mimiclog.NewNullLogger()
 	}
 	globalStickerForLastRequirementCheckCreated = *newReqChk
 	return newReqChk
@@ -149,37 +144,44 @@ func (d *DefaultRequires) StringMatchTest(pattern, value string) bool {
 	switch first {
 	// string not empty
 	case "?":
-		d.logger.WithFields(logrus.Fields{"pattern": pattern, "value": value, "check": first, "result": (value != "")}).Debug("check anything then empty")
+		logFields := mimiclog.Fields{"pattern": pattern, "value": value, "check": first, "result": (value != "")}
+		d.logger.Debug("check anything then empty", logFields)
 		return (value != "")
 
 	// string equals
 	case "=":
-		d.logger.WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch == value)}).Debug("check equal")
+		logFields := mimiclog.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch == value)}
+		d.logger.Debug("check equal", logFields)
 		return (maybeMatch == value)
 
 	// string not equals
 	case "!":
-		d.logger.WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch != value)}).Debug("check not equal")
+		logFields := mimiclog.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch != value)}
+		d.logger.Debug("check not equal", logFields)
 		return (maybeMatch != value)
 
 	// string greater
 	case ">":
-		d.logger.WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch < value)}).Debug("check greather then")
+		logFields := mimiclog.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch < value)}
+		d.logger.Debug("check greather then", logFields)
 		return (value > maybeMatch)
 
 	// sstring lower
 	case "<":
-		d.logger.WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch > value)}).Debug("check lower then")
+		logFields := mimiclog.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (maybeMatch > value)}
+		d.logger.Debug("check lower then", logFields)
 		return (value < maybeMatch)
 
 	// string not empty
 	case "*":
-		d.logger.WithFields(logrus.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (value != "")}).Debug("check empty *")
+		logFields := mimiclog.Fields{"pattern": maybeMatch, "value": value, "check": first, "result": (value != "")}
+		d.logger.Debug("check empty *", logFields)
 		return (value != "")
 
 	// default is checking equals
 	default:
-		d.logger.WithFields(logrus.Fields{"pattern": pattern, "value": value, "check": first, "result": (pattern == value)}).Debug("default: check equal against plain values")
+		logFields := mimiclog.Fields{"pattern": pattern, "value": value, "check": first, "result": (pattern == value)}
+		d.logger.Debug("default: check equal against plain values", logFields)
 		return (pattern == value)
 	}
 }
@@ -187,13 +189,13 @@ func (d *DefaultRequires) StringMatchTest(pattern, value string) bool {
 // checks reasons that is used for some triggers
 // returns bool and a message what trigger was matched and the reason
 func (d *DefaultRequires) CheckReason(checkReason configure.Trigger, output string, e error) (bool, string) {
-	d.logger.WithFields(logrus.Fields{
+	logFields := mimiclog.Fields{
 		"contains":   checkReason.OnoutContains,
 		"onError":    checkReason.Onerror,
 		"onLess":     checkReason.OnoutcountLess,
 		"onMore":     checkReason.OnoutcountMore,
-		"testing-at": output,
-	}).Debug("Checking Trigger")
+		"testing-at": output}
+	d.logger.Debug("Checking Trigger", logFields)
 
 	var message = ""
 	// now means forcing this trigger
@@ -226,11 +228,12 @@ func (d *DefaultRequires) CheckReason(checkReason configure.Trigger, output stri
 			return true, message
 		}
 		if checkText != "" {
-			d.logger.WithFields(logrus.Fields{
+			logFields := mimiclog.Fields{
 				"check": checkText,
 				"with":  output,
 				"from":  checkReason.OnoutContains,
-			}).Debug("OnoutContains NO MATCH")
+			}
+			d.logger.Debug("OnoutContains NO MATCH", logFields)
 		}
 	}
 

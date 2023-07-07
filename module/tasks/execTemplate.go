@@ -27,10 +27,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/awaitgroup"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/systools"
 )
 
@@ -39,7 +39,7 @@ type TaskListExec struct {
 	watch                  *Watchman
 	subTasks               map[string]*targetExecuter
 	args                   []interface{}
-	logger                 *logrus.Logger
+	logger                 mimiclog.Logger
 	presetHardExistOnError bool
 }
 
@@ -53,7 +53,7 @@ func NewTaskListExec(config configure.RunConfig, adds ...interface{}) *TaskListE
 
 func NewStdTaskListExec(config configure.RunConfig, adds ...interface{}) *TaskListExec {
 	dmc := NewCombinedDataHandler()
-	req := NewDefaultRequires(dmc, logrus.New())
+	req := NewDefaultRequires(dmc, mimiclog.NewNullLogger())
 	if adds == nil {
 		adds = make([]interface{}, 0)
 	}
@@ -79,7 +79,7 @@ func (e *TaskListExec) RunTargetWithVars(target string, scopeVars map[string]str
 	return tExec.executeTemplate(async, target, scopeVars)
 }
 
-func (e *TaskListExec) SetLogger(logger *logrus.Logger) {
+func (e *TaskListExec) SetLogger(logger mimiclog.Logger) {
 	e.logger = logger
 }
 
@@ -142,7 +142,10 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 	// check if task is already running
 	// this check depends on the target name.
 	if !t.runCfg.Config.AllowMutliRun && t.watch.TaskRunning(target) {
-		t.getLogger().WithField("task", target).Warning("task would be triggered again while is already running. IGNORED")
+		logFields := mimiclog.Fields{
+			"target": target,
+		}
+		t.getLogger().Error("task would be triggered again while is already running. IGNORED", logFields)
 		return systools.ExitAlreadyRunning
 	}
 
@@ -150,9 +153,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 	t.watch.IncTaskCount(target)
 	defer t.watch.IncTaskDoneCount(target) // save done count at then end
 
-	t.getLogger().WithFields(logrus.Fields{
-		"target": target,
-	}).Info("executeTemplate LOOKING for target")
+	t.getLogger().Info("executeTemplate LOOKING for target", target)
 
 	// Checking if the Tasklist have something
 	// to handle
@@ -208,11 +209,11 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 
 		// check if we have found the target
 		for curTIndex, script := range taskList {
-
-			t.getLogger().WithFields(logrus.Fields{
-				"target":    target,
-				"scopeVars": scopeVars,
-			}).Info("executeTemplate EXECUTE target")
+			logFields := mimiclog.Fields{
+				"target": target,
+				"scope":  scopeVars,
+			}
+			t.getLogger().Info("executeTemplate EXECUTE target", logFields)
 			targetFound = true
 
 			//stopReason := script.Stopreasons
@@ -224,10 +225,11 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			// check requirements
 			canRun, message := t.checkRequirements(script.Requires)
 			if !canRun {
-				t.getLogger().WithFields(logrus.Fields{
+				logFields := mimiclog.Fields{
 					"target": target,
 					"reason": message,
-				}).Info("executeTemplate IGNORE because requirements not matching")
+				}
+				t.getLogger().Info("executeTemplate IGNORE because requirements not matching", logFields)
 				if script.Options.Displaycmd {
 					t.out(MsgTarget{Target: target, Context: "requirement-check-failed", Info: message}, MsgNumber(curTIndex+1))
 				}
@@ -272,7 +274,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			// be executed
 			if len(script.Needs) > 0 {
 				t.out(MsgTarget{Target: target, Context: "needs_required", Info: strings.Join(script.Needs, ",")}, MsgArgs(script.Needs))
-				t.getLogger().WithField("needs", script.Needs).Debug("Needs for the script")
+				t.getLogger().Debug("Needs for the script", script.Needs)
 				if runAsync {
 					var needExecs []awaitgroup.FutureStack
 					for _, needTarget := range script.Needs {
@@ -295,7 +297,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 					futures := awaitgroup.ExecFutureGroup(needExecs) // create the futures and start the tasks
 					results := awaitgroup.WaitAtGroup(futures)       // wait until any task is executed
 
-					t.getLogger().WithField("result", results).Debug("needs result")
+					t.getLogger().Debug("needs result", results)
 				} else {
 					for _, needTarget := range script.Needs {
 						if t.watch.TaskRunsAtLeast(needTarget, 1) { // do not run needs the already runs
@@ -351,10 +353,11 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			}
 			// next are tarets they runs afterwards the regular
 			// script os done
-			t.getLogger().WithFields(logrus.Fields{
+			logFields2 := mimiclog.Fields{
 				"current-target": target,
 				"nexts":          script.Next,
-			}).Debug("executeTemplate next definition")
+			}
+			t.getLogger().Debug("executeTemplate next definition", logFields2)
 
 			nextfutures := t.generateFuturesByTargetListAndExec(script.Next, t.runCfg)
 			awaitgroup.WaitAtGroup(nextfutures)

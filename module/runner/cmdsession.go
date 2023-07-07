@@ -22,11 +22,9 @@
 package runner
 
 import (
-	"os"
-
-	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/ctemplate"
 	"github.com/swaros/contxt/module/ctxout"
+	"github.com/swaros/contxt/module/mimiclog"
 )
 
 type CmdSession struct {
@@ -39,7 +37,7 @@ type CmdSession struct {
 
 type SessionLogger struct {
 	LogLevel string
-	Logger   *logrus.Logger
+	Logger   mimiclog.Logger
 }
 
 func NewCmdSession() *CmdSession {
@@ -50,12 +48,7 @@ func NewCmdSession() *CmdSession {
 		TemplateHndl: ctemplate.New(),
 		Log: &SessionLogger{
 			LogLevel: "error",
-			Logger: &logrus.Logger{
-				Out:       os.Stdout,
-				Formatter: new(logrus.TextFormatter),
-				Hooks:     make(logrus.LevelHooks),
-				Level:     logrus.ErrorLevel,
-			},
+			Logger:   NewLogrusLogger(),
 		},
 	}
 }

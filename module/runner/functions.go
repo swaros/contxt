@@ -31,6 +31,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
+	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
 	"github.com/swaros/contxt/module/yaclint"
@@ -77,17 +78,19 @@ func (c *CmdExecutorImpl) CallBackOldWs(oldws string) bool {
 
 		os.Chdir(path)
 		template, exists, _ := c.session.TemplateHndl.Load()
-
-		c.session.Log.Logger.WithFields(logrus.Fields{
-			"exists": exists,
-			"path":   path,
-		}).Debug("path parsing")
+		Fields := logrus.Fields{
+			"template: ": template,
+			"exists":     exists,
+			"path":       path,
+		}
+		c.session.Log.Logger.Debug("path parsing ", Fields)
 
 		if exists && template.Config.Autorun.Onleave != "" {
 			onleaveTarget := template.Config.Autorun.Onleave
-			c.session.Log.Logger.WithFields(logrus.Fields{
+			Fields := logrus.Fields{
 				"target": onleaveTarget,
-			}).Info("execute leave-action")
+			}
+			c.session.Log.Logger.Info("execute leave-action", Fields)
 			c.RunTargets(onleaveTarget, true)
 
 		}
@@ -102,26 +105,28 @@ func (c *CmdExecutorImpl) CallBackNewWs(newWs string) {
 	c.session.Log.Logger.Info("NEW workspace: ", newWs)
 	configure.GetGlobalConfig().PathWorker(func(_ string, path string) { // iterate any path
 		template, exists, _ := c.session.TemplateHndl.Load()
-
-		c.session.Log.Logger.WithFields(logrus.Fields{
-
-			"exists": exists,
-			"path":   path,
-		}).Debug("path parsing")
+		Fields := logrus.Fields{
+			"template: ": template,
+			"exists":     exists,
+			"path":       path,
+		}
+		c.session.Log.Logger.Debug("path parsing", Fields)
 
 		// try to run onEnter func at any possible target in the workspace
 		if exists && template.Config.Autorun.Onenter != "" {
+			Fields := logrus.Fields{
+				"target": template.Config.Autorun.Onenter,
+			}
 			onEnterTarget := template.Config.Autorun.Onenter
-			c.session.Log.Logger.WithFields(logrus.Fields{
-				"target": onEnterTarget,
-			}).Info("execute enter-action")
+			c.session.Log.Logger.Info("execute enter-action", Fields)
 			c.RunTargets(onEnterTarget, true)
 		}
 
 	}, func(origin string) {
-		c.session.Log.Logger.WithFields(logrus.Fields{
+		Fields := logrus.Fields{
 			"current-dir": origin,
-		}).Debug("done calling autoruns on sub-dirs")
+		}
+		c.session.Log.Logger.Debug("done calling autoruns on sub-dirs", Fields)
 	})
 }
 
@@ -130,13 +135,9 @@ func (c *CmdExecutorImpl) CallBackNewWs(newWs string) {
 // to runs shared targets once in front of the regular assigned targets
 func (c *CmdExecutorImpl) RunTargets(target string, force bool) {
 	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
-		c.session.Log.Logger.WithFields(logrus.Fields{
-			"error": err,
-		}).Error("error while loading template")
+		c.session.Log.Logger.Error("error while loading template", err)
 	} else if !exists {
-		c.session.Log.Logger.WithFields(logrus.Fields{
-			"error": err,
-		}).Error("template not exists")
+		c.session.Log.Logger.Error("template not exists")
 	} else {
 
 		datahndl := tasks.NewCombinedDataHandler()
@@ -155,13 +156,9 @@ func (c *CmdExecutorImpl) RunTargets(target string, force bool) {
 
 func (c *CmdExecutorImpl) GetTargets(incInvisible bool) []string {
 	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
-		c.session.Log.Logger.WithFields(logrus.Fields{
-			"error": err,
-		}).Error("error while loading template")
+		c.session.Log.Logger.Error("error while loading template", err)
 	} else if !exists {
-		c.session.Log.Logger.WithFields(logrus.Fields{
-			"error": err,
-		}).Error("template not exists")
+		c.session.Log.Logger.Error("template not exists", err)
 	} else {
 		if res, have := TemplateTargetsAsMap(template, incInvisible); have {
 			return res
@@ -200,7 +197,8 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 		configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 			wsCount++
 			for pathIndex, ws2 := range cfg.Paths {
-				c.session.Log.Logger.WithFields(logrus.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}).Debug("parsing workspace")
+				logFields := mimiclog.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}
+				c.session.Log.Logger.Debug("parsing workspace", logFields)
 				if err := os.Chdir(ws2.Path); err == nil && ws2.Project == "" && ws2.Role == "" {
 					template, found, err := c.session.TemplateHndl.Load()
 					if found && err == nil {
@@ -208,12 +206,13 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 							ws2.Project = template.Workspace.Project
 							ws2.Role = template.Workspace.Role
 							cfg.Paths[pathIndex] = ws2
-							c.session.Log.Logger.WithFields(logrus.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}).Info("found template for workspace")
+							logFields := mimiclog.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}
+							c.session.Log.Logger.Info("found template for workspace", logFields)
 							configure.GetGlobalConfig().UpdateCurrentConfig(cfg)
 							haveUpdate = true
 							wsUpdated++
 							if updateFn != nil {
-								c.session.Log.Logger.WithFields(logrus.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}).Debug("exeute update function")
+								c.session.Log.Logger.Debug("exeute update function")
 								updateFn(index, wsCount, true, ws2)
 							}
 						}
@@ -229,7 +228,7 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 		if haveUpdate {
 			c.session.Log.Logger.Info("Update configuration")
 			if err := configure.GetGlobalConfig().SaveConfiguration(); err != nil {
-				c.session.Log.Logger.WithFields(logrus.Fields{"err": err}).Error("Error while saving configuration")
+				c.session.Log.Logger.Error("Error while saving configuration", err)
 				ctxout.CtxOut("Error while saving configuration", err)
 				systools.Exit(systools.ErrorBySystem)
 			}
@@ -252,16 +251,14 @@ func (c *CmdExecutorImpl) SetLogLevel(level string) error {
 	return nil
 }
 
-func (c *CmdExecutorImpl) GetLogger() *logrus.Logger {
+func (c *CmdExecutorImpl) GetLogger() mimiclog.Logger {
 	return c.session.Log.Logger
 }
 
 func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 	dir, err := os.Getwd()
-	c.session.Log.Logger.WithFields(logrus.Fields{
-		"dir": dir,
-		"err": err,
-	}).Debug("print paths in workspace")
+	logFields := mimiclog.Fields{"dir": dir, "err": err}
+	c.session.Log.Logger.Debug("print paths in workspace", logFields)
 
 	if err == nil {
 		if !plain {
@@ -327,9 +324,7 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 		}, func(origin string) {})
 
 		if walkErr != nil {
-			c.session.Log.Logger.WithFields(logrus.Fields{
-				"err": walkErr,
-			}).Error("Error while walking through paths")
+			c.session.Log.Logger.Error("Error while walking through paths", err)
 			c.Println(ctxout.ForeRed, "Error while walking through paths: ", ctxout.CleanTag, walkErr.Error(), ctxout.CleanTag)
 		}
 		//c.Println("")

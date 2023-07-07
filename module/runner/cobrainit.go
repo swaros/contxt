@@ -27,11 +27,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/systools"
 )
 
@@ -422,8 +422,7 @@ func (c *SessionCobra) GetDirCmd() *cobra.Command {
 			}
 
 			if len(args) == 0 {
-				c.log().Debug("show all paths in any workspace")
-				c.log().WithFields(logrus.Fields{"all-flag": c.Options.DirAll}).Debug("show all paths in any workspace shoul be executed")
+				c.log().Debug("show all paths in any workspace", c.Options.DirAll)
 				current := configure.GetGlobalConfig().UsedV2Config.CurrentSet
 				c.print("<table>")
 				if c.Options.DirAll {
@@ -583,7 +582,7 @@ func (c *SessionCobra) GetDirRmCmd() *cobra.Command {
 }
 
 // log returns the logger
-func (c *SessionCobra) log() *logrus.Logger {
+func (c *SessionCobra) log() mimiclog.Logger {
 	return c.ExternalCmdHndl.GetLogger()
 }
 

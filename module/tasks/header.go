@@ -24,8 +24,8 @@ package tasks
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/mimiclog"
 )
 
 var (
@@ -41,7 +41,7 @@ type targetExecuter struct {
 	phHandler       PlaceHolder
 	outputHandler   func(msg ...interface{})
 	requireHandler  Requires
-	Logger          *logrus.Logger
+	Logger          mimiclog.Logger
 	dataHandler     DataMapHandler
 	watch           *Watchman
 	commandFallback MainCmdSetter
@@ -156,7 +156,7 @@ func (t *targetExecuter) CopyToTarget(target string) *targetExecuter {
 	return copy
 }
 
-func (t *targetExecuter) SetLogger(logger *logrus.Logger) *targetExecuter {
+func (t *targetExecuter) SetLogger(logger mimiclog.Logger) *targetExecuter {
 	t.Logger = logger
 	return t
 }
