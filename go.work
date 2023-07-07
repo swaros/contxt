@@ -4,12 +4,12 @@ use (
 	./module/awaitgroup
 	./module/configure
 	./module/ctemplate
-	./module/yaclint
 	./module/ctxout
 	./module/ctxshell
 	./module/ctxtcell
 	./module/dirhandle
 	./module/linehack
+	./module/mimiclog
 	./module/runner
 	./module/shellcmd
 	./module/systools
@@ -17,5 +17,6 @@ use (
 	./module/tasks
 	./module/trigger
 	./module/yacl
+	./module/yaclint
 	./module/yamc
 )

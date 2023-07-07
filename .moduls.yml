@@ -104,6 +104,12 @@ module:
       timeout: 30s
 
   -
+    modul: mimiclog
+    local: true
+    test:
+      timeout: 30s
+
+  -
     modul: manout
     local: false
     path: ${WS0_manout_root}

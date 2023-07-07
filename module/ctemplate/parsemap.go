@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package ctemplate
+package ctemplate
 
 import (
 	"bytes"
@@ -31,16 +31,25 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/imdario/mergo"
+	"github.com/swaros/contxt/module/mimiclog"
 )
 
 type CtxTemplate struct {
-	data map[string]interface{}
+	data   map[string]interface{}
+	logger mimiclog.Logger
 }
 
 func NewCtxTemplate() *CtxTemplate {
-	return &CtxTemplate{
-		data: make(map[string]interface{}),
+	tpl := &CtxTemplate{
+		data:   make(map[string]interface{}),
+		logger: mimiclog.NewNullLogger(),
 	}
+
+	return tpl
+}
+
+func (c *CtxTemplate) SetLogger(logger mimiclog.Logger) {
+	c.logger = logger
 }
 
 func (c *CtxTemplate) SetData(data map[string]interface{}) {
@@ -49,6 +58,7 @@ func (c *CtxTemplate) SetData(data map[string]interface{}) {
 
 func (c *CtxTemplate) AddDataValue(key string, value interface{}) {
 	if c.data == nil {
+		c.logger.Debug("Creating new data map by adding value")
 		c.data = make(map[string]interface{})
 	}
 	c.data[key] = value
@@ -56,6 +66,7 @@ func (c *CtxTemplate) AddDataValue(key string, value interface{}) {
 
 func (c *CtxTemplate) AddDataMap(m map[string]interface{}) {
 	if c.data == nil {
+		c.logger.Debug("Creating new data map by adding map")
 		c.data = make(map[string]interface{})
 	}
 	for k, v := range m {
@@ -65,6 +76,7 @@ func (c *CtxTemplate) AddDataMap(m map[string]interface{}) {
 
 func (c *CtxTemplate) ParseTemplate(tmpl *template.Template) (string, error) {
 	if c.data == nil {
+		c.logger.Debug("Creating new data map by parsing template")
 		c.data = make(map[string]interface{})
 	}
 	var buf bytes.Buffer
