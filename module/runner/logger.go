@@ -57,42 +57,6 @@ func (l *logrusLogger) Critical(args ...interface{}) {
 	l.Logger.Fatal(args...)
 }
 
-func (l *logrusLogger) TraceFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsTraceEnabled() {
-		l.Trace(fn(args...))
-	}
-}
-
-func (l *logrusLogger) DebugFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsDebugEnabled() {
-		l.Debug(fn(args...))
-	}
-}
-
-func (l *logrusLogger) ErrorFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsErrorEnabled() {
-		l.Error(fn(args...))
-	}
-}
-
-func (l *logrusLogger) WarnFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsWarnEnabled() {
-		l.Warn(fn(args...))
-	}
-}
-
-func (l *logrusLogger) InfoFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsInfoEnabled() {
-		l.Info(fn(args...))
-	}
-}
-
-func (l *logrusLogger) CriticalFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsCriticalEnabled() {
-		l.Critical(fn(args...))
-	}
-}
-
 func (l *logrusLogger) IsLevelEnabled(level string) bool {
 	switch level {
 	case mimiclog.LevelTrace:

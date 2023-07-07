@@ -51,15 +51,6 @@ type Logger interface {
 	Warn(args ...interface{})
 	Critical(args ...interface{})
 
-	// the logging methods depending on the log level implemented as functions
-	// so this way we evade the evaluation of the arguments if the log level is not enabled
-	TraceFn(fn LogFunc, args ...interface{})
-	DebugFn(fn LogFunc, args ...interface{})
-	InfoFn(fn LogFunc, args ...interface{})
-	ErrorFn(fn LogFunc, args ...interface{})
-	WarnFn(fn LogFunc, args ...interface{})
-	CriticalFn(fn LogFunc, args ...interface{})
-
 	// maintain functions
 	IsLevelEnabled(level string) bool // returns true if the given level is enabled
 	IsTraceEnabled() bool             // returns true if trace is enabled

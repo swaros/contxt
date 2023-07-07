@@ -56,42 +56,6 @@ func (l *logrusLogger) Critical(args ...interface{}) {
 	l.Logger.Fatal(args...)
 }
 
-func (l *logrusLogger) TraceFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsTraceEnabled() {
-		l.Trace(fn(args...))
-	}
-}
-
-func (l *logrusLogger) DebugFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsDebugEnabled() {
-		l.Debug(fn(args...))
-	}
-}
-
-func (l *logrusLogger) ErrorFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsErrorEnabled() {
-		l.Error(fn(args...))
-	}
-}
-
-func (l *logrusLogger) WarnFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsWarnEnabled() {
-		l.Warn(fn(args...))
-	}
-}
-
-func (l *logrusLogger) InfoFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsInfoEnabled() {
-		l.Info(fn(args...))
-	}
-}
-
-func (l *logrusLogger) CriticalFn(fn mimiclog.LogFunc, args ...interface{}) {
-	if l.IsCriticalEnabled() {
-		l.Critical(fn(args...))
-	}
-}
-
 func (l *logrusLogger) IsLevelEnabled(level string) bool {
 	switch level {
 	case mimiclog.LevelTrace:
@@ -235,50 +199,6 @@ func TestBasics(t *testing.T) {
 
 	if testHook.LastEntry().Message != "3 warn" {
 		t.Errorf("expected 3 warn, got %s", testHook.LastEntry().Message)
-	}
-
-}
-
-func TestWithFn(t *testing.T) {
-	mimicLogger := &LogrusMimic{}
-	logger, err := mimicLogger.Init()
-	testHook.Reset()
-	if err != nil {
-		t.Fatal(err)
-	}
-	// and set the level to info
-	logger.SetLevel(mimiclog.LevelInfo)
-
-	logger.TraceFn(func(args ...interface{}) []interface{} {
-		return []interface{}{"this should not shown"}
-	})
-
-	if testHook.LastEntry() != nil {
-		t.Errorf("expected nil, got %s", testHook.LastEntry().Message)
-	}
-
-	logger.DebugFn(func(args ...interface{}) []interface{} {
-		return []interface{}{"this should not shown too"}
-	})
-
-	if testHook.LastEntry() != nil {
-		t.Errorf("expected nil, got %s", testHook.LastEntry().Message)
-	}
-
-	logger.InfoFn(func(args ...interface{}) []interface{} {
-		return []interface{}{"this should be shown"}
-	})
-
-	if testHook.LastEntry().Message != "[this should be shown]" {
-		t.Errorf("expected [this should be shown], got %s", testHook.LastEntry().Message)
-	}
-
-	logger.WarnFn(func(args ...interface{}) []interface{} {
-		return []interface{}{"this should be shown too"}
-	})
-
-	if testHook.LastEntry().Message != "[this should be shown too]" {
-		t.Errorf("expected [this should be shown too], got %s", testHook.LastEntry().Message)
 	}
 
 }
