@@ -87,7 +87,7 @@ func (f *Flow) Handler(fn func(args ...interface{})) *Flow {
 	return f
 }
 
-func (f *Flow) Each(arg ...interface{}) *Flow {
+func (f *Flow) Go(arg ...interface{}) *Flow {
 	// create and return a new uuid
 	// that will be used as a key
 	uuid := uuid.New().String()

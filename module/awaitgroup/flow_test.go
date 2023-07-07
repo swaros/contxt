@@ -22,9 +22,9 @@ func TestFlow(t *testing.T) {
 	numbers := []int{}
 	stringsSlice := []string{}
 	floats := []float64{}
-	testFlow.Each(3, "hello", 3.14).
-		Each(4, "world", 6.28).
-		Each(1, "!", 9.42).
+	err := testFlow.Go(3, "hello", 3.14).
+		Go(4, "world", 6.28).
+		Go(1, "!", 9.42).
 		Handler(func(args ...interface{}) {
 			for _, arg := range args {
 				switch m := arg.(type) {
@@ -38,6 +38,10 @@ func TestFlow(t *testing.T) {
 			}
 		}).
 		Run()
+
+	if err != nil {
+		t.Errorf("error running flow: %s", err)
+	}
 
 	expectNumbers := []int{3, 4, 1}
 	expectStrings := []string{"hello", "world", "!"}
@@ -88,8 +92,8 @@ func TestFlowWithReflect(t *testing.T) {
 	keepResultNames := []string{}
 	keepResultAges := []int{}
 
-	TestFlow.Each("Michael", 42, "Miller").
-		Each("Jane", 24, "Doe").
+	TestFlow.Go("Michael", 42, "Miller").
+		Go("Jane", 24, "Doe").
 		Handler(func(args ...interface{}) {
 			for _, arg := range args {
 				switch m := arg.(type) {
@@ -138,8 +142,8 @@ func TestFlowWithReflectAndError(t *testing.T) {
 	keepResultAges := []int{}
 
 	runError := TestFlow.
-		Each(88, 42, "Miller").
-		Each("Jane", 24, "Doe").
+		Go(88, 42, "Miller").
+		Go("Jane", 24, "Doe").
 		Handler(func(args ...interface{}) {
 			for _, arg := range args {
 				switch m := arg.(type) {
@@ -187,7 +191,7 @@ func TestFlowWithReflectAndError4(t *testing.T) {
 	keepResultAges := []int{}
 
 	runError := TestFlow.
-		Each(88).
+		Go(88).
 		Handler(func(args ...interface{}) {
 			for _, arg := range args {
 				switch m := arg.(type) {
@@ -229,7 +233,7 @@ func TestFlowWithReflectAndError5(t *testing.T) {
 	keepResultAges := []int{}
 
 	runError := TestFlow.
-		Each(88).
+		Go(88).
 		Handler(func(args ...interface{}) {
 			for _, arg := range args {
 				switch m := arg.(type) {

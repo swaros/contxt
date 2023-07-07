@@ -78,7 +78,7 @@ func doneWithFlow() {
 	flow.Use(callSomething)
 
 	for i := 0; i < len(calcsA); i++ {
-		flow.Each(i, calcsA[i], calcsB[i])
+		flow.Go(i, calcsA[i], calcsB[i])
 	}
 	flow.Handler(func(args ...interface{}) {
 		if len(args) != 2 {
