@@ -50,6 +50,8 @@ type Linter struct {
 	ldlogger          DirtyLoggerDef    // quick and dirty logger for the linter
 }
 
+// Create a new Linter. The config is the config model that we need to verify
+// it must be loaded before, and it must be injected as pointer
 func NewLinter(config yacl.ConfigModel) *Linter {
 	return &Linter{
 		config:            &config,
@@ -345,21 +347,9 @@ func (l *Linter) findPairsHelper(tkn *MatchToken) {
 		l.findPairInPairMap(tkn, pathToken, "findPairsHelper:    try path only. compare ")
 	}
 
-	// TODO: make this still sence?
-
-	// we did not find a pair in the best case, so we need to find a pair in the worst case.
-	// that means we have to seach in all other chunks, if we find a pair.
-	// that can be lead to false positives, but we can not do anything else.
-	/*
-		if tkn.PairToken == nil {
-			// for the trace, we try so intent the output, so it is more readable
-			//l.Trace("findPairsHelper:    try fallback", tkn, " in best case search, try to find a pair without sequence number")
-			moreTokens := l.lMap.GetTokensFromSequence(tkn.SequenceNr)
-			l.findPairInPairMap(tkn, moreTokens, "findPairsHelper:    retry with sequence only. ")
-
-		}*/
 }
 
+// findPairInPairMap is a helper to find the pair in a map of tokens.
 func (l *Linter) findPairInPairMap(tkn *MatchToken, tkns []*MatchToken, traceMsg string) {
 	if len(tkns) > 0 {
 		for _, bestmatch := range tkns {
@@ -436,18 +426,23 @@ func (l *Linter) GetIssue(level int, reportFn func(token *MatchToken)) {
 	}
 }
 
+// Errors will return all errors found in the diff as a string array
 func (l *Linter) Errors() []string {
 	return l.filterIssueBylevel(IssueLevelError)
 }
 
+// Warnings will return all warnings found in the diff as a string array
 func (l *Linter) Warnings() []string {
 	return l.filterIssueBylevel(IssueLevelWarn)
 }
 
+// Infos will return all infos found in the diff as a string array
 func (l *Linter) Infos() []string {
 	return l.filterIssueBylevel(IssueLevelInfo)
 }
 
+// filterIssueBylevel will filter the issues by the given level.
+// the level is ment to equal or higher.
 func (l *Linter) filterIssueBylevel(equalOrHigherLevel int) []string {
 	var out []string
 	if l.diffFound {
@@ -482,6 +477,7 @@ func (l *Linter) PrintIssues() string {
 	return outPut
 }
 
+// WalkIssues will execute the reportFn for all tokens that have the same or higher level as the given level.
 func (l *Linter) WalkIssues(hndlFn func(token *MatchToken, added bool)) {
 	if l.diffFound {
 		l.walkAll(func(token *MatchToken, added bool) {
