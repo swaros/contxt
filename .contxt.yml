@@ -85,17 +85,45 @@ task:
          echo ""
          echo "<b:yellow><f:red> ERROR </>  <f:cyan>dos2unix</> is required"
          echo ""
-       else         
+       else
          find . -type f -print0 | xargs -0 dos2unix -v
          git status -s
        fi
-       
+
 
   ##### module based task #####
   ##### the definition for modules is stored in .modules.yml
   ##### here we check if all modules we expect
   ##### exists. and if not we create this modul
   ##### by using the regular go tool-set
+
+  ## clean tasks
+  - id: clean
+    require:
+      system: linux
+    runTargets:
+      - clean-moduls
+    script:
+      - echo "clean all"
+      - rm -rf ./bin/*
+      - rm -rf ./docs/coverage.html
+
+  - id: clean-moduls
+    require:
+      system: linux
+    script:
+      - echo "clean moduls"
+{{- range $k, $modul := $.module }}
+  {{- if $modul.clean}}
+      - echo "   clean modul {{ $modul.modul }}"
+      - |
+        cd ./module/{{ $modul.modul }}/
+        {{ range $k, $clean := $modul.clean }}
+        echo "      remove {{ $clean }}"
+        rm -rf {{ $clean }}
+        {{ end }}
+  {{- end }}
+{{- end }}
 
   ## update mai task
  

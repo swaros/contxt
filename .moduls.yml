@@ -1,6 +1,8 @@
 module:
   -
     modul: yacl
+    clean:
+      - "tmfiles/*.yml"
     local: true
     test:
       timeout: 30s
@@ -14,6 +16,8 @@ module:
   -
     modul: runner
     local: true
+    clean:
+      - "testdata/*.log"
     test:
       timeout: 30s
 
@@ -26,6 +30,10 @@ module:
   -
     modul: configure
     local: true
+    clean:
+      - "test/temp/*.yml"
+      - "test/temp/*.yaml"
+      - "test/temp/*.json"
     test:
       timeout: 30s
 
