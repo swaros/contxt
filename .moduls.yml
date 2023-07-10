@@ -2,7 +2,7 @@ module:
   -
     modul: yacl
     clean:
-      - "tmfiles/*.yml"
+      - "tmpfiles/*.yml"
     local: true
     test:
       timeout: 30s
