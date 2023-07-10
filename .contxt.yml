@@ -105,8 +105,8 @@ task:
       - clean-moduls
     script:
       - echo "clean all"
-      - rm -rf ./bin/*
-      - rm -rf ./docs/coverage.html
+      - rm -rfv ./bin/*
+      - rm -rfv ./docs/coverage.html
 
   - id: clean-moduls
     require:
@@ -120,7 +120,7 @@ task:
         cd ./module/{{ $modul.modul }}/
         {{ range $k, $clean := $modul.clean }}
         echo "      remove {{ $clean }}"
-        rm -rf {{ $clean }}
+        rm -rfv {{ $clean }}
         {{ end }}
   {{- end }}
 {{- end }}
