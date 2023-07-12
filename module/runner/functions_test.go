@@ -546,7 +546,8 @@ func TestRunAndVariablesFromProjects(t *testing.T) {
 
 	assertInMessage(t, output, "CTX_TARGET default")
 	assertInMessage(t, output, "CTX_WS samira")
-	assertInMessage(t, output, "CTX_WS_KEYS WS0_samira_root WS0_samira_website WS0_samira_backend")
+	// order of the keys is not defined
+	assertRegexmatchInMessage(t, output, "CTX_WS_KEYS WS0_samira_[a-z]+ WS0_samira_[a-z]+ WS0_samira_[a-z]+")
 	assertInMessage(t, output, "WS0_samira_root "+systools.PadString(getAbsolutePath("projects01/project_samira"), 40))
 	assertInMessage(t, output, "WS0_samira_website "+systools.PadString(getAbsolutePath("projects01/project_samira/website"), 40))
 	assertInMessage(t, output, "WS0_samira_backend "+systools.PadString(getAbsolutePath("projects01/project_samira/backend"), 40))

@@ -154,7 +154,16 @@ func backToWorkDir() {
 
 // helper function to get the absolute path to the testdata directory
 func getAbsolutePath(dir string) string {
-	return useLastDir + "/" + dir
+
+	dir = useLastDir + "/" + dir
+	if filepath.IsAbs(dir) {
+		return dir
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		panic(err)
+	}
+	return abs
 }
 
 // helper function to remove the config files

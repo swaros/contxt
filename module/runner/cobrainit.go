@@ -514,7 +514,7 @@ func (c *SessionCobra) GetDirAddCmd() *cobra.Command {
 				// we need to check if the path is absolute
 				if !filepath.IsAbs(arg) {
 					c.println("error: ", ctxout.ForeRed, "path is not absolute", ctxout.CleanTag)
-					return errors.New("path is not absolute")
+					return errors.New("path is not absolute " + arg)
 				}
 
 				if ok, err := dirhandle.Exists(arg); !ok || err != nil {
