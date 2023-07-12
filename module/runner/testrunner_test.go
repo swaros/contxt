@@ -24,10 +24,13 @@ var testDirectory = ""
 // create the application. set up the config folder name, and the name of the config file.
 // the testapp bevavior is afterwards different, because it uses the config
 // related to the current directory.
+//
+//	if the file should remover automatically, it needs prefixed by 'ctx_'.
+//
 // thats why we have some special helper functions.
-// - getAbsolutePath to get the absolute path to the testdata directory
-// - backToWorkDir to go back to the testdata directory
-// - cleanAllFiles to remove the config file
+//   - getAbsolutePath to get the absolute path to the testdata directory
+//   - backToWorkDir to go back to the testdata directory
+//   - cleanAllFiles to remove the config file
 func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error) {
 
 	// first we want to catch the exist codes
@@ -48,12 +51,12 @@ func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error)
 	// any other directory will not work
 	if err := os.Chdir("./testdata"); err != nil {
 
-		return nil, nil, err
+		panic(err)
 	}
 	// check if the directory exists, that we want to use in the testdata directory.
-	// even if the config package is abel to create them, we want avoid this here.
+	// even if the config package is able to create them, we want avoid this here.
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return nil, nil, err
+		panic(err.Error() + "| the directory " + dir + " does not exist in the testdata directory")
 	}
 
 	// build the absolute path to the testdata directory
@@ -65,17 +68,19 @@ func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error)
 			return useLastDir + "/" + configure.CONTEXT_DIR + "/" + configure.CONTXT_FILE
 		}
 	} else {
-		return nil, nil, derr
+		panic(derr)
 	}
 
 	app := runner.NewCmdSession()
 
 	functions := runner.NewCmd(app)
+	// init the main functions
+	functions.MainInit()
 
 	ctxout.AddPostFilter(ctxout.NewTabOut())
 
 	if err := app.Cobra.Init(functions); err != nil {
-		return nil, nil, err
+		panic(err)
 	}
 
 	outputHdnl := NewTestOutHandler()
@@ -187,7 +192,14 @@ func runCobraCmd(app *runner.CmdSession, cmd string) error {
 func assertInMessage(t *testing.T, output *TestOutHandler, msg string) {
 	t.Helper()
 	if !output.Contains(msg) {
-		t.Errorf("Expected '%s', got '%v'", msg, output.String())
+		t.Errorf("Expected \n%s\nbut instead we got\n%v", msg, output.String())
+	}
+}
+
+func assertRegexmatchInMessage(t *testing.T, output *TestOutHandler, msg string) {
+	t.Helper()
+	if !output.TestRegexPattern(msg) {
+		t.Errorf("Expected \n%s\nbut instead we got\n%v", msg, output.String())
 	}
 }
 

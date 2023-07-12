@@ -22,6 +22,8 @@
 package tasks
 
 import (
+	"errors"
+	"os"
 	"runtime"
 	"strings"
 
@@ -85,4 +87,69 @@ func (s shellCmd) GetArgsForCmd(cmd string) []string {
 
 	}
 	return []string{}
+}
+
+func getCmd(forOs string) (string, []string, error) {
+	lwr := strings.ToLower(forOs)
+	switch lwr {
+	case "linux": // linux
+		return "bash", []string{"-c"}, nil
+
+	case "darwin": // macos
+		return "bash", []string{"-c"}, nil
+	case "freebsd": // freebsd
+		return "bash", []string{"-c"}, nil
+	case "netbsd": // netbsd
+		return "bash", []string{"-c"}, nil
+	case "openbsd": // openbsd
+		return "bash", []string{"-c"}, nil
+	case "plan9": // plan9
+		return "rc", []string{}, nil
+	case "solaris": // solaris
+		return "bash", []string{"-c"}, nil
+	case "windows": // windows
+		return "powershell", []string{"-nologo", "-noprofile"}, nil
+
+	}
+
+	return "", nil, errors.New("could not detect shell")
+}
+func detectCmd() (string, []string, error) {
+	return getCmd(runtime.GOOS)
+}
+
+type shellRunner struct {
+	cmd  string
+	args []string
+}
+
+func GetShellRunner() *shellRunner {
+	if shell, args, err := detectCmd(); err == nil {
+		return &shellRunner{shell, args}
+	} else {
+		panic(err)
+	}
+}
+
+func GetShellRunnerForOs(os string) *shellRunner {
+	if shell, args, err := getCmd(os); err == nil {
+		return &shellRunner{shell, args}
+	} else {
+		panic(err)
+	}
+}
+
+// Exec executes the given command and calls the callback for each line of output
+// If the callback returns false, the execution is stopped
+func (s *shellRunner) Exec(command string, callback func(string, error) bool, startInfo func(*os.Process)) (int, int, error) {
+	return Execute(s.cmd, s.args, command, callback, startInfo)
+}
+
+func (s *shellRunner) ExecSilentAndReturnLast(command string) (string, int) {
+	last := ""
+	_, code, _ := Execute(s.cmd, s.args, command, func(s string, err error) bool {
+		last = s
+		return true
+	}, func(p *os.Process) {})
+	return last, code
 }

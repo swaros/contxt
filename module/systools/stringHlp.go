@@ -79,12 +79,12 @@ func PrintableChars(str string) string {
 	return string(result)
 }
 
-func PrintableCharsByUnquote(str string) string {
+func PrintableCharsByUnquote(str string) (string, error) {
 	s2, err := strconv.Unquote(`"` + str + `"`)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return s2
+	return s2, nil
 }
 
 func SplitArgs(cmdList []string, prefix string, arghandler func(string, map[string]string)) []string {

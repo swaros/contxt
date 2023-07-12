@@ -2,12 +2,15 @@ package runner_test
 
 import (
 	"os"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/runner"
+	"github.com/swaros/contxt/module/systools"
 )
 
 // quicktesting the app messagehandler
@@ -354,4 +357,198 @@ func TestWorkSpacesInvalidNames(t *testing.T) {
 	assertCobraError(t, app, "workspace new hello>", "string contains not accepted chars")
 	output.ClearAndLog()
 	assertCobraError(t, app, "workspace new hello world", "to many arguments")
+}
+
+func TestRunBasic(t *testing.T) {
+	app, output, appErr := SetupTestApp("tasks1", "ctx_test_basic.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "basic_run_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+	if err := runCobraCmd(app, "run test1"); err == nil {
+		t.Error("Expected an error, got none")
+	} else {
+		expectedError := "no contxt template found in current directory"
+		if !strings.Contains(err.Error(), expectedError) {
+			t.Errorf("Expected error '%v', got '%v'", expectedError, err)
+		}
+	}
+
+}
+
+func TestRunBasic2(t *testing.T) {
+	app, output, appErr := SetupTestApp("task2", "ctx_test_basic.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "basic2_run_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+
+	// change into the test directory
+	if err := os.Chdir(getAbsolutePath("task2")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	if err := runCobraCmd(app, "run test1"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	assertInMessage(t, output, "testing-1-working")
+	assertInMessage(t, output, "test1 DONE")
+	assertNotInMessage(t, output, "testing-2-working")
+	output.ClearAndLog()
+
+	if err := runCobraCmd(app, "run test2"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	assertInMessage(t, output, "testing-2-working")
+	assertInMessage(t, output, "test2 DONE")
+	assertNotInMessage(t, output, "testing-1-working")
+	output.ClearAndLog()
+
+	if err := runCobraCmd(app, "run not-exists"); err == nil {
+		t.Error("Expected an error, got none")
+	} else {
+		expectedError := "target not-exists not exists"
+		if !strings.Contains(err.Error(), expectedError) {
+			t.Errorf("Expected error '%v', got '%v'", expectedError, err)
+		}
+	}
+}
+
+// testing the ctx_pwd default variable
+// and a defiened variable in the context file
+func TestRunAndVariables(t *testing.T) {
+	app, output, appErr := SetupTestApp("task3", "ctx_test_basic.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "basic3_run_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+
+	// change into the test directory
+	if err := os.Chdir(getAbsolutePath("task3")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	if err := runCobraCmd(app, "run show-variables"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	expectedPath := getAbsolutePath("task3")
+
+	assertInMessage(t, output, expectedPath)
+
+	expectedHello := "hello john doe"
+	assertInMessage(t, output, expectedHello)
+	output.ClearAndLog()
+
+}
+
+func TestRunAndVariablesFromProjects(t *testing.T) {
+	app, output, appErr := SetupTestApp("projects01", time.Now().Format(time.RFC3339)+"ctx_projects.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "samira_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+
+	// change into the test directory
+	if err := os.Chdir(getAbsolutePath("projects01/project_samira")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	// first create a new workspace
+	// we do ot care about errors here
+	// because at first run the workspace might does not exists
+	if err := runCobraCmd(app, "workspace new samira"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	if err := runCobraCmd(app, "dir add"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	if err := runCobraCmd(app, "workspace scan"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "found 1 projects and updated 1 projects")
+	output.ClearAndLog()
+	if err := runCobraCmd(app, "dir"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "projects01/project_samira")
+	assertInMessage(t, output, "current workspace: samira")
+	output.ClearAndLog()
+
+	// add the website to the project
+	if err := os.Chdir(getAbsolutePath("projects01/project_samira/website")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	if err := runCobraCmd(app, "dir add"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	// update workspace should find the new project and updates the workspace
+	assertInMessage(t, output, "found 1 projects and updated 1 projects")
+	output.ClearAndLog()
+
+	// add the website to the project
+	if err := os.Chdir(getAbsolutePath("projects01/project_samira/backend")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	if err := runCobraCmd(app, "dir add"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	if err := os.Chdir(getAbsolutePath("projects01/project_samira")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	// lets do the linting
+	if err := runCobraCmd(app, "lint"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "...loading config ok")
+	output.ClearAndLog()
+	if err := runCobraCmd(app, "run defaults"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	assertInMessage(t, output, "CTX_PWD "+systools.PadString(getAbsolutePath("projects01/project_samira"), 40))
+	assertInMessage(t, output, "CTX_PROJECT samira")
+	assertInMessage(t, output, "CTX_ROLE root")
+	assertInMessage(t, output, "CTX_VERSION 1.0.2")
+	// just windows and linux will be checked depending OS
+	if runtime.GOOS == "windows" {
+		assertInMessage(t, output, "CTX_OS windows")
+	} else if runtime.GOOS == "linux" {
+		assertInMessage(t, output, "CTX_OS linux")
+	}
+	assertInMessage(t, output, "CTX_USER "+os.Getenv("USER"))
+	assertRegexmatchInMessage(t, output, "CTX_HOST [a-zA-Z0-9.-]+")
+	assertRegexmatchInMessage(t, output, "CTX_DATE [0-9]{4}-[0-9]{2}-[0-9]{2}")
+	assertRegexmatchInMessage(t, output, "CTX_TIME [0-9]{2}:[0-9]{2}:[0-9]{2}")
+	assertRegexmatchInMessage(t, output, "CTX_DATETIME [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}")
+
+	assertInMessage(t, output, "CTX_TARGET default")
+	assertInMessage(t, output, "CTX_WS samira")
+	assertInMessage(t, output, "CTX_WS_KEYS WS0_samira_root WS0_samira_website WS0_samira_backend")
+	assertInMessage(t, output, "WS0_samira_root "+systools.PadString(getAbsolutePath("projects01/project_samira"), 40))
+	assertInMessage(t, output, "WS0_samira_website "+systools.PadString(getAbsolutePath("projects01/project_samira/website"), 40))
+	assertInMessage(t, output, "WS0_samira_backend "+systools.PadString(getAbsolutePath("projects01/project_samira/backend"), 40))
+
 }

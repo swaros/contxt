@@ -16,6 +16,61 @@ func TestCheckForCleanString(t *testing.T) {
 	}
 }
 
+func TestCheckForCleanString2(t *testing.T) {
+	type test struct {
+		in            string
+		out           string
+		errorExpected bool
+	}
+
+	tests := []test{
+		{"0.4.6", "0-4-6", false},
+		{"0.4.6-rc1", "0-4-6-rc1", false},
+		{"0.4.6-rc1+build1", "", true},
+		{"yamama", "yamama", false},
+		{"\\m/", "_m_", false},
+		{"\033[1;32mCHECK\033[0m", "", true},
+		{"??.'", "", true},
+	}
+
+	for i, v := range tests {
+		str, err := systools.CheckForCleanString(v.in)
+		if err != nil && !v.errorExpected {
+			t.Error("unexpected error: [", err, "] for string ", v.in, " test ", i)
+		} else if err == nil && v.errorExpected {
+			t.Error("expected error, got none. for string ", v.in, " test ", i)
+		}
+		if str != v.out {
+			t.Error("unexpected string: [", str, "] for string ", v.in, " test ", i)
+		}
+	}
+}
+
+func TestPrintableString(t *testing.T) {
+	type test struct {
+		in  string
+		out string
+	}
+
+	tests := []test{
+		{"0.4.6", "0.4.6"},
+		{"0.4.6-rc1", "0.4.6-rc1"},
+		{"0.4.6-rc1+build1", "0.4.6-rc1+build1"},
+		{"yamama", "yamama"},
+		{"\\m/", "\\m/"},
+		{"\033[1;32mCHECK\033[0m", "[1;32mCHECK[0m"},
+		{"??.'", "??.'"},
+		{"\033[1;32mCHECK\033[0m\033[1;31mCHECK\033[0m\033[1;33mCHECK\033[0m", "[1;32mCHECK[0m[1;31mCHECK[0m[1;33mCHECK[0m"},
+	}
+
+	for i, v := range tests {
+		str := systools.PrintableChars(v.in)
+		if str != v.out {
+			t.Error("unexpected string: [", str, "] for string ", v.in, " test ", i)
+		}
+	}
+}
+
 func TestStrLen(t *testing.T) {
 	len := systools.StrLen("hello world")
 

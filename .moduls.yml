@@ -18,6 +18,7 @@ module:
     local: true
     clean:
       - "testdata/*.log"
+      - "testdata/projects01/*ctx_projects.yml"
     test:
       timeout: 30s
 

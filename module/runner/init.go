@@ -80,6 +80,9 @@ func Init() error {
 	// set the default output filter
 	ctxout.AddPostFilter(ctxout.NewTabOut())
 
+	// initialize the application functions
+	functions.MainInit()
+
 	// initialize the cobra commands
 	if err := app.Cobra.Init(functions); err != nil {
 		return err

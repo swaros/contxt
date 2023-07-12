@@ -28,11 +28,12 @@ import (
 )
 
 type CmdSession struct {
-	Log          *SessionLogger
-	TemplateHndl *ctemplate.Template
-	Cobra        *SessionCobra
-	OutPutHdnl   ctxout.StreamInterface
-	Printer      ctxout.PrintInterface
+	Log              *SessionLogger         // the whole logging stuff
+	TemplateHndl     *ctemplate.Template    // template handler they execute the template
+	Cobra            *SessionCobra          // the cobra command handler
+	OutPutHdnl       ctxout.StreamInterface // used for output stream
+	Printer          ctxout.PrintInterface  // used formated printing to the console
+	DefaultVariables map[string]string      // DefaultVariables are variables which are set for every task. they are predefines. not the used variables itself
 }
 
 type SessionLogger struct {
@@ -42,10 +43,11 @@ type SessionLogger struct {
 
 func NewCmdSession() *CmdSession {
 	return &CmdSession{
-		OutPutHdnl:   ctxout.NewFmtWrap(),
-		Printer:      ctxout.NewMOWrap(),
-		Cobra:        NewCobraCmds(),
-		TemplateHndl: ctemplate.New(),
+		OutPutHdnl:       ctxout.NewFmtWrap(),
+		Printer:          ctxout.NewMOWrap(),
+		Cobra:            NewCobraCmds(),
+		TemplateHndl:     ctemplate.New(),
+		DefaultVariables: make(map[string]string),
 		Log: &SessionLogger{
 			LogLevel: "error",
 			Logger:   NewLogrusLogger(),

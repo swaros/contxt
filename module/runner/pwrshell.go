@@ -22,33 +22,12 @@
 
 // AINC-NOTE-0815
 
-package systools
+package runner
 
-import "sort"
-
-func SliceContains(slice []string, search string) bool {
-	for _, str := range slice {
-		if str == search {
-			return true
-		}
-	}
-	return false
-}
-
-// Alias for SliceContains
-func StringInSlice(search string, slice []string) bool {
-	return SliceContains(slice, search)
-}
-
-// an callback handler to sort the entries in a map by key first
-// and then call the callback function with the key and value
-func MapRangeSortedFn(m map[string]any, fn func(key string, value any)) {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		fn(k, m[k])
-	}
-}
+// this file contains important constants for the powershell runner
+const (
+	PWRSHELL_CMD_VERSION        = "$PSVersionTable.PSVersion.Major"                                      // powershell cmd to get actual version
+	PWRSHELL_CMD_PROFILE        = "$PROFILE"                                                             // powershell cmd to get actual profile
+	PWRSHELL_CMD_TEST_PROFILE   = `Test-Path -Path $PROFILE.CurrentUserCurrentHost`                      // powershell cmd to test if profile exists
+	PWRSHELL_CMD_PROFILE_CREATE = `New-Item -Path $PROFILE.CurrentUserCurrentHost -ItemType File -Force` // powershell cmd to create profile
+)

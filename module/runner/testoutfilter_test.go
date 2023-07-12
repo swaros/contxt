@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
+
+	"github.com/swaros/contxt/module/systools"
 )
 
 // create a output handler to catch the created output while testing
@@ -21,6 +24,16 @@ func (t *TestOutHandler) SetLogFile(logFile string) {
 	t.logFile = logFile
 }
 
+func filterMessages(msgs []string) []string {
+	filtered := []string{}
+	for _, msg := range msgs {
+		filteredStr := systools.PrintableChars(msg)
+		filtered = append(filtered, filteredStr)
+
+	}
+	return filtered
+}
+
 func (t *TestOutHandler) Stream(msg ...interface{}) {
 	t.Msgs = append(t.Msgs, fmt.Sprint(msg...))
 }
@@ -31,7 +44,7 @@ func (t *TestOutHandler) StreamLn(msg ...interface{}) {
 
 // get all the messages as a string
 func (t *TestOutHandler) String() string {
-	return fmt.Sprintln(t.Msgs)
+	return fmt.Sprintln(strings.Join(filterMessages(t.Msgs), "\n"))
 }
 
 // get all the messages the are created
@@ -85,4 +98,29 @@ func (t *TestOutHandler) Contains(msg string) bool {
 		}
 	}
 	return false
+}
+
+func (t *TestOutHandler) TestRegexPattern(pattern string) bool {
+	for _, m := range t.Msgs {
+		regexp, err := regexp.Compile(pattern)
+		if err != nil {
+			return false
+		}
+		if regexp.MatchString(m) {
+			return true
+		}
+	}
+	return false
+}
+
+// check if the message is in the output
+func (t *TestOutHandler) Get(msg string) []string {
+	matches := []string{}
+	for _, m := range t.Msgs {
+
+		if strings.Contains(m, msg) {
+			matches = append(matches, m)
+		}
+	}
+	return matches
 }

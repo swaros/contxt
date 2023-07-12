@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package ctxout
+package ctxout
 
 import (
 	"fmt"
@@ -35,21 +35,35 @@ import (
 
 var (
 	// PreHook is a function that can be used to intercept the message before it is printed
+	// it is a very simple way to hook in the whole output process.
+	// the return value is a bool. if false is returned the message will not be longer processed.
+	// if true is returned the message will be processed further.
+	// use this function with care. it is ment for testing or debugging.
+	// an simple example is:
+	//
+	//    messages := []string{}
+	//    ctxout.PreHook = func(msg ...interface{}) bool {
+	//      messages = append(messages, ctxout.ToString(msg...))
+	//      return true
+	//    }
+	//  ctxout.Print("hello world")
+	//
+	//  now you can inspect the messages slice
 	PreHook func(msg ...interface{}) bool = nil
-	// output is the interface that will be used to print the message
-	output      StreamInterface = nil
-	initDone    bool            = false
-	postFilters []PostFilter    = []PostFilter{}
-	termInfo    PostFilterInfo
-	behavior    CtxOutBehavior = CtxOutBehavior{
+
+	output      StreamInterface = nil             // output is the interface that will be used to print the message
+	initDone    bool            = false           // global flag that indicates if the init for this module is done
+	postFilters []PostFilter    = []PostFilter{}  // all post filters that are registered
+	termInfo    PostFilterInfo                    // the terminal information
+	behavior    CtxOutBehavior  = CtxOutBehavior{ // the default behavior of the output
 		NoColored: false,
 		ANSI:      true,
 		ANSI256:   false,
 		ANSI16M:   false,
 		Info:      &termInfo,
 	}
-	runInfos []string // contains informartion what filters are run
-	mu       sync.Mutex
+	runInfos []string   // contains information what filters are run
+	mu       sync.Mutex // mutex to protect the message processing
 )
 
 type CtxOutBehavior struct {

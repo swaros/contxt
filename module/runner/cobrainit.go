@@ -36,19 +36,20 @@ import (
 )
 
 type SessionCobra struct {
-	RootCmd         *cobra.Command
-	ExternalCmdHndl CmdExecutor
-	Options         CobraOptions
+	RootCmd         *cobra.Command // the root command
+	ExternalCmdHndl CmdExecutor    // the command executor that is used to execute the commands logic
+	Options         CobraOptions   // all flags for the root command
 }
 
 type CobraOptions struct {
-	ShowColors      bool
+	ShowColors      bool // flag for show colors in output
 	ShowHints       bool
 	LogLevel        string
 	DirAll          bool // dir flag for show all dirs in any workspace
 	ShowFullTargets bool
 }
 
+// this is the main entry point for the cobra command
 func NewCobraCmds() *SessionCobra {
 	return &SessionCobra{
 		RootCmd: &cobra.Command{
@@ -66,6 +67,7 @@ also it includes a task runner to execute commands in the right context.
 	}
 }
 
+// init the cobra command tree
 func (c *SessionCobra) Init(cmd CmdExecutor) error {
 	c.ExternalCmdHndl = cmd
 	if c.ExternalCmdHndl == nil {
@@ -381,7 +383,9 @@ func (c *SessionCobra) GetRunCmd() *cobra.Command {
 			if len(args) > 0 {
 				c.log().Debug("run command in context of project", args)
 				for _, p := range args {
-					c.ExternalCmdHndl.RunTargets(p, true)
+					if err := c.ExternalCmdHndl.RunTargets(p, true); err != nil {
+						return err
+					}
 				}
 			} else {
 				targets := c.ExternalCmdHndl.GetTargets(false)
@@ -597,6 +601,7 @@ func (c *SessionCobra) println(msg ...interface{}) {
 }
 
 func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {
+	// TODO: why this way? is the global flag not working?
 	color, err := cmd.Flags().GetBool("coloroff")
 	if err == nil && color {
 		behave := ctxout.GetBehavior()

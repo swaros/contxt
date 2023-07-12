@@ -1,0 +1,13 @@
+config:
+  variables:
+     name: "john"
+     surename: "doe"
+
+task:
+  - id: show-variables
+    script:
+     - echo "1-[${CTX_PWD}]"
+  
+  - id: show-variables
+    script:
+     - echo "hello ${name} ${surename}"

@@ -1,0 +1,7 @@
+task:
+  - id: test1
+    script:
+      - echo "testing-1-working"
+  - id: test2
+    script:
+      - echo "testing-2-working"

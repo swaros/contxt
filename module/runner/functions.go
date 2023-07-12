@@ -25,8 +25,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
@@ -101,7 +104,6 @@ func (c *CmdExecutorImpl) CallBackOldWs(oldws string) bool {
 
 func (c *CmdExecutorImpl) CallBackNewWs(newWs string) {
 	c.ResetVariables() // reset old variables while change the workspace. (req for shell mode)
-	c.MainInit()       // initialize the workspace
 	c.session.Log.Logger.Info("NEW workspace: ", newWs)
 	configure.GetGlobalConfig().PathWorker(func(_ string, path string) { // iterate any path
 		template, exists, _ := c.session.TemplateHndl.Load()
@@ -130,17 +132,78 @@ func (c *CmdExecutorImpl) CallBackNewWs(newWs string) {
 	})
 }
 
+// set the default runtime variables depeding the predefined variables from
+// the main init, and the given variables depending the task and environment
+func (c *CmdExecutorImpl) SetStartupVariables(dataHndl *tasks.CombinedDh, template *configure.RunConfig) {
+	c.session.Log.Logger.Debug("set startup variables")
+	// get the predifined variables from the MainInit function
+	// and set them to the datahandler
+	for k, v := range c.session.DefaultVariables {
+		dataHndl.SetPH(k, v)
+	}
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		c.session.Log.Logger.Error("error while getting current dir", err)
+	} else {
+		// we will override the current dir from the predefined ones, with the current dir
+		dataHndl.SetPH("CTX_PWD", currentDir)
+	}
+
+	// template depending variables
+	dataHndl.SetPH("CTX_PROJECT", template.Workspace.Project)
+	dataHndl.SetPH("CTX_ROLE", template.Workspace.Role)
+	dataHndl.SetPH("CTX_VERSION", template.Workspace.Version)
+
+	dataHndl.SetPH("CTX_WS", configure.GetGlobalConfig().UsedV2Config.CurrentSet)
+	keys := ""
+	configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+		for _, ws2 := range cfg.Paths {
+			keys += setConfigVaribales(dataHndl, ws2, "WS") // there a space is added at the end already
+			c.session.Log.Logger.Debug("set startup variables for ws2", keys)
+		}
+
+	})
+	dataHndl.SetPH("CTX_WS_KEYS", keys)
+
+}
+
+func setConfigVaribales(dataHndl *tasks.CombinedDh, wsInfo configure.WorkspaceInfoV2, varPrefix string) string {
+	pathStrInfo := ""
+	if wsInfo.Project != "" && wsInfo.Role != "" {
+		prefix := wsInfo.Project + "_" + wsInfo.Role
+		pathkey := varPrefix + "0_" + prefix
+		dataHndl.SetPH(pathkey, wsInfo.Path) // at least XXX0 without any version. this could be overwritten by other checkouts
+		pathStrInfo += pathkey + " "
+		if wsInfo.Version != "" {
+			// if version is set, we use them for avoid conflicts with different checkouts
+			if versionSan, err := systools.CheckForCleanString(wsInfo.Version); err == nil {
+				prefix += "_" + versionSan
+				// add it to ws1 as prefix for versionized keys
+				dataHndl.SetPH(varPrefix+"1_"+prefix, wsInfo.Path)
+			}
+		}
+	}
+	return pathStrInfo
+}
+
 // RunTargets run the given targets
 // force is used as flag for the first level targets, and is used
 // to runs shared targets once in front of the regular assigned targets
-func (c *CmdExecutorImpl) RunTargets(target string, force bool) {
+func (c *CmdExecutorImpl) RunTargets(target string, force bool) error {
 	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
 		c.session.Log.Logger.Error("error while loading template", err)
+		return err
 	} else if !exists {
 		c.session.Log.Logger.Error("template not exists")
+		return errors.New("no contxt template found in current directory")
 	} else {
 
 		datahndl := tasks.NewCombinedDataHandler()
+		c.SetStartupVariables(datahndl, &template)
+		datahndl.SetPH("CTX_TARGET", target)
+		datahndl.SetPH("CTX_FORCE", strconv.FormatBool(force))
+
 		requireHndl := tasks.NewDefaultRequires(datahndl, c.session.Log.Logger)
 		executer := tasks.NewTaskListExec(
 			template,
@@ -150,8 +213,29 @@ func (c *CmdExecutorImpl) RunTargets(target string, force bool) {
 			tasks.ShellCmd,
 		)
 		executer.SetLogger(c.session.Log.Logger)
-		executer.RunTarget(target, force)
+		code := executer.RunTarget(target, force)
+		switch code {
+		case systools.ExitByNoTargetExists:
+			c.session.Log.Logger.Error("target not exists:", target)
+			return errors.New("target " + target + " not exists")
+		case systools.ExitAlreadyRunning:
+			c.session.Log.Logger.Info("target already running")
+			return nil
+		case systools.ExitCmdError:
+			c.session.Log.Logger.Error("error while running target ", target)
+			return errors.New("error while running target:" + target)
+		case systools.ExitByNothingToDo:
+			c.session.Log.Logger.Info("nothing to do ", target)
+			return nil
+		case systools.ExitOk:
+			c.session.Log.Logger.Info("target executed successfully")
+			return nil
+		default:
+			c.session.Log.Logger.Error("unexpected exit code:", code)
+			return errors.New("unexpected exit code:" + fmt.Sprintf("%d", code))
+		}
 	}
+
 }
 
 func (c *CmdExecutorImpl) GetTargets(incInvisible bool) []string {
@@ -171,6 +255,86 @@ func (c *CmdExecutorImpl) ResetVariables() {
 }
 
 func (c *CmdExecutorImpl) MainInit() {
+	c.initDefaultVariables()
+}
+
+// initDefaultVariables init the default variables for the current session.
+// these are the varibales they should not change during the session.
+func (c *CmdExecutorImpl) initDefaultVariables() {
+	if currentPath, err := os.Getwd(); err != nil {
+		ctxout.CtxOut("Error while reading current directory", err)
+		systools.Exit(systools.ErrorBySystem)
+	} else {
+		c.setVariable("CTX_PWD", currentPath)
+		c.setVariable("CTX_PATH", currentPath)
+	}
+	c.setVariable("CTX_OS", runtime.GOOS)
+	c.setVariable("CTX_ARCH", runtime.GOARCH)
+	c.setVariable("CTX_USER", os.Getenv("USER"))
+	c.setVariable("CTX_HOST", getHostname())
+	c.setVariable("CTX_HOME", os.Getenv("HOME"))
+	c.setVariable("CTX_DATE", time.Now().Format("2006-01-02"))
+	c.setVariable("CTX_TIME", time.Now().Format("15:04:05"))
+	c.setVariable("CTX_DATETIME", time.Now().Format("2006-01-02 15:04:05"))
+
+	c.setVariable("CTX_VERSION", configure.GetVersion())
+	c.setVariable("CTX_BUILD_NO", configure.GetBuild())
+
+	c.handleWindowsInit() // it self is testing if we are on windows
+}
+
+func getHostname() string {
+	if hostname, err := os.Hostname(); err != nil {
+		return ""
+	} else {
+		return hostname
+	}
+}
+
+func (c *CmdExecutorImpl) handleWindowsInit() {
+	if runtime.GOOS == "windows" {
+		// we need to set the console to utf8, to be able to print utf8 chars
+		// in the console
+		if os.Getenv("CTX_COLOR") == "ON" { // then lets see if this should forced for beeing enabled by env-var
+			c.SetColor(true)
+		} else {
+			// if not forced already we try to figure out, by oure own, if the powershell is able to support ANSII
+			// this is since version 7 the case
+			pwrShellRunner := tasks.GetShellRunnerForOs("windows")
+			version, _ := pwrShellRunner.ExecSilentAndReturnLast(PWRSHELL_CMD_VERSION)
+			c.setVariable("CTX_PS_VERSION", version) // also setup varibale to have the PS version in place
+			if version >= "7" {
+				c.SetColor(true)
+			}
+		}
+	}
+}
+
+// updates the given variable in the current session.
+// this is just for keeping the variable in the session. but this
+// is not used as variables for the template.
+// this is just ment, to define already variables while setting up
+// the session and keep them in the session, until they get used by the template later.
+// see RunTargets for the usage of the variables.
+func (c *CmdExecutorImpl) setVariable(name string, value string) {
+	c.session.DefaultVariables[name] = value
+}
+
+func (c *CmdExecutorImpl) GetVariable(name string) string {
+	if val, have := c.session.DefaultVariables[name]; have {
+		return val
+	}
+	return ""
+}
+
+func (c *CmdExecutorImpl) GetVariables() map[string]string {
+	return c.session.DefaultVariables
+}
+
+func (c *CmdExecutorImpl) SetColor(onoff bool) {
+	behave := ctxout.GetBehavior()
+	behave.NoColored = onoff
+	ctxout.SetBehavior(behave)
 }
 
 func (c *CmdExecutorImpl) GetOuputHandler() (ctxout.StreamInterface, ctxout.PrintInterface) {
@@ -196,29 +360,32 @@ func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace st
 		haveUpdate := false
 		configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 			wsCount++
-			for pathIndex, ws2 := range cfg.Paths {
-				logFields := mimiclog.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}
+			for pathIndex, savedWorkspace := range cfg.Paths {
+				logFields := mimiclog.Fields{"path": savedWorkspace.Path, "project": savedWorkspace.Project, "role": savedWorkspace.Role}
 				c.session.Log.Logger.Debug("parsing workspace", logFields)
-				if err := os.Chdir(ws2.Path); err == nil && ws2.Project == "" && ws2.Role == "" {
+				if err := os.Chdir(savedWorkspace.Path); err == nil && savedWorkspace.Project == "" && savedWorkspace.Role == "" {
 					template, found, err := c.session.TemplateHndl.Load()
 					if found && err == nil {
 						if template.Workspace.Project != "" && template.Workspace.Role != "" {
-							ws2.Project = template.Workspace.Project
-							ws2.Role = template.Workspace.Role
-							cfg.Paths[pathIndex] = ws2
-							logFields := mimiclog.Fields{"path": ws2.Path, "project": ws2.Project, "role": ws2.Role}
+							savedWorkspace.Project = template.Workspace.Project
+							savedWorkspace.Role = template.Workspace.Role
+							if template.Workspace.Version != "" {
+								savedWorkspace.Version = template.Workspace.Version
+							}
+							cfg.Paths[pathIndex] = savedWorkspace
+							logFields := mimiclog.Fields{"path": savedWorkspace.Path, "project": savedWorkspace.Project, "role": savedWorkspace.Role}
 							c.session.Log.Logger.Info("found template for workspace", logFields)
 							configure.GetGlobalConfig().UpdateCurrentConfig(cfg)
 							haveUpdate = true
 							wsUpdated++
 							if updateFn != nil {
 								c.session.Log.Logger.Debug("exeute update function")
-								updateFn(index, wsCount, true, ws2)
+								updateFn(index, wsCount, true, savedWorkspace)
 							}
 						}
 					} else {
 						if updateFn != nil {
-							updateFn(index, wsCount, false, ws2)
+							updateFn(index, wsCount, false, savedWorkspace)
 						}
 					}
 				}
