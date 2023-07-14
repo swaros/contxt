@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/swaros/contxt/module/awaitgroup"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/mimiclog"
@@ -158,28 +157,14 @@ func (c *CmdExecutorImpl) SetStartupVariables(dataHndl *tasks.CombinedDh, templa
 
 	dataHndl.SetPH("CTX_WS", configure.GetGlobalConfig().UsedV2Config.CurrentSet)
 	keys := ""
-
-	flow := awaitgroup.NewFlow()
-	flow.Use(setConfigVaribales)
 	configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 		for _, ws2 := range cfg.Paths {
-			//keys += setConfigVaribales(dataHndl, ws2, "WS") // there a space is added at the end already
+			keys += setConfigVaribales(dataHndl, ws2, "WS") // there a space is added at the end already
 			c.session.Log.Logger.Debug("set startup variables for ws2", keys)
-			flow.Go(dataHndl, ws2, "WS")
 		}
 
 	})
-
-	flow.Handler(func(args ...interface{}) {
-		if len(args) > 0 {
-			keys += args[0].(string)
-		}
-	})
-	if err := flow.Run(); err != nil {
-		c.session.Log.Logger.Error("error while setting startup variables", err)
-	}
 	dataHndl.SetPH("CTX_WS_KEYS", keys)
-
 }
 
 func setConfigVaribales(dataHndl *tasks.CombinedDh, wsInfo configure.WorkspaceInfoV2, varPrefix string) string {

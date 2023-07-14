@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package awaitgroup
+package awaitgroup
 
 import (
 	"context"
