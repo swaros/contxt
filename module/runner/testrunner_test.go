@@ -230,3 +230,15 @@ func assertCobraError(t *testing.T, app *runner.CmdSession, cmd string, expected
 		}
 	}
 }
+
+// checking if we are in the expected path in the operting system
+func assertInOsPath(t *testing.T, path string) {
+	t.Helper()
+	if currentDir, err := os.Getwd(); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	} else {
+		if currentDir != path {
+			t.Errorf("Expected to be in '%v', got '%v'", path, currentDir)
+		}
+	}
+}

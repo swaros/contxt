@@ -165,7 +165,9 @@ all defined onEnter and onLeave task will be executed
 if these task are defined
 `,
 		RunE: func(_ *cobra.Command, args []string) error {
+			current := dirhandle.Pushd()
 			c.ExternalCmdHndl.FindWorkspaceInfoByTemplate(nil)
+			current.Popd()
 			var cmderr error
 			found := false
 			if len(args) > 0 {
@@ -314,6 +316,7 @@ func (c *SessionCobra) GetScanCmd() *cobra.Command {
 			c.print("\n")
 			c.print("<table>")
 			c.print("<row>", ctxout.BoldTag, "<tab size='15'> project</tab><tab size='70'>path</tab><tab size='15' origin='2'>status</tab>", ctxout.CleanTag, "</row>")
+			current := dirhandle.Pushd()
 			all, updated := c.ExternalCmdHndl.FindWorkspaceInfoByTemplate(func(ws string, cnt int, update bool, info configure.WorkspaceInfoV2) {
 				color := ctxout.ForeYellow
 				msg := "found"
@@ -323,6 +326,7 @@ func (c *SessionCobra) GetScanCmd() *cobra.Command {
 				}
 				c.print("<row>", ctxout.ForeBlue, "<tab size='15'> ", ws, "</tab>", ctxout.ForeLightBlue, "<tab size='70'>", info.Path, color, "</tab><tab size='15' origin='2'>", msg, "</tab></row>")
 			})
+			current.Popd()
 			c.print("</table>")
 			c.println(ctxout.CleanTag, "")
 			c.println("found ", ctxout.ForeLightBlue, all, ctxout.CleanTag, " projects and updated ", ctxout.ForeLightBlue, updated, ctxout.CleanTag, " projects")

@@ -552,4 +552,25 @@ func TestRunAndVariablesFromProjects(t *testing.T) {
 	assertInMessage(t, output, "WS0_samira_website "+systools.PadString(getAbsolutePath("projects01/project_samira/website"), 40))
 	assertInMessage(t, output, "WS0_samira_backend "+systools.PadString(getAbsolutePath("projects01/project_samira/backend"), 40))
 
+	ducktalePath := getAbsolutePath("projects01/dangerduck")
+	// now add a new project
+	if err := os.Chdir(ducktalePath); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInOsPath(t, ducktalePath)
+	output.ClearAndLog()
+	if err := runCobraCmd(app, "workspace new ducktale"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	assertInOsPath(t, ducktalePath)
+
+	if err := runCobraCmd(app, "dir add"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	if err := runCobraCmd(app, "run script"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
 }

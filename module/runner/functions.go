@@ -34,6 +34,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
+	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
@@ -79,7 +80,7 @@ func (c *CmdExecutorImpl) CallBackOldWs(oldws string) bool {
 	// get all paths first
 	configure.GetGlobalConfig().PathWorkerNoCd(func(_ string, path string) {
 
-		os.Chdir(path)
+		current := dirhandle.Pushd()
 		template, exists, _ := c.session.TemplateHndl.Load()
 		Fields := logrus.Fields{
 			"template: ": template,
@@ -97,6 +98,7 @@ func (c *CmdExecutorImpl) CallBackOldWs(oldws string) bool {
 			c.RunTargets(onleaveTarget, true)
 
 		}
+		current.Popd()
 
 	})
 	return true
@@ -349,7 +351,6 @@ func (c *CmdExecutorImpl) GetWorkspaces() []string {
 func (c *CmdExecutorImpl) FindWorkspaceInfoByTemplate(updateFn func(workspace string, cnt int, update bool, info configure.WorkspaceInfoV2)) (allCount int, updatedCount int) {
 	wsCount := 0
 	wsUpdated := 0
-
 	c.session.Log.Logger.Info("Start to find workspace info by template")
 
 	if currentPath, err := os.Getwd(); err != nil {
