@@ -3,7 +3,6 @@ package awaitgroup_test
 import (
 	"context"
 	"fmt"
-	"math"
 	"sync"
 	"testing"
 
@@ -16,14 +15,21 @@ type test4Bench struct {
 	datas []testStruct3Result
 }
 
+func factorial(n int) int {
+	for i := 100 - 1; i > 0; i-- {
+		n *= i - 1
+	}
+	return n
+}
+
 func (t *test4Bench) handleResult(result int, logMessage string) {
 	t.datas = append(t.datas, testStruct3Result{result, logMessage})
 }
 
 func (t *test4Bench) testSomething(calcIn int, logMessage string) (int, string) {
-	calcIn = int(math.Pow(float64(calcIn), 2))
+	calcIn = factorial(calcIn)
 
-	return calcIn + 100, fmt.Sprintf(" result is %d. message is [%s]", calcIn, logMessage)
+	return calcIn, fmt.Sprintf(" result is %d. message is [%s]", calcIn, logMessage)
 }
 
 func BenchmarkFluxEngine(b *testing.B) {
@@ -46,8 +52,6 @@ func BenchmarkFluxEngineNoReflection(b *testing.B) {
 	fluxCompensator.Fn(func(args ...interface{}) []interface{} {
 		calcIn := args[0].(int)
 		logMessage := args[1].(string)
-		calcIn = int(math.Pow(float64(calcIn), 2))
-
 		res1, res2 := testBench.testSomething(calcIn, logMessage)
 		return []interface{}{res1, res2}
 	})
@@ -60,23 +64,6 @@ func BenchmarkFluxEngineNoReflection(b *testing.B) {
 	for _, result := range results {
 		result := result.([]interface{})
 		testBench.handleResult(result[0].(int), result[1].(string))
-	}
-}
-
-func BenchmarkFlowEngine(b *testing.B) {
-	flowCompensator := awaitgroup.NewFlow()
-	testBench := &test4Bench{}
-	flowCompensator.Use(testBench.testSomething)
-
-	for i := 0; i < b.N; i++ {
-		flowCompensator.Go(i, "hello")
-	}
-
-	flowCompensator.Handler(func(args ...interface{}) {
-		testBench.handleResult(args[0].(int), args[1].(string))
-	})
-	if err := flowCompensator.Run(); err != nil {
-		b.Error(err)
 	}
 }
 
