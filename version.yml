@@ -1,5 +1,6 @@
 # target version for the release
 release:
+  main: "cmd/cmd-contxt/main.go" # main file for the release
   version:
      main: 0
      mid: 5

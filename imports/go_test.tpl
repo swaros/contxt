@@ -24,7 +24,7 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Build contxt bin
-      run: go build -ldflags "-X github.com/swaros/contxt/configure.minversion={{ $.release.version.minor }} -X github.com/swaros/contxt/configure.midversion={{ $.release.version.mid }} -X github.com/swaros/contxt/configure.mainversion={{ $.release.version.main }} -X github.com/swaros/contxt/configure.build=`date -u +.%Y%m%d.%H%M%S`" -o ./bin/contxt cmd/cmd-contxt/main.go
+      run: go build -ldflags "-X github.com/swaros/contxt/configure.minversion={{ $.release.version.minor }} -X github.com/swaros/contxt/configure.midversion={{ $.release.version.mid }} -X github.com/swaros/contxt/configure.mainversion={{ $.release.version.main }} -X github.com/swaros/contxt/configure.build=`date -u +.%Y%m%d.%H%M%S`" -o ./bin/contxt {{$.release.main}}
 
     - name: Test
       run: |

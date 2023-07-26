@@ -1,7 +1,7 @@
 build: test	build-no-test
 
 build-no-test:
-	go build -ldflags "-X ${configmodul}.minversion=${minor-version} -X ${configmodul}.midversion=${mid-version} -X ${configmodul}.mainversion=${main-version} -X ${configmodul}.build=${build-hash}" -o ./bin/contxt cmd/cmd-contxt/main.go
+	go build -ldflags "-X ${configmodul}.minversion=${minor-version} -X ${configmodul}.midversion=${mid-version} -X ${configmodul}.mainversion=${main-version} -X ${configmodul}.build=${build-hash}" -o ./bin/contxt {{$.release.main}}
 
 install-local: build
 	./bin/contxt run install-local

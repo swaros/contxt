@@ -424,7 +424,7 @@ task:
     script:
       - echo "build start----"
       - echo "   target -- ${bin-out}"
-      - go build -ldflags "-X ${configmodul}.minversion=${minor-version} -X ${configmodul}.midversion=${mid-version} -X ${configmodul}.mainversion=${main-version} -X ${configmodul}.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
+      - go build -ldflags "-X ${configmodul}.minversion=${minor-version} -X ${configmodul}.midversion=${mid-version} -X ${configmodul}.mainversion=${main-version} -X ${configmodul}.build=${build-hash}" -o ./bin/${bin-out} {{$.release.main}}
       - echo "   done   -- build "
 
   - id: verify-build
