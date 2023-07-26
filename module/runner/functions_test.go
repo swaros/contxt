@@ -569,8 +569,11 @@ func TestRunAndVariablesFromProjects(t *testing.T) {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
 
+	output.ClearAndLog()
 	if err := runCobraCmd(app, "run script"); err != nil {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
+	// testing if variable map is working
+	assertInMessage(t, output, "greeting raideristwix")
 
 }

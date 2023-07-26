@@ -168,6 +168,24 @@ func (t *Template) readAsTemplate() (string, error) {
 	}
 }
 
+func (t *Template) GetFileParsed(path string) (string, error) {
+	templateData, ferr := os.ReadFile(path) // read the content of the file for later use
+	if ferr != nil {
+		return "", ferr
+	}
+	if _, _, err := t.LoadInclude(); err != nil { // load the include files
+		return "", err // if we have an error here we can not continue
+	}
+
+	// now use the template parser to parse the template file
+	t.tplParser.SetData(t.GetOriginMap())
+	if templateParsed, err := t.tplParser.ParseTemplateString(string(templateData)); err != nil {
+		return "", err
+	} else {
+		return templateParsed, nil
+	}
+}
+
 func (t *Template) Load() (configure.RunConfig, bool, error) {
 	if _, ok := t.FindTemplateFileName(); !ok {
 		return configure.RunConfig{}, false, nil

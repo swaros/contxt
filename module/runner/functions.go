@@ -167,6 +167,48 @@ func (c *CmdExecutorImpl) SetStartupVariables(dataHndl *tasks.CombinedDh, templa
 
 	})
 	dataHndl.SetPH("CTX_WS_KEYS", keys)
+	// read the imports from the template and set them to the datahandler
+	c.handleImports(dataHndl, template)
+}
+
+// taking care about the imports.
+// these are the imports from the template, defined in config.imports and they are
+// used as variables map for the current run.
+// these imports will be set as map[string]string to the datahandler as long the are json or yaml files.
+// and can be used as placeholder in the tasks.
+// for example:
+//
+//	imports:
+//	  - imports.json
+//	  - imports.yaml
+//
+// this can be used in the tasks as ${imports.json:key1} or ${imports.yaml:key1}
+// but if an string is given, sperated by a space, the string will be used as key.
+// for example:
+//
+//	imports:
+//	  - imports.json jmap
+//	  - imports.yaml ymap
+//
+// this can be used in the tasks as ${jmap:key1} or ${ymap:key1}
+// any other file type will be loaded as string and assigned to the key with the whole content of the file.
+// for example:
+//
+//	imports:
+//	  - imports.txt
+//
+// this can be used in the tasks as ${imports.txt}
+// or by using the key by the import
+// for example:
+//
+//	imports:
+//	  - imports.txt txt
+//
+// this can be used in the tasks as ${txt}
+func (c *CmdExecutorImpl) handleImports(dataHndl *tasks.CombinedDh, template *configure.RunConfig) {
+	importHndlr := NewImportHandler(c.session.Log.Logger, dataHndl, c.session.TemplateHndl)
+	importHndlr.SetImports(template.Config.Imports)
+	importHndlr.HandleImports()
 }
 
 func setConfigVaribales(dataHndl *tasks.CombinedDh, wsInfo configure.WorkspaceInfoV2, varPrefix string) string {
