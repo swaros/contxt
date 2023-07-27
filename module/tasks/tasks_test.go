@@ -834,7 +834,7 @@ task:
 			{target: "failure_10", expectedCode: 8, expectedError: "invalid usage #@set needs 2 arguments at least. <keyname> <value>"},
 			{target: "failure_11", expectedCode: 8, expectedError: "invalid usage #@set-in-map needs 3 arguments at least. <mapName> <json.path> <value>"},
 			{target: "failure_12", expectedCode: 8, expectedError: "error while setting value in map: the key [notexists] does not exists"},
-			{target: "failure_13", expectedCode: 8, expectedError: "error while writing variable to file: variable test can not be used for export to file. not exists or empty"},
+			{target: "failure_13", expectedCode: 8, expectedError: "error while writing variable to file: variable 'test' can not be used for export to file. this variable not exists"},
 			{target: "failure_14", expectedCode: 8, expectedError: "invalid usage #@var-to-file needs 2 arguments at least. <variable> <filename>"},
 			{target: "failure_15", expectedCode: 8, expectedError: "invalid usage #@export-to-json needs 2 arguments at least. <map-key> <variable>"},
 			{target: "failure_16", expectedCode: 8, expectedError: "map with key notexists not exists"},
@@ -1401,7 +1401,7 @@ task:
 			t.Errorf("Expected code 0, got %d", code)
 		}
 		assert.Contains(t, messages, "reaction", "reaction not found in messages ["+strings.Join(messages, ",")+"]")
-		assert.Contains(t, targetUpdates, "subTarget:wait_next_done[]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+		assert.Contains(t, targetUpdates, "subTarget:wait_next_done[index 0]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
 	}
 }
 
@@ -1434,7 +1434,7 @@ task:
 			t.Errorf("Expected code 0, got %d", code)
 		}
 		assert.Contains(t, messages, "reaction", "reaction not found in messages ["+strings.Join(messages, ",")+"]")
-		assert.Contains(t, targetUpdates, "subTarget:wait_next_done[]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+		assert.Contains(t, targetUpdates, "subTarget:wait_next_done[index 0]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
 	}
 }
 
