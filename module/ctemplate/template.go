@@ -32,6 +32,7 @@ import (
 	"sync"
 
 	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/yacl"
 	"github.com/swaros/contxt/module/yaclint"
 	"github.com/swaros/contxt/module/yamc"
@@ -51,13 +52,19 @@ type Template struct {
 	tplParser     CtxTemplate
 	linter        *yaclint.Linter
 	linting       bool
+	logger        mimiclog.Logger
 }
 
 func New() *Template {
 	return &Template{
 		includeFile: DefaultIncludeFile,
+		logger:      mimiclog.NewNullLogger(),
 		tplParser:   CtxTemplate{},
 	}
+}
+
+func (t *Template) SetLogger(logger mimiclog.Logger) {
+	t.logger = logger
 }
 
 func (t *Template) SetLinting(linting bool) {
@@ -151,23 +158,12 @@ func (t *Template) readAsTemplate() (string, error) {
 	if !ok {
 		return "", errors.New("no template file found")
 	}
-	templateData, ferr := os.ReadFile(path) // read the content of the file for later use
-	if ferr != nil {
-		return "", ferr // this should not happen because we got already the file exists. so that might be a permission issue
-	}
-	if _, _, err := t.LoadInclude(); err != nil { // load the include files
-		return "", err // if we have an error here we can not continue
-	}
-
-	// now use the template parser to parse the template file
-	t.tplParser.SetData(t.GetOriginMap())
-	if templateParsed, err := t.tplParser.ParseTemplateString(string(templateData)); err != nil {
-		return "", err
-	} else {
-		return templateParsed, nil
-	}
+	return t.GetFileParsed(path)
 }
 
+// GetFileParsed parses a template file and returns the parsed content
+// by using all the the include files.
+// the usage is the same as the go template parser. so you can use {{ .var }} to access the variables
 func (t *Template) GetFileParsed(path string) (string, error) {
 	templateData, ferr := os.ReadFile(path) // read the content of the file for later use
 	if ferr != nil {

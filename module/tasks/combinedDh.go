@@ -27,6 +27,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/swaros/contxt/module/mimiclog"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/yamc"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -40,6 +42,7 @@ type CombinedDh struct {
 	openBracket        string                // the brackets used for the placeholders as opening bracket
 	closeBracket       string                // the brackets used for the placeholders as closing bracket
 	inBracketSeperator string                // the seperator used to get the key for map placeholders
+	logger             mimiclog.Logger       // the logger
 }
 
 func NewCombinedDataHandler() *CombinedDh {
@@ -51,6 +54,17 @@ func NewCombinedDataHandler() *CombinedDh {
 		inBracketSeperator: ":",                         // this is the seperator for the key in the brackets
 	}
 	return dh
+}
+
+func (d *CombinedDh) SetLogger(logger mimiclog.Logger) {
+	d.logger = logger
+}
+
+func (d *CombinedDh) getLogger() mimiclog.Logger {
+	if d.logger == nil {
+		return mimiclog.NewNullLogger()
+	}
+	return d.logger
 }
 
 // we need to get a yamc handler by key
@@ -88,6 +102,7 @@ func (d *CombinedDh) GetJSONPathResult(key, path string) (gjson.Result, bool) {
 // if the key is not present it returns an empty string
 func (d *CombinedDh) GetDataAsJson(key string) (string, bool) {
 	if !d.ifKeyExists(key) {
+		d.getLogger().Debug("GetDataAsJson: key [" + key + "] not found")
 		return "", false
 	}
 	data, err := d.getYamcByKey(key).ToString(yamc.NewJsonReader())
@@ -98,6 +113,7 @@ func (d *CombinedDh) GetDataAsJson(key string) (string, bool) {
 // if the key is not present it returns an empty string
 func (d *CombinedDh) GetDataAsYaml(key string) (string, bool) {
 	if !d.ifKeyExists(key) {
+		d.getLogger().Debug("GetDataAsYaml: key [" + key + "] not found")
 		return "", false
 	}
 	data, err := d.getYamcByKey(key).ToString(yamc.NewYamlReader())
@@ -108,6 +124,9 @@ func (d *CombinedDh) GetDataAsYaml(key string) (string, bool) {
 // AddJSON adds data by parsing a json string
 // and store them with the given key
 func (d *CombinedDh) AddJSON(key, jsonString string) error {
+	if d.getLogger().IsTraceEnabled() {
+		d.getLogger().Trace("AddJSON: key [" + key + "] jsonString [" + systools.StringSubLeft(jsonString, 40) + "]")
+	}
 	ymc := d.getYamcByKey(key)
 	return ymc.Parse(yamc.NewJsonReader(), []byte(jsonString))
 
@@ -116,6 +135,9 @@ func (d *CombinedDh) AddJSON(key, jsonString string) error {
 // AddJSON adds data by parsing a json string
 // and store them with the given key
 func (d *CombinedDh) AddYaml(key, yamlString string) error {
+	if d.getLogger().IsTraceEnabled() {
+		d.getLogger().Trace("AddYaml: key [" + key + "] yamlString [" + systools.StringSubLeft(yamlString, 40) + "]")
+	}
 	ymc := d.getYamcByKey(key)
 	return ymc.Parse(yamc.NewYamlReader(), []byte(yamlString))
 }
@@ -124,6 +146,7 @@ func (d *CombinedDh) AddYaml(key, yamlString string) error {
 // the sjson library
 func (d *CombinedDh) SetJSONValueByPath(key, path, value string) error {
 	if !d.ifKeyExists(key) {
+		d.getLogger().Error("SetJSONValueByPath: key [" + key + "] not found")
 		return errors.New("the key [" + key + "] does not exists")
 	}
 	ymc := d.getYamcByKey(key)
@@ -170,6 +193,7 @@ func (d *CombinedDh) GetYamc() *yamc.Yamc {
 }
 
 func (d *CombinedDh) SetPH(key, value string) {
+	d.getLogger().Trace("SetPH: key [" + key + "] value [" + systools.StringSubLeft(value, 40) + " ...]")
 	d.yamcRoot.Store(key, value)
 }
 
@@ -194,6 +218,7 @@ func (d *CombinedDh) SetIfNotExists(key, value string) {
 
 func (d *CombinedDh) GetPH(key string) string {
 	if val, found := d.yamcRoot.Get(key); !found {
+		d.getLogger().Warn("GetPH: key [" + key + "] not found")
 		return ""
 	} else {
 		return val.(string)
@@ -343,9 +368,12 @@ func (d *CombinedDh) ClearAll() {
 }
 
 func (d *CombinedDh) ExportVarToFile(variable string, filename string) error {
-	strData := d.GetPH(variable)
-	if strData == "" {
-		return errors.New("variable " + variable + " can not be used for export to file. not exists or empty")
+	strData, exists := d.GetPHExists(variable)
+	if strData == "" || !exists {
+		if !exists {
+			return errors.New("variable '" + variable + "' can not be used for export to file. this variable not exists")
+		}
+		return errors.New("variable '" + variable + "' can not be used for export to file. variable is empty")
 	}
 	f, err := os.Create(filename)
 	if err != nil {

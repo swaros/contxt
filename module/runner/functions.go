@@ -137,6 +137,9 @@ func (c *CmdExecutorImpl) CallBackNewWs(newWs string) {
 // set the default runtime variables depeding the predefined variables from
 // the main init, and the given variables depending the task and environment
 func (c *CmdExecutorImpl) SetStartupVariables(dataHndl *tasks.CombinedDh, template *configure.RunConfig) {
+	// first apply logger if poosible
+	mimiclog.ApplyLogger(c.session.Log.Logger, dataHndl)
+
 	c.session.Log.Logger.Debug("set startup variables")
 	// get the predifined variables from the MainInit function
 	// and set them to the datahandler
@@ -208,7 +211,11 @@ func (c *CmdExecutorImpl) SetStartupVariables(dataHndl *tasks.CombinedDh, templa
 func (c *CmdExecutorImpl) handleImports(dataHndl *tasks.CombinedDh, template *configure.RunConfig) {
 	importHndlr := NewImportHandler(c.session.Log.Logger, dataHndl, c.session.TemplateHndl)
 	importHndlr.SetImports(template.Config.Imports)
-	importHndlr.HandleImports()
+	if err := importHndlr.HandleImports(); err != nil {
+		c.Println(ctxout.ForeRed, "error while handling imports", ctxout.ForeYellow, err)
+		c.session.Log.Logger.Error("error while handling imports", err)
+		systools.Exit(systools.ErrorBySystem)
+	}
 }
 
 func setConfigVaribales(dataHndl *tasks.CombinedDh, wsInfo configure.WorkspaceInfoV2, varPrefix string) string {

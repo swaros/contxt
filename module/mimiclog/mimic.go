@@ -77,3 +77,23 @@ type MimicLogger interface {
 
 // mapppings for the logrus logger fields
 type Fields map[string]interface{}
+
+// If a module wants to use the mimiclog module, it has to implement this interface.
+// So it can be used to inject the logger into the module, without changing any other interfaces
+// they my be implemented by the module.
+type MimicLogUser interface {
+	SetLogger(logger Logger)
+}
+
+// just a helper function to apply a logger to a module that implements the MimicLogUser interface
+func ApplyLogger(logger Logger, logUser MimicLogUser) {
+	logUser.SetLogger(logger)
+}
+
+// just a helper function to apply a logger to a module that implements the MimicLogUser interface
+// without knowing if the logUser implements the MimicLogUser interface
+func ApplyIfPossible(logger Logger, logUser interface{}) {
+	if logUser, ok := logUser.(MimicLogUser); ok {
+		logUser.SetLogger(logger)
+	}
+}

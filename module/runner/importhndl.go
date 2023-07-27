@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"os"
 	"strings"
 
 	"github.com/swaros/contxt/module/ctemplate"
@@ -37,23 +36,13 @@ func (ih *ImportHandler) HandleImports() error {
 	return ih.handleFileImportsToVars(ih.imports)
 }
 
-// just to load file content as string
-func (ih *ImportHandler) getFileContent(filename string) (string, error) {
-	if bData, err := os.ReadFile(filename); err != nil {
-		return "", err
-	} else {
-		return string(bData), nil
-	}
-
-}
-
 func (ih *ImportHandler) handleFileImportsToVars(imports []string) error {
 	for _, filenameFull := range imports {
 		var keyname string
 		parts := strings.Split(filenameFull, " ")
 		filename := parts[0]
-
-		if content, err := ih.getFileContent(filename); err != nil {
+		// loading the file ad parses the template markup inside
+		if content, err := ih.template.GetFileParsed(filename); err != nil {
 			ih.logger.Error("error while loading import", filename)
 			return err
 		} else {
@@ -85,14 +74,8 @@ func (ih *ImportHandler) handleFileImportsToVars(imports []string) error {
 				if keyname == "" {
 					keyname = filename
 				}
-				ih.logger.Debug("loading File: as plain named variable", filename, ext)
-
-				if str, err := ih.template.GetFileParsed(filename); err != nil {
-					ih.logger.Error("error while loading import", filename)
-					systools.Exit(systools.ErrorOnConfigImport)
-				} else {
-					ih.dataHndl.SetPH(keyname, str)
-				}
+				ih.logger.Debug("using content as plain named variable: "+keyname, ext)
+				ih.dataHndl.SetPH(keyname, content)
 
 			}, func(path string, err error) {
 				ih.logger.Error("file not exists:", err)

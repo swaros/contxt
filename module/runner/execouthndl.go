@@ -196,6 +196,14 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					//"error",
 					ctxout.ForeYellow+ctxout.BoldTag+ctxout.BackRed,
 				)
+				c.drawRow(
+					"error ref: "+tm.Target,
+					ctxout.ForeWhite+ctxout.BoldTag+ctxout.BackRed,
+					tm.Reference+" ",
+					ctxout.ForeLightYellow,
+					" "+ctxout.BaseSignError+" ",
+					ctxout.ForeYellow+ctxout.BoldTag+ctxout.BackRed,
+				)
 
 			case tasks.MsgInfo:
 				c.Println(

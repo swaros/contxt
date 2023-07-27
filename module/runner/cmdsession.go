@@ -42,7 +42,8 @@ type SessionLogger struct {
 }
 
 func NewCmdSession() *CmdSession {
-	return &CmdSession{
+	logger := NewLogrusLogger()
+	session := &CmdSession{
 		OutPutHdnl:       ctxout.NewFmtWrap(),
 		Printer:          ctxout.NewMOWrap(),
 		Cobra:            NewCobraCmds(),
@@ -50,7 +51,9 @@ func NewCmdSession() *CmdSession {
 		DefaultVariables: make(map[string]string),
 		Log: &SessionLogger{
 			LogLevel: "error",
-			Logger:   NewLogrusLogger(),
+			Logger:   logger,
 		},
 	}
+	mimiclog.ApplyLogger(logger, session.TemplateHndl)
+	return session
 }
