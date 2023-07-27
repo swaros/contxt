@@ -23,6 +23,7 @@ package tasks
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -362,7 +363,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			nextfutures := t.generateFuturesByTargetListAndExec(script.Next, t.runCfg)
 			awaitgroup.WaitAtGroup(nextfutures)
 
-			t.out(MsgTarget{Target: target, Context: "wait_next_done"})
+			t.out(MsgTarget{Target: target, Context: "wait_next_done", Info: fmt.Sprintf("index %v", curTIndex)})
 
 			//return returnCode
 			// back to old dir if workpace usage was set

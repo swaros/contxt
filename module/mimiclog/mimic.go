@@ -92,8 +92,11 @@ func ApplyLogger(logger Logger, logUser MimicLogUser) {
 
 // just a helper function to apply a logger to a module that implements the MimicLogUser interface
 // without knowing if the logUser implements the MimicLogUser interface
-func ApplyIfPossible(logger Logger, logUser interface{}) {
+// returns true if the logger was applied, false if not
+func ApplyIfPossible(logger Logger, logUser interface{}) bool {
 	if logUser, ok := logUser.(MimicLogUser); ok {
 		logUser.SetLogger(logger)
+		return true
 	}
+	return false
 }

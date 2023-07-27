@@ -165,10 +165,9 @@ func (c *CmdExecutorImpl) SetStartupVariables(dataHndl *tasks.CombinedDh, templa
 	configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
 		for _, ws2 := range cfg.Paths {
 			keys += setConfigVaribales(dataHndl, ws2, "WS") // there a space is added at the end already
-			c.session.Log.Logger.Debug("set startup variables for ws2", keys)
 		}
-
 	})
+	c.session.Log.Logger.Debug("set startup variables for ws2", keys)
 	dataHndl.SetPH("CTX_WS_KEYS", keys)
 	// read the imports from the template and set them to the datahandler
 	c.handleImports(dataHndl, template)

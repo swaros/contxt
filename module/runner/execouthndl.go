@@ -25,6 +25,7 @@
 package runner
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/swaros/contxt/module/ctxout"
@@ -139,7 +140,7 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					c.drawRow(
 						ctxout.BaseSignSuccess+" "+tm.Target,
 						ctxout.ForeGreen,
-						"DONE ...",
+						"DONE ..."+tm.Info,
 						ctxout.ForeLightGreen,
 						ctxout.BaseSignSuccess+" ",
 						ctxout.ForeBlue,
@@ -162,14 +163,26 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				}
 
 			case tasks.MsgReason, tasks.MsgType:
-				c.Println(
-					ctxout.ForeLightMagenta,
-					"mixed",
-					ctxout.ForeMagenta,
-					tm,
-					ctxout.CleanTag,
-				)
-
+				msg := fmt.Sprintf("%v", tm)
+				if msg == "target-async-group-created" {
+					c.drawRow(
+						"system",
+						ctxout.ForeLightBlue,
+						"running async group ...",
+						ctxout.ForeBlue,
+						ctxout.BaseSignInfo+" ", // three green success signs for all subneeds done
+						ctxout.ForeYellow,
+					)
+				} else {
+					c.drawRow(
+						"info",
+						ctxout.ForeLightCyan,
+						fmt.Sprintf("%v", tm),
+						ctxout.ForeDarkGrey,
+						ctxout.BaseSignInfo+" ", // three green success signs for all subneeds done
+						ctxout.ForeBlue,
+					)
+				}
 			case *tasks.MsgInfo:
 				c.Println(
 					ctxout.ForeLightMagenta,
