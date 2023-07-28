@@ -124,9 +124,9 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				case "needs_execute":
 					c.drawRow(
 						tm.Target,
-						ctxout.ForeYellow,
-						"request to start ... "+tm.Info,
-						ctxout.ForeBlue,
+						ctxout.ForeWhite+ctxout.BackLightBlue,
+						"needs "+tm.Info,
+						ctxout.ForeDarkGrey+ctxout.BoldTag+ctxout.Dim,
 						ctxout.BaseSignScreen+" ",
 						ctxout.ForeMagenta,
 					)
@@ -146,7 +146,7 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 						ctxout.BaseSignSuccess+" "+tm.Target,
 						ctxout.ForeGreen,
 						"DONE ..."+tm.Info,
-						ctxout.ForeLightGreen,
+						ctxout.ForeDarkGrey,
 						ctxout.BaseSignSuccess+" ",
 						ctxout.ForeBlue,
 					)

@@ -1401,7 +1401,7 @@ task:
 			t.Errorf("Expected code 0, got %d", code)
 		}
 		assert.Contains(t, messages, "reaction", "reaction not found in messages ["+strings.Join(messages, ",")+"]")
-		assert.Contains(t, targetUpdates, "subTarget:wait_next_done[index 0]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+		assert.Contains(t, targetUpdates, "subTarget:wait_next_done[(1/1)]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
 	}
 }
 
@@ -1434,7 +1434,7 @@ task:
 			t.Errorf("Expected code 0, got %d", code)
 		}
 		assert.Contains(t, messages, "reaction", "reaction not found in messages ["+strings.Join(messages, ",")+"]")
-		assert.Contains(t, targetUpdates, "subTarget:wait_next_done[index 0]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+		assert.Contains(t, targetUpdates, "subTarget:wait_next_done[(1/1)]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
 	}
 }
 

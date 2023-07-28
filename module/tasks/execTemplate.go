@@ -184,6 +184,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 		targetExecuted := false
 
 		// oure tasklist that will use later
+		// here we filter the task they is matching the ids
 		var taskList []configure.Task
 		for _, script := range t.runCfg.Task {
 			if strings.EqualFold(target, script.ID) {
@@ -209,6 +210,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			}*/
 
 		// check if we have found the target
+		taskCount := len(taskList)
 		for curTIndex, script := range taskList {
 			logFields := mimiclog.Fields{
 				"target": target,
@@ -363,7 +365,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			nextfutures := t.generateFuturesByTargetListAndExec(script.Next, t.runCfg)
 			awaitgroup.WaitAtGroup(nextfutures)
 
-			t.out(MsgTarget{Target: target, Context: "wait_next_done", Info: fmt.Sprintf("index %v", curTIndex)})
+			t.out(MsgTarget{Target: target, Context: "wait_next_done", Info: fmt.Sprintf("(%v/%v)", curTIndex+1, taskCount)})
 
 			//return returnCode
 			// back to old dir if workpace usage was set
