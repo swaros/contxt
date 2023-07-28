@@ -113,7 +113,7 @@ func (l *logrusLogger) logWithLevel(level string, msg string, args ...interface{
 		entry.Warn(msg)
 	case mimiclog.LevelError:
 		entry.Error(msg)
-	case mimiclog.LevelCrit:
+	case mimiclog.LevelCritical:
 		entry.Fatal(msg)
 	default:
 		entry.Trace(msg)
@@ -141,7 +141,7 @@ func (l *logrusLogger) Info(args ...interface{}) {
 }
 
 func (l *logrusLogger) Critical(args ...interface{}) {
-	l.makeNice(mimiclog.LevelCrit, args...)
+	l.makeNice(mimiclog.LevelCritical, args...)
 }
 
 func (l *logrusLogger) IsLevelEnabled(level string) bool {
@@ -156,7 +156,7 @@ func (l *logrusLogger) IsLevelEnabled(level string) bool {
 		return l.IsWarnEnabled()
 	case mimiclog.LevelError:
 		return l.IsErrorEnabled()
-	case mimiclog.LevelCrit:
+	case mimiclog.LevelCritical:
 		return l.IsCriticalEnabled()
 	default:
 		return false
@@ -199,7 +199,7 @@ func (l *logrusLogger) SetLevelByString(level string) {
 		l.Logger.SetLevel(logrus.WarnLevel)
 	case mimiclog.LevelError:
 		l.Logger.SetLevel(logrus.ErrorLevel)
-	case mimiclog.LevelCrit:
+	case mimiclog.LevelCritical:
 		l.Logger.SetLevel(logrus.FatalLevel)
 	default:
 		l.Logger.SetLevel(logrus.InfoLevel)

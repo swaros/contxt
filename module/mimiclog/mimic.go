@@ -24,20 +24,20 @@
 
 package mimiclog
 
-// mimiclog is a module that ust defines a logger interface and a default logger implementation.
+// mimiclog is a module that just defines a logger interface and a default logger implementation.
 // it is ment to be used as a dependency for other modules that need logging, without sticking to
 // a specific logging framework.
 // so the idea is to use this module as a dependency and then use the logger interface to log.
 // the default logger implementation is a simple wrapper around the standard log package.
 
 const (
-	LevelTrace = "trace"
-	LevelDebug = "debug"
-	LevelInfo  = "info"
-	LevelWarn  = "warn"
-	LevelError = "error"
-	LevelCrit  = "critical"
-	LevelNone  = "none"
+	LevelTrace    = "trace"
+	LevelDebug    = "debug"
+	LevelInfo     = "info"
+	LevelWarn     = "warn"
+	LevelError    = "error"
+	LevelCritical = "critical"
+	LevelNone     = "none"
 )
 
 type LogFunc func(args ...interface{}) []interface{}

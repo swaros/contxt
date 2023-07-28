@@ -9,10 +9,9 @@ import (
 	"github.com/swaros/contxt/module/mimiclog"
 )
 
-// test an logrus implementation
+// test an logrus implementation of the mimiclog.Logger interface
 
 // first we will create the logrus implementation
-
 type logrusLogger struct {
 	*logrus.Logger
 }
@@ -31,7 +30,6 @@ func NewLogrusLogger() *logrusLogger {
 }
 
 // we need to implement the mimiclog.Logger interface
-
 func (l *logrusLogger) Trace(args ...interface{}) {
 	l.Logger.Trace(args...)
 }
@@ -68,7 +66,7 @@ func (l *logrusLogger) IsLevelEnabled(level string) bool {
 		return l.IsWarnEnabled()
 	case mimiclog.LevelError:
 		return l.IsErrorEnabled()
-	case mimiclog.LevelCrit:
+	case mimiclog.LevelCritical:
 		return l.IsCriticalEnabled()
 	default:
 		return false
@@ -111,7 +109,7 @@ func (l *logrusLogger) SetLevelByString(level string) {
 		l.Logger.SetLevel(logrus.WarnLevel)
 	case mimiclog.LevelError:
 		l.Logger.SetLevel(logrus.ErrorLevel)
-	case mimiclog.LevelCrit:
+	case mimiclog.LevelCritical:
 		l.Logger.SetLevel(logrus.FatalLevel)
 	default:
 		l.Logger.SetLevel(logrus.InfoLevel)
