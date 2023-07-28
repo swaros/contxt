@@ -38,13 +38,6 @@ func (l *NullLogger) Error(args ...interface{})    {}
 func (l *NullLogger) Warn(args ...interface{})     {}
 func (l *NullLogger) Critical(args ...interface{}) {}
 
-func (l *NullLogger) TraceFn(fn LogFunc, args ...interface{})    {}
-func (l *NullLogger) DebugFn(fn LogFunc, args ...interface{})    {}
-func (l *NullLogger) InfoFn(fn LogFunc, args ...interface{})     {}
-func (l *NullLogger) ErrorFn(fn LogFunc, args ...interface{})    {}
-func (l *NullLogger) WarnFn(fn LogFunc, args ...interface{})     {}
-func (l *NullLogger) CriticalFn(fn LogFunc, args ...interface{}) {}
-
 func (l *NullLogger) IsLevelEnabled(level string) bool { return false }
 func (l *NullLogger) IsTraceEnabled() bool             { return false }
 func (l *NullLogger) IsDebugEnabled() bool             { return false }
