@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package ctxout
+package ctxout
 
 import "strings"
 
@@ -31,6 +31,8 @@ const (
 	ResetCode = "\033[0m"
 	// CleanTag is the tag to reset to default
 	CleanTag = "</>"
+	// ForeBlack black foreground color
+	ForeBlack = "<f:black>"
 	// ForeRed red foreground color
 	ForeRed = "<f:red>"
 	// ForeGreen red foreground color
@@ -120,7 +122,7 @@ const (
 type BasicColors struct {
 	parser Markup
 	// Foreground colors
-	Red, Green, Yellow, Blue, Magenta, Cyan, LightGrey, DarkGrey, LightRed, LightGreen, LightYellow, LightBlue, LightCyan, LightMagenta, White string
+	Black, Red, Green, Yellow, Blue, Magenta, Cyan, LightGrey, DarkGrey, LightRed, LightGreen, LightYellow, LightBlue, LightCyan, LightMagenta, White string
 	// Background colors
 	BackBlack, BackRed, BackGreen, BackYellow, BackBlue, BackMagenta, BackCyan, BackLightGrey, BackDarkGrey, BackLightRed, BackLightGreen, BackLightYellow, BackLightBlue, BackLightCyan, BackLightMagenta, BackWhite string
 	// Bold, Dim, Underlined, Reverse, Hidden string
@@ -134,6 +136,7 @@ func NewBasicColors() *BasicColors {
 }
 
 func (bc *BasicColors) InitColors() {
+	bc.Black = ForeBlack
 	bc.Red = ForeRed
 	bc.Green = ForeGreen
 	bc.Yellow = ForeYellow
@@ -184,6 +187,7 @@ func (bc *BasicColors) ParseText(text string, handleColorCode func(m Parsed) str
 
 func HaveBasicColors(input string) bool {
 	return strings.Contains(input, ForeRed) ||
+		strings.Contains(input, ForeBlack) ||
 		strings.Contains(input, ForeGreen) ||
 		strings.Contains(input, ForeYellow) ||
 		strings.Contains(input, ForeBlue) ||

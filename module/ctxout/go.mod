@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/muesli/reflow v0.3.0
 	github.com/rivo/uniseg v0.4.4
-	github.com/swaros/manout v0.2.0
+	github.com/swaros/manout v0.2.1
 	golang.org/x/term v0.9.0
 )
 

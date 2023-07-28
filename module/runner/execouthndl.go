@@ -33,6 +33,11 @@ import (
 	"github.com/swaros/contxt/module/tasks"
 )
 
+var (
+	// random color helper
+	randColors = NewRandColorStore()
+)
+
 func (c *CmdExecutorImpl) drawRow(label, labelColor, content, contentColor, info, infoColor string) {
 	c.drawRowWithLabels("", "", label, labelColor, content, contentColor, info, infoColor)
 }
@@ -227,11 +232,13 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					ctxout.CleanTag,
 				)
 			case tasks.MsgExecOutput:
+				// getting forground, background and the sign color for the arrow char
+				fg, bg, sc := randColors.GetColorAsCtxMarkup(tm.Target)
 				c.drawRowWithLabels(
 					" ",
-					ctxout.ForeBlue+"<sign runident> ",
+					sc+"<sign runident> ",
 					tm.Target,
-					ctxout.ForeWhite+ctxout.BackBlue,
+					fg+bg, //ctxout.ForeWhite+ctxout.BackBlue,
 					systools.AnyToStrNoTabs(tm.Output),
 					ctxout.ResetCode,
 					ctxout.BaseSignScreen+" ",
