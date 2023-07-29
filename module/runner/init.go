@@ -22,7 +22,6 @@
 package runner
 
 import (
-	"fmt"
 	"os"
 	"runtime"
 
@@ -73,8 +72,6 @@ func Init() error {
 			glyps.AddSign(ctxout.Sign{Glyph: "🭬", Name: "runident", Fallback: ">"})
 			glyps.AddSign(ctxout.Sign{Glyph: "🭮", Name: "stopident", Fallback: ">"})
 		}
-	} else {
-		fmt.Println("no unicode support")
 	}
 
 	// set the default output filter
