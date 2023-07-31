@@ -528,6 +528,9 @@ func TestRunAndVariablesFromProjects(t *testing.T) {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
 
+	// check not cutted output.
+	assertInMessage(t, output, "CTX_PWD "+getAbsolutePath("projects01/project_samira"))
+
 	assertInMessage(t, output, "CTX_PWD "+systools.PadString(getAbsolutePath("projects01/project_samira"), 40))
 	assertInMessage(t, output, "CTX_PROJECT samira")
 	assertInMessage(t, output, "CTX_ROLE root")

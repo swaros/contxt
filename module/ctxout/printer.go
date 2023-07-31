@@ -29,7 +29,9 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/term"
 )
 
@@ -51,11 +53,11 @@ var (
 	//  now you can inspect the messages slice
 	PreHook func(msg ...interface{}) bool = nil
 
-	output      StreamInterface = nil             // output is the interface that will be used to print the message
-	initDone    bool            = false           // global flag that indicates if the init for this module is done
-	postFilters []PostFilter    = []PostFilter{}  // all post filters that are registered
-	termInfo    PostFilterInfo                    // the terminal information
-	behavior    CtxOutBehavior  = CtxOutBehavior{ // the default behavior of the output
+	output   StreamInterface = nil   // output is the interface that will be used to print the message
+	initDone bool            = false // global flag that indicates if the init for this module is done
+
+	termInfo PostFilterInfo                   // the terminal information
+	behavior CtxOutBehavior = CtxOutBehavior{ // the default behavior of the output
 		NoColored: false,
 		ANSI:      true,
 		ANSI256:   false,
@@ -106,38 +108,18 @@ type PostFilter interface {
 }
 
 type PostFilterInfo struct {
-	IsTerminal bool // if the output is a terminal
-	Colored    bool // if the output can be colored
-	Disabled   bool // if the whole filter is enabled. the filter is still called, but it should not change the message. but remove the markup
-	Width      int  // the width of the terminal
-	Height     int  // the height of the terminal
+	IsTerminal bool   // if the output is a terminal
+	Colored    bool   // if the output can be colored
+	Disabled   bool   // if the whole filter is enabled. the filter is still called, but it should not change the message. but remove the markup
+	Width      int    // the width of the terminal
+	Height     int    // the height of the terminal
+	Id         string // the id of the filter
 
 }
 
-// AddPostFilter adds a post filter to the list of post filters
-// these filters are called after the markup filter
-// they works only on strings
-func AddPostFilter(filter PostFilter) {
-	initCtxOut()
-	postFilters = append(postFilters, filter)
-	filter.Update(termInfo)
-}
-
-// GetPostFilters returns the list of post filters
-func GetPostFilters() []PostFilter {
-	return postFilters
-}
-
-// ClearPostFilters clears the list of post filters
-func ClearPostFilters() {
-	postFilters = []PostFilter{}
-}
-
-// Updates all registered post filters with the new terminal information
-func ForceFilterUpdate(info PostFilterInfo) {
-	for _, filter := range postFilters {
-		filter.Update(termInfo)
-	}
+func FilterId() string {
+	// we create a uuid and add the time stamp
+	return uuid.New().String() + "-" + fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
 // initCtxOut initializes the ctxout package
@@ -154,6 +136,7 @@ func initCtxOut() {
 		Disabled:   false,
 		Width:      80,
 		Height:     24,
+		Id:         FilterId(),
 	}
 	if info.IsTerminal {
 		w, h, err := term.GetSize(fd)
@@ -276,7 +259,8 @@ func PostMarkupFilter(msgSlice []interface{}) []interface{} {
 func MarkupFilter(msg string) string {
 
 	if len(postFilters) > 0 {
-		for _, filter := range postFilters {
+		// we use GetPostFilters() so we get the filters ordered.
+		for _, filter := range GetPostFilters() {
 			if filter.CanHandleThis(msg) {
 				runInfos = append(runInfos, fmt.Sprintf("(YES) post filter: %T", filter))
 				msg = filter.Command(msg)
