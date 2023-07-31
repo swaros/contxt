@@ -21,6 +21,9 @@ func NewTestOutHandler() *TestOutHandler {
 }
 
 func (t *TestOutHandler) SetLogFile(logFile string) {
+	logFile = strings.ReplaceAll(logFile, ":", "_")
+	logFile = strings.ReplaceAll(logFile, "-", "_")
+	logFile = strings.ReplaceAll(logFile, "+", "_")
 	t.logFile = logFile
 }
 

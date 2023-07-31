@@ -33,6 +33,10 @@ var testDirectory = ""
 //   - cleanAllFiles to remove the config file
 func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error) {
 
+	file = strings.ReplaceAll(file, ":", "_")
+	file = strings.ReplaceAll(file, "-", "_")
+	file = strings.ReplaceAll(file, "+", "_")
+
 	// first we want to catch the exist codes
 	systools.AddExitListener("testing_prevent_exit", func(no int) systools.ExitBehavior {
 		lastExistCode = no
@@ -77,11 +81,22 @@ func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error)
 	// init the main functions
 	functions.MainInit()
 
-	ctxout.AddPostFilter(ctxout.NewTabOut())
+	// tabout filter
+	tabouOutFilter := ctxout.NewTabOut()
+	ctxout.AddPostFilter(tabouOutFilter)
+	info := ctxout.PostFilterInfo{
+		Width:      800,   // give us a big width so we can render the whole line
+		IsTerminal: false, //no terminal
+		Colored:    false, // no colors
+		Height:     500,   // give us a big height so we can render the whole line
+		Disabled:   true,
+	}
+	tabouOutFilter.Update(info)
 
 	if err := app.Cobra.Init(functions); err != nil {
 		panic(err)
 	}
+	ctxout.ForceFilterUpdate(info)
 
 	outputHdnl := NewTestOutHandler()
 	app.OutPutHdnl = outputHdnl

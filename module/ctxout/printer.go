@@ -133,6 +133,13 @@ func ClearPostFilters() {
 	postFilters = []PostFilter{}
 }
 
+// Updates all registered post filters with the new terminal information
+func ForceFilterUpdate(info PostFilterInfo) {
+	for _, filter := range postFilters {
+		filter.Update(termInfo)
+	}
+}
+
 // initCtxOut initializes the ctxout package
 // but only once
 func initCtxOut() {

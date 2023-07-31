@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package ctxout
+package ctxout
 
 import "strings"
 

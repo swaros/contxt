@@ -241,6 +241,64 @@ func TestRowOnlyOut(t *testing.T) {
 
 }
 
+func TestFilterBehavior(t *testing.T) {
+
+	// create a string that is longer than the terminal
+	longText := "this is a very long text that should be cut off at the end of the line."
+	for i := 0; i < 10; i++ {
+		longText += fmt.Sprintf("[%v]", i) + longText
+	}
+
+	content := "<row><tab size='50'>" + longText + "</tab><tab size='50' origin='2'>and this is another test " + longText + "</tab></row>"
+	// now we test again but now we fake a working terminal
+	size := 800
+	info := ctxout.PostFilterInfo{
+		Width:      size,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+	to := ctxout.NewTabOut()
+	to.Update(info)
+
+	output := to.Command(content)
+	realLen := len(output)
+	if realLen != size {
+		t.Errorf("Expected length is not equal than %d but got %d", size, realLen)
+		t.Log(output)
+	}
+
+}
+
+func TestFilterBehavior2(t *testing.T) {
+	// here we want to test the table output if the filter is disabled
+
+	// create a string that is longer than the terminal
+	longText := "this is a very long text that should be cut off at the end of the line."
+	for i := 0; i < 2; i++ {
+		longText += fmt.Sprintf("[%v]", i) + longText
+	}
+
+	lenPerStr := len(longText)
+	content := "<row><tab size='50'>" + longText + "</tab><tab size='50' origin='2'>" + longText + "</tab></row>"
+	// now we test again but now we fake a working terminal
+	size := 800
+	info := ctxout.PostFilterInfo{
+		Width:      size,
+		IsTerminal: false, // we make sure we have the behavior of a terminal
+		Disabled:   true,
+	}
+	to := ctxout.NewTabOut()
+	to.Update(info)
+
+	output := to.Command(content)
+	realLen := len(output)
+	expectedLen := lenPerStr * 2
+	if realLen != expectedLen {
+		t.Errorf("Expected length is not equal than %d but got %d", expectedLen, realLen)
+		t.Log(output)
+	}
+
+}
+
 func TestPadding(t *testing.T) {
 	abc := "abcdefghijklmnopqrstuvwxyz"
 	cell := ctxout.NewTabCell(nil)

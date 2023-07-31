@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package ctxout
+package ctxout
 
 import (
 	"errors"
@@ -162,20 +162,23 @@ func (tr *tabRow) Render() (string, *tabRow, error) {
 	tr.parent.parent.GetRoundTool().Next()
 
 	for indx, cell := range tr.Cells {
-		wrapRow.AddCell(cell) // update the possible wrap row
-		if cell.Size > 0 {
-			size := tr.GetSize(cell, indx)
-			// we just ignore any cell with a size of 0
-			if size > 0 {
-				result = append(result, cell.anyPrefix+cell.CutString(size)+cell.anySuffix)
-			}
-
-		} else {
+		// if the plugin is disabled, then we just ignore any size calculation
+		// an take the content as it is
+		if tr.parent.parent.GetInfo().Disabled {
 			result = append(result, cell.GetText())
+		} else {
+			wrapRow.AddCell(cell) // update the possible wrap row
+			if cell.Size > 0 {
+				size := tr.GetSize(cell, indx)
+				// we just ignore any cell with a size of 0
+				if size > 0 {
+					result = append(result, cell.anyPrefix+cell.CutString(size)+cell.anySuffix)
+				}
+
+			} else {
+				result = append(result, cell.GetText())
+			}
 		}
-		// we add all the cells to the wrap row, so we can use it if we have a wrap overflow mode
-		// any cell have the information about the overflow mode and it have also
-		// the content of the overflow text
 
 	}
 
