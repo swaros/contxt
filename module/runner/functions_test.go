@@ -10,7 +10,6 @@ import (
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/runner"
-	"github.com/swaros/contxt/module/systools"
 )
 
 // quicktesting the app messagehandler
@@ -530,8 +529,6 @@ func TestRunAndVariablesFromProjects(t *testing.T) {
 
 	// check not cutted output.
 	assertInMessage(t, output, "CTX_PWD "+getAbsolutePath("projects01/project_samira"))
-
-	assertInMessage(t, output, "CTX_PWD "+systools.PadString(getAbsolutePath("projects01/project_samira"), 40))
 	assertInMessage(t, output, "CTX_PROJECT samira")
 	assertInMessage(t, output, "CTX_ROLE root")
 	assertInMessage(t, output, "CTX_VERSION 1.0.2")
@@ -551,9 +548,9 @@ func TestRunAndVariablesFromProjects(t *testing.T) {
 	assertInMessage(t, output, "CTX_WS samira")
 	// order of the keys is not defined
 	assertRegexmatchInMessage(t, output, "CTX_WS_KEYS WS0_samira_[a-z]+ WS0_samira_[a-z]+ WS0_samira_[a-z]+")
-	assertInMessage(t, output, "WS0_samira_root "+systools.PadString(getAbsolutePath("projects01/project_samira"), 40))
-	assertInMessage(t, output, "WS0_samira_website "+systools.PadString(getAbsolutePath("projects01/project_samira/website"), 40))
-	assertInMessage(t, output, "WS0_samira_backend "+systools.PadString(getAbsolutePath("projects01/project_samira/backend"), 40))
+	assertInMessage(t, output, "WS0_samira_root "+(getAbsolutePath("projects01/project_samira")))
+	assertInMessage(t, output, "WS0_samira_website "+getAbsolutePath("projects01/project_samira/website"))
+	assertInMessage(t, output, "WS0_samira_backend "+getAbsolutePath("projects01/project_samira/backend"))
 
 	ducktalePath := getAbsolutePath("projects01/dangerduck")
 	// now add a new project

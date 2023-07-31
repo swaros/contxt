@@ -34,6 +34,9 @@ func AddPostFilter(filter PostFilter) {
 func GetPostFilters() []PostFilter {
 	var filters []PostFilter
 	for _, nameOfFilter := range filterOrder {
+		if postFilters[nameOfFilter] == nil {
+			continue
+		}
 		filters = append(filters, postFilters[nameOfFilter])
 	}
 	return filters
@@ -51,7 +54,7 @@ func ForceFilterUpdate(info PostFilterInfo) {
 		info.Id = FilterId()
 	}
 
-	for _, filter := range postFilters {
+	for _, filter := range GetPostFilters() {
 		filter.Update(info)
 	}
 
