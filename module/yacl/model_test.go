@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/yacl"
 	"github.com/swaros/contxt/module/yamc"
 )
@@ -861,7 +862,7 @@ func TestOneFileNameUsageAndContent(t *testing.T) {
   host: project.deploy.com
   inport: 8089
   outport: 7001`
-		if string(fileContent) != expected {
+		if systools.PrintableChars(string(fileContent)) != systools.PrintableChars(expected) {
 			t.Error("we should have the expected content")
 			t.Log(string(fileContent))
 		}

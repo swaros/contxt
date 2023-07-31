@@ -2,6 +2,7 @@ package runner_test
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -311,7 +312,11 @@ func TestWorkSpaces(t *testing.T) {
 	if err := runCobraCmd(app, "dir -a"); err != nil {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
-	assertInMessage(t, output, "docs: no such file or directory")
+	if runtime.GOOS == "windows" {
+		assertInMessage(t, output, "The system cannot find the file specified.")
+	} else {
+		assertInMessage(t, output, "docs: no such file or directory")
+	}
 }
 
 func TestWorkSpacesInvalidNames(t *testing.T) {
@@ -492,7 +497,7 @@ func TestRunAndVariablesFromProjects(t *testing.T) {
 	if err := runCobraCmd(app, "dir"); err != nil {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
-	assertInMessage(t, output, "projects01/project_samira")
+	assertInMessage(t, output, filepath.Clean("projects01/project_samira"))
 	assertInMessage(t, output, "current workspace: samira")
 	output.ClearAndLog()
 

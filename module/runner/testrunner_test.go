@@ -171,6 +171,7 @@ func backToWorkDir() {
 func getAbsolutePath(dir string) string {
 
 	dir = useLastDir + "/" + dir
+	dir = filepath.Clean(dir)
 	if filepath.IsAbs(dir) {
 		return dir
 	}
