@@ -3,7 +3,7 @@ module github.com/swaros/contxt/module/systools
 go 1.18
 
 require (
-	github.com/swaros/manout v0.2.0
+	github.com/swaros/manout v0.2.1
 	golang.org/x/term v0.8.0
 )
 

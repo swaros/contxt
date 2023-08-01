@@ -1,5 +1,5 @@
-github.com/swaros/manout v0.2.0 h1:YiukV36UDKw6bzu+InTnTK9S7RkNgKlLzXZdPUpKvbg=
-github.com/swaros/manout v0.2.0/go.mod h1:uLr3/KG+BKYkuS9egz8yBEI5TVvOJEc4a3LHo87ZnSA=
+github.com/swaros/manout v0.2.1 h1:vahzXmDrqgtm30CE36vvPnMQWfh+p5PwwIBbfz8IrPY=
+github.com/swaros/manout v0.2.1/go.mod h1:jShapWGngejTppzXUDyISFXH7ZaRLQaGiKlagQhZuic=
 github.com/swaros/outinject v0.0.4 h1:i9/qMaUTGaAE3vNU6rStX78eMXnVEtEKfxqR7sgaVLg=
 github.com/swaros/outinject v0.0.4/go.mod h1:wcIOa87m1ijBNaDFVvLBgo7wLOfE6s1fdDIHCy4RYb4=
 golang.org/x/sys v0.8.0 h1:EBmGv8NaZBZTWvrbjNoL6HVt+IVy3QDQpJs7VRIw3tU=
