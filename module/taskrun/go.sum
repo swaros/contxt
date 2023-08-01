@@ -74,8 +74,8 @@ github.com/swaros/contxt/module/dirhandle v0.0.0-20221206091003-553c703b0561 h1:
 github.com/swaros/contxt/module/dirhandle v0.0.0-20221206091003-553c703b0561/go.mod h1:uadGIHB1hjP67Fu//UH09imK4xV1HL9edn/GgtGhK2Y=
 github.com/swaros/contxt/module/systools v0.0.0-20221206091003-553c703b0561 h1:l5GoAsaC4ou99BZdHm7BS6JZBbFzfzl/HWKjiujxiU0=
 github.com/swaros/contxt/module/systools v0.0.0-20221206091003-553c703b0561/go.mod h1:r63GuiBtglPA6jveVxuVppQIxd/EaAN3ZFJlTmnLiyA=
-github.com/swaros/manout v0.2.0 h1:YiukV36UDKw6bzu+InTnTK9S7RkNgKlLzXZdPUpKvbg=
-github.com/swaros/manout v0.2.0/go.mod h1:uLr3/KG+BKYkuS9egz8yBEI5TVvOJEc4a3LHo87ZnSA=
+github.com/swaros/manout v0.2.1 h1:vahzXmDrqgtm30CE36vvPnMQWfh+p5PwwIBbfz8IrPY=
+github.com/swaros/manout v0.2.1/go.mod h1:jShapWGngejTppzXUDyISFXH7ZaRLQaGiKlagQhZuic=
 github.com/swaros/outinject v0.0.4 h1:i9/qMaUTGaAE3vNU6rStX78eMXnVEtEKfxqR7sgaVLg=
 github.com/swaros/outinject v0.0.4/go.mod h1:wcIOa87m1ijBNaDFVvLBgo7wLOfE6s1fdDIHCy4RYb4=
 github.com/tidwall/gjson v1.14.2/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
