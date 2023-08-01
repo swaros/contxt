@@ -213,6 +213,16 @@ func runCobraCmd(app *runner.CmdSession, cmd string) error {
 	return app.Cobra.RootCmd.Execute()
 }
 
+func assertSplitTestInMessage(t *testing.T, output *TestOutHandler, msg string) {
+	t.Helper()
+	parts := strings.Split(msg, "\n")
+	for _, part := range parts {
+		if !output.Contains(part) {
+			t.Errorf("Expected \n%s\nin the output \n%v", part, output.String())
+		}
+	}
+}
+
 // assert a string is part of the output buffer
 func assertInMessage(t *testing.T, output *TestOutHandler, msg string) {
 	t.Helper()

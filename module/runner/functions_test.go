@@ -581,4 +581,82 @@ func TestRunAndVariablesFromProjects(t *testing.T) {
 	// testing if variable map is working
 	assertInMessage(t, output, "greeting raideristwix")
 
+	if err := os.Chdir(ducktalePath + "/varia"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	output.ClearAndLog()
+	if err := runCobraCmd(app, "run testimports"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	expectedStrings := `start template
+User  John 30
+  --> John's Car no 0 Ford
+   Ford Fiesta
+   Ford Focus
+   Ford Mustang
+ --> John's Car no 1 BMW
+   BMW 320
+   BMW X3
+   BMW X5
+ --> John's Car no 2 Fiat
+   Fiat 500
+   Fiat Panda
+User  Peter 46
+ --> Peter's Car no 0 Hundai
+   Hundai i10
+   Hundai i20
+   Hundai i30
+ --> Peter's Car no 1 Rover
+   Rover 25
+   Rover 45
+   Rover 75`
+	assertSplitTestInMessage(t, output, expectedStrings)
+
+	output.ClearAndLog()
+	if err := runCobraCmd(app, "run letter"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	expected := `
+Hello John ! 
+
+we have to talk about your age 30. 
+
+as you know you have 3 different car models. 
+so we have to talk about them. 
+
+Number: 0 is Ford" and from them you have 
+  Ford Fiesta 
+  Ford Focus 
+  Ford Mustang 
+
+Number: 1 is BMW" and from them you have 
+  BMW 320 
+  BMW X3 
+  BMW X5 
+   
+Number: 2 is Fiat" and from them you have 
+  Fiat 500 
+  Fiat Panda 
+   
+  ------------------------------------------------------------- 
+
+Hello Peter ! 
+
+we have to talk about your age 46. 
+ 
+as you know you have 2 different car models. 
+so we have to talk about them. 
+
+Number: 0 is Hundai" and from them you have 
+  Hundai i10 
+  Hundai i20 
+  Hundai i30 
+
+Number: 1 is Rover" and from them you have 
+  Rover 25 
+  Rover 45 
+  Rover 75 
+`
+	assertSplitTestInMessage(t, output, expected)
 }

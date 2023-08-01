@@ -1,0 +1,16 @@
+{{ range $key, $User := .user }}
+      Hello {{ $User.name }} !
+
+      we have to talk about your age {{ $User.age }}.
+      
+      as you know you have {{ len $User.cars }} different car models.
+      so we have to talk about them.
+       
+    {{ range $kn, $Cars := $User.cars }}
+      Number: {{ $kn }} is {{ $Cars.name }}" and from them you have 
+      {{- range $km, $Car := $Cars.models }}
+            {{ $Cars.name }} {{ $Car }}
+      {{- end }}
+    {{ end }}
+    -------------------------------------------------------------
+{{ end }}

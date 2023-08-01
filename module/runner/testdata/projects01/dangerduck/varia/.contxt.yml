@@ -1,0 +1,25 @@
+config:
+  imports:
+    - imp/hello.txt letter
+
+task:
+  - id: testimports
+    script:
+      - echo "start template"
+  {{ range $key, $User := .user }}
+      - echo "User  {{ $User.name }} {{ $User.age }}"
+    {{ range $kn, $Cars := $User.cars }}
+      - echo "  --> {{ $User.name }}'s Car no {{ $kn }} {{ $Cars.name }}"
+      {{ range $km, $Car := $Cars.models }}
+      - echo "       {{ $Cars.name }} {{ $Car }}"
+      {{ end }}
+    {{ end }}
+  {{ end }}
+
+  - id: letter
+    script:
+      - |
+        cat << EOF
+        ${letter}
+        EOF
+    
