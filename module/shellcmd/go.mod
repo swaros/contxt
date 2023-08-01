@@ -11,7 +11,7 @@ require (
 	github.com/swaros/contxt/module/dirhandle v0.0.0-20230106225453-d04145a0b401
 	github.com/swaros/contxt/module/systools v0.0.0-20230106225453-d04145a0b401
 	github.com/swaros/contxt/module/taskrun v0.0.0-20230106225453-d04145a0b401
-	github.com/swaros/manout v0.2.0
+	github.com/swaros/manout v0.2.1
 )
 
 require (
