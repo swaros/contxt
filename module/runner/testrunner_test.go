@@ -217,6 +217,9 @@ func assertSplitTestInMessage(t *testing.T, output *TestOutHandler, msg string) 
 	t.Helper()
 	parts := strings.Split(msg, "\n")
 	for _, part := range parts {
+		if part == "" {
+			continue
+		}
 		if !output.Contains(part) {
 			t.Errorf("Expected \n%s\nin the output \n%v", part, output.String())
 		}
