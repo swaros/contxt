@@ -33,6 +33,9 @@ func TestOutPutHandl(t *testing.T) {
 
 // Testing the dir command togehther with the workspace command
 func TestDir(t *testing.T) {
+	path := RuntimeFileInfo(t)
+	t.Log(path)
+	ChangeToRuntimeDir(t)
 	popdTestDir()
 	app, output, appErr := SetupTestApp("config", "ctx_test_config.yml")
 	if appErr != nil {
@@ -144,6 +147,7 @@ func TestDir(t *testing.T) {
 }
 
 func TestWorkSpaces(t *testing.T) {
+	ChangeToRuntimeDir(t)
 	app, output, appErr := SetupTestApp("config", "ctx_test_workspace.yml")
 	if appErr != nil {
 		t.Errorf("Expected no error, got '%v'", appErr)
@@ -320,7 +324,7 @@ func TestWorkSpaces(t *testing.T) {
 }
 
 func TestWorkSpacesInvalidNames(t *testing.T) {
-
+	ChangeToRuntimeDir(t)
 	app, output, appErr := SetupTestApp("config", "ctx_test_ws_naming.yml")
 	if appErr != nil {
 		t.Errorf("Expected no error, got '%v'", appErr)
@@ -474,6 +478,7 @@ func TestRunAndVariables(t *testing.T) {
 // here we work with the same instance of the instance, so we can make sure, that the
 // application keeps the state of the projects and tasks correctly, even it is not re-initialized
 func TestRunAndVariablesFromProjects(t *testing.T) {
+	ChangeToRuntimeDir(t)
 	app, output, appErr := SetupTestApp("projects01", time.Now().Format(time.RFC3339)+"ctx_projects.yml")
 	if appErr != nil {
 		t.Errorf("Expected no error, got '%v'", appErr)

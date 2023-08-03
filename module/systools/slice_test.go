@@ -55,3 +55,23 @@ func TestMap(t *testing.T) {
 	}
 
 }
+
+func TestRemoveFromSlice(t *testing.T) {
+	slice := []string{"hello", "world", "yolo", "swag"}
+
+	slice = systools.RemoveFromSliceOnce(slice, "yolo")
+
+	if systools.SliceContains(slice, "yolo") {
+		t.Error("yolo should be removed")
+	}
+	// but others still there?
+	if !systools.SliceContains(slice, "hello") {
+		t.Error("hello should be found")
+	}
+	if !systools.SliceContains(slice, "world") {
+		t.Error("world should be found")
+	}
+	if !systools.SliceContains(slice, "swag") {
+		t.Error("swag should be found")
+	}
+}

@@ -514,11 +514,15 @@ func (c *SessionCobra) GetDirAddCmd() *cobra.Command {
 			}
 			c.println(" (", ctxout.ForeDarkGrey, len(args), ctxout.CleanTag, " paths)")
 			for _, arg := range args {
+				if arg == "" {
+					return errors.New("empty path is not allowed")
+				}
 				c.println("try ... ", ctxout.ForeLightBlue, arg, ctxout.CleanTag)
 				// we need to check if the path is absolute
 				if !filepath.IsAbs(arg) {
 					c.println("error: ", ctxout.ForeRed, "path is not absolute", ctxout.CleanTag)
-					return errors.New("path is not absolute " + arg)
+					currentDir, _ := filepath.Abs(".")
+					return errors.New("given path for adding is not absolute [" + arg + "], current path:" + currentDir)
 				}
 
 				if ok, err := dirhandle.Exists(arg); !ok || err != nil {
@@ -568,7 +572,7 @@ func (c *SessionCobra) GetDirRmCmd() *cobra.Command {
 				// we need to check if the path is absolute
 				if !filepath.IsAbs(arg) {
 					c.println("error: ", ctxout.ForeRed, "path is not absolute", ctxout.CleanTag)
-					return errors.New("path is not absolute")
+					return errors.New("path is not absolute for dir cmd")
 				}
 
 				// we don not check if the path exists. we just remove it

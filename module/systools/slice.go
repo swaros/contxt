@@ -52,3 +52,13 @@ func MapRangeSortedFn(m map[string]any, fn func(key string, value any)) {
 		fn(k, m[k])
 	}
 }
+
+// RemoveFromSliceOnce removes the first occurence of search in slice
+func RemoveFromSliceOnce(slice []string, search string) []string {
+	for i, str := range slice {
+		if str == search {
+			return append(slice[:i], slice[i+1:]...)
+		}
+	}
+	return slice
+}

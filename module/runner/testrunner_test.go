@@ -3,6 +3,7 @@ package runner_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -18,6 +19,20 @@ var useLastDir = "./"
 var lastExistCode = 0
 var testDirectory = ""
 
+func RuntimeFileInfo(t *testing.T) string {
+	_, filename, _, _ := runtime.Caller(0)
+	return filename
+}
+
+func ChangeToRuntimeDir(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	t.Log("change to dir: " + dir)
+	if err := os.Chdir(dir); err != nil {
+		t.Error(err)
+	}
+}
+
 // this are some helper functions especially for testing the runner
 
 // Setup the test app
@@ -32,7 +47,6 @@ var testDirectory = ""
 //   - backToWorkDir to go back to the testdata directory
 //   - cleanAllFiles to remove the config file
 func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error) {
-
 	file = strings.ReplaceAll(file, ":", "_")
 	file = strings.ReplaceAll(file, "-", "_")
 	file = strings.ReplaceAll(file, "+", "_")
@@ -255,7 +269,7 @@ func assertCobraError(t *testing.T, app *runner.CmdSession, cmd string, expected
 		t.Errorf("Expected error, but got none")
 	} else {
 		if !strings.Contains(err.Error(), expectedMessageContains) {
-			t.Errorf("Expected error message to contain '%s', but got '%s'", expectedMessageContains, err.Error())
+			t.Errorf("Expected error message to contain '%s', but got '%s'", systools.PadString(expectedMessageContains, 80), err.Error())
 		}
 	}
 }
@@ -268,6 +282,97 @@ func assertInOsPath(t *testing.T, path string) {
 	} else {
 		if currentDir != path {
 			t.Errorf("Expected to be in '%v', got '%v'", path, currentDir)
+		}
+	}
+}
+
+var (
+	AcceptFullMatch          = 1
+	AcceptIgnoreLn           = 2
+	AcceptContains           = 3
+	AcceptContainsNoSpecials = 4
+)
+
+func AssertStringFind(search, searchIn string, acceptableLevel int) bool {
+	if search == "" || searchIn == "" {
+		return true
+	}
+	if acceptableLevel >= AcceptFullMatch && searchIn == search {
+		return true
+	}
+	if acceptableLevel >= AcceptIgnoreLn && searchIn == search+"\n" {
+		return true
+	}
+	if acceptableLevel >= AcceptContains && strings.Contains(searchIn, search) {
+		return true
+	}
+
+	if acceptableLevel >= AcceptContainsNoSpecials {
+		search = strings.Replace(search, " ", "", -1)
+		searchIn = strings.Replace(searchIn, " ", "", -1)
+		search = strings.Replace(search, "\n", "", -1)
+		searchIn = strings.Replace(searchIn, "\n", "", -1)
+		search = strings.Replace(search, "\t", "", -1)
+		searchIn = strings.Replace(searchIn, "\t", "", -1)
+		if strings.Contains(searchIn, search) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func AssertStringFindInArray(search string, searchIn []string, acceptableLevel int) int {
+	for index, s := range searchIn {
+		if AssertStringFind(search, s, acceptableLevel) {
+			return index
+		}
+	}
+	return -1
+}
+
+func AssertFileExists(t *testing.T, file string) {
+	t.Helper()
+	file, err := filepath.Abs(file)
+	if err != nil {
+		t.Errorf("Error while trying to get the absolute path, got '%v'", err)
+	}
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		t.Errorf("Expected file '%s' exists, but got '%v'", file, err)
+	}
+}
+
+func AssertFileNotExists(t *testing.T, file string) {
+	t.Helper()
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		return
+	}
+	t.Errorf("Expected file '%s' not exists, but got '%v'", file, nil)
+}
+
+func AssertFileContent(t *testing.T, file string, expectedContent string, acceptableLevel int) {
+	t.Helper()
+	if content, err := os.ReadFile(file); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	} else {
+		fileSlice := strings.Split(string(content), "\n")
+		expectedSlice := strings.Split(expectedContent, "\n")
+		// we want to check anything from the expectations is in the file
+		// but we need to make sure if we also have this in order
+		lastHit := -1
+		for _, expected := range expectedSlice {
+			hitAtIndex := AssertStringFindInArray(expected, fileSlice, acceptableLevel)
+			if hitAtIndex == -1 {
+				t.Errorf("Expected file '%s' should contains '%s' what seems not be the case", file, expected)
+			}
+			if hitAtIndex < lastHit {
+				t.Errorf("Expected file '%s' contains '%s' but not in the right order", file, expected)
+			}
+			// remove the hit from the file slice, so we can check if we have duplicates.
+			// this is also nessary to check if we have the same line multiple times and do
+			// not fail because we found it on the wrong index
+			systools.RemoveFromSliceOnce(fileSlice, fileSlice[hitAtIndex])
+			lastHit = hitAtIndex
 		}
 	}
 }
