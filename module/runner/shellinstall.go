@@ -116,16 +116,15 @@ func (si *shellInstall) FishUpdate(cmd *cobra.Command) {
 }
 
 // FishCompletionUpdate updates the fish completion file
-func (si *shellInstall) FishCompletionUpdate(cmd *cobra.Command) {
+func (si *shellInstall) FishCompletionUpdate(cmd *cobra.Command) error {
 
 	if si.userHomePath != "" {
 		// completion dir Exists ?
 		exists, err := dirhandle.Exists(si.userHomePath + "/.config/fish/completions")
 		if err == nil && !exists {
-			mkErr := os.Mkdir(si.userHomePath+"/.config/fish/completions/", os.ModePerm)
+			mkErr := os.MkdirAll(si.userHomePath+"/.config/fish/completions/", os.ModePerm)
 			if mkErr != nil {
-				si.logger.Critical(mkErr)
-				systools.Exit(systools.ErrorBySystem)
+				return mkErr
 			}
 		}
 	}
@@ -134,9 +133,13 @@ func (si *shellInstall) FishCompletionUpdate(cmd *cobra.Command) {
 
 	origin := cmpltn.String()
 	ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
-	systools.WriteFileIfNotExists(si.userHomePath+"/.config/fish/completions/contxt.fish", origin)
-	systools.WriteFileIfNotExists(si.userHomePath+"/.config/fish/completions/ctx.fish", ctxCmpltn)
-
+	if _, err := systools.WriteFileIfNotExists(si.userHomePath+"/.config/fish/completions/contxt.fish", origin); err != nil {
+		return err
+	}
+	if _, err := systools.WriteFileIfNotExists(si.userHomePath+"/.config/fish/completions/ctx.fish", ctxCmpltn); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (si *shellInstall) FishFunctionUpdate() error {

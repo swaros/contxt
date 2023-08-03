@@ -113,8 +113,24 @@ end`
 	AssertFileContent(t, cnFunctionFile, cnFunc, AcceptContainsNoSpecials)
 }
 
+func TestFishCompletionUpdate(t *testing.T) {
+	defer os.RemoveAll("./test/fakehome/.config")
+	installer := runner.NewShellInstall("./test", mimiclog.NewNullLogger())
+	installer.SetUserHomePath("./test/fakehome")
+
+	cobra := runner.NewCobraCmds()
+	if err := installer.FishCompletionUpdate(cobra.RootCmd); err != nil {
+		t.Error("should not return an error, bot got:", err)
+	}
+
+	completionFile := "test/fakehome/.config/fish/completions/ctx.fish"
+	AssertFileExists(t, completionFile)
+
+	completionFile = "test/fakehome/.config/fish/completions/contxt.fish"
+	AssertFileExists(t, completionFile)
+}
+
 func TestZshFuncDir(t *testing.T) {
-	ChangeToRuntimeDir(t)
 	installer := runner.NewShellInstall("./test", mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
 	fpath := "[ABS]/test/fakehome/.zfunc:[ABS]/test/fakehome/zFuncExists:[ABS]/test/fakehome/zFuncNotExists"
@@ -132,4 +148,25 @@ func TestZshFuncDir(t *testing.T) {
 	} else if path != expectedpath {
 		t.Error("should return \n", expectedpath, ", but got:\n", path, "\n")
 	}
+}
+
+func TestZshUser(t *testing.T) {
+	os.WriteFile("./test/fakehome/.zshrc", []byte("# a fake zshrc"), 0644)
+	defer os.Remove("./test/fakehome/.zshrc")
+	defer os.Remove("./test/fakehome/zFuncExists/_ctx")
+	defer os.Remove("./test/fakehome/zFuncExists/_contxt")
+	installer := runner.NewShellInstall("./test", mimiclog.NewNullLogger())
+	installer.SetUserHomePath("./test/fakehome")
+	fpath := "[ABS]/test/fakehome/.zfunc:[ABS]/test/fakehome/zFuncExists:[ABS]/test/fakehome/zFuncNotExists"
+	abs, _ := filepath.Abs(".")
+	fpath = strings.ReplaceAll(fpath, "[ABS]", abs)
+	os.Setenv("FPATH", fpath)
+
+	cobra := runner.NewCobraCmds()
+
+	if err := installer.ZshUpdate(cobra.RootCmd); err != nil {
+		t.Error("should not return an error, bot got:", err)
+	}
+	AssertFileExists(t, "test/fakehome/zFuncExists/_ctx")
+	AssertFileExists(t, "test/fakehome/zFuncExists/_contxt")
 }
