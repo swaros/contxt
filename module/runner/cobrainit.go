@@ -47,6 +47,7 @@ type CobraOptions struct {
 	LogLevel        string
 	DirAll          bool // dir flag for show all dirs in any workspace
 	ShowFullTargets bool
+	ShowBuild       bool
 }
 
 // this is the main entry point for the cobra command
@@ -711,10 +712,15 @@ func (c *SessionCobra) GetVersionCmd() *cobra.Command {
 		Long:  `All software has versions. This is contxt's`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c.checkDefaultFlags(cmd, args)
-			c.println("contxt version:", ctxout.ForeGreen, configure.GetVersion(), " build ", configure.GetBuild(), ctxout.CleanTag)
+			if c.Options.ShowBuild {
+				c.println("contxt version: ", configure.GetVersion(), " build ", configure.GetBuild())
+			} else {
+				c.println("contxt version: ", configure.GetVersion())
+			}
 			return nil
 		},
 	}
+	vCmd.Flags().BoolVarP(&c.Options.ShowBuild, "build", "b", false, "show build information")
 	return vCmd
 }
 
