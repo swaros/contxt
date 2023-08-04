@@ -27,6 +27,10 @@ config:
       coverage-report: ""
       depbot-file: .github/dependabot.yml
       licence_keyword: "MIT License"
+      docker-tag: "{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}"
+      docker-registry: "swaros"
+      docker-image: "contxt"
+      docker-image-tag: "${docker-registry}/${docker-image}:${docker-tag}"
 
 ###### contxt welcome message
 ###### just to display default variables
@@ -450,9 +454,9 @@ task:
       - build
     script:
       - "#@var-to-file docker Dockerfile.tmp"
-      - docker build -t contxt -f Dockerfile.tmp .
-      - echo "docker run -it -v ${CTX_PWD}:/etc/contxt contxt run say-hello"
-      - docker run -i -v ${CTX_PWD}:/etc/contxt contxt run say-hello
+      - docker build -t ${docker-image-tag} -f Dockerfile.tmp .
+      - echo "docker run -it -v ${CTX_PWD}:/etc/contxt  ${docker-image-tag} run say-hello"
+      - docker run -i -v ${CTX_PWD}:/etc/contxt  ${docker-image-tag} run say-hello
 
 ## a simple hello world
 ## just to test the docker image is working
