@@ -27,6 +27,7 @@ config:
       coverage-report: ""
       depbot-file: .github/dependabot.yml
       licence_keyword: "MIT License"
+      build-info: "-release"
       docker-tag: "{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}"
       docker-registry: "swaros"
       docker-image: "contxt"
@@ -56,8 +57,11 @@ task:
 {{- end }}
     next:
       - go-check
+
+## set the build version to the development version
   - id: dev
     variables:
+      build-info: "-dev"
       build-main-file: {{$.development.main}}
 ######
   - id: dev-external
@@ -388,7 +392,7 @@ task:
     require:
       system: linux
     script:
-      - "#@var build-hash date -u +.%Y%m%d.%H%M%S"
+      - "#@var build-hash date -u +.%Y%m%d.%H%M%S-linux${build-info}"
       - "#@set bin-out contxt"
 
   - id: set-version
@@ -401,7 +405,7 @@ task:
     require:
       system: windows
     script:
-      - "#@var build-hash Get-Date -UFormat \"%m.%d.%Y.%R\""
+      - "#@var build-hash Get-Date -UFormat \"%m.%d.%Y.%R-windows${build-info}\""
       - "#@set bin-out contxt.exe"
 
   - id: set-version
@@ -454,9 +458,9 @@ task:
       - build
     script:
       - "#@var-to-file docker Dockerfile.tmp"
-      - docker build -t ${docker-image-tag} -f Dockerfile.tmp .
-      - echo "docker run -it -v ${CTX_PWD}:/etc/contxt  ${docker-image-tag} run say-hello"
-      - docker run -i -v ${CTX_PWD}:/etc/contxt  ${docker-image-tag} run say-hello
+      - docker build -t ${docker-image-tag}${build-info} -f Dockerfile.tmp .
+      - echo "docker run -it -v ${CTX_PWD}:/etc/contxt  ${docker-image-tag}${build-info} run say-hello"
+      - docker run -i -v ${CTX_PWD}:/etc/contxt  ${docker-image-tag}${build-info} run say-hello
 
 ## a simple hello world
 ## just to test the docker image is working
