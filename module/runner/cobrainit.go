@@ -43,6 +43,7 @@ type SessionCobra struct {
 
 type CobraOptions struct {
 	ShowColors      bool // flag for show colors in output
+	DisableTable    bool // flag for disable table output
 	ShowHints       bool
 	LogLevel        string
 	DirAll          bool // dir flag for show all dirs in any workspace
@@ -77,6 +78,7 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.ShowColors, "coloroff", "c", false, "disable usage of colors in output")
 	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.ShowHints, "nohints", "n", false, "disable printing hints")
 	c.RootCmd.PersistentFlags().StringVar(&c.Options.LogLevel, "loglevel", "FATAL", "set loglevel")
+	c.RootCmd.PersistentFlags().BoolVar(&c.Options.DisableTable, "notable", false, "disable table format output")
 
 	c.RootCmd.AddCommand(
 		c.GetWorkspaceCmd(),
@@ -755,6 +757,11 @@ func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {
 	if err := c.ExternalCmdHndl.SetLogLevel(c.Options.LogLevel); err != nil {
 		c.log().Error(err)
 		systools.Exit(systools.ErrorInitApp)
+	}
+
+	if c.Options.DisableTable {
+		// overwrite the table plugin with a disabled one
+		ctxout.UpdateFilterByRef(ctxout.NewTabOut(), ctxout.PostFilterInfo{Disabled: true})
 	}
 }
 

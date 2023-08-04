@@ -42,10 +42,30 @@ func GetPostFilters() []PostFilter {
 	return filters
 }
 
+func GetPostFilter(nameOfFilter string) PostFilter {
+	return postFilters[nameOfFilter]
+}
+
+func GetPostFilterbyRef(filter PostFilter) PostFilter {
+	return GetPostFilter(fmt.Sprintf("%T", filter))
+}
+
 // ClearPostFilters clears the list of post filters
 func ClearPostFilters() {
 	postFilters = make(map[string]PostFilter)
 	filterOrder = []string{}
+}
+
+func UpdateFilterByName(nameOfFilter string, info PostFilterInfo) error {
+	if postFilters[nameOfFilter] == nil {
+		return fmt.Errorf("filter [%s] not found", nameOfFilter)
+	}
+	postFilters[nameOfFilter].Update(info)
+	return nil
+}
+
+func UpdateFilterByRef(filter PostFilter, info PostFilterInfo) error {
+	return UpdateFilterByName(fmt.Sprintf("%T", filter), info)
 }
 
 // Updates all registered post filters with the new terminal information
