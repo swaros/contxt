@@ -86,6 +86,7 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 		c.GetRunCmd(),
 		c.GetLintCmd(),
 		c.GetInstallCmd(),
+		c.GetVersionCmd(),
 	)
 
 	return nil
@@ -701,6 +702,20 @@ func (c *SessionCobra) GetInstallPowershellCmd() *cobra.Command {
 		},
 	}
 	return iCmd
+}
+
+func (c *SessionCobra) GetVersionCmd() *cobra.Command {
+	vCmd := &cobra.Command{
+		Use:   "version",
+		Short: "print the version number of contxt",
+		Long:  `All software has versions. This is contxt's`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.checkDefaultFlags(cmd, args)
+			c.println("contxt version:", ctxout.ForeGreen, configure.GetVersion(), " build ", configure.GetBuild(), ctxout.CleanTag)
+			return nil
+		},
+	}
+	return vCmd
 }
 
 // log returns the logger
