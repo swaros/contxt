@@ -742,9 +742,10 @@ func (c *SessionCobra) println(msg ...interface{}) {
 }
 
 func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {
+	envColorOff := os.Getenv("CTX_COLOROFF")
 	// TODO: why this way? is the global flag not working?
 	color, err := cmd.Flags().GetBool("coloroff")
-	if err == nil && color {
+	if err == nil && (color || envColorOff == "true") {
 		behave := ctxout.GetBehavior()
 		behave.NoColored = true
 		ctxout.SetBehavior(behave)
@@ -759,6 +760,17 @@ func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {
 		systools.Exit(systools.ErrorInitApp)
 	}
 
+	// force the log level by env var
+	envLogLevel := os.Getenv("CTX_LOGLEVEL")
+	if envLogLevel != "" {
+		c.Options.LogLevel = envLogLevel
+	}
+
+	// force the disable table flag by env var
+	envDisableTable := os.Getenv("CTX_DISABLE_TABLE")
+	if envDisableTable == "true" {
+		c.Options.DisableTable = true
+	}
 	if c.Options.DisableTable {
 		// overwrite the table plugin with a disabled one
 		ctxout.UpdateFilterByRef(ctxout.NewTabOut(), ctxout.PostFilterInfo{Disabled: true})
