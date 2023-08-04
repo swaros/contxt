@@ -20,6 +20,7 @@ config:
     - ./imports/go_test.tpl test-action
     - ./imports/codehead.tpl codehead
   variables:
+      build-main-file: {{$.release.main}}
       include-dev-externals: ""
       configmodul: github.com/swaros/contxt/module/configure
       coverage-report: ""
@@ -36,6 +37,7 @@ task:
       - echo " --- targets build version         [ - {{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}} - ]"
       - echo " --- self version                  [ - ${CTX_VERSION} - ]"
       - echo " --- operating system              [ - ${CTX_OS} - ]"
+      - echo " --- build main file               [ - ${build-main-file} - ]"
 {{- if $.WS0_contxt_root}} # always check if is set. without project info, this is not exists
       - echo " --- WS0_contxt_root = go/template [ - {{$.WS0_contxt_root}} - ]"
 {{- end}}
@@ -49,7 +51,9 @@ task:
 {{- end }}
     next:
       - go-check
-
+  - id: dev
+    variables:
+      build-main-file: {{$.development.main}}
 ######
   - id: dev-external
     variables:
@@ -422,10 +426,12 @@ task:
     next:
       - verify-build
     script:
-      - echo "build start----"
-      - echo "   target -- ${bin-out}"
-      - go build -ldflags "-X ${configmodul}.minversion=${minor-version} -X ${configmodul}.midversion=${mid-version} -X ${configmodul}.mainversion=${main-version} -X ${configmodul}.build=${build-hash}" -o ./bin/${bin-out} {{$.release.main}}
-      - echo "   done   -- build "
+      - echo "start the build"
+      - echo "   target  --> ${bin-out}"
+      - echo "   version --> ${main-version}.${mid-version}.${minor-version} ${build-hash}"
+      - echo "   main    --> ${build-main-file}"
+      - go build -ldflags "-X ${configmodul}.minversion=${minor-version} -X ${configmodul}.midversion=${mid-version} -X ${configmodul}.mainversion=${main-version} -X ${configmodul}.build=${build-hash}" -o ./bin/${bin-out} ${build-main-file}
+      - echo "   build   <-- done "
 
   - id: verify-build
     options:

@@ -85,6 +85,7 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 		c.GetInteractiveCmd(),
 		c.GetRunCmd(),
 		c.GetLintCmd(),
+		c.GetInstallCmd(),
 	)
 
 	return nil
@@ -591,6 +592,115 @@ func (c *SessionCobra) GetDirRmCmd() *cobra.Command {
 		},
 	}
 	return rCmd
+}
+
+func (c *SessionCobra) GetInstallCmd() *cobra.Command {
+	iCmd := &cobra.Command{
+		Use:   "install",
+		Short: "install shell support",
+		Long: `install shell support for different shells.
+		supported shells are: bash, zsh, fish, powershell`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.checkDefaultFlags(cmd, args)
+			c.print("install shell support")
+			return nil
+		},
+	}
+	iCmd.AddCommand(c.GetInstallBashCmd())
+	iCmd.AddCommand(c.GetInstallZshCmd())
+	iCmd.AddCommand(c.GetInstallFishCmd())
+	iCmd.AddCommand(c.GetInstallPowershellCmd())
+	return iCmd
+}
+
+func (c *SessionCobra) GetInstallBashCmd() *cobra.Command {
+	iCmd := &cobra.Command{
+		Use:   "bash",
+		Short: "install shell support for bash",
+		Long: `install shell support for bash.
+		this is done by adding some functions and a source command to the bashrc file.
+		Afterwards you can use the ctx command in your bash shell instead of contxt.
+		So after an switch command, you will automatically change the dir to the new workspace.
+		You can also use the cn command to change one of the assigned paths to the current workspace.`,
+
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.ExternalCmdHndl.MainInit()
+			installer := NewShellInstall(c.log())
+			if err := installer.BashUserInstall(); err != nil {
+				c.log().Error(err)
+				return err
+			}
+			return nil
+		},
+	}
+	return iCmd
+}
+
+func (c *SessionCobra) GetInstallZshCmd() *cobra.Command {
+	iCmd := &cobra.Command{
+		Use:   "zsh",
+		Short: "install shell support for zsh",
+		Long: `install shell support for zsh.
+		this is done by adding some functions and a source command to the zshrc file.
+		Afterwards you can use the ctx command in your zsh shell instead of contxt.
+		So after an switch command, you will automatically change the dir to the new workspace.
+		You can also use the cn command to change one of the assigned paths to the current workspace.`,
+
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.ExternalCmdHndl.MainInit()
+			installer := NewShellInstall(c.log())
+			if err := installer.ZshUpdate(c.RootCmd); err != nil {
+				c.log().Error(err)
+				return err
+			}
+			return nil
+		},
+	}
+	return iCmd
+}
+
+func (c *SessionCobra) GetInstallFishCmd() *cobra.Command {
+	iCmd := &cobra.Command{
+		Use:   "fish",
+		Short: "install shell support for fish",
+		Long: `install shell support for fish.
+		this is done by adding some functions and a source command to the fish config file.
+		Afterwards you can use the ctx command in your fish shell instead of contxt.
+		So after an switch command, you will automatically change the dir to the new workspace.
+		You can also use the cn command to change one of the assigned paths to the current workspace.`,
+
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.ExternalCmdHndl.MainInit()
+			installer := NewShellInstall(c.log())
+			if err := installer.FishUpdate(c.RootCmd); err != nil {
+				c.log().Error(err)
+				return err
+			}
+			return nil
+		},
+	}
+	return iCmd
+}
+
+func (c *SessionCobra) GetInstallPowershellCmd() *cobra.Command {
+	iCmd := &cobra.Command{
+		Use:   "powershell",
+		Short: "install shell support for powershell",
+		Long: `install shell support for powershell.
+		this is done by adding some functions and a source command to the powershell profile file.
+		Afterwards you can use the ctx command in your powershell shell instead of contxt.		
+		You can also use the cn command to change one of the assigned paths to the current workspace.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.ExternalCmdHndl.MainInit()
+			installer := NewShellInstall(c.log())
+			if err := installer.PwrShellUpdate(c.RootCmd); err != nil {
+				c.log().Error(err)
+				return err
+			}
+			return nil
+		},
+	}
+	return iCmd
 }
 
 // log returns the logger

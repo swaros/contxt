@@ -11,19 +11,19 @@ import (
 )
 
 func TestBashRcInstallFails(t *testing.T) {
-	installer := runner.NewShellInstall("./test", mimiclog.NewNullLogger())
+	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test")
-	if err := installer.BashUser(); err == nil {
+	if err := installer.BashUserInstall(); err == nil {
 		t.Error("should return an error, because the test folder do not contains a .bashrc file")
 	}
 }
 
 func TestBashRcInstall(t *testing.T) {
 	defer os.RemoveAll("./test/fakehome/.bashrc")
-	installer := runner.NewShellInstall("./test", mimiclog.NewNullLogger())
+	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
 	os.WriteFile("./test/fakehome/.bashrc", []byte("# a fake bashrc"), 0644)
-	if err := installer.BashUser(); err != nil {
+	if err := installer.BashUserInstall(); err != nil {
 		t.Error("should not return an error, bot got:", err)
 	}
 	expected := `# a fake bashrc
@@ -54,19 +54,19 @@ source <(ctxcompletion)
 }
 
 func TestZshRcInstallFails(t *testing.T) {
-	installer := runner.NewShellInstall("./test", mimiclog.NewNullLogger())
+	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test")
-	if err := installer.ZshUser(); err == nil {
+	if err := installer.ZshUserInstall(); err == nil {
 		t.Error("should return an error, because the test folder do not contains a .zshrc file")
 	}
 }
 
 func TestZshRcInstall(t *testing.T) {
 	defer os.RemoveAll("./test/fakehome/.zshrc")
-	installer := runner.NewShellInstall("./test", mimiclog.NewNullLogger())
+	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
 	os.WriteFile("./test/fakehome/.zshrc", []byte("# a fake zshrc"), 0644)
-	if err := installer.ZshUser(); err != nil {
+	if err := installer.ZshUserInstall(); err != nil {
 		t.Error("should not return an error, bot got:", err)
 	}
 	expected := `# a fake zshrc
@@ -89,7 +89,7 @@ func TestZshRcInstall(t *testing.T) {
 
 func TestFishRcInstall(t *testing.T) {
 	defer os.RemoveAll("./test/fakehome/.config")
-	installer := runner.NewShellInstall("./test", mimiclog.NewNullLogger())
+	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
 	//os.WriteFile("./test/fakehome/.config/fish/config.fish", []byte("# a fake fishrc"), 0644)
 	if err := installer.FishFunctionUpdate(); err != nil {
@@ -115,7 +115,7 @@ end`
 
 func TestFishCompletionUpdate(t *testing.T) {
 	defer os.RemoveAll("./test/fakehome/.config")
-	installer := runner.NewShellInstall("./test", mimiclog.NewNullLogger())
+	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
 
 	cobra := runner.NewCobraCmds()
@@ -131,7 +131,7 @@ func TestFishCompletionUpdate(t *testing.T) {
 }
 
 func TestZshFuncDir(t *testing.T) {
-	installer := runner.NewShellInstall("./test", mimiclog.NewNullLogger())
+	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
 	fpath := "[ABS]/test/fakehome/.zfunc:[ABS]/test/fakehome/zFuncExists:[ABS]/test/fakehome/zFuncNotExists"
 	abs, _ := filepath.Abs(".")
@@ -155,7 +155,7 @@ func TestZshUser(t *testing.T) {
 	defer os.Remove("./test/fakehome/.zshrc")
 	defer os.Remove("./test/fakehome/zFuncExists/_ctx")
 	defer os.Remove("./test/fakehome/zFuncExists/_contxt")
-	installer := runner.NewShellInstall("./test", mimiclog.NewNullLogger())
+	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
 	fpath := "[ABS]/test/fakehome/.zfunc:[ABS]/test/fakehome/zFuncExists:[ABS]/test/fakehome/zFuncNotExists"
 	abs, _ := filepath.Abs(".")

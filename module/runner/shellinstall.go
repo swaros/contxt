@@ -45,7 +45,6 @@ import (
 // function files for the shell
 
 type shellInstall struct {
-	contxtHomePath    string
 	pwrShellPathCache string
 	userHomePath      string
 	logger            mimiclog.Logger
@@ -60,17 +59,12 @@ func UserDirectory() (string, error) {
 }
 
 // NewShellInstall returns a new shellInstall struct
-func NewShellInstall(basePath string, logger mimiclog.Logger) *shellInstall {
+func NewShellInstall(logger mimiclog.Logger) *shellInstall {
 	userPath, _ := UserDirectory()
 	return &shellInstall{
-		contxtHomePath: basePath,
-		userHomePath:   userPath,
-		logger:         logger,
+		userHomePath: userPath,
+		logger:       logger,
 	}
-}
-
-func (si *shellInstall) SetContxtBasePath(basePath string) {
-	si.contxtHomePath = basePath
 }
 
 func (si *shellInstall) SetUserHomePath(userHomePath string) {
@@ -110,9 +104,11 @@ func updateExistingFile(filename, content, doNotContain string) (bool, string) {
 
 // FishFunctionUpdate updates the fish function file
 // and adds code completion for the fish shell
-func (si *shellInstall) FishUpdate(cmd *cobra.Command) {
-	si.FishFunctionUpdate()
-	si.FishCompletionUpdate(cmd)
+func (si *shellInstall) FishUpdate(cmd *cobra.Command) error {
+	if err := si.FishFunctionUpdate(); err != nil {
+		return err
+	}
+	return si.FishCompletionUpdate(cmd)
 }
 
 // FishCompletionUpdate updates the fish completion file
@@ -190,7 +186,7 @@ end`
 	return nil
 }
 
-func (si *shellInstall) BashUser() error {
+func (si *shellInstall) BashUserInstall() error {
 	bashrcAdd := `
 ### begin contxt bashrc
 function cn() { cd $(contxt dir find "$@"); }
@@ -232,7 +228,7 @@ source <(ctxcompletion)
 }
 
 func (si *shellInstall) ZshUpdate(cmd *cobra.Command) error {
-	if err := si.ZshUser(); err != nil {
+	if err := si.ZshUserInstall(); err != nil {
 		return err
 	}
 	return si.updateZshFunctions(cmd)
@@ -284,7 +280,7 @@ func (si *shellInstall) updateZshFunctions(cmd *cobra.Command) error {
 	return nil
 }
 
-func (si *shellInstall) ZshUser() error {
+func (si *shellInstall) ZshUserInstall() error {
 	zshrcAdd := `
 ### begin contxt zshrc
 function cn() { cd $(contxt dir find "$@"); }
@@ -393,7 +389,7 @@ func (si *shellInstall) PwrShellCompletionUpdate(cmd *cobra.Command) error {
 
 		ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
 
-		ctxPowerShellPath := si.contxtHomePath + "/powershell"
+		ctxPowerShellPath := si.userHomePath + "/.context/powershell"
 		if exists, err := systools.Exists(ctxPowerShellPath); err != nil || !exists {
 			if err := os.MkdirAll(ctxPowerShellPath, 0755); err != nil {
 				return err
