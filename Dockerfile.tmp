@@ -1,0 +1,7 @@
+FROM ubuntu:latest
+COPY ./bin/contxt /usr/bin/
+RUN chmod +x /usr/bin/contxt && \
+    mkdir -p /etc/contxt
+WORKDIR /etc/contxt
+
+ENTRYPOINT ["/usr/bin/contxt"]

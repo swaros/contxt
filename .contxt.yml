@@ -19,6 +19,7 @@ config:
     - ./imports/go_build.tpl build-action
     - ./imports/go_test.tpl test-action
     - ./imports/codehead.tpl codehead
+    - ./imports/Dockerfile.ubuntu docker
   variables:
       build-main-file: {{$.release.main}}
       include-dev-externals: ""
@@ -443,6 +444,21 @@ task:
     script:
        - echo "verifiy build version. expected [${main-version}.${mid-version}.${minor-version} build ${build-hash}]"
        - bin/${bin-out} version
+
+  - id: build-docker
+    needs:
+      - build
+    script:
+      - "#@var-to-file docker Dockerfile.tmp"
+      - docker build -t contxt -f Dockerfile.tmp .
+      - echo "docker run -it -v ${CTX_PWD}:/etc/contxt contxt run say-hello"
+      - docker run -i -v ${CTX_PWD}:/etc/contxt contxt run say-hello
+
+## a simple hello world
+## just to test the docker image is working
+  - id: say-hello
+    script:
+      - echo "hello world"
 
 ## install local. this is used by the Makefile
 ## because contxt can not update himself while it is running,
