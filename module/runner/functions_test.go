@@ -933,11 +933,9 @@ Task.Options.Stickcursor false MissingEntry: level[5] @stickcursor (Task.Options
 Task.Options.TickTimeNeeds 0 MissingEntry: level[5] @tickTimeNeeds (Task.Options.TickTimeNeeds)int
 Task.Options.TimeoutNeeds 0 MissingEntry: level[5] @timeoutNeeds (Task.Options.TimeoutNeeds)int
 Task.Options.WorkingDir  MissingEntry: level[5] @workingdir (Task.Options.WorkingDir)string
-Task.Requires  MissingEntry: level[5] @require (Task.Requires)undefined
 Task.Requires.Environment nil MissingEntry: level[5] @environment (Task.Requires.Environment)string
 Task.Requires.Exists nil MissingEntry: level[5] @exists (Task.Requires.Exists)string
 Task.Requires.NotExists nil MissingEntry: level[5] @notExists (Task.Requires.NotExists)string
-Task.Requires.System  MissingEntry: level[5] @system (Task.Requires.System)string
 Task.Requires.Variables nil MissingEntry: level[5] @variables (Task.Requires.Variables)string
 Task.RunTargets nil MissingEntry: level[5] @runTargets (Task.RunTargets)string
 Task.Stopreasons  MissingEntry: level[5] @stopreasons (Task.Stopreasons)undefined

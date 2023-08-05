@@ -17,9 +17,18 @@ task:
   {{ end }}
 
   - id: letter
+    require:
+      system: linux
     script:
       - |
         cat << EOF
         ${letter}
         EOF
+
+  - id: letter
+    require:
+      system: windows
+    script:
+      - "#@var-to-file letter letter.tmp"
+      - type letter.tmp
     

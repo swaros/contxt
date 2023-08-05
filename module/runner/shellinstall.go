@@ -24,7 +24,6 @@ package runner
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"log"
 	"path/filepath"
 
@@ -244,12 +243,13 @@ func (si *shellInstall) ZshFuncDir() (string, error) {
 		for _, path := range paths {
 			fileStats, err := os.Stat(path)
 			if err != nil {
-				fmt.Println(err)
 				continue
 			}
 			permissions := fileStats.Mode().Perm()
 			if permissions&0b110000000 == 0b110000000 {
-				return path, nil
+				if aPath, err := filepath.Abs(path); err == nil {
+					return aPath, nil
+				}
 			}
 		}
 		return "", errors.New("could not find zsh function dir that is accessible for writing. [" + fpath + "]")
