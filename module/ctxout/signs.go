@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package ctxout
+package ctxout
 
 // defining an sign that can be used to display information as an sign.
 // this sign is an utf-8 character. and a fallback string that is used

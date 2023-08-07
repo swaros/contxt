@@ -49,6 +49,7 @@ type CobraOptions struct {
 	DirAll          bool // dir flag for show all dirs in any workspace
 	ShowFullTargets bool
 	ShowBuild       bool
+	LastDirIndex    bool
 }
 
 // this is the main entry point for the cobra command
@@ -434,6 +435,13 @@ func (c *SessionCobra) GetDirCmd() *cobra.Command {
 				return
 			}
 
+			if c.Options.LastDirIndex {
+				pathStr := configure.GetGlobalConfig().GetActivePath(".")
+				fmt.Println(pathStr)
+				c.Options.LastDirIndex = false // one time usage
+				return
+			}
+
 			if len(args) == 0 {
 				c.log().Debug("show all paths in any workspace", c.Options.DirAll)
 				current := configure.GetGlobalConfig().UsedV2Config.CurrentSet
@@ -457,6 +465,7 @@ func (c *SessionCobra) GetDirCmd() *cobra.Command {
 	}
 	dCmd.Flags().BoolVarP(&c.Options.DirAll, "all", "a", false, "show all paths in any workspace")
 	dCmd.Flags().BoolVarP(&c.Options.ShowFullTargets, "full", "f", false, "show full amount of targets")
+	dCmd.Flags().BoolVarP(&c.Options.LastDirIndex, "last", "l", false, "show last used path")
 	dCmd.AddCommand(c.GetDirFindCmd(), c.GetDirAddCmd(), c.GetDirRmCmd(), c.GetDirLsCmd())
 	return dCmd
 }
