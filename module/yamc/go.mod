@@ -3,7 +3,7 @@ module github.com/swaros/contxt/module/yamc
 go 1.18
 
 require (
-	github.com/tidwall/gjson v1.15.0
+	github.com/tidwall/gjson v1.16.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
