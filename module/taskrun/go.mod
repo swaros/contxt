@@ -44,7 +44,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0
 	github.com/rivo/tview v0.0.0-20221117065207-09f052e6ca98
 	github.com/spf13/cobra v1.7.0
-	github.com/tidwall/gjson v1.15.0
+	github.com/tidwall/gjson v1.17.0
 	golang.org/x/sys v0.11.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
