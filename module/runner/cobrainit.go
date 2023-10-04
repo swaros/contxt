@@ -50,6 +50,7 @@ type CobraOptions struct {
 	ShowFullTargets bool
 	ShowBuild       bool
 	LastDirIndex    bool
+	InContext       string // flag to switch to a workspace in the context of another workspace
 }
 
 // this is the main entry point for the cobra command
@@ -80,6 +81,7 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.ShowHints, "nohints", "n", false, "disable printing hints")
 	c.RootCmd.PersistentFlags().StringVar(&c.Options.LogLevel, "loglevel", "FATAL", "set loglevel")
 	c.RootCmd.PersistentFlags().BoolVar(&c.Options.DisableTable, "notable", false, "disable table format output")
+	c.RootCmd.PersistentFlags().StringVar(&c.Options.InContext, "incontext", "", "switch to a workspace in the context of another workspace")
 
 	c.RootCmd.AddCommand(
 		c.GetWorkspaceCmd(),
@@ -91,9 +93,39 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 		c.GetLintCmd(),
 		c.GetInstallCmd(),
 		c.GetVersionCmd(),
+		c.getSharedCmd(),
 	)
 
 	return nil
+}
+
+func (c *SessionCobra) getSharedCmd() *cobra.Command {
+	shared := &cobra.Command{
+		Use:   "shared",
+		Short: "manage shared libraries",
+		Long:  "manage shared libraries",
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) == 0 {
+				cmd.Help()
+			}
+		},
+	}
+	shared.AddCommand(
+		c.sharedCmdList(),
+	)
+	return shared
+}
+
+func (c *SessionCobra) sharedCmdList() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "show all shared libraries",
+		Long:  "show all shared libraries",
+		Run: func(cmd *cobra.Command, args []string) {
+			c.checkDefaultFlags(cmd, args)
+			c.ExternalCmdHndl.PrintShared()
+		},
+	}
 }
 
 // til here we define the commands
@@ -783,6 +815,25 @@ func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {
 	if c.Options.DisableTable {
 		// overwrite the table plugin with a disabled one
 		ctxout.UpdateFilterByRef(ctxout.NewTabOut(), ctxout.PostFilterInfo{Disabled: true})
+	}
+
+	// if this flag is set, we do change into the workspace and using the current directory there.
+	// so any command will be executed in the context of the workspace
+	if c.Options.InContext != "" {
+		c.println("working in context of ", ctxout.ForeLightBlue, c.Options.InContext, ctxout.CleanTag)
+		configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+			if c.Options.InContext == index {
+
+				path := configure.GetGlobalConfig().GetActivePath("")
+				if path != "" {
+					c.println("going to path: ", ctxout.ForeLightBlue, path, ctxout.CleanTag)
+					os.Chdir(path)
+					// important to set the default variables in the context of the workspace
+					c.ExternalCmdHndl.MainInit()
+				}
+			}
+		})
+
 	}
 }
 

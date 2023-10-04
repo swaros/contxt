@@ -667,3 +667,12 @@ func (c *CmdExecutorImpl) InteractiveScreen() {
 	}
 	shellRunner(c)
 }
+
+// PrintShared print all shared paths in a simple list
+func (c *CmdExecutorImpl) PrintShared() {
+	sharedRun := NewSharedHelper()
+	sharedDirs, _ := sharedRun.ListUseCases(false)
+	for _, sharedPath := range sharedDirs {
+		c.Println(sharedPath)
+	}
+}

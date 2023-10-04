@@ -277,6 +277,7 @@ func (sh *SharedHelper) UpdateUseCase(fullPath string) {
 	}
 }
 
+// ListUseCases returns a list of all available shared usecases
 func (sh *SharedHelper) ListUseCases(fullPath bool) ([]string, error) {
 	var sharedDirs []string
 	sharedPath := sh.GetSharedPath("")
