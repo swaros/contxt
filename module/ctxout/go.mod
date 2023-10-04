@@ -3,7 +3,7 @@ module github.com/swaros/contxt/module/ctxout
 go 1.18
 
 require (
-	atomicgo.dev/cursor v0.1.3
+	atomicgo.dev/cursor v0.2.0
 	github.com/google/uuid v1.3.0
 	github.com/muesli/reflow v0.3.0
 	github.com/rivo/uniseg v0.4.4
