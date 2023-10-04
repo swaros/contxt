@@ -204,7 +204,6 @@ if these task are defined
 `,
 		RunE: func(_ *cobra.Command, args []string) error {
 			current := dirhandle.Pushd()
-			c.ExternalCmdHndl.FindWorkspaceInfoByTemplate(nil)
 			current.Popd()
 			var cmderr error
 			found := false
