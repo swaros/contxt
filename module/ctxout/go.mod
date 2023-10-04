@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	atomicgo.dev/cursor v0.2.0
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/muesli/reflow v0.3.0
 	github.com/rivo/uniseg v0.4.4
 	github.com/swaros/contxt/module/systools v0.0.0-20230531064521-09943a54576e
