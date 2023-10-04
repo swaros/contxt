@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package configure
+package configure
 
 import (
 	"errors"
@@ -257,6 +257,19 @@ func (c *contxtConfigure) ChangeWorkspace(workspace string, oldspace func(string
 	} else {
 		return errors.New("changing workspace failed")
 	}
+}
+
+// ChangeWorkspaceNotSaved changes the current workspace without saving the configuration.
+// it also do not execute any callbacks while changing the workspace
+func (c *contxtConfigure) ChangeWorkspaceNotSaved(workspace string) error {
+	_, exists := c.getConfig(workspace)
+	if !exists {
+		return errors.New("workspace does not exists")
+	}
+	// change the current workspace
+	c.UsedV2Config.CurrentSet = workspace
+	return nil
+
 }
 
 // RemoveWorkspace a workspace from the configuration

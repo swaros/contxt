@@ -50,7 +50,8 @@ type CobraOptions struct {
 	ShowFullTargets bool
 	ShowBuild       bool
 	LastDirIndex    bool
-	InContext       string // flag to switch to a workspace in the context of another workspace
+	UseContext      string // flag to switch to a workspace in the context of another workspace
+	InContext       bool   // flag to use the current workspace as context
 }
 
 // this is the main entry point for the cobra command
@@ -81,7 +82,8 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.ShowHints, "nohints", "n", false, "disable printing hints")
 	c.RootCmd.PersistentFlags().StringVar(&c.Options.LogLevel, "loglevel", "FATAL", "set loglevel")
 	c.RootCmd.PersistentFlags().BoolVar(&c.Options.DisableTable, "notable", false, "disable table format output")
-	c.RootCmd.PersistentFlags().StringVar(&c.Options.InContext, "incontext", "", "switch to a workspace in the context of another workspace")
+	c.RootCmd.PersistentFlags().StringVar(&c.Options.UseContext, "usecontext", "", "use a different workspace as context")
+	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.InContext, "incontext", "I", false, "use the current workspace as context")
 
 	c.RootCmd.AddCommand(
 		c.GetWorkspaceCmd(),
@@ -816,18 +818,39 @@ func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {
 		ctxout.UpdateFilterByRef(ctxout.NewTabOut(), ctxout.PostFilterInfo{Disabled: true})
 	}
 
+	// forces to change to the current used workspace and the assosiated path
+	if c.Options.InContext {
+		if c.Options.UseContext != "" {
+			c.log().Critical("use of --incontext and --usecontext is not allowed")
+			systools.Exit(systools.ErrorInitApp)
+		}
+		c.log().Info("force to change to the current workspace and path", configure.GetGlobalConfig().CurrentWorkspace())
+		path := configure.GetGlobalConfig().GetActivePath("")
+		if path != "" {
+			c.log().Info("change to path", path)
+			os.Chdir(path)
+			// important to set the default variables in the context of the used workspace
+			c.ExternalCmdHndl.MainInit()
+		}
+	}
+
 	// if this flag is set, we do change into the workspace and using the current directory there.
 	// so any command will be executed in the context of the workspace
-	if c.Options.InContext != "" {
-		c.println("working in context of ", ctxout.ForeLightBlue, c.Options.InContext, ctxout.CleanTag)
+	if c.Options.UseContext != "" {
+		c.log().Info("working in context of ", c.Options.UseContext)
 		configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
-			if c.Options.InContext == index {
+			if c.Options.UseContext == index {
+
+				if err := configure.GetGlobalConfig().ChangeWorkspaceNotSaved(index); err != nil {
+					c.log().Error("error while trying to change workspace", err)
+					systools.Exit(systools.ErrorWhileLoadCfg)
+				}
 
 				path := configure.GetGlobalConfig().GetActivePath("")
 				if path != "" {
 					c.println("going to path: ", ctxout.ForeLightBlue, path, ctxout.CleanTag)
 					os.Chdir(path)
-					// important to set the default variables in the context of the workspace
+					// important to set the default variables in the context of the used workspace
 					c.ExternalCmdHndl.MainInit()
 				}
 			}
