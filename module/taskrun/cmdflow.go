@@ -34,12 +34,34 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/swaros/contxt/module/awaitgroup"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/trigger"
 	"github.com/swaros/manout"
 
 	"github.com/swaros/contxt/module/systools"
 
 	"github.com/swaros/contxt/module/configure"
 )
+
+const (
+	EventAllLines         = "ExecuteScriptLine" // EventAllLines is the event name for sending all lines
+	EventTaskStatusUpdate = "TaskStatus"        // EventTaskStatusUpdate is the event name for sending task status updates
+)
+
+type EventScriptLine struct {
+	Line   string
+	Target string
+	Error  error
+}
+
+type EventTaskStatus struct {
+	Target   string
+	Running  bool
+	Finished bool
+	RunCount int
+	Error    error
+	ExitCode int
+	Pid      int
+}
 
 // SharedFolderExecuter runs shared .contxt.yml files directly without merging them into
 // the current contxt file
@@ -296,6 +318,29 @@ func listenerWatch(script configure.Task, target, logLine string, e error, waitG
 	}
 }
 
+// create the event for the trigger
+// this is a workaround for the trigger package
+// we have to create the event before we can use it
+// but we can't create it in the init function, because
+// the trigger package is not initialized at this time
+// so we have to create it on the first call
+// and we have to handle the listener here
+func createOrGetExecuteEvent(eventName string) *trigger.Event {
+	var execEvent *trigger.Event
+	execEvent, _ = trigger.GetEvent(eventName)
+	// we have to handle the listener here
+	if execEvent == nil {
+		var eventErr error
+		execEvent, eventErr = trigger.NewEvent(eventName)
+
+		if eventErr != nil {
+			GetLogger().Error("fail to create event")
+			return nil
+		}
+	}
+	return execEvent
+}
+
 // the main script handler
 func lineExecuter(
 	waitGroup *sync.WaitGroup, // the main waitgoup
@@ -313,7 +358,7 @@ func lineExecuter(
 	}
 	var mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBack) // get the maincommand by default first
 	if configure.GetOs() == "windows" {                                             // handle windows behavior depending default commands
-		mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBackWindows)
+		mainCommand = defaultString(script.Options.Maincmd, DefaultCommandFallBackWindows) // setup windows default command
 	}
 	replacedLine := HandlePlaceHolderWithScope(codeLine, arguments) // placeholders
 	if script.Options.Displaycmd {                                  // do we show the argument?
@@ -321,6 +366,7 @@ func lineExecuter(
 	}
 
 	SetPH("RUN.SCRIPT_LINE", replacedLine) // overwrite the current scriptline. this is only reliable if we not in async mode
+	// composing the label for the output
 	var targetLabel CtxTargetOut = CtxTargetOut{
 		ForeCol:   defaultString(script.Options.Colorcode, colorCode),
 		BackCol:   defaultString(script.Options.Bgcolorcode, bgCode),
@@ -329,6 +375,18 @@ func lineExecuter(
 	// here we execute the current script line
 	execCode, realExitCode, execErr := ExecuteScriptLine(mainCommand, script.Options.Mainparams, replacedLine,
 		func(logLine string, err error) bool { // callback for any logline
+
+			execEvent := createOrGetExecuteEvent(EventAllLines) // create or get the event for all lines
+			if execEvent != nil {
+				event := EventScriptLine{
+					Target: target,
+					Line:   logLine,
+					Error:  err,
+				}
+				execEvent.SetArguments(event)
+				trigger.UpdateEvents()
+				execEvent.Send()
+			}
 
 			SetPH("RUN."+target+".LOG.LAST", logLine) // set or overwrite the last script output for the target
 
@@ -380,10 +438,37 @@ func lineExecuter(
 			if script.Options.Displaycmd {
 				CtxOut(LabelFY("pid"), ValF(process.Pid))
 			}
+			taskUpdate := createOrGetExecuteEvent(EventTaskStatusUpdate)
+			event := EventTaskStatus{
+				Target:   target,
+				Running:  true,
+				Finished: false,
+				Error:    nil,
+				Pid:      process.Pid,
+			}
+			if taskUpdate != nil {
+				taskUpdate.SetArguments(event)
+				taskUpdate.Send()
+			}
+
 		})
 	if execErr != nil {
 		if script.Options.Displaycmd {
 			CtxOut(LabelErrF("exec error"), ValF(execErr))
+		}
+
+		// send errors as event too
+		execEvent := createOrGetExecuteEvent(EventAllLines)
+		if execEvent != nil {
+			event := EventScriptLine{
+				Target: target,
+				Line:   execErr.Error(),
+				Error:  execErr,
+			}
+			execEvent.SetArguments(event)
+			trigger.UpdateEvents()
+			execEvent.Send()
+
 		}
 	}
 	// check execution codes
@@ -410,7 +495,7 @@ func lineExecuter(
 			CtxOut("\t you may disable a hard exit on error by setting ignoreCmdError: true")
 			CtxOut("\t if you do so, a Note will remind you, that a error is happend in this case.")
 			CtxOut()
-			GetLogger().Error("runtime error:", execErr, "exit", realExitCode)
+			//GetLogger().Error("runtime error:", execErr, "exit", realExitCode)
 			systools.Exit(realExitCode)
 			// returns the error code
 			return systools.ExitCmdError, true
@@ -481,13 +566,28 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 		GetLogger().WithField("task", target).Warning("task would be triggered again while is already running. IGNORED")
 		return systools.ExitAlreadyRunning
 	}
+
 	// increment task counter
-	incTaskCount(target)
+	targetTaskCount := incTaskCount(target)
 	defer incTaskDoneCount(target)
 
 	GetLogger().WithFields(logrus.Fields{
 		"target": target,
 	}).Info("executeTemplate LOOKING for target")
+
+	// create the task update event
+	taskUpdate := createOrGetExecuteEvent(EventTaskStatusUpdate)
+	event := EventTaskStatus{
+		Target:   target,
+		Running:  false,
+		RunCount: targetTaskCount,
+		Finished: false,
+		Error:    nil,
+	}
+	if taskUpdate != nil {
+		taskUpdate.SetArguments(event)
+		taskUpdate.Send()
+	}
 
 	// Checking if the Tasklist have something
 	// to handle
@@ -642,6 +742,15 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 					time.Sleep(duration)
 				}
 
+				// now we update all the listeners
+				// and start the script
+				if taskUpdate != nil {
+					event.Target = target
+					event.Running = true
+					taskUpdate.SetArguments(event)
+					taskUpdate.Send()
+				}
+
 				// preparing codelines by execute second level commands
 				// that can affect the whole script
 				abort, returnCode, _ = TryParse(script.Script, func(codeLine string) (bool, int) {
@@ -650,6 +759,14 @@ func executeTemplate(waitGroup *sync.WaitGroup, runAsync bool, runCfg configure.
 				})
 				if abort {
 					GetLogger().Debug("abort reason found ")
+				}
+				// here we update the listeners again, after scripts was running
+				if taskUpdate != nil {
+					event.Running = false
+					event.ExitCode = returnCode
+					event.Finished = true
+					taskUpdate.SetArguments(event)
+					taskUpdate.Send()
 				}
 
 				// waitin until the any target that runns also is done

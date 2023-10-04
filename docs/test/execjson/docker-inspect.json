@@ -1,0 +1,108 @@
+[
+    {
+        "Id": "sha256:e2cb6b4a2b19b79ec0d8fe8e6fdcacab70ebfdc53ba957d31d3c6ab9c88b81e5",
+        "RepoTags": [
+            "golib-local:latest"
+        ],
+        "RepoDigests": [],
+        "Parent": "",
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2022-12-30T08:03:01.561761902Z",
+        "Container": "",
+        "ContainerConfig": {
+            "Hostname": "",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": null,
+            "Cmd": null,
+            "Image": "",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": null
+        },
+        "DockerVersion": "",
+        "Author": "",
+        "Config": {
+            "Hostname": "",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "PHPIZE_DEPS=autoconf \t\tdpkg-dev \t\tfile \t\tg++ \t\tgcc \t\tlibc-dev \t\tmake \t\tpkg-config \t\tre2c",
+                "PHP_INI_DIR=/usr/local/etc/php",
+                "PHP_CFLAGS=-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64",
+                "PHP_CPPFLAGS=-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64",
+                "PHP_LDFLAGS=-Wl,-O1 -pie",
+                "GPG_KEYS=39B641343D8C104B2B146DC3F9C39DC0B9698544 E60913E4DF209907D8E30D96659A97C9CF2A795A 1198C0117593497A5EC5C199286AF1F9897469DC",
+                "PHP_VERSION=8.2.0",
+                "PHP_URL=https://www.php.net/distributions/php-8.2.0.tar.xz",
+                "PHP_ASC_URL=https://www.php.net/distributions/php-8.2.0.tar.xz.asc",
+                "PHP_SHA256=6ea4c2dfb532950fd712aa2a08c1412a6a81cd1334dd0b0bf88a8e44c2b3a943"
+            ],
+            "Cmd": [
+                "php",
+                "-a"
+            ],
+            "Image": "",
+            "Volumes": null,
+            "WorkingDir": "/usr/src/golibdb",
+            "Entrypoint": [
+                "docker-php-entrypoint"
+            ],
+            "OnBuild": null,
+            "Labels": {
+                "php-golib": ""
+            }
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 547746422,
+        "VirtualSize": 547746422,
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/tg7toj9xvp1q7b97tjnsmw5k9/diff:/var/lib/docker/overlay2/7axqfpot1jl5knosth0zmrigu/diff:/var/lib/docker/overlay2/e0b85y9bwighai4oosswpywhq/diff:/var/lib/docker/overlay2/z2hk0tnj9e1tlz6sjz3yew5z8/diff:/var/lib/docker/overlay2/sexzfdiw5dp4zaockneyck0lg/diff:/var/lib/docker/overlay2/a5f07faa58a0b6ab105fb1c54619e21979efe0241746f0854fc1ab7086f5c8d2/diff:/var/lib/docker/overlay2/e9cc6a5f94ff7d6159192c8515c9a2cdce5c8d66c628cd487bc513a0fb1173dd/diff:/var/lib/docker/overlay2/bb0841bf8717316b7e955271c192d59ec4e9e08b0efc05ad706a97c4f0b4469b/diff:/var/lib/docker/overlay2/2b15c7c3e097fd9075630ba93519fad9486c567f52b5ad21db12ed5cdb037cd7/diff:/var/lib/docker/overlay2/a15001f54041efe5769efc3b919f89faab5c70a752b36f3ca5df4f8807746132/diff:/var/lib/docker/overlay2/9d3be110a393b044d0c1ce3f1104128bf194686a35c73f154b53edbd9ff6ea08/diff:/var/lib/docker/overlay2/089e0ee89b687673ff439520269e51393074c5fd1bf8fa86e0f8a61ea8ac0010/diff:/var/lib/docker/overlay2/77f0bdb8f1071ef976d2a87fd527d5eb5cc15d92d3917b8ca04553dfb320f776/diff:/var/lib/docker/overlay2/a9268b3f899840abb5e84aab870a9946649a9e96aaa27bde41ecbea2b015b232/diff",
+                "MergedDir": "/var/lib/docker/overlay2/uhrqv6c039ga79wl91e5ylz5d/merged",
+                "UpperDir": "/var/lib/docker/overlay2/uhrqv6c039ga79wl91e5ylz5d/diff",
+                "WorkDir": "/var/lib/docker/overlay2/uhrqv6c039ga79wl91e5ylz5d/work"
+            },
+            "Name": "overlay2"
+        },
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:8a70d251b65364698f195f5a0b424e0d67de81307b79afbe662abd797068a069",
+                "sha256:a29262b7e496be58f4db3200c9abe169d058c12be1159456e2184f633cbd44d3",
+                "sha256:68c2782b10404e0fe91e3b657f53257aa9c9565285620bc80067788f0aef554f",
+                "sha256:515a5b3e7c569fc1dfc686df653b63c6bd444868da2ce9efc5ff933f10267c69",
+                "sha256:da2839ab21a1bdf421485e16ce0eb4f8e5320f6754b3720e9adacfb70304890f",
+                "sha256:f27a7f850a1f5015692b75e2742cbf1f5c4e87e86e8981f73c5220eca842f251",
+                "sha256:995ca945f88b865665a8aca3a970a9951fc2dddeacb08a994c40298d17fc74b9",
+                "sha256:4a2f6e34da282926176b20a96c78ea5e15664eca70c897239abdfdab124193db",
+                "sha256:6c0c8a6bc536831413d041ff13b4ad4f6e2800215bde87b9311dacf7edce0426",
+                "sha256:3fe8982b4e2a855220027827b8e22d3277016e888e6270372f50aca0dce1b4a0",
+                "sha256:044c80badd897b56fa0518311e477bc3c94ec817134b3d4f1fc1544777df7abe",
+                "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+                "sha256:76566ac990dad5be84ad02a98876eac686ca8fe15272d52d4afb34f7db7fd625",
+                "sha256:c153e42419bf9b9f5ff705e7c0f7e1691d5f87614b52f5cdf7fc1705fd712c42",
+                "sha256:7012226858eb7331bc34504fd1c7b5017bd4681f9de65566d210e1c844c3cb98"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2022-12-30T08:07:34.697517125Z"
+        }
+    }
+]

@@ -1,11 +1,13 @@
 package yacl_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/yacl"
 	"github.com/swaros/contxt/module/yamc"
 )
@@ -30,8 +32,8 @@ type configV2 struct {
 }
 
 func TestLoadWithoutLoaders(t *testing.T) {
-	var cfg *configV0
-	cfgv1 := yacl.New(cfg).SetSubDirs("test", "version")
+	var cfg configV0
+	cfgv1 := yacl.New(&cfg).SetSubDirs("test", "version")
 	err := cfgv1.Load()
 	if err != nil {
 		if !strings.Contains(err.Error(), "no loaders assigned") {
@@ -53,10 +55,10 @@ func TestLoadWithoutLoaders(t *testing.T) {
 }
 
 func TestComposePath(t *testing.T) {
-	var cfg *configV0
+	var cfg configV0
 
 	// relative path just with two subfolder
-	cfgv1 := yacl.New(cfg).SetSubDirs("test", "version")
+	cfgv1 := yacl.New(&cfg).SetSubDirs("test", "version")
 	path := cfgv1.GetConfigPath()
 	if path != filepath.Clean("test/version") {
 		t.Error("did not get expected path ", path)
@@ -90,15 +92,47 @@ func TestComposePath(t *testing.T) {
 
 }
 
+func TestLoadByFullPathFail(t *testing.T) {
+	currentPath, errLoad := os.Getwd()
+	if errLoad != nil {
+		t.Error(errLoad)
+	}
+	var cfg configV1
+	cfgv1 := yacl.New(&cfg, yamc.NewYamlReader()).SetSingleFile(currentPath + "/data/001-test.base.yml")
+
+	err := cfgv1.Load()
+	if err == nil {
+		t.Error("error should happen, because file can not be loaded by setting the full path for the base name")
+	}
+}
+func TestLoadByFullPath(t *testing.T) {
+	currentPath, errLoad := os.Getwd()
+	if errLoad != nil {
+		t.Error(errLoad)
+	}
+	var cfg configV1
+	cfgv1 := yacl.New(&cfg, yamc.NewYamlReader()).SetFileAndPathsByFullFilePath(currentPath + "/data/v2/001-test.base.yml")
+
+	err := cfgv1.Load()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if cfgv1.GetLoadedFile() != filepath.Clean(currentPath+"/data/v2/001-test.base.yml") {
+		t.Error("wrong file loaded", cfgv1.GetLoadedFile())
+	}
+
+}
+
 func TestPropertieLoads(t *testing.T) {
 	var cfg configV2
-	cfgv1Handl := yacl.New(&cfg, yamc.NewYamlReader()).SetSubDirs("v1").SetSingleFile("cfgv2.yml")
+	cfgv1Handl := yacl.New(&cfg, yamc.NewYamlReader()).SetSubDirs("data", "v1").SetSingleFile("cfgv2.yml")
 
 	if err := cfgv1Handl.Load(); err != nil {
 		t.Error(err)
 	}
 
-	if cfgv1Handl.GetLoadedFile() != filepath.Clean("v1/cfgv2.yml") {
+	if cfgv1Handl.GetLoadedFile() != filepath.Clean("data/v1/cfgv2.yml") {
 		t.Error("wrong file loaded", cfgv1Handl.GetLoadedFile())
 	}
 
@@ -127,13 +161,13 @@ func TestPropertieLoads(t *testing.T) {
 func TestPropertieFailLoads(t *testing.T) {
 	var cfg configV2
 	cfgv1Handl := yacl.New(&cfg, yamc.NewYamlReader()).
-		SetSubDirs("v1").
+		SetSubDirs("data", "v1").
 		SetSingleFile("notThere.yml")
 
 	if err := cfgv1Handl.Load(); err == nil {
 		t.Error("the file not exists. this should result in a error")
 	} else {
-		if err.Error() != "at least one Configuration should exists. but found nothing" {
+		if !strings.Contains(err.Error(), "at least one Configuration should exists.") {
 			t.Error("we expected a different error message then ", err.Error())
 		}
 	}
@@ -161,14 +195,14 @@ func TestPropertieChanges(t *testing.T) {
 		Path:     "none",
 	}
 	cfgv1Handl := yacl.New(&cfg, yamc.NewYamlReader()).
-		SetSubDirs("v1").
+		SetSubDirs("data", "v1").
 		SetSingleFile("cfgv1.yml")
 
 	if err := cfgv1Handl.Load(); err != nil {
 		t.Error(err)
 	}
 
-	if cfgv1Handl.GetLoadedFile() != filepath.Clean("v1/cfgv1.yml") {
+	if cfgv1Handl.GetLoadedFile() != filepath.Clean("data/v1/cfgv1.yml") {
 		t.Error("wrong file loaded", cfgv1Handl.GetLoadedFile())
 	}
 
@@ -226,7 +260,7 @@ type chainConfig struct {
 func TestLoadingOverride(t *testing.T) {
 	var cfg chainConfig
 	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
-		SetSubDirs("v2")
+		SetSubDirs("data", "v2")
 		//SetFolderBlackList([]string{"v2/deployEu", "v2/deployUs"})
 
 	loadErr := chainCfg.Load()
@@ -236,7 +270,7 @@ func TestLoadingOverride(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "v2/001-test.base.yml, v2/002-local-gitignored.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/002-local-gitignored.yml") {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 
@@ -261,7 +295,7 @@ func TestLoadingOverride(t *testing.T) {
 func TestLoadingOverrideAnUseEu(t *testing.T) {
 	var cfg chainConfig
 	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
-		SetSubDirs("v2").
+		SetSubDirs("data", "v2").
 		AllowSubdirsByRegex("deployEu")
 
 	loadErr := chainCfg.Load()
@@ -271,7 +305,7 @@ func TestLoadingOverrideAnUseEu(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "v2/001-test.base.yml, v2/002-local-gitignored.yml, v2/deployEu/001-test.base.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/002-local-gitignored.yml, data/v2/deployEu/001-test.base.yml") {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 
@@ -297,8 +331,8 @@ func TestLoadingOverrideAnUseEu(t *testing.T) {
 func TestLoadingOverrideAndUseEuByBlackList(t *testing.T) {
 	var cfg chainConfig
 	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
-		SetSubDirs("v2").
-		SetFolderBlackList([]string{"v2/deployUs"})
+		SetSubDirs("data", "v2").
+		SetFolderBlackList([]string{"data/v2/deployUs"})
 
 	loadErr := chainCfg.Load()
 	if loadErr != nil {
@@ -307,7 +341,7 @@ func TestLoadingOverrideAndUseEuByBlackList(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "v2/001-test.base.yml, v2/002-local-gitignored.yml, v2/deployEu/001-test.base.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/002-local-gitignored.yml, data/v2/deployEu/001-test.base.yml") {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 
@@ -334,7 +368,7 @@ func TestLoadingOverrideAndUseEuByBlackList(t *testing.T) {
 func TestLoadingOverrideUseUsNoDEv(t *testing.T) {
 	var cfg chainConfig
 	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
-		SetSubDirs("v2").
+		SetSubDirs("data", "v2").
 		AllowSubdirsByRegex("deployUs").
 		SetFilePattern("00([0-9])-(....).base.yml") // sets regex so it ignores the local
 
@@ -345,7 +379,7 @@ func TestLoadingOverrideUseUsNoDEv(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "v2/001-test.base.yml, v2/deployUs/001-test.base.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/deployUs/001-test.base.yml") {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 
@@ -376,8 +410,8 @@ func TestLoadingOverrideUseUsNoDEv(t *testing.T) {
 func TestLoadingOverrideUseUsByChainLoad(t *testing.T) {
 	var cfg chainConfig
 	chainCfg := yacl.New(&cfg, yamc.NewYamlReader())
-	chainCfg.LoadFile("v2/001-test.base.yml")
-	chainCfg.LoadFile("v2/deployUs/001-test.base.yml")
+	chainCfg.LoadFile("data/v2/001-test.base.yml")
+	chainCfg.LoadFile("data/v2/deployUs/001-test.base.yml")
 
 	loadErr := chainCfg.Load()
 	if loadErr != nil {
@@ -386,7 +420,7 @@ func TestLoadingOverrideUseUsByChainLoad(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "v2/001-test.base.yml, v2/deployUs/001-test.base.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/deployUs/001-test.base.yml") {
 		t.Error("error on loading the expected files ", filesAll)
 	}
 
@@ -423,7 +457,7 @@ func TestNoConfigFilesFailExpected(t *testing.T) {
 func TestNoConfigFiles(t *testing.T) {
 	var cfg chainConfig
 	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
-		SetSubDirs("v2").
+		SetSubDirs("data", "v2").
 		SetSingleFile("not_existing.yml").
 		SetExpectNoConfigFiles() // it is okay for not having any configuration yet.
 
@@ -441,7 +475,7 @@ func TestNoConfigFilesCheckInit(t *testing.T) {
 	notExistCalled := false
 	var cfg chainConfig
 	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
-		SetSubDirs("v2").
+		SetSubDirs("data", "v2").
 		SetSingleFile("not_existing.yml").
 		Init(nil, func(errCode int) error {
 			if errCode == yacl.NO_CONFIG_FILES_FOUND {
@@ -511,7 +545,7 @@ func TestOneFileNameUsage(t *testing.T) {
 	var cfg chainConfig
 
 	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
-		SetSubDirs("v2").
+		SetSubDirs("data", "v2").
 		AllowSubdirs().
 		SetSingleFile("001-test.base.yml")
 
@@ -521,7 +555,430 @@ func TestOneFileNameUsage(t *testing.T) {
 	}
 
 	filesAll := strings.Join(chainCfg.GetAllParsedFiles(), ", ")
-	if filesAll != "v2/001-test.base.yml, v2/deployEu/001-test.base.yml, v2/deployUs/001-test.base.yml" {
+	if filesAll != filepath.FromSlash("data/v2/001-test.base.yml, data/v2/deployEu/001-test.base.yml, data/v2/deployUs/001-test.base.yml") {
 		t.Error("error on loading the expected files ", filesAll)
+	}
+}
+
+func TestGetLastLoader(t *testing.T) {
+	var cfg chainConfig
+
+	yamlLoader := yamc.NewYamlReader()
+	chainCfg := yacl.New(&cfg, yamlLoader).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml")
+
+	loadErr := chainCfg.Load()
+	if loadErr != nil {
+		t.Error(loadErr)
+	}
+
+	loader := chainCfg.GetLastUsedReader()
+	if loader == nil {
+		t.Error("we should have a reader here")
+	}
+
+	if loader != yamlLoader {
+		t.Error("we should have the same reader")
+	}
+
+	loader.GetFields().Init = false
+
+	if loader != yamlLoader {
+		t.Error("we should have the same reader")
+	}
+}
+
+func TestGetLastLoaderNew(t *testing.T) {
+	var cfg chainConfig
+
+	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml")
+
+	loadErr := chainCfg.Load()
+	if loadErr != nil {
+		t.Error(loadErr)
+	}
+
+	loader := chainCfg.GetLastUsedReader()
+	if loader == nil {
+		t.Error("we should have a reader here")
+	}
+
+	if loader.HaveFields() == false {
+		t.Error("we should have fields here")
+	}
+
+	if loader.GetFields().Init == false {
+		t.Error("the loader should be initialized")
+	}
+}
+
+func TestWithCustomLoader(t *testing.T) {
+	var cfg chainConfig
+
+	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			replaced := `config:
+   host: southamerica.deploy.gov`
+			return []byte(replaced), nil
+		})
+
+	loadErr := chainCfg.Load()
+	if loadErr != nil {
+		t.Error(loadErr)
+	}
+
+	expected := "southamerica.deploy.gov"
+	if cfg.Config.Host != expected {
+		t.Error("we should have the expected host", expected, "but we have[", cfg.Config.Host, "]")
+	}
+
+	// verify the struct also
+	loader := chainCfg.GetLastUsedReader()
+	if loader == nil {
+		t.Error("we should have a reader here")
+	}
+
+	if loader.HaveFields() == false {
+		t.Error("we should have fields here")
+	}
+
+	if loader.GetFields().Init == false {
+		t.Error("the loader should be initialized")
+	}
+}
+
+func TestWithCustomLoaderFails(t *testing.T) {
+	var cfg chainConfig
+
+	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			replaced := `{not a yaml file{
+				   host: southamerica.deploy.gov
+			}}`
+			return []byte(replaced), nil
+		})
+
+	loadErr := chainCfg.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here. the yaml reader can not parse the file")
+	}
+
+}
+
+func TestWithCustomLoaderAndGetFileContent(t *testing.T) {
+	var cfg chainConfig
+
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetTrackFiles().
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			replaced := `config:
+   host: southamerica.deploy.gov`
+			return []byte(replaced), nil
+		})
+
+	loadErr := loadConfig.Load()
+	if loadErr != nil {
+		t.Error(loadErr)
+	}
+
+	fileContent, err := loadConfig.GetFileContent("data/v2/deployEu/001-test.base.yml")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if string(fileContent) != "config:\n   host: southamerica.deploy.gov" {
+		t.Error("we should have the expected content")
+		t.Log(string(fileContent))
+	}
+
+	// we should get an error if we try to get the content of a file that was not loaded
+	_, err = loadConfig.GetFileContent("data/v2/deployEu/002-test.base.yml")
+	if err == nil {
+		t.Error("we should have an error here")
+	}
+}
+
+// simple load error by not existing directory
+func TestLoadingErrors1(t *testing.T) {
+	var cfg chainConfig
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("weird", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetTrackFiles()
+
+	loadErr := loadConfig.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here")
+	}
+
+}
+
+// load error by using a custom loader that fails
+func TestLoadingErrors2(t *testing.T) {
+	var cfg chainConfig
+	// load error by using file tracking.
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			return nil, errors.New("custom loader error")
+		})
+
+	loadErr := loadConfig.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here")
+	} else {
+		expectedErr := "custom loader error"
+		if loadErr.Error() != expectedErr {
+			t.Error("we should have the expected error message", expectedErr, "but we have", loadErr.Error())
+		}
+	}
+}
+
+// loading error by using a custom loader that return invalid yaml
+func TestLoadingErrors3(t *testing.T) {
+	var cfg chainConfig
+	// load error by using file tracking.
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("001-test.base.yml").
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			return []byte("not a yaml file"), nil
+
+		})
+
+	loadErr := loadConfig.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here")
+	} else {
+		expectedErr := "unmarshal errors:"
+		if strings.Contains(loadErr.Error(), expectedErr) == false {
+			t.Error("we should have the expected error message", expectedErr, " contains in ", loadErr.Error())
+		}
+	}
+
+}
+
+// loading error by using a wrong loader
+func TestLoadingErrors4(t *testing.T) {
+	var cfg chainConfig
+	// load error by using file tracking.
+	loadConfig := yacl.New(&cfg, yamc.NewJsonReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		UseRelativeDir().
+		SetSingleFile("001-test.base.yml")
+
+	loadErr := loadConfig.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here")
+	} else {
+		expectedErr := "at least one Configuration should exists. but found nothing"
+		if strings.Contains(loadErr.Error(), expectedErr) == false {
+			t.Error("we should have the expected error message", expectedErr, " contains in ", loadErr.Error())
+		}
+	}
+
+	// we use this test to cover
+	// the GetFileContent Error without having tracking files enabled
+	_, err := loadConfig.GetFileContent("data/v2/deployEu/001-test.base.yml")
+	if err == nil {
+		t.Error("we should have an error here")
+	}
+
+}
+
+// loading error wrong file name
+func TestLoadingErrors5(t *testing.T) {
+	var cfg chainConfig
+	// load error by using file tracking.
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetSingleFile("XXX001-test.base.yml")
+
+	loadErr := loadConfig.Load()
+	if loadErr == nil {
+		t.Error("we should have an error here")
+	} else {
+		expectedErr := "at least one Configuration should exists. but found nothing"
+		if strings.Contains(loadErr.Error(), expectedErr) == false {
+			t.Error("we should have the expected error message", expectedErr, " contains in ", loadErr.Error())
+		}
+	}
+
+}
+
+func TestOneFileNameUsageAndContent(t *testing.T) {
+	var cfg chainConfig
+
+	chainCfg := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetTrackFiles().
+		SetSingleFile("001-test.base.yml")
+
+	loadErr := chainCfg.Load()
+	if loadErr != nil {
+		t.Error(loadErr)
+	}
+
+	filesAll := chainCfg.GetAllParsedFiles()
+	if len(filesAll) != 3 {
+		t.Error("we should have 3 files here")
+		t.SkipNow()
+	}
+
+	if filesAll[0] != filepath.FromSlash("data/v2/001-test.base.yml") {
+		t.Error("we should have the expected file name")
+	} else {
+		fileContent, err := chainCfg.GetFileContent(filesAll[0])
+		if err != nil {
+			t.Error(err)
+		}
+		expected := `config:
+  loglevel: ERROR
+  env:
+    target: production
+  users:
+     - root
+  host: project.deploy.com
+  inport: 8089
+  outport: 7001`
+		if systools.PrintableChars(string(fileContent)) != systools.PrintableChars(expected) {
+			t.Error("we should have the expected content")
+			t.Log(string(fileContent))
+		}
+	}
+	chainCfg.Reset()
+	filesAll = chainCfg.GetAllParsedFiles()
+	if len(filesAll) != 0 {
+		t.Error("we should have 0 files here")
+	}
+
+}
+
+func TestConfigGetter(t *testing.T) {
+	var cfg chainConfig
+	// load error by using file tracking.
+	loadConfig := yacl.New(&cfg, yamc.NewYamlReader()).
+		SetSubDirs("data", "v2").
+		AllowSubdirs().
+		SetTrackFiles().
+		SetCustomFileLoader(func(path string) ([]byte, error) {
+			return []byte("not a yaml file"), nil
+		}).
+		SetSingleFile("001-test.base.yml").
+		SetFilePattern("*.yml")
+
+	cgf := loadConfig.GetConfig(yacl.ConfigFilesPattern)
+	if cgf == nil {
+		t.Error("we should have a config here")
+	} else {
+		if cgf.(string) != "*.yml" {
+			t.Error("we should have the expected value ", cfg)
+		}
+	}
+
+	cgf = loadConfig.GetConfig(yacl.ConfigUseSpecialDir)
+	if cgf == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cgf.(int)
+		if val != 0 {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cgf = loadConfig.GetConfig(yacl.ConfigAllowSubDirs)
+	if cgf == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cgf.(bool)
+		if val != true {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cgf = loadConfig.GetConfig(yacl.ConfigTrackFiles)
+	if cgf == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cgf.(bool)
+		if val != true {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 := loadConfig.GetConfig(yacl.ConfigDirBlackList)
+	if cfg2 == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cfg2.([]string)
+		if len(val) != 0 {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 = loadConfig.GetConfig(yacl.ConfigExpectNoFiles)
+	if cfg2 == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cfg2.(bool)
+		if val != false {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 = loadConfig.GetConfig(yacl.ConfigAllowDirPattern)
+	if cfg2 == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cfg2.(string)
+		if val != "" {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 = loadConfig.GetConfig(yacl.ConfigSupportMigrate)
+	if cfg2 == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cfg2.(bool)
+		if val != false {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 = loadConfig.GetConfig(yacl.ConfigHaveCustomLoader)
+	if cfg2 == nil {
+		t.Error("we should have a config here")
+	} else {
+		val := cfg2.(bool)
+		if val != true {
+			t.Errorf("we should have the expected value %v", val)
+		}
+	}
+
+	cfg2 = loadConfig.GetConfig(99)
+	if cfg2 != nil {
+		t.Error("we should have no config here")
 	}
 }

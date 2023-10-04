@@ -1,0 +1,84 @@
+main: hello
+targets:
+  worker:
+  - name: hello
+    surename: world
+
+  - name: hello2
+    surename: world2
+
+  - name: hello3
+    surename: world3
+  
+  - name: hello4
+    surename: world4
+
+  - name: hello5
+    surename: world5
+  
+  - name: hello6
+    surename: world6
+
+  - name: hello7
+    surename: world7
+  
+  - name: hello8
+    surename: world8
+
+  - name: hello9
+    surename: world9
+
+  - name: hello10
+    surename: world10
+
+  - name: hello11
+    surename: world11
+
+  - name: hello12
+    surename: world12
+
+  - name: hello13
+    surename: world13
+
+  - name: hello14
+    surename: world14
+
+  - name: hello15
+    surename: world15
+
+  - name: hello16
+    surename: world16
+
+  - name: hello17
+    surename: world17
+
+  - name: hello18
+    surename: world18
+  
+  - name: hello19
+    surename: world19
+
+  - name: hello20
+    surename: world20
+  
+  labels:
+    - payed
+    - not payed
+    - important
+    - not important
+    - payed2
+    - not payed2
+    - important2
+    - not important2
+    - payed3
+    - not payed3
+    - important3
+    - not important3
+    - payed4
+    - not payed4
+    - important4
+    - not important4
+    - payed5
+    - not payed5
+    - important5
+    - not important5

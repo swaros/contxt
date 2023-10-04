@@ -1,9 +1,32 @@
-package taskrun
+// MIT License
+//
+// Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the Software), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+// AINC-NOTE-0815
+
+ package taskrun
 
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -94,8 +117,8 @@ func InitWindow(cmd *cobra.Command, args []string) (*CtxUi, error) {
 
 func (ui *CtxUi) createHeaderText() string {
 	path := ""
-	if configure.UsedConfig.LastIndex < len(configure.UsedConfig.Paths) {
-		path = configure.UsedConfig.Paths[configure.UsedConfig.LastIndex]
+	if configure.GetGlobalConfig().UsedV2Config.CurrentSet != "" {
+		path = configure.GetGlobalConfig().GetActivePath("")
 
 		dir, err := dirhandle.Current()
 		if err != nil {
@@ -106,7 +129,7 @@ func (ui *CtxUi) createHeaderText() string {
 			path = "[red]" + path + "[white](we are not in this path)"
 		}
 	}
-	header := "[blue]WORKSPACE [yellow]" + configure.UsedConfig.CurrentSet + " [blue]current active dir[yellow] " + path
+	header := "[blue]WORKSPACE [yellow]" + configure.GetGlobalConfig().UsedV2Config.CurrentSet + " [blue]current active dir[yellow] " + path
 	return header
 }
 
@@ -133,9 +156,9 @@ func (ui *CtxUi) UpdatePathList() {
 		ui.pages.SendToBack("paths")
 	})
 
-	configure.PathWorkerNoCd(func(index int, name string) {
-		indxStr := strconv.Itoa(index)
-		ui.pathList.AddItem(name, "", rune(indxStr[0]), nil)
+	configure.GetGlobalConfig().PathWorkerNoCd(func(index string, name string) {
+
+		ui.pathList.AddItem(name, "", rune(index[0]), nil)
 	})
 }
 
@@ -243,9 +266,10 @@ func (ui *CtxUi) CreateWorkSpacePage() *tview.Flex {
 	uiWsList.AddItem("[blue]<<< [green]BACK", "", 'x', func() {
 		ui.pages.SendToBack("workspace")
 	})
-	configure.WorkSpaces(func(name string) {
-		uiWsList.AddItem(name, "", rune(name[0]), nil)
+	configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+		uiWsList.AddItem(index, "", rune(index[0]), nil)
 	})
+
 	uiWsList.SetHighlightFullLine(true)
 	uiWsList.ShowSecondaryText(false)
 	uiWsList.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
@@ -267,10 +291,9 @@ func (ui *CtxUi) CreatePathSelectPage() *tview.Flex {
 	ui.pathList.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
 		//doMagicParamOne(s1)
 
-		configure.PathWorkerNoCd(func(index int, path string) {
+		configure.GetGlobalConfig().PathWorkerNoCd(func(index string, path string) {
 			if path == s1 {
-				configure.UsedConfig.LastIndex = index
-				configure.SaveDefaultConfiguration(true)
+				configure.GetGlobalConfig().ChangeActivePath(index)
 				os.Chdir(path)
 			}
 		})

@@ -25,33 +25,25 @@
 package taskrun
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/dirhandle"
-	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/manout"
 )
 
-func PrintCnPaths(hints bool) {
-	fmt.Println(manout.MessageCln("\t", "paths stored in ", manout.ForeCyan, configure.UsedConfig.CurrentSet))
+func PrintCnPaths() {
+	fmt.Println(manout.MessageCln("\t", "paths stored in ", manout.ForeCyan, configure.GetGlobalConfig().UsedV2Config.CurrentSet))
 	dir, err := dirhandle.Current()
 	if err == nil {
-		count := ShowPaths(dir)
-		if count > 0 && hints {
-			fmt.Println()
-			fmt.Println(manout.MessageCln("\t", "if you have installed the shell functions ", manout.ForeDarkGrey, "(contxt install bash|zsh|fish)", manout.CleanTag, " change the directory by ", manout.BoldTag, "cn ", count-1))
-			fmt.Println(manout.MessageCln("\t", "this will be the same as ", manout.BoldTag, "cd ", dirhandle.GetDir(count-1)))
-		}
+		ShowPaths(dir)
 	}
 }
 
 // ShowPaths : display all stored paths in the workspace
-func ShowPaths(current string) int {
-
-	configure.PathWorkerNoCd(func(index int, path string) {
+func ShowPaths(current string) {
+	configure.GetGlobalConfig().PathWorkerNoCd(func(index string, path string) {
 		if path == current {
 			fmt.Println(manout.MessageCln("\t[", manout.ForeLightYellow, index, manout.CleanTag, "]\t", manout.BoldTag, path))
 		} else {
@@ -59,7 +51,6 @@ func ShowPaths(current string) int {
 		}
 
 	})
-	return len(configure.UsedConfig.Paths)
 }
 
 func GetAllTargets() ([]string, bool) {
@@ -162,16 +153,16 @@ func printPaths() {
 	dir, err := dirhandle.Current()
 	if err == nil {
 		fmt.Println(manout.MessageCln(manout.ForeWhite, " current directory: ", manout.BoldTag, dir))
-		fmt.Println(manout.MessageCln(manout.ForeWhite, " current workspace: ", manout.BoldTag, configure.UsedConfig.CurrentSet))
+		fmt.Println(manout.MessageCln(manout.ForeWhite, " current workspace: ", manout.BoldTag, configure.GetGlobalConfig().UsedV2Config.CurrentSet))
 		notWorkspace := true
 		pathColor := manout.ForeLightBlue
-		if !configure.PathMeightPartOfWs(dir) {
+		if !configure.GetGlobalConfig().PathMeightPartOfWs(dir) {
 			pathColor = manout.ForeLightMagenta
 		} else {
 			notWorkspace = false
 		}
 		fmt.Println(" contains paths:")
-		configure.PathWorker(func(index int, path string) {
+		configure.GetGlobalConfig().PathWorker(func(index string, path string) {
 			template, _, exists, _ := GetTemplate()
 			add := ""
 			if strings.Contains(dir, path) {
@@ -209,107 +200,12 @@ func printPaths() {
 		} else {
 			fmt.Println(manout.MessageCln(" all workspaces:"))
 		}
-		configure.WorkSpaces(func(name string) {
-			if name == configure.UsedConfig.CurrentSet {
-				fmt.Println(manout.MessageCln("\t[ ", manout.BoldTag, name, manout.CleanTag, " ]"))
+		configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+			if cfg.Name == configure.GetGlobalConfig().UsedV2Config.CurrentSet {
+				fmt.Println(manout.MessageCln("\t[ ", manout.BoldTag, cfg.Name, manout.CleanTag, " ]"))
 			} else {
-				fmt.Println(manout.MessageCln("\t  ", name, "   "))
+				fmt.Println(manout.MessageCln("\t  ", cfg.Name, "   "))
 			}
 		})
-	}
-}
-
-type pathInfo struct {
-	Path         string                  // the stored path
-	Targets      []string                // all existing targets
-	Active       bool                    // this is the active path
-	IsSubDir     bool                    // this path is the active or a subdir of current dir
-	HaveTemplate bool                    // in this folder a template exists
-	Project      configure.WorkspaceInfo // infos about the project could be there
-}
-
-type workspace struct {
-	CurrentDir string     // the current directory
-	CurrentWs  string     // the name of the current workspace
-	InWs       bool       // flag if the current path is part of the workspace
-	Paths      []pathInfo // all stored paths
-}
-
-func CollectWorkspaceInfos() (workspace, error) {
-	var ws workspace
-	if configure.UsedConfig.CurrentSet == "" {
-		return ws, errors.New("no workspace loaded")
-	}
-	dir, err := dirhandle.Current()
-	if err == nil {
-		ws.CurrentDir = dir
-		ws.CurrentWs = configure.UsedConfig.CurrentSet
-		ws.InWs = configure.PathMeightPartOfWs(dir)
-
-		configure.PathWorker(func(index int, path string) {
-			var pInfo pathInfo
-			pInfo.Path = path
-			template, _, exists, _ := GetTemplate()
-			pInfo.HaveTemplate = exists
-			pInfo.Active = (dir == path)
-			pInfo.Project = template.Workspace
-			UpdateProjectRelation(pInfo)
-			pInfo.IsSubDir = strings.Contains(dir, path)
-			if exists {
-				pInfo.Targets, _ = templateTargetsAsMap(template)
-			}
-			ws.Paths = append(ws.Paths, pInfo)
-
-		}, func(origin string) {})
-		return ws, nil
-	}
-	return ws, err
-}
-
-func ParseWorkspaceConfig(cfg configure.Configuration, pathInfoWorker func(forPath string, info configure.WorkspaceInfo)) {
-	if cfg.PathInfo != nil { // do we have informations about the paths?
-		for _, path := range cfg.Paths { // look for assignements for any of these paths
-			// build path key (sanitizedPath) if possible...
-			if sanitizedPath, err := systools.CheckForCleanString(path); err == nil {
-				// ...and check then if we infos with this path specific key
-				if storedInfos, ok := cfg.PathInfo[sanitizedPath]; ok {
-					pathInfoWorker(path, storedInfos)
-				}
-			}
-		}
-	}
-}
-
-func UpdateProjectRelation(pInfo pathInfo) {
-	if pInfo.Project.Project != "" && pInfo.Project.Role != "" {
-		haveChanges := false
-		// could be nil. so we initilize them first if needed
-		if configure.UsedConfig.PathInfo == nil {
-			configure.UsedConfig.PathInfo = make(map[string]configure.WorkspaceInfo)
-			haveChanges = true
-		}
-		if sanitizedPath, err := systools.CheckForCleanString(pInfo.Path); err == nil {
-
-			if storedInfos, ok := configure.UsedConfig.PathInfo[sanitizedPath]; ok {
-				// differs? then we need to update too
-				if storedInfos != pInfo.Project {
-					configure.UsedConfig.PathInfo[sanitizedPath] = pInfo.Project
-					haveChanges = true
-				}
-			} else {
-				// not existing. so we add them
-				configure.UsedConfig.PathInfo[sanitizedPath] = pInfo.Project
-				haveChanges = true
-			}
-			// TODO: this should not be done anytime. we should check diffs
-		} else {
-			CtxOut("error sanitize path name ", err, " ", pInfo.Path, " ignored")
-		}
-
-		if haveChanges {
-			GetLogger().WithField("project", pInfo.Project.Project).Info("Update global configuration")
-			configure.SaveDefaultConfiguration(false)
-		}
-
 	}
 }

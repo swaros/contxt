@@ -26,6 +26,7 @@ package taskrun
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -141,6 +142,7 @@ all defined onEnter and onLeave task will be executed
 if these task are defined
 `,
 		Run: func(_ *cobra.Command, args []string) {
+			FindWorkspaceInfoByTemplate(nil)
 			if len(args) > 0 {
 				for _, arg := range args {
 					doMagicParamOne(arg)
@@ -151,31 +153,128 @@ if these task are defined
 			if len(args) != 0 {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
-			targets, found := configure.GetWorkSpacesAsList()
-			if !found {
-				return nil, cobra.ShellCompDirectiveNoFileComp
-			}
+			targets := configure.GetGlobalConfig().ListWorkSpaces()
 			return targets, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
 
 	workspaceCmd = &cobra.Command{
 		Use:   "workspace",
-		Short: "create new workspace if not exists, and use them",
-		Long: `create a new workspace if not exists.
-if the workspace is exists, we will just use them.
-you need to set the name for the workspace`,
+		Short: "manage workspaces",
+		Long: `create a new workspace 'ctx workspace new <name>'. 
+Remove a workspace 'ctx workspace rm <name>'.
+list all workspaces 'ctx workspace list'.
+scan for new projects in the workspace 'ctx workspace scan'`,
+	}
+
+	wsNewCmd = &cobra.Command{
+		Use:   "new",
+		Short: "create a new workspace",
+		Long: `
+create a new workspace.
+this will trigger any onLeave task defined in the workspace
+and also onEnter task defined in the new workspace
+`,
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			workspace, _ := cmd.Flags().GetString("name")
-			if workspace == "" {
-				manout.Error("paramater missing", "name is required")
+			if len(args) > 0 {
+				if err := configure.GetGlobalConfig().AddWorkSpace(args[0], CallBackOldWs, CallBackNewWs); err != nil {
+					fmt.Println(err)
+				} else {
+					CtxOut("workspace created ", args[0])
+				}
+
 			} else {
-				configure.ChangeWorkspace(workspace, CallBackOldWs, CallBackNewWs)
+				fmt.Println("no workspace name given")
 			}
 		},
 	}
 
+	wsRmCmd = &cobra.Command{
+		Use:   "rm",
+		Short: "remove a workspace by given name",
+		Long: `
+remove a workspace.
+this will trigger any onLeave task defined in the workspace
+and also onEnter task defined in the new workspace
+`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			if len(args) > 0 {
+				if err := configure.GetGlobalConfig().RemoveWorkspace(args[0]); err != nil {
+					manout.Error("error while trying to remove workspace", err)
+					systools.Exit(systools.ErrorBySystem)
+				} else {
+					if err := configure.GetGlobalConfig().SaveConfiguration(); err != nil {
+						manout.Error("error while trying to save configuration", err)
+						systools.Exit(systools.ErrorBySystem)
+					}
+					CtxOut("workspace removed ", args[0])
+				}
+			} else {
+				fmt.Println("no workspace name given")
+			}
+		},
+		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			targets := configure.GetGlobalConfig().ListWorkSpaces()
+			return targets, cobra.ShellCompDirectiveNoFileComp
+		},
+	}
+
+	wsListCmd = &cobra.Command{
+		Use:   "list",
+		Short: "list all workspaces",
+		Long:  "list all workspaces",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			workspacesList := configure.GetGlobalConfig().ListWorkSpaces()
+			for _, ws := range workspacesList {
+				fmt.Println(ws)
+			}
+		},
+	}
+
+	wsScanCmd = &cobra.Command{
+		Use:   "scan",
+		Short: "scan for new projects in the workspace",
+		Long:  "scan for new projects in the workspace",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			all, updated := FindWorkspaceInfoByTemplate(func(ws string, cnt int, update bool, info configure.WorkspaceInfoV2) {
+				if update {
+					CtxOut(manout.ForeBlue, ws, " ", manout.ForeDarkGrey, " ", info.Path, manout.ForeGreen, "\tupdated")
+				} else {
+					CtxOut(manout.ForeBlue, ws, " ", manout.ForeDarkGrey, " ", info.Path, manout.ForeYellow, "\tignored. nothing to do.")
+				}
+			})
+			CtxOut("found ", all, " projects and updated ", updated, " projects")
+
+		},
+	}
+
+	wsUseCmd = &cobra.Command{
+		Use:   "use",
+		Short: "use a workspace",
+		Long: `use a workspace. this is then the new active workspace
+this will trigger any onLeave task defined in the workspace
+and also onEnter task defined in the new workspace
+`,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkDefaultFlags(cmd, args)
+			if len(args) > 0 {
+				if err := configure.GetGlobalConfig().ChangeWorkspace(args[0], CallBackOldWs, CallBackNewWs); err != nil {
+					fmt.Println(err)
+				} else {
+					CtxOut("workspace used ", args[0])
+				}
+			} else {
+				fmt.Println("no workspace name given")
+			}
+		},
+	}
 	dirCmd = &cobra.Command{
 		Use:   "dir",
 		Short: "handle workspaces and assigned paths",
@@ -185,26 +284,32 @@ you need to set the name for the workspace`,
 			checkDirFlags(cmd, args)
 			defaulttask := true
 			if pathIndex >= 0 {
-				dirhandle.PrintDir(pathIndex)
+				pathStr := configure.GetGlobalConfig().GetPathByIndex(strconv.Itoa(pathIndex), ".")
+				fmt.Println(pathStr)
 				defaulttask = false
 			}
 
 			if uselastIndex {
-				GetLogger().WithField("dirIndex", configure.UsedConfig.LastIndex).Debug("current stored index")
-				dirhandle.PrintDir(configure.UsedConfig.LastIndex)
+				GetLogger().WithField("dirIndex", configure.GetGlobalConfig().UsedV2Config.CurrentSet).Debug("current stored index")
+				pathStr := configure.GetGlobalConfig().GetActivePath(".")
+				fmt.Println(pathStr)
 				defaulttask = false
 			}
 
 			if clearTask {
 				GetLogger().Info("got clear command")
-				configure.ClearPaths()
+				configure.GetGlobalConfig().ClearPaths()
 				defaulttask = false
 			}
 
 			if deleteWs != "" {
 				GetLogger().WithField("workspace", deleteWs).Info("got remove workspace option")
-				if err := configure.RemoveWorkspace(deleteWs); err != nil {
+				if err := configure.GetGlobalConfig().RemoveWorkspace(deleteWs); err != nil {
 					manout.Error("error while trying to deleting workspace", err)
+					systools.Exit(systools.ErrorBySystem)
+				}
+				if err := configure.GetGlobalConfig().SaveConfiguration(); err != nil {
+					manout.Error("error while trying to save configuration", err)
 					systools.Exit(systools.ErrorBySystem)
 				}
 				defaulttask = false
@@ -212,7 +317,7 @@ you need to set the name for the workspace`,
 
 			if setWs != "" {
 				GetLogger().WithField("workspace", setWs).Info("create a new worspace")
-				configure.ChangeWorkspace(setWs, CallBackOldWs, CallBackNewWs)
+				configure.GetGlobalConfig().ChangeWorkspace(setWs, CallBackOldWs, CallBackNewWs)
 				defaulttask = false
 			}
 
@@ -227,7 +332,7 @@ you need to set the name for the workspace`,
 		Short: "show assigned paths",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			PrintCnPaths(!showHints)
+			PrintCnPaths()
 		},
 	}
 
@@ -237,7 +342,8 @@ you need to set the name for the workspace`,
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
 			if len(args) < 1 {
-				dirhandle.PrintDir(configure.UsedConfig.LastIndex) // without arguments prinst the last used path
+				pathStr := configure.GetGlobalConfig().GetActivePath(".")
+				fmt.Println(pathStr)
 			} else {
 				path, _ := DirFindApplyAndSave(args)
 				fmt.Println(path) // path only as output. so cn can handle it
@@ -250,7 +356,10 @@ you need to set the name for the workspace`,
 		Short: "show assigned paths",
 		Run: func(cmd *cobra.Command, args []string) {
 			checkDefaultFlags(cmd, args)
-			configure.DisplayWorkSpaces()
+
+			for _, p := range configure.GetGlobalConfig().ListWorkSpaces() {
+				fmt.Println(p)
+			}
 		},
 	}
 
@@ -262,8 +371,9 @@ you need to set the name for the workspace`,
 			dir, err := dirhandle.Current()
 			if err == nil {
 				fmt.Println(manout.MessageCln("add ", manout.ForeBlue, dir))
-				configure.AddPath(dir)
-				configure.SaveDefaultConfiguration(true)
+				configure.GetGlobalConfig().AddPath(dir)
+				configure.GetGlobalConfig().SaveConfiguration()
+				FindWorkspaceInfoByTemplate(nil) // this is parsing all templates in all workspaces and updates the project Infos
 			}
 		},
 	}
@@ -276,13 +386,13 @@ you need to set the name for the workspace`,
 			dir, err := dirhandle.Current()
 			if err == nil {
 				fmt.Println(manout.MessageCln("try to remove ", manout.ForeBlue, dir, manout.CleanTag, " from workspace"))
-				removed := configure.RemovePath(dir)
+				removed := configure.GetGlobalConfig().RemovePath(dir)
 				if !removed {
 					fmt.Println(manout.MessageCln(manout.ForeRed, "error", manout.CleanTag, " path is not part of the current workspace"))
 					systools.Exit(1)
 				} else {
 					fmt.Println(manout.MessageCln(manout.ForeGreen, "success"))
-					configure.SaveDefaultConfiguration(true)
+					configure.GetGlobalConfig().SaveConfiguration()
 				}
 			}
 		},
@@ -444,6 +554,17 @@ you will also see if a unexpected propertie found `,
 		},
 	}
 
+	installPwrShell = &cobra.Command{
+		Use:   "powershell",
+		Short: "create powershell shell functions",
+		Long: `create needed powershell functions and auto completion for powershell.
+		for powershell the ctx shortcut is not aviable right now.
+		`,
+		Run: func(cmd *cobra.Command, _ []string) {
+			PwrShellUpdate(cmd)
+		},
+	}
+
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "run a target in contxt.yml task file",
@@ -469,7 +590,7 @@ you will also see if a unexpected propertie found `,
 				path, err := dirhandle.Current()
 				if err == nil {
 					if runAtAll {
-						configure.PathWorkerNoCd(func(_ int, path string) {
+						configure.GetGlobalConfig().PathWorkerNoCd(func(_ string, path string) {
 							GetLogger().WithField("path", path).Info("change dir")
 							os.Chdir(path)
 							runTargets(path, arg)
@@ -534,14 +655,9 @@ func checkRunFlags(cmd *cobra.Command, _ []string) {
 }
 
 func checkDirFlags(cmd *cobra.Command, _ []string) {
-	pindex, err := cmd.Flags().GetInt("index")
-	if err == nil && pindex >= 0 {
-		pathIndex = pindex
-	}
-	GetLogger().WithFields(logrus.Fields{"current": configure.UsedConfig.LastIndex, "index": pindex}).Trace("Index detection")
-	if pindex >= 0 && pindex != configure.UsedConfig.LastIndex {
-		configure.UsedConfig.LastIndex = pindex
-		configure.SaveDefaultConfiguration(true)
+
+	if pindex, err := cmd.Flags().GetString("index"); err == nil {
+		configure.GetGlobalConfig().ChangeActivePath(pindex)
 	}
 
 	clearTask, _ = cmd.Flags().GetBool("clear")
@@ -602,12 +718,14 @@ func initCobra() {
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(gotoCmd)
 
+	installPwrShell.Flags().Bool("create-profile", false, "create a profile for powershell if not exists already")
 	installCmd.AddCommand(installBashRc)
 	installCmd.AddCommand(installFish)
 	installCmd.AddCommand(installZsh)
+	installCmd.AddCommand(installPwrShell)
 	rootCmd.AddCommand(installCmd)
 
-	workspaceCmd.Flags().String("name", "", "set the name for the workspace. REQUIRED")
+	workspaceCmd.AddCommand(wsNewCmd, wsRmCmd, wsListCmd, wsScanCmd, wsUseCmd)
 	rootCmd.AddCommand(workspaceCmd)
 
 	sharedCmd.AddCommand(sharedListCmd)
@@ -669,15 +787,7 @@ func InitDefaultVars() {
 		} else {
 			// if not forced already we try to figure out, by oure own, if the powershell is able to support ANSII
 			// this is since version 7 the case
-			cmd := "$PSVersionTable.PSVersion.Major"    // powershell cmd to get actual version
-			cmdArg := []string{"-nologo", "-noprofile"} // these the arguments for powrshell
-			version := ""
-			ExecuteScriptLine(GetDefaultCmd(), cmdArg, cmd, func(s string, e error) bool {
-				version = s
-				return true
-			}, func(p *os.Process) {
-
-			})
+			version := PwrShellExec(PWRSHELL_CMD_VERSION)
 			SetPH("CTX_PS_VERSION", version) // also setup varibale to have the PS version in place
 			if version >= "7" {
 				manout.ColorEnabled = true // enable colors if we have powershell equals or greater then 7
@@ -702,43 +812,81 @@ func InitDefaultVars() {
 }
 
 func setWorkspaceVariables() {
-	if err := configure.AllWorkspacesConfig(func(config configure.Configuration, path string) {
-		ParseWorkspaceConfig(config, func(forPath string, info configure.WorkspaceInfo) {
-			setConfigVaribales(info, path, "WS")
-		})
-	}); err != nil {
-		manout.Error("Configuration error", "[", err, "] there is an error in the global configuration files.")
-		systools.Exit(systools.ErrorOnConfigImport)
-	}
+	SetPH("CTX_WS", configure.GetGlobalConfig().UsedV2Config.CurrentSet)
+	configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+		for _, ws2 := range cfg.Paths {
+			setConfigVaribales(ws2, "WS")
+		}
+
+	})
 }
 
 // InitWsVariables is setting up variables depending the current found configuration (.contxt.yml)
 func InitWsVariables() {
 	setWorkspaceVariables()
-	if ws, err := CollectWorkspaceInfos(); err == nil {
-		SetPH("CTX_WS", ws.CurrentWs)
-		/*
-			for _, wsInfo := range ws.Paths {
-				setConfigVaribales(wsInfo.Project, wsInfo.Path, "WS")
-			}*/
-	} else {
-		manout.Error("fail loading workspace information ", "we run in a error while we tryed to parse the workspaces.", err)
-		systools.Exit(systools.ErrorTemplateReading)
-	}
 }
 
-func setConfigVaribales(wsInfo configure.WorkspaceInfo, path, varPrefix string) {
+func setConfigVaribales(wsInfo configure.WorkspaceInfoV2, varPrefix string) {
 	if wsInfo.Project != "" && wsInfo.Role != "" {
 		prefix := wsInfo.Project + "_" + wsInfo.Role
-		SetPH(varPrefix+"0_"+prefix, path) // at least XXX0 without any version. this could be overwritten by other checkouts
+		SetPH(varPrefix+"0_"+prefix, wsInfo.Path) // at least XXX0 without any version. this could be overwritten by other checkouts
 		if wsInfo.Version != "" {
 			// if version is set, we use them for avoid conflicts with different checkouts
 			if versionSan, err := systools.CheckForCleanString(wsInfo.Version); err == nil {
 				prefix += "_" + versionSan
-				SetPH(varPrefix+"1_"+prefix, path) // add it to ws1 as prefix for versionized keys
+				// add it to ws1 as prefix for versionized keys
+				SetPH(varPrefix+"1_"+prefix, wsInfo.Path)
 			}
 		}
 	}
+}
+
+// FindWorkspaceInfoByTemplate is searching for a template file and if found, it will set the project and role
+// from the template file to the workspace info
+// this is only done if the workspace info is not set yet
+// this is automatically done on each workspace, if the workspace is not set yet
+// but only on the command switch and 'dir add'
+func FindWorkspaceInfoByTemplate(updateFn func(workspace string, cnt int, update bool, info configure.WorkspaceInfoV2)) (allCount int, updatedCount int) {
+	wsCount := 0
+	wsUpdated := 0
+	if currentPath, err := os.Getwd(); err != nil {
+		CtxOut("Error while reading current directory", err)
+		systools.Exit(systools.ErrorBySystem)
+	} else {
+		haveUpdate := false
+		configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+			wsCount++
+			for pathIndex, ws2 := range cfg.Paths {
+				if err := os.Chdir(ws2.Path); err == nil && ws2.Project == "" && ws2.Role == "" {
+					template, _, found, err := GetTemplate()
+					if found && err == nil {
+						if template.Workspace.Project != "" && template.Workspace.Role != "" {
+							ws2.Project = template.Workspace.Project
+							ws2.Role = template.Workspace.Role
+							cfg.Paths[pathIndex] = ws2
+							CtxOut("Found template for workspace ", index, " and set project and role to ", ws2.Project, ":", ws2.Role)
+							configure.GetGlobalConfig().UpdateCurrentConfig(cfg)
+							haveUpdate = true
+							wsUpdated++
+							if updateFn != nil {
+								updateFn(index, wsCount, true, ws2)
+							}
+						}
+					} else {
+						if updateFn != nil {
+							updateFn(index, wsCount, false, ws2)
+						}
+					}
+				}
+			}
+
+		})
+		if haveUpdate {
+			configure.GetGlobalConfig().SaveConfiguration()
+		}
+		os.Chdir(currentPath)
+	}
+	return wsCount, wsUpdated
 }
 
 // MainInit initilaize the Application.
@@ -746,12 +894,12 @@ func setConfigVaribales(wsInfo configure.WorkspaceInfo, path, varPrefix string) 
 // currently we have two of them.
 // by running in interactive in ishell, and by running with parameters.
 func MainInit() {
-	ResetVariables()                       // needed because we could run in a shell
-	pathIndex = -1                         // this is the path index used for the current path. -1 means unset
-	initLogger()                           // init the logger. currently there is nothing happens except sometime for local debug
-	InitDefaultVars()                      // init all the default variables first, they are independend from any configuration
-	CopyPlaceHolder2Origin()               // doing this 1/2 to have the current variables already in palce until we parse the config
-	var configErr = configure.InitConfig() // try to initialize current config
+	ResetVariables()                                         // needed because we could run in a shell
+	pathIndex = -1                                           // this is the path index used for the current path. -1 means unset
+	initLogger()                                             // init the logger. currently there is nothing happens except sometime for local debug
+	InitDefaultVars()                                        // init all the default variables first, they are independend from any configuration
+	CopyPlaceHolder2Origin()                                 // doing this 1/2 to have the current variables already in palce until we parse the config
+	var configErr = configure.GetGlobalConfig().InitConfig() // try to initialize current config
 	if configErr != nil {
 		log.Fatal(configErr)
 	}
@@ -779,7 +927,7 @@ func MainExecute() {
 func CallBackOldWs(oldws string) bool {
 	GetLogger().Info("OLD workspace: ", oldws)
 	// get all paths first
-	configure.PathWorkerNoCd(func(_ int, path string) {
+	configure.GetGlobalConfig().PathWorkerNoCd(func(_ string, path string) {
 
 		os.Chdir(path)
 		template, templateFile, exists, _ := GetTemplate()
@@ -804,11 +952,19 @@ func CallBackOldWs(oldws string) bool {
 	return true
 }
 
+func GetColorEnabled() bool {
+	return showColors
+}
+
+func SetColorEnabled(enabled bool) {
+	showColors = enabled
+}
+
 func CallBackNewWs(newWs string) {
 	ResetVariables() // reset old variables while change the workspace. (req for shell mode)
 	MainInit()       // initialize the workspace
 	GetLogger().Info("NEW workspace: ", newWs)
-	configure.PathWorker(func(_ int, path string) { // iterate any path
+	configure.GetGlobalConfig().PathWorker(func(_ string, path string) { // iterate any path
 		template, templateFile, exists, _ := GetTemplate()
 
 		GetLogger().WithFields(logrus.Fields{
@@ -841,9 +997,9 @@ func doMagicParamOne(param string) bool {
 		return true
 	}
 	// param is a workspace ?
-	configure.WorkSpaces(func(ws string) {
-		if param == ws {
-			configure.ChangeWorkspace(ws, CallBackOldWs, CallBackNewWs)
+	configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+		if param == index {
+			configure.GetGlobalConfig().ChangeWorkspace(index, CallBackOldWs, CallBackNewWs)
 			result = true
 		}
 	})

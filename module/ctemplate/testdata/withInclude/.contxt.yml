@@ -1,0 +1,8 @@
+config:
+  variables:
+    test: check
+
+task:
+  - id: {{ $.vars.name }}
+    script:
+      - echo dummy

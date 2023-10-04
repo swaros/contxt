@@ -1,4 +1,28 @@
-package shellcmd
+// MIT License
+//
+// Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the Software), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+// AINC-NOTE-0815
+
+ package shellcmd
 
 import (
 	"fmt"
@@ -7,16 +31,28 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/swaros/contxt/module/systools"
 )
 
-var docStyle = lipgloss.NewStyle().Margin(1, 2)
+var (
+	docStyle = lipgloss.NewStyle().Margin(1, 2)
+
+	menuTitleStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#25A065")).Bold(true).
+			Padding(0, 1)
+
+	selectionTitleStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#ccccFF")).Bold(true).
+				Padding(0, 1)
+)
 
 type selectItem struct {
 	title, desc string
 }
 
 var (
-	items []selectItem
+	items      []selectItem
+	logPointer LogOutput
 )
 
 func (i selectItem) Title() string       { return i.title }
@@ -25,6 +61,7 @@ func (i selectItem) FilterValue() string { return i.title }
 
 type selectUiModel struct {
 	list list.Model
+	log  LogOutput
 }
 
 func (m selectUiModel) Init() tea.Cmd {
@@ -58,7 +95,7 @@ func (m selectUiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m selectUiModel) View() string {
-	return docStyle.Render(m.list.View())
+	return lipgloss.JoinHorizontal(lipgloss.Top, docStyle.Render(m.list.View()), m.log.View())
 }
 
 func ClearSelectItems() {
@@ -69,16 +106,26 @@ func AddItemToSelect(item selectItem) {
 	items = append(items, item)
 }
 
-func uIselectItem(title string) selectResult {
+func ApplyLogOut(log LogOutput) {
+	logPointer = log
+}
+
+func uIselectItem(title string, asMenu bool) selectResult {
 	displayItems := []list.Item{}
 	selected.isSelected = false
 
 	for _, itm := range items {
 		displayItems = append(displayItems, itm)
 	}
-
-	listModel := selectUiModel{list: list.New(displayItems, list.NewDefaultDelegate(), 0, 0)}
+	w, h, _ := systools.GetStdOutTermSize()
+	listModel := selectUiModel{list: list.New(displayItems, list.NewDefaultDelegate(), w/2, h-3)}
+	listModel.log = logPointer
 	listModel.list.Title = title
+	if asMenu {
+		listModel.list.Styles.Title = menuTitleStyle
+	} else {
+		listModel.list.Styles.Title = selectionTitleStyle
+	}
 
 	p := tea.NewProgram(listModel, tea.WithAltScreen())
 

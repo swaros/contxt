@@ -26,8 +26,8 @@
 package taskrun
 
 import (
+	"errors"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -38,9 +38,27 @@ import (
 func DirFindApplyAndSave(args []string) (string, error) {
 	dir := DirFind(args)
 	if dir != "" && dir != "." {
-		return dir, configure.SaveActualPathByPath(dir)
+		index, ok := FindIndexByPath(dir)
+		if !ok {
+			return dir, errors.New("path not found in configuration")
+		}
+		if err := configure.GetGlobalConfig().SetCurrentPathIndex(index); err != nil {
+			return dir, err
+		}
+		return dir, configure.GetGlobalConfig().SaveConfiguration()
 	}
 	return dir, nil // just no or the same path reported
+}
+
+func FindIndexByPath(path string) (index string, ok bool) {
+	indexFound := ""
+	configure.GetGlobalConfig().PathWorkerNoCd(func(index string, p string) {
+		if p == path {
+			ok = true
+			indexFound = index
+		}
+	})
+	return indexFound, ok
 }
 
 // DirFind returns the best matching part of depending the arguments, what of the stored paths
@@ -50,23 +68,20 @@ func DirFind(args []string) string {
 	if len(args) < 1 {
 		return "."
 	}
-	// do we have a index number as first argument?
-	if i, err := strconv.Atoi(args[0]); err == nil {
-		// lets see if we have this index in the paths
-		indexPath := "."
-		configure.PathWorkerNoCd(func(index int, path string) {
-			if index == i {
-				indexPath = path
-			}
-		})
-		GetLogger().WithFields(logrus.Fields{"index": i, "path": indexPath}).Debug("Found match by using param as index")
-		return indexPath
-	}
-	paths := []string{}
 
-	configure.PathWorkerNoCd(func(index int, path string) {
+	paths := []string{}
+	indexMatchMap := map[string]string{}
+
+	configure.GetGlobalConfig().PathWorkerNoCd(func(index string, path string) {
 		paths = append(paths, path)
+		indexMatchMap[index] = path
 	})
+
+	if iPath, ok := indexMatchMap[args[0]]; ok {
+		GetLogger().WithFields(logrus.Fields{"path": iPath}).Debug("Found match by index")
+		return iPath
+	}
+
 	if p, ok := DecidePath(args, paths); ok {
 		GetLogger().WithFields(logrus.Fields{"path": p}).Debug("Found match by comparing strings")
 		return p

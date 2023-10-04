@@ -1,6 +1,8 @@
 module:
   -
     modul: yacl
+    clean:
+      - "tmpfiles/*.yml"
     local: true
     test:
       timeout: 30s
@@ -12,8 +14,27 @@ module:
       timeout: 30s
 
   -
+    modul: runner
+    local: true
+    clean:
+      - "testdata/*.log"
+      - "testdata/projects01/*ctx_projects.yml"
+    test:
+      timeout: 30s
+
+  -
+    modul: ctxtcell
+    local: true
+    test:
+      timeout: 20s
+
+  -
     modul: configure
     local: true
+    clean:
+      - "test/temp/*.yml"
+      - "test/temp/*.yaml"
+      - "test/temp/*.json"
     test:
       timeout: 30s
 
@@ -37,6 +58,24 @@ module:
       timeout: 30s
 
   -
+    modul: linehack
+    local: true
+    test:
+      timeout: 30s
+
+  -
+    modul: ctemplate
+    local: true
+    test:
+      timeout: 30s
+
+  -
+    modul: ctxout
+    local: true
+    test:
+      timeout: 60s
+
+  -
     modul: taskrun
     local: true
     test:
@@ -51,6 +90,30 @@ module:
 
   -
     modul: shellcmd
+    local: true
+    test:
+      timeout: 30s
+
+  -
+    modul: ctxshell
+    local: true
+    test:
+      timeout: 30s
+
+  -
+    modul: tasks
+    local: true
+    test:
+      timeout: 30s
+  
+  - 
+    modul: yaclint
+    local: true
+    test:
+      timeout: 30s
+
+  -
+    modul: mimiclog
     local: true
     test:
       timeout: 30s

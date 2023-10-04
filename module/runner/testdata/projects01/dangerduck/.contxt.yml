@@ -1,0 +1,7 @@
+config:
+  imports:
+    - values.yml values
+task:
+  - id: script
+    script:
+      - echo "greeting ${values:ducktale.nightrider}"

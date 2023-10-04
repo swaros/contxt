@@ -1,7 +1,6 @@
 // Copyright (c) 2022 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,31 +22,85 @@
 package yamc
 
 import (
+	"errors"
 	"os"
+	"strings"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
-type YamlReader struct{}
-
-func NewYamlReader() *YamlReader {
-	return &YamlReader{}
+// YamlReader is a reader for yaml files
+type YamlReader struct {
+	fields *StructDef
 }
 
+// NewYamlReader creates a new YamlReader
+func NewYamlReader() *YamlReader {
+	return &YamlReader{
+		fields: &StructDef{},
+	}
+}
+
+// HaveFields returns true if the reader has field information
+func (y *YamlReader) HaveFields() bool {
+	return y.fields != nil && y.fields.Init
+}
+
+// GetFields returns the field information
+func (y *YamlReader) GetFields() *StructDef {
+	return y.fields
+}
+
+// Unmarshal unmarshals like yaml.Unmarshal
 func (y *YamlReader) Unmarshal(in []byte, out interface{}) (err error) {
+	y.fields = NewStructDef(out)
+	if err := y.fields.ReadStruct(parseYamlTagfunc); err != nil {
+		return err
+	}
 	return yaml.Unmarshal(in, out)
 }
 
+// Marshal marshals like yaml.Marshal
 func (y *YamlReader) Marshal(in interface{}) (out []byte, err error) {
 	return yaml.Marshal(in)
 }
 
+// FileDecode decodes a yaml file into a struct
 func (y *YamlReader) FileDecode(path string, decodeInterface interface{}) (err error) {
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	return yaml.Unmarshal(file, decodeInterface)
+
+	if !IsPointer(decodeInterface) {
+		return errors.New("decode will work on pointers only")
+
+	}
+	y.fields = NewStructDef(decodeInterface)
+	if err := y.fields.ReadStruct(parseYamlTagfunc); err != nil {
+		return err
+	}
+	err2 := yaml.Unmarshal(file, decodeInterface)
+
+	return err2
+}
+
+// parser fuctions to resolve reflection tags for yaml struct tags
+func parseYamlTagfunc(info StructField) ReflectTagRef {
+	if info.Tag.Get("yaml") != "" {
+		all := info.Tag.Get("yaml")
+		parts := strings.Split(all, ",")
+		adds := []string{}
+		if len(parts) > 1 {
+			adds = parts[1:]
+		}
+		return ReflectTagRef{
+			TagRenamed:    parts[0],
+			TagAdditional: adds,
+		}
+	}
+
+	return ReflectTagRef{}
 }
 
 func (y *YamlReader) SupportsExt() []string {

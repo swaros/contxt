@@ -23,10 +23,13 @@ package yacl
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/swaros/contxt/module/yamc"
@@ -36,15 +39,28 @@ const (
 	PATH_UNSET            = 0
 	PATH_HOME             = 1
 	PATH_CONFIG           = 2
+	PATH_ABSOLUTE         = 3
 	ERROR_PATH_NOT_EXISTS = 101
 	NO_CONFIG_FILES_FOUND = 102
+
+	// Flags to get config entries
+	ConfigUseSpecialDir    = 1
+	ConfigAllowSubDirs     = 2
+	ConfigExpectNoFiles    = 4
+	ConfigAllowDirPattern  = 8
+	ConfigFilesPattern     = 16
+	ConfigTrackFiles       = 32
+	ConfigDirBlackList     = 64
+	ConfigSupportMigrate   = 128
+	ConfigHaveCustomLoader = 256
 )
 
 type ConfigModel struct {
 	setFile          string                             // sets a specific filename. so this is the only one that will be loaded
 	useSpecialDir    int                                // defines the behavior og the paths used like config, user home or none a simple path (relative or absolute)
 	structure        any                                // points to the config struct
-	reader           []yamc.DataReader                  // list of used readers
+	reader           *[]yamc.DataReader                 // list of posible readers
+	lastUsedReader   yamc.DataReader                    // the last used reader
 	subDirs          []string                           // subdirectories relative to the basedir (defined by useSpecialDir behavior)
 	usedFile         string                             // the last used configFile that is parsed
 	loadedFiles      []string                           // list of all files they processed
@@ -57,6 +73,11 @@ type ConfigModel struct {
 	allowSubDirs     bool                               // flag to enables scanning sub folders while looking for config files
 	allowDirPattern  string                             // regex-pattern to whitelist sub folders while looking for config files
 	filesPattern     string                             // file regex-pattern while looking for config files
+	errorHappened    bool                               // flag to indicate, that an error happened while loading the configuration
+	chainError       error                              // the last error that happened while loading the configuration
+	customFileLoader func(path string) ([]byte, error)  // a custom file loader. if this is set, it will be used instead of the default file loader
+	trackFiles       bool                               // flag to enable the tracking of loaded files
+	fileContent      map[string][]byte                  // map of file contents. if trackFiles is enabled, this will be filled
 }
 
 // New creates a New yacl ConfigModel with default properties
@@ -65,7 +86,7 @@ func New(structure any, read ...yamc.DataReader) *ConfigModel {
 		useSpecialDir: PATH_UNSET,
 		expectNoFiles: false,
 		structure:     structure,
-		reader:        read,
+		reader:        &read,
 		allowSubDirs:  false,
 	}
 }
@@ -77,6 +98,62 @@ func (c *ConfigModel) Init(initFn func(strct *any), noConfigFn func(errCode int)
 	c.initFn = initFn
 	c.noConfigFilesFn = noConfigFn
 	return c
+}
+
+// sets a custome file loader they will be used instead of the default file loader to load the configuration files
+// and return the content as byte array. so some template engines can be used to load the configuration files
+func (c *ConfigModel) SetCustomFileLoader(fn func(path string) ([]byte, error)) *ConfigModel {
+	c.customFileLoader = fn
+	return c
+}
+
+// SetTrackFiles enables the tracking of loaded files. so the file content will be stored in the ConfigModel
+// and can be accessed by GetFileContent
+func (c *ConfigModel) SetTrackFiles() *ConfigModel {
+	c.trackFiles = true
+	c.fileContent = make(map[string][]byte)
+	return c
+}
+
+// GetConfig returns the value of the given config entry
+func (c *ConfigModel) GetConfig(what int) interface{} {
+	switch what {
+	case ConfigUseSpecialDir:
+		return c.useSpecialDir
+	case ConfigAllowSubDirs:
+		return c.allowSubDirs
+	case ConfigExpectNoFiles:
+		return c.expectNoFiles
+	case ConfigAllowDirPattern:
+		return c.allowDirPattern
+	case ConfigFilesPattern:
+		return c.filesPattern
+	case ConfigTrackFiles:
+		return c.trackFiles
+	case ConfigDirBlackList:
+		return c.dirBlackList
+	case ConfigSupportMigrate:
+		return c.supportMigrate
+	case ConfigHaveCustomLoader:
+		return c.customFileLoader != nil
+	}
+	return nil
+}
+
+// GetFileContent returns the file content of the given file path
+// if trackFiles is not enabled, this will return an error
+func (c *ConfigModel) GetFileContent(path string) ([]byte, error) {
+	absolutePath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	if !c.trackFiles {
+		return nil, errors.New("trackFiles is not enabled")
+	}
+	if content, ok := c.fileContent[absolutePath]; ok {
+		return content, nil
+	}
+	return nil, errors.New("file not found:" + path + " (absolute:" + absolutePath + ")")
 }
 
 // SetExpectNoConfigFiles disable the behavior, not existing config files will be handled as error.
@@ -126,7 +203,28 @@ func (c *ConfigModel) SetSubDirs(dirs ...string) *ConfigModel {
 // if you like to load one specific file so use LoadFile instead.
 // if you like more flexible, depending what files should load, define a regex-pattern and use SetFilePattern
 func (c *ConfigModel) SetSingleFile(filename string) *ConfigModel {
+	if filepath.Base(filename) != filename {
+		c.errorHappened = true
+		c.chainError = fmt.Errorf("SetSingleFile: [%s] filename should not contain any path", filename)
+	}
 	c.setFile = filename
+	return c
+}
+
+// SetFileAndPathsByFullFilePath sets the file and the path to the file. so the file will be loaded and
+// the path will be used to scan for sub directories. so this is the same as SetSingleFile and SetSubDirs
+// but in one call.
+func (c *ConfigModel) SetFileAndPathsByFullFilePath(fullPath string) *ConfigModel {
+	c.setFile = filepath.Base(fullPath)
+	c.subDirs = strings.Split(filepath.Dir(fullPath), string(filepath.Separator))
+	c.useSpecialDir = PATH_ABSOLUTE
+	// remove the first element, if it is empty
+	// this will happen if the path starts with a slash
+	// so this means also we have an absolute path
+	if c.subDirs[0] == "" {
+		c.subDirs = c.subDirs[1:]
+		c.useSpecialDir = PATH_ABSOLUTE
+	}
 	return c
 }
 
@@ -168,6 +266,9 @@ func (c *ConfigModel) Empty() *ConfigModel {
 // this can be called multiple times with different files.
 // the content is merged (no deep copy, so no list merge for example)
 func (c *ConfigModel) LoadFile(path string) error {
+	if c.errorHappened {
+		return c.chainError
+	}
 	c.Empty()
 	c.setFile = path
 	var extension = filepath.Ext(path)
@@ -230,10 +331,13 @@ func (c *ConfigModel) filePattenCheck(path string) bool {
 
 // Load start loading all configuration files depends the configured behavior.
 func (c *ConfigModel) Load() error {
+	if c.errorHappened {
+		return c.chainError
+	}
 	c.Empty()
 
 	// do we have loaders?
-	if len(c.reader) == 0 {
+	if len(*c.reader) == 0 {
 		return errors.New("no loaders assigned. add add least one Reader on New(&cf, ...)")
 	}
 	dir := c.GetConfigPath()
@@ -256,7 +360,9 @@ func (c *ConfigModel) Load() error {
 					return c.tryLoad(path, extension)
 
 				} else if c.setFile == "" { // loading all files and override anything by the last used config. but not if we expect a single file is used
-					c.tryLoad(path, extension)
+					if err := c.tryLoad(path, extension); err != nil {
+						return err
+					}
 				}
 			}
 		} else {
@@ -280,7 +386,7 @@ func (c *ConfigModel) Load() error {
 		if c.noConfigFilesFn != nil {
 			return c.noConfigFilesFn(NO_CONFIG_FILES_FOUND)
 		}
-		return errors.New("at least one Configuration should exists. but found nothing")
+		return errors.New("at least one Configuration should exists. but found nothing. check loaders,paths and filenames")
 	}
 	return err
 }
@@ -291,9 +397,9 @@ func (c *ConfigModel) detectFilename() string {
 		filename = c.usedFile
 
 	} else if c.setFile != "" { // or do we have a file defined?
-		filename = c.setFile
+		filename = filepath.Clean(c.GetConfigPath() + "/" + c.setFile)
 	}
-	if filename != "" { // still no filename? then compose it
+	if filename == "" { // still no filename? then compose it
 		return filepath.Clean(c.GetConfigPath() + "/" + filename)
 	}
 	return filename
@@ -304,7 +410,7 @@ func (c *ConfigModel) detectFilename() string {
 // IF we have setup a SingleFile and do not have a usage while loading, then this will be used instead.
 // anything else will report an error
 func (c *ConfigModel) Save() error {
-	if len(c.reader) < 1 {
+	if len(*c.reader) < 1 {
 		return errors.New("we need at least one DataReader. the fist assigned will be used for write operations")
 	}
 	filename := c.detectFilename()
@@ -313,7 +419,8 @@ func (c *ConfigModel) Save() error {
 	}
 
 	if ym, err := c.GetAsYmac(); err == nil {
-		if str, sErr := ym.ToString(c.reader[0]); sErr == nil {
+		reader := *c.reader
+		if str, sErr := ym.ToString(reader[0]); sErr == nil {
 			data := []byte(str)
 			if err := os.WriteFile(filename, data, 0644); err != nil {
 				return err
@@ -331,7 +438,7 @@ func (c *ConfigModel) Save() error {
 // anything what can go wrong will end up in a panic
 func (c *ConfigModel) GetConfigPath() string {
 	dir := "."
-
+	startSep := ""
 	switch c.useSpecialDir {
 	case PATH_HOME:
 		if usrDir, err := os.UserHomeDir(); err != nil {
@@ -339,16 +446,25 @@ func (c *ConfigModel) GetConfigPath() string {
 		} else {
 			dir = usrDir
 		}
+		startSep = "/"
 	case PATH_CONFIG:
 		if usrCfgDir, err := os.UserConfigDir(); err != nil {
 			panic(err) // if this fails, there is something terrible wrong. a good reason for panic
 		} else {
 			dir = usrCfgDir
 		}
+		startSep = "/"
+	case PATH_ABSOLUTE:
+		dir = ""                       // this is the root of the system. we add / later
+		if runtime.GOOS != "windows" { // windows does not have a root folder. it is C:\
+			startSep = "/"
+		}
+	default:
+		startSep = "/"
 	}
 
 	if len(c.subDirs) > 0 {
-		dir += "/" + strings.Join(c.subDirs, "/")
+		dir += startSep + strings.Join(c.subDirs, "/")
 	}
 	return filepath.Clean(dir)
 }
@@ -407,29 +523,79 @@ func (c *ConfigModel) CreateYamc(reader yamc.DataReader) (*yamc.Yamc, error) {
 	}
 }
 
+// main function for loading the content from a file.
 func (c *ConfigModel) tryLoad(path, ext string) error {
-	for _, loader := range c.reader {
+	for _, loader := range *c.reader {
 		for _, ex := range loader.SupportsExt() {
-			if strings.EqualFold("."+ex, ext) {
-				if err := loader.FileDecode(path, c.structure); err == nil {
-					if c.supportMigrate { // migrate the config
-						c.fileLoadCallback(path, c.structure)
+			if strings.EqualFold("."+ex, ext) { // find the matching loader by extension
+				if c.customFileLoader != nil {
+					if content, err := c.customFileLoader(path); err != nil {
+						return err
+					} else {
+						if c.trackFiles {
+							absolutPath, err := filepath.Abs(path)
+							if err != nil {
+								return err
+							}
+							c.fileContent[absolutPath] = content
+						}
+						if err := loader.Unmarshal(content, c.structure); err != nil {
+							return err
+						}
 					}
-					c.usedFile = path
-					c.loadedFiles = append(c.loadedFiles, path)
 				} else {
-					return err
+					if c.trackFiles {
+						absolutPath, err := filepath.Abs(path)
+						if err != nil {
+							return err
+						}
+						// we need to load the content for tracking
+						// so instead of using loader.FileDecode, we use the ioutil
+						// to get the the content and store them.
+						// and then we use the loader.Unmarshal to decode the content
+						content, err := ioutil.ReadFile(path)
+						if err != nil {
+							return err
+						}
+						c.fileContent[absolutPath] = content
+						if err := loader.Unmarshal(content, c.structure); err != nil {
+							return err
+						}
+					} else {
+						if err := loader.FileDecode(path, c.structure); err != nil {
+							return err
+						}
+					}
 				}
-				return nil
+				c.lastUsedReader = loader
+				if c.supportMigrate { // migrate the config
+					c.fileLoadCallback(path, c.structure)
+				}
+				c.usedFile = path
+				c.loadedFiles = append(c.loadedFiles, path)
 			}
 		}
 	}
 	return nil
 }
 
+// return the last used reader for loading the configuration
+// this is nil, if no configuration was loaded
+func (c *ConfigModel) GetLastUsedReader() yamc.DataReader {
+	return c.lastUsedReader
+}
+
 // GetLoadedFile returns the used configuration filename
 func (c *ConfigModel) GetLoadedFile() string {
 	return c.usedFile
+}
+
+// Reset the configuration. this will clear the usedFile and loadedFiles.
+// this is useful for testing
+func (c *ConfigModel) Reset() {
+	c.usedFile = ""
+	c.loadedFiles = []string{}
+	c.fileContent = map[string][]byte{}
 }
 
 // GetAllParsedFiles returns all parsed configuration filenames

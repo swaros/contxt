@@ -3,11 +3,20 @@ go 1.18
 use (
 	./module/awaitgroup
 	./module/configure
+	./module/ctemplate
+	./module/ctxout
+	./module/ctxshell
+	./module/ctxtcell
 	./module/dirhandle
+	./module/linehack
+	./module/mimiclog
+	./module/runner
 	./module/shellcmd
 	./module/systools
 	./module/taskrun
+	./module/tasks
 	./module/trigger
 	./module/yacl
+	./module/yaclint
 	./module/yamc
 )

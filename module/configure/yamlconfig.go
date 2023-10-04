@@ -23,14 +23,6 @@
 
 package configure
 
-// StopReasons mapping for RunConfig.Task[].Stopreasons
-type StopReasons struct {
-	Onerror        bool
-	OnoutcountLess int
-	OnoutcountMore int
-	OnoutContains  []string
-}
-
 // IncludePaths are files the defines how variables should be parsed.
 // they indludes folders they have to be parsed first so they contents
 // can be sued to proceeed with test/template.
@@ -41,19 +33,6 @@ type IncludePaths struct {
 		Folders []string `yaml:"folders"`
 	} `yaml:"include"`
 }
-
-// ++++++++++++++++++++ IMPORTANT !!!! ++++++++++++++++++++++++++++++
-// after autogenerate todos:
-// Variables are map[string]string and contains settings for Placeholders. add yaml:"variables,omitempty
-//
-// change all variables anywhere
-//
-// Variables    map[string]string `yaml:"variables,omitempty"`
-//
-// same for environment in Require
-//
-// Environment map[string]string `yaml:"environment,omitempty"`
-//
 
 // RunConfig defines the structure of the local stored execution files
 // this is the ROOT of the contxt.yml

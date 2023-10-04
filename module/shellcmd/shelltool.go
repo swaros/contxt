@@ -1,33 +1,55 @@
-package shellcmd
+// MIT License
+//
+// Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the Software), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+// AINC-NOTE-0815
+
+ package shellcmd
 
 import (
-	"fmt"
 	"os"
-	"strings"
+	"strconv"
 
 	"github.com/abiosoft/ishell"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/taskrun"
 	"github.com/swaros/manout"
 )
 
 func autoRecoverWs() {
-	if !inWs() {
-		configure.WorkSpaces(func(ws string) {
-			if configure.UsedConfig.CurrentSet == ws {
-				configure.ChangeWorkspace(ws, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
-			}
-		})
-	}
+	// TODO: old config is gone
 }
+
+var (
+	UiLogger LogOutput = *NewAutoSizeLogOutput()
+)
 
 func inWs() bool {
 	dir, err := dirhandle.Current()
 	if err != nil {
 		panic(err)
 	}
-	return configure.PathMeightPartOfWs(dir)
+	return configure.GetGlobalConfig().PathMeightPartOfWs(dir)
 }
 
 func resetShell() {
@@ -38,54 +60,71 @@ func resetShell() {
 // handleWorkSpaces display a list of workspace to select one.
 // it returns true, if the workspace is switched
 func handleWorkSpaces(c *ishell.Context) bool {
-	var ws []string
+	//var ws []string = configure.GetGlobalConfig().ListWorkSpaces()
 	// adds workspaces to the list by callback iterator
-	configure.WorkSpaces(func(s string) {
-		ws = append(ws, s)
+
+	configure.GetGlobalConfig().ExecOnWorkSpaces(func(wsName string, ws configure.ConfigurationV2) {
+		AddItemToSelect(selectItem{title: wsName, desc: strconv.Itoa(len(ws.Paths)) + " stored paths"})
 	})
-	selectedWs := simpleSelect("workspaces", ws)
+
+	selectedWs := uIselectItem("Select Workspace ...", false)
 	if selectedWs.isSelected {
 		c.Println("change to workspace: ", selectedWs.item.title)
-		configure.ChangeWorkspace(selectedWs.item.title, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
+		UiLogger.Add("change to workspace: " + selectedWs.item.title)
+		configure.GetGlobalConfig().ChangeWorkspace(selectedWs.item.title, taskrun.CallBackOldWs, taskrun.CallBackNewWs)
 		return true
 	}
 	return false
 }
 
-func handleContexNavigation(c *ishell.Context) bool {
-	workspace, err := taskrun.CollectWorkspaceInfos() // get workspace meta-info
-	if err != nil {
-		manout.Om.Print(manout.ForeRed, "Error parsing workspace", manout.CleanTag, err)
-		return false
+func handleCreateWorkspace(c *ishell.Context) bool {
+	wsName := ""
+	if len(c.Args) > 0 {
+		wsName = c.Args[0]
+	} else {
+		wsName, _ = TextInput("Enter Workspace Name", "new workspace name", 128, 25)
 	}
+	wsName, _ = systools.CheckForCleanString(wsName)
+	UiLogger.Add("try to create workspace: (" + wsName + ")")
 
-	for _, wsPath := range workspace.Paths { // iterate the path infos
-		if wsPath.HaveTemplate {
-			// build description by the tasks the beeing used
-			label := fmt.Sprintf("%d tasks:  ", len(wsPath.Targets))
-			AddItemToSelect(selectItem{title: wsPath.Path, desc: label + strings.Join(wsPath.Targets, "|")})
-		} else {
-			// plain added path. no template there
-			AddItemToSelect(selectItem{title: wsPath.Path, desc: "no tasks in this path"})
+	if wsName != "" {
+		if err := configure.GetGlobalConfig().AddWorkSpace(wsName, taskrun.CallBackOldWs, taskrun.CallBackNewWs); err != nil {
+			manout.Om.Println(manout.ForeRed, "Error while trying to create workspace", manout.CleanTag, err)
+			UiLogger.Add("error:" + err.Error())
+			return false
 		}
-
+		c.Println("workspace created: ", wsName)
+		UiLogger.Add("success  (" + wsName + ") created")
+		return true
 	}
+	manout.Om.Println(manout.ForeRed, "Error while trying to create workspace ", manout.CleanTag, " no name given")
+	UiLogger.Add("error: empty workspace name")
+	return false
+}
 
-	selectedCn := uIselectItem("choose path in " + workspace.CurrentWs)
+func handleContexNavigation(c *ishell.Context) bool {
+	configure.GetGlobalConfig().PathWorkerNoCd(func(index, path string) {
+
+		AddItemToSelect(selectItem{title: path, desc: index})
+	})
+
+	selectedCn := uIselectItem("choose path in "+configure.GetGlobalConfig().UsedV2Config.CurrentSet, false)
 	if selectedCn.isSelected {
 		if err := os.Chdir(selectedCn.item.title); err != nil {
 			manout.Om.Print(manout.ForeRed, "Error while trying to enter path", manout.CleanTag, err)
+			UiLogger.Add("Error while trying to enter path" + err.Error())
 			return false
 		}
-		c.Println(
-			manout.MessageCln(
-				manout.ForeBlue,
-				"... path changed ",
-				manout.CleanTag,
-				selectedCn.item.title, " ",
-				manout.ForeLightGrey,
-				selectedCn.item.desc,
-				manout.CleanTag))
+		msg := manout.MessageCln(
+			manout.ForeBlue,
+			"... path changed ",
+			manout.CleanTag,
+			selectedCn.item.title, " ",
+			manout.ForeLightGrey,
+			selectedCn.item.desc,
+			manout.CleanTag)
+		UiLogger.Add("path changed to " + selectedCn.item.title)
+		taskrun.CtxOut(msg)
 		return true
 	}
 	return false

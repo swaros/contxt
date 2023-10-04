@@ -1,0 +1,36 @@
+{
+    "user" : [
+        {
+            "name" : "John",
+            "age" : 30,
+            "cars" : [
+                {
+                    "name" : "Ford",
+                    "models" : ["Fiesta", "Focus", "Mustang"]
+                },
+                {
+                    "name" : "BMW",
+                    "models" : ["320", "X3", "X5"]
+                },
+                {
+                    "name" : "Fiat",
+                    "models" : ["500", "Panda"]
+                }
+            ]
+        },
+        {
+            "name" : "Peter",
+            "age" : 46,
+            "cars" : [
+                {
+                    "name" : "Hundai",
+                    "models" : ["i10", "i20", "i30"]
+                },
+                {
+                    "name" : "Rover",
+                    "models" : ["25", "45", "75"]
+                }
+            ]
+        }
+    ]
+}

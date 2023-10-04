@@ -1,111 +1,25 @@
-package configure
+// MIT License
+//
+// Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the Software), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
-import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-)
+// AINC-NOTE-0815
 
-// ListWorkSpaces : list all existing workspaces
-func ListWorkSpaces() []string {
-	var files []string
-	var fullHomeDir string
-	homeDir, err := getUserDir()
-	if err == nil {
-		fullHomeDir = homeDir + DefaultPath
-		err := filepath.Walk(fullHomeDir, func(path string, info os.FileInfo, err error) error {
-			var basePath = filepath.Dir(path)
-			if basePath == filepath.Dir(fullHomeDir) && filepath.Ext(path) == ".json" {
-				files = append(files, path)
-			}
-			return nil
-		})
-		if err != nil {
-			panic(err)
-		}
-	}
-	return files
-}
-
-// DisplayWorkSpaces prints out all workspaces
-func DisplayWorkSpaces() {
-	//var files []string
-	files := ListWorkSpaces()
-
-	if len(files) > 0 {
-		for _, file := range files {
-			var basePath = filepath.Base(file)
-			var extension = filepath.Ext(file)
-			// display json files only they are not the default config
-			if extension == ".json" && basePath != DefaultConfigFileName {
-				basePath = strings.TrimSuffix(basePath, extension)
-				// we are also not interested in the default workspace
-				if basePath != DefaultWorkspace {
-					fmt.Println(basePath)
-				}
-			}
-		}
-	}
-}
-
-// GetWorkSpacesAsList prints out all workspaces
-func GetWorkSpacesAsList() ([]string, bool) {
-	var files []string
-	var workspaces []string
-	found := false
-	files = ListWorkSpaces()
-
-	if len(files) > 0 {
-		for _, file := range files {
-			var basePath = filepath.Base(file)
-			var extension = filepath.Ext(file)
-			// display json files only they are not the default config
-			if extension == ".json" && basePath != DefaultConfigFileName {
-				basePath = strings.TrimSuffix(basePath, extension)
-				// we are also not interested in the default workspace
-				if basePath != DefaultWorkspace {
-					workspaces = append(workspaces, basePath)
-					found = true
-				}
-			}
-		}
-	}
-	return workspaces, found
-}
-
-// WorkSpaces handler to iterate all workspaces
-func WorkSpaces(callback func(string)) {
-	//var files []string
-	files := ListWorkSpaces()
-
-	if len(files) > 0 {
-		for _, file := range files {
-			var basePath = filepath.Base(file)
-			var extension = filepath.Ext(file)
-			// display json files only they are not the default config
-			if extension == ".json" && basePath != DefaultConfigFileName {
-				basePath = strings.TrimSuffix(basePath, extension)
-				// we are also not interested in the default workspace
-				if basePath != DefaultWorkspace {
-					callback(basePath)
-				}
-			}
-		}
-	}
-}
-
-func AllWorkspacesConfig(configHandl func(config Configuration, path string)) error {
-	var wErr error = nil
-	WorkSpaces(func(s string) {
-		filename, _ := GetConfigPath(s + ".json")
-		if cfg, err := LoadExtConfiguration(filename); err == nil {
-			for _, path := range cfg.Paths {
-				configHandl(cfg, path)
-			}
-		} else {
-			wErr = err
-		}
-	})
-	return wErr
-}
+ package configure

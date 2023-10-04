@@ -29,6 +29,7 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
+	"github.com/swaros/contxt/module/yamc"
 	"gopkg.in/yaml.v3"
 
 	"github.com/tidwall/gjson"
@@ -127,11 +128,11 @@ func ImportDataFromYAMLFile(key string, filename string) error {
 
 // AddJSON imports data by a json String
 func AddJSON(key, jsonString string) error {
-	m := make(map[string]interface{})
-	err := json.Unmarshal([]byte(jsonString), &m)
-	if err != nil {
+	rdr := yamc.New()
+	if err := rdr.Parse(yamc.NewJsonReader(), []byte(jsonString)); err != nil {
 		return err
 	}
+	m := rdr.GetData()
 	AddData(key, m)
 	return nil
 }

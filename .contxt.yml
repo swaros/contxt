@@ -1,11 +1,11 @@
 # we use the build version for not running in a version conflict, if we do not have the new version installed
 version: "{{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.minor}}"
 
-# define oure workspace
+# define ours workspace
 workspace:
-   project: contxt
-   role: root
-   version: "{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}"
+  project: contxt
+  role: root
+  version: "{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}"
 
 # we need a couple of imports to create some
 # content depending the values we imported
@@ -16,11 +16,22 @@ config:
     - ./imports/coverage.html coverage
     - ./imports/Makefile.tpl makefile
     - ./imports/vscode.workspace.yml vscode-ws
+    - ./imports/go_build.tpl build-action
+    - ./imports/go_test.tpl test-action
+    - ./imports/codehead.tpl codehead
+    - ./imports/Dockerfile.ubuntu docker
   variables:
+      build-main-file: {{$.release.main}}
       include-dev-externals: ""
       configmodul: github.com/swaros/contxt/module/configure
       coverage-report: ""
       depbot-file: .github/dependabot.yml
+      licence_keyword: "MIT License"
+      build-info: "-release"
+      docker-tag: "{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}"
+      docker-registry: "swaros"
+      docker-image: "contxt"
+      docker-image-tag: "${docker-registry}/${docker-image}:${docker-tag}"
 
 ###### contxt welcome message
 ###### just to display default variables
@@ -32,6 +43,7 @@ task:
       - echo " --- targets build version         [ - {{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}} - ]"
       - echo " --- self version                  [ - ${CTX_VERSION} - ]"
       - echo " --- operating system              [ - ${CTX_OS} - ]"
+      - echo " --- build main file               [ - ${build-main-file} - ]"
 {{- if $.WS0_contxt_root}} # always check if is set. without project info, this is not exists
       - echo " --- WS0_contxt_root = go/template [ - {{$.WS0_contxt_root}} - ]"
 {{- end}}
@@ -46,6 +58,11 @@ task:
     next:
       - go-check
 
+## set the build version to the development version
+  - id: dev
+    variables:
+      build-info: "-dev"
+      build-main-file: {{$.development.main}}
 ######
   - id: dev-external
     variables:
@@ -81,17 +98,56 @@ task:
          echo ""
          echo "<b:yellow><f:red> ERROR </>  <f:cyan>dos2unix</> is required"
          echo ""
-       else         
+       else
          find . -type f -print0 | xargs -0 dos2unix -v
          git status -s
        fi
-       
+
 
   ##### module based task #####
   ##### the definition for modules is stored in .modules.yml
   ##### here we check if all modules we expect
   ##### exists. and if not we create this modul
   ##### by using the regular go tool-set
+
+  ## clean tasks
+  - id: clean
+    require:
+      system: linux
+    runTargets:
+      - clean-moduls
+    script:
+      - echo "clean all"
+      - rm -rfv ./bin/*
+      - rm -rfv ./docs/coverage.html
+
+  - id: clean-moduls
+    require:
+      system: linux
+    script:
+      - echo "clean moduls"
+{{- range $k, $modul := $.module }}
+  {{- if $modul.clean}}
+      - echo "   clean modul {{ $modul.modul }}"
+      - |
+        cd ./module/{{ $modul.modul }}/
+        {{ range $k, $clean := $modul.clean }}
+        echo "      remove {{ $clean }}"
+        rm -rfv {{ $clean }}
+        {{ end }}
+  {{- end }}
+{{- end }}
+
+  ## update mai task
+ 
+  - id: update-all
+    runTargets:
+      - modules-verify
+      - makefile-update
+      - licence-header-check
+      - update-dependencies
+    script:
+      - echo "update all" 
 
   ## update makefile
   - id: makefile-update
@@ -100,10 +156,17 @@ task:
     script:
     - "#@var-to-file makefile Makefile"
 
+  ## update github actions
+  - id: github-actions-update
+    script:
+      - "#@var-to-file build-action .github/workflows/go.yml"
+      - "#@var-to-file test-action .github/workflows/test.yml"
+
   ## verify the modules
   - id: modules-verify
     runTargets:
       - depandabot
+      - github-actions-update
     needs:
 {{- range $k, $modul := $.module }}
       - verify-modul-{{ $modul.modul }}
@@ -211,13 +274,14 @@ task:
        - "#@var-to-file depandabot ${depbot-file}"
 
 #### update dependencies for all modules
-  - id: cleanup-dependencies
+  - id: update-dependencies
     script:
     {{- range $k, $test := $.module }}
     {{- if $test.local}}
       - |
-       cd {{ $test.modul }}
+       cd ${CTX_PWD}/module/{{ $test.modul }}
        go mod tidy
+       cd ${CTX_PWD}
     {{- end }}
     {{- end }}
       - git status
@@ -242,9 +306,10 @@ task:
 
   - id: test-coverage
     require:
-      system: linux
+      notExists:
+        - docs/test/coverage/
     script:
-      - mkdir -p ./docs/test/coverage/
+      - mkdir ./docs/test/coverage/
 
   - id: test-coverage
     script:
@@ -265,12 +330,28 @@ task:
 
   - id: test-coverage
     require:
-      system: linux
       exists:
         - docs/coverage.html
     script:
       - echo "try to open default browser with report ${CTX_PWD}"
+      - echo "if this is not working, you can find the report here"
+      - echo "file://${CTX_PWD}/docs/coverage.html"
+
+  - id: test-coverage
+    require:
+      system: linux
+      exists:
+        - docs/coverage.html
+    script:
       - xdg-open file://${CTX_PWD}/docs/coverage.html
+
+  - id: test-coverage
+    require:
+      system: windows
+      exists:
+        - docs/coverage.html
+    script:
+      - Start-Process file://${CTX_PWD}/docs/coverage.html
 
 #### same as test but running async
 #### it is just faster
@@ -286,9 +367,11 @@ task:
     {{- if $test.local}}
   - id: atest-{{ $test.modul }}
     options:
-      displaycmd: true
+      displaycmd: false
+      panelsize: 25
     script:
-      - go test -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...
+      - echo "start async testing modul {{ $test.modul }}"
+      - go test -count=1 -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...
     {{- end }}
     {{- end }}
 
@@ -309,7 +392,7 @@ task:
     require:
       system: linux
     script:
-      - "#@var build-hash date -u +.%Y%m%d.%H%M%S"
+      - "#@var build-hash date -u +.%Y%m%d.%H%M%S-linux${build-info}"
       - "#@set bin-out contxt"
 
   - id: set-version
@@ -322,7 +405,7 @@ task:
     require:
       system: windows
     script:
-      - "#@var build-hash Get-Date -UFormat \"%m.%d.%Y.%R\""
+      - "#@var build-hash Get-Date -UFormat \"%m.%d.%Y.%R-windows${build-info}\""
       - "#@set bin-out contxt.exe"
 
   - id: set-version
@@ -352,10 +435,12 @@ task:
     next:
       - verify-build
     script:
-      - echo "build start----"
-      - echo "   target -- ${bin-out}"
-      - go build -ldflags "-X ${configmodul}.minversion=${minor-version} -X ${configmodul}.midversion=${mid-version} -X ${configmodul}.mainversion=${main-version} -X ${configmodul}.build=${build-hash}" -o ./bin/${bin-out} cmd/cmd-contxt/main.go
-      - echo "   done   -- build "
+      - echo "start the build"
+      - echo "   target  --> ${bin-out}"
+      - echo "   version --> ${main-version}.${mid-version}.${minor-version} ${build-hash}"
+      - echo "   main    --> ${build-main-file}"
+      - go build -ldflags "-X ${configmodul}.minversion=${minor-version} -X ${configmodul}.midversion=${mid-version} -X ${configmodul}.mainversion=${main-version} -X ${configmodul}.build=${build-hash}" -o ./bin/${bin-out} ${build-main-file}
+      - echo "   build   <-- done "
 
   - id: verify-build
     options:
@@ -367,6 +452,21 @@ task:
     script:
        - echo "verifiy build version. expected [${main-version}.${mid-version}.${minor-version} build ${build-hash}]"
        - bin/${bin-out} version
+
+  - id: build-docker
+    needs:
+      - build
+    script:
+      - "#@var-to-file docker Dockerfile.tmp"
+      - docker build -t ${docker-image-tag}${build-info} -f Dockerfile.tmp .
+      - echo "docker run -it -v ${CTX_PWD}:/etc/contxt  ${docker-image-tag}${build-info} run say-hello"
+      - docker run -i -v ${CTX_PWD}:/etc/contxt  ${docker-image-tag}${build-info} run say-hello
+
+## a simple hello world
+## just to test the docker image is working
+  - id: say-hello
+    script:
+      - echo "hello world"
 
 ## install local. this is used by the Makefile
 ## because contxt can not update himself while it is running,
@@ -451,3 +551,26 @@ task:
       - echo "check versions"
       - contxt version
 
+### licence check
+  - id: licence-header-check
+    options:
+      displaycmd: false
+      invisible: false
+    require:
+      system: linux
+    next:
+      - test-each
+    script:
+      - |
+       GOFILES=$(find . -type f -name "*.go" ! -name "*_test.go" ! -path "./vendor/*" ! -path "./bin/*")
+       while IFS= read -r gfile; do
+          #echo "... $gfile ..."
+          # check if file has licence header
+          if ! grep -q "${licence_keyword}" "$gfile"; then
+            echo "MISSING: $gfile is missing licence header"
+            FCNT=$(cat $gfile)
+            echo "${codehead} $FCNT" > $gfile
+          else
+            echo "OK: $gfile"
+          fi
+       done <<< "$GOFILES"

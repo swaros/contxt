@@ -101,7 +101,8 @@ func ExecFutureGroup(fg []FutureStack) []Future {
 	return futures
 }
 
-// WaitAtGroup wait until all Futures are executes
+// WaitAtGroup wait until all Futures are executes and returns
+// the results in the order of the execution.
 func WaitAtGroup(futures []Future) []interface{} {
 	var results []interface{}
 	for _, f := range futures {

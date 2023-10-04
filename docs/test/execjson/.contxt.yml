@@ -1,0 +1,16 @@
+task:
+  - id: test-load
+    require:
+      system: windows
+    script:
+      - "#@import-json-exec JSON type docker-inspect.json"
+
+  - id: test-load
+    require:
+      system: linux
+    script:
+      - "#@import-json-exec JSON cat docker-inspect.json"
+  
+  - id: test-load
+    script:
+      - "echo ${JSON:0.Comment}"

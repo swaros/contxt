@@ -1,0 +1,62 @@
+Configs:
+  contxt:
+    CurrentIndex: "3"
+    Name: contxt
+    Paths:
+      "0":
+        Path: /home/deep/development/contxt
+        Project: ""
+        Role: ""
+        Version: ""
+      "1":
+        Path: /home/deep/development/fixed-line-mout
+        Project: ""
+        Role: ""
+        Version: ""
+      "2":
+        Path: /home/deep/development/manout
+        Project: ""
+        Role: ""
+        Version: ""
+      "3":
+        Path: /home/deep/development/markup-string
+        Project: ""
+        Role: ""
+        Version: ""
+      "4":
+        Path: /home/deep/development/doku-assets
+        Project: ""
+        Role: ""
+        Version: ""
+  fixed-line-mout:
+    CurrentIndex: ""
+    Name: fixed-line-mout
+    Paths:
+      "0":
+        Path: /home/deep/development/fixed-line-mout
+        Project: ""
+        Role: ""
+        Version: ""
+  lima:
+    CurrentIndex: ""
+    Name: lima
+    Paths:
+      "0":
+        Path: /home/deep/development/lima
+        Project: ""
+        Role: ""
+        Version: ""
+  manout:
+    CurrentIndex: ""
+    Name: manout
+    Paths:
+      "0":
+        Path: /home/deep/development/manout
+        Project: ""
+        Role: ""
+        Version: ""
+  version:
+    CurrentIndex: ""
+    Name: version
+    Paths: null
+CurrentSet: contxt

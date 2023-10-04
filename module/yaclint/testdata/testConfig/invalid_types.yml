@@ -1,0 +1,18 @@
+# matches the following pattern: module/yaclint/linter_test.go:TestLoadConfig
+#
+# type testConfig struct {
+# SourceCode         string
+# BuildEngine        string
+# BuildEngineVersion string
+# Targets            []string
+# BuildSteps         []string
+# IsSystem           bool
+# IsDefault          bool
+# mainVersionNr      int
+# }
+#
+
+SourceCode: module/yaclint/linter_test.go
+Engine: "hubert"
+
+

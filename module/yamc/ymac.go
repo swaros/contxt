@@ -25,7 +25,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/tidwall/gjson"
 )
@@ -36,24 +38,41 @@ const (
 	UNSET           = 0 // initial status
 )
 
+// DataReader is the interface for the data reader
+// the data reader have to support the regular unmarshal and marshal.
+// additionally it have to support the file decode.
+// the filedecode is as shortcut for read the file and decode it.
+// this part of the  interface is used to get the data from the file
+// depending on the file extension.
+// for this, the SupportsExt returns a list of supported file extensions.
+//
+// the HaveFields is used to tell the caller if the data reader have
+// fields they can report. this can be used to work with data tags for validateing data.
+// depending on the type of the source structure, it is not guaranteed that the data reader
+// have fields they can report.
+// if we have fields to report, read them with GetFields.
 type DataReader interface {
-	Unmarshal(in []byte, out interface{}) (err error)
-	Marshal(in interface{}) (out []byte, err error)
-	FileDecode(path string, decodeInterface interface{}) (err error)
-	SupportsExt() []string
+	Unmarshal(in []byte, out interface{}) (err error)                // Unmarshal is used to decode the data
+	Marshal(in interface{}) (out []byte, err error)                  // Marshal is used to encode the data
+	FileDecode(path string, decodeInterface interface{}) (err error) // FileDecode is used to decode the data from a file
+	SupportsExt() []string                                           // SupportsExt returns a list of supported file extensions
+	HaveFields() bool                                                // HaveFields returns true if the data reader have fields they can report
+	GetFields() *StructDef                                           // GetFields returns the fields of the data reader
 }
 
 type Yamc struct {
-	data           map[string]interface{} // holds the data after parse
+	data           sync.Map               // holds the data after parse
+	dataInterface  map[string]interface{} // holds the data after parse and will then be used to store the data in the sync.Map
 	loaded         bool                   // is true if we at least tried to get data and got no error (can still be empty)
 	sourceDataType int                    // holds the information about the structure of the source
+	mu             sync.Mutex             // mutex for the data
 }
 
+// New returns a new Yamc instance
 func New() *Yamc {
 	return &Yamc{
 		loaded:         false,
 		sourceDataType: 0,
-		data:           make(map[string]interface{}),
 	}
 }
 
@@ -77,30 +96,99 @@ func (y *Yamc) IsLoaded() bool {
 // it fallback to read []interface{} and convert them.
 func (y *Yamc) Parse(use DataReader, in []byte) error {
 	y.Reset()
-	if err := use.Unmarshal([]byte(in), &y.data); err != nil {
+	if err := use.Unmarshal([]byte(in), &y.dataInterface); err != nil {
 		return y.testAndConvertJsonType(use, in)
+	} else {
+		y.sourceDataType = TYPE_STRING_MAP
+		y.updateSyncMap(y.dataInterface)               // update the sync.Map
+		y.dataInterface = make(map[string]interface{}) // reset because we don't need it anymore
+		y.loaded = true
+		return nil
 	}
-	y.sourceDataType = TYPE_STRING_MAP
-	y.loaded = true
-	return nil
-
 }
 
+// updateSyncMap is just a helper to update the sync.Map
+// it is used in Parse and ParseFile
+func (y *Yamc) updateSyncMap(data map[string]interface{}) {
+	for k, v := range data {
+		y.data.Store(k, v)
+	}
+}
+
+// mapFromSyncMap is just a helper to get the data from the sync.Map
+func (y *Yamc) mapFromSyncMap() map[string]interface{} {
+	data := make(map[string]interface{})
+	y.data.Range(func(key, value interface{}) bool {
+		data[key.(string)] = value
+		return true
+	})
+	return data
+}
+
+// deleteAllData removes all data from the sync.Map
+func (y *Yamc) deleteAllData() {
+	y.data.Range(func(key, value interface{}) bool {
+		y.data.Delete(key)
+		return true
+	})
+}
+
+// setData reset current data and set new data
+// by apply the map[string]interface{} to the sync.Map
 func (y *Yamc) SetData(data map[string]interface{}) {
-	y.Reset()
-	y.data = data
+	//y.Reset()
+	y.updateSyncMap(data)
+}
+
+// Store is just a wrapper for the sync.Map Store function
+func (y *Yamc) Store(key string, data interface{}) {
+	y.data.Store(key, data)
+}
+
+// Get is just a wrapper for the sync.Map Load function
+func (y *Yamc) Get(key string) (interface{}, bool) {
+	return y.data.Load(key)
+}
+
+// GetOrSet is just a wrapper for the sync.Map LoadOrStore function
+// The bool result is true if the value was loaded, false if stored.
+func (y *Yamc) GetOrSet(key string, data interface{}) (interface{}, bool) {
+	return y.data.LoadOrStore(key, data)
+}
+
+// Delete is just a wrapper for the sync.Map Delete function
+func (y *Yamc) Delete(key string) {
+	y.data.Delete(key)
+}
+
+// Range is just a wrapper for the sync.Map Range function
+func (y *Yamc) Range(f func(key, value interface{}) bool) {
+	y.data.Range(f)
+}
+
+// Update is just a wrapper for the sync.Map Load and Store function
+// it is a helper to update the data in the sync.Map
+// and lock the sync.Map for the time of the update
+func (y *Yamc) Update(key string, f func(value interface{}) interface{}) bool {
+	y.mu.Lock()
+	defer y.mu.Unlock()
+	val, ok := y.data.Load(key)
+	if ok {
+		y.data.Store(key, f(val))
+	}
+	return ok
 }
 
 // GetData is just the getter for the actual
 // data. this is independend if they are loaded or not
 func (y *Yamc) GetData() map[string]interface{} {
-	return y.data
+	return y.mapFromSyncMap()
 }
 
 // ToString uses the reader to create the string output of the
 // data content
 func (y *Yamc) ToString(use DataReader) (str string, err error) {
-	if byteData, err := use.Marshal(y.data); err != nil {
+	if byteData, err := use.Marshal(y.mapFromSyncMap()); err != nil {
 		return "", err
 	} else {
 		return string(byteData), nil
@@ -110,7 +198,7 @@ func (y *Yamc) ToString(use DataReader) (str string, err error) {
 // Resets the whole Ymac
 func (y *Yamc) Reset() {
 	y.loaded = false
-	y.data = make(map[string]interface{})
+	y.deleteAllData()
 	y.sourceDataType = UNSET
 }
 
@@ -118,7 +206,7 @@ func (y *Yamc) Reset() {
 // the error while using Marshall the data into json
 // what can be used by gson
 func (y *Yamc) Gjson(path string) (gjson.Result, error) {
-	jsonData, err := json.Marshal(y.data)
+	jsonData, err := json.Marshal(y.GetData())
 	if err == nil {
 		return gjson.Get(string(jsonData), path), nil
 	}
@@ -139,7 +227,7 @@ func (y *Yamc) GetGjsonString(path string) (jsonStr string, err error) {
 // or the error while processing the data
 func (y *Yamc) FindValue(path string) (content any, err error) {
 
-	return FindChain(y.data, strings.Split(path, ".")...)
+	return FindChain(y.mapFromSyncMap(), strings.Split(path, ".")...)
 
 }
 
@@ -155,7 +243,7 @@ func (y *Yamc) testAndConvertJsonType(use DataReader, data []byte) error {
 			keyStr := fmt.Sprintf("%d", key)
 			switch val.(type) {
 			case string, interface{}:
-				y.data[keyStr] = val
+				y.Store(keyStr, val)
 			default:
 				y.loaded = false
 				return errors.New("unsupported json structure")
@@ -167,4 +255,12 @@ func (y *Yamc) testAndConvertJsonType(use DataReader, data []byte) error {
 	} else {
 		return err
 	}
+}
+
+// IsPointer checks if the given interface is a pointer
+func IsPointer(i interface{}) bool {
+	kindOfi := reflect.ValueOf(i).Kind()
+
+	return (kindOfi == reflect.Ptr)
+
 }

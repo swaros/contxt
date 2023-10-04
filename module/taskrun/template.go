@@ -1,7 +1,6 @@
 // Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +24,7 @@ package taskrun
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+
 	"os"
 	"os/user"
 	"path/filepath"
@@ -138,7 +137,7 @@ func getIncludeConfig(path string) (configure.IncludePaths, string, string, bool
 		return importTemplate, checkIncPath, fullPath, false
 	}
 
-	file, ferr := ioutil.ReadFile(checkIncPath)
+	file, ferr := os.ReadFile(checkIncPath)
 	if ferr != nil {
 		return importTemplate, checkIncPath, fullPath, false
 	}
@@ -192,7 +191,7 @@ func GetParsedTemplateSource(path string) (string, error) {
 			return templateSource, nil
 		}
 		// no imports .... load template file
-		file, ferr := ioutil.ReadFile(path)
+		file, ferr := os.ReadFile(path)
 		if ferr != nil {
 			return "", ferr
 		}

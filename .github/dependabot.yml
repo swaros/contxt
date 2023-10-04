@@ -18,6 +18,20 @@ updates:
        interval: daily
     assignees:
        - swaros
+### dependencie for /module/runner/
+  - package-ecosystem: gomod
+    directory: /module/runner/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+### dependencie for /module/ctxtcell/
+  - package-ecosystem: gomod
+    directory: /module/ctxtcell/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
 ### dependencie for /module/configure/
   - package-ecosystem: gomod
     directory: /module/configure/
@@ -46,6 +60,27 @@ updates:
        interval: daily
     assignees:
        - swaros
+### dependencie for /module/linehack/
+  - package-ecosystem: gomod
+    directory: /module/linehack/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+### dependencie for /module/ctemplate/
+  - package-ecosystem: gomod
+    directory: /module/ctemplate/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+### dependencie for /module/ctxout/
+  - package-ecosystem: gomod
+    directory: /module/ctxout/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
 ### dependencie for /module/taskrun/
   - package-ecosystem: gomod
     directory: /module/taskrun/
@@ -63,6 +98,34 @@ updates:
 ### dependencie for /module/shellcmd/
   - package-ecosystem: gomod
     directory: /module/shellcmd/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+### dependencie for /module/ctxshell/
+  - package-ecosystem: gomod
+    directory: /module/ctxshell/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+### dependencie for /module/tasks/
+  - package-ecosystem: gomod
+    directory: /module/tasks/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+### dependencie for /module/yaclint/
+  - package-ecosystem: gomod
+    directory: /module/yaclint/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros
+### dependencie for /module/mimiclog/
+  - package-ecosystem: gomod
+    directory: /module/mimiclog/
     schedule:
        interval: daily
     assignees:

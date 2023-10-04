@@ -3,3 +3,4 @@ include:
   folders:
   - ./.moduls.yml
   - version.yml
+  - build.yml

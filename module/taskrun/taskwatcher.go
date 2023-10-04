@@ -1,7 +1,6 @@
 // Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -40,10 +39,11 @@ type TaskDef struct {
 	doneCount int
 }
 
-func incTaskCount(target string) {
+func incTaskCount(target string) int {
 	taskInfo, _ := getTask(target)
 	taskInfo.count++
 	watchTaskList.Store(target, taskInfo)
+	return taskInfo.count
 }
 
 func incTaskDoneCount(target string) bool {

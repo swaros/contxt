@@ -1,7 +1,6 @@
 // Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+
 	"os"
 	"path/filepath"
 	"reflect"
@@ -181,7 +180,7 @@ func TryParse(script []string, regularScript func(string) (bool, int)) (bool, in
 						err := AddJSON(keyname, returnValue)
 						if err != nil {
 							GetLogger().WithField("error-on-parsing-string", returnValue).Debug("result of command")
-							manout.Error("import from json string failed", err, ' ', returnValue)
+							manout.Error("import from json string failed", err, ' ', systools.StringSubLeft(returnValue, 75))
 						}
 					}
 				} else {
@@ -649,7 +648,7 @@ func ImportFolder(path string, _ string) (map[string]interface{}, error) {
 // ImportFileContent imports a file and returns content as string
 func ImportFileContent(filename string) (string, error) {
 	GetLogger().WithField("file", filename).Debug("import file content")
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		fmt.Println("File reading error", err)
 		return "", err

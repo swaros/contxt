@@ -37,11 +37,13 @@ func CallBackAssertPath(ymap *yamc.Yamc, path string, expected any, ifNotEquals 
 func LazyAssertPath(t *testing.T, ymap *yamc.Yamc, path string, expected any) {
 	t.Helper()
 	CallBackAssertPath(ymap, path, expected, func(val any) {
+		_, fnmane, lineNo, _ := runtime.Caller(3)
+		errmsgWithLine := "ERROR: " + fnmane + ":" + strconv.Itoa(lineNo)
 		if reflect.TypeOf(val) != reflect.TypeOf(expected) {
-			_, fnmane, lineNo, _ := runtime.Caller(3)
+
 			t.Error("ERROR: ", fnmane+":"+strconv.Itoa(lineNo), " types not equal. we got ", reflect.TypeOf(val), " we expect ", reflect.TypeOf(expected))
 		}
-		t.Error("expected the value (", expected, ") got [", val, "] instead")
+		t.Error(errmsgWithLine, "expected the value (", expected, ") got [", val, "] instead")
 	}, func(err error) {
 		_, fnmane, lineNo, _ := runtime.Caller(3)
 		t.Error("ERROR: ", fnmane+":"+strconv.Itoa(lineNo), err)
@@ -220,6 +222,51 @@ hello:
 		if _, ok := conv.GetData()["hello"]; !ok {
 			t.Error("we should have the data node")
 		}
+	}
+
+}
+
+func TestGjson(t *testing.T) {
+	data := []byte(`{"name":{"first":"Tom","last":"Anderson"},"age":37,"children":["Sara","Alex","Jack"],"fav.movie":"Deer Hunter","friends":[{"first":"Dale","last":"Murphy","age":44},{"first":"Roger","last":"Craig","age":68},{"first":"Jane","last":"Murphy","age":47}]}`)
+	conv := yamc.New()
+	if err := conv.Parse(yamc.NewJsonReader(), data); err != nil {
+		t.Error("this reading should not fail")
+	} else {
+		if found, err := conv.Gjson("friends.2.last"); err != nil {
+			t.Error(err)
+		} else {
+			if found.Str != "Murphy" {
+				t.Error("unexpected value", found)
+			}
+		}
+
+		// same test as above but with using GetGsonString
+		if found, err := conv.GetGjsonString("friends.2.last"); err != nil {
+			t.Error(err)
+		} else {
+			if found != "Murphy" {
+				t.Error("unexpected value", found)
+			}
+		}
+
+		// test for non existing path
+		if found, err := conv.Gjson("friends.2.last2"); err != nil {
+			t.Error(err)
+		} else {
+			if found.Exists() {
+				t.Error("unexpected value", found)
+			}
+		}
+
+		// test for non existing path by using GetGsonString
+		if found, err := conv.GetGjsonString("friends.2.last2"); err != nil {
+			t.Error(err)
+		} else {
+			if found != "" {
+				t.Error("unexpected value", found)
+			}
+		}
+
 	}
 
 }

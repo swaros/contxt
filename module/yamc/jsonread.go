@@ -1,7 +1,6 @@
 // Copyright (c) 2022 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,15 +24,32 @@ package yamc
 import (
 	"encoding/json"
 	"os"
+	"strings"
 )
 
-type JsonReader struct{}
+type JsonReader struct {
+	fields *StructDef
+}
 
 func NewJsonReader() *JsonReader {
-	return &JsonReader{}
+	return &JsonReader{
+		fields: &StructDef{},
+	}
+}
+
+func (j *JsonReader) HaveFields() bool {
+	return j.fields != nil && j.fields.Init
+}
+
+func (j *JsonReader) GetFields() *StructDef {
+	return j.fields
 }
 
 func (j *JsonReader) Unmarshal(in []byte, out interface{}) (err error) {
+	j.fields = NewStructDef(out)
+	if err := j.fields.ReadStruct(parseJsonTagfunc); err != nil {
+		return err
+	}
 	return json.Unmarshal(in, out)
 }
 
@@ -48,9 +64,31 @@ func (j *JsonReader) FileDecode(path string, decodeInterface interface{}) (err e
 	}
 	defer file.Close()
 	decoder := json.NewDecoder(file)
+	j.fields = NewStructDef(decodeInterface)
+	if err := j.fields.ReadStruct(parseYamlTagfunc); err != nil {
+		return err
+	}
 	return decoder.Decode(&decodeInterface)
 }
 
 func (j *JsonReader) SupportsExt() []string {
 	return []string{"json"}
+}
+
+// parser fuctions to resolve reflection tags for yaml struct tags
+func parseJsonTagfunc(info StructField) ReflectTagRef {
+	if info.Tag.Get("json") != "" {
+		all := info.Tag.Get("json")
+		parts := strings.Split(all, ",")
+		adds := []string{}
+		if len(parts) > 1 {
+			adds = parts[1:]
+		}
+		return ReflectTagRef{
+			TagRenamed:    parts[0],
+			TagAdditional: adds,
+		}
+	}
+
+	return ReflectTagRef{}
 }

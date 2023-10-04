@@ -1,0 +1,64 @@
+// MIT License
+//
+// Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the Software), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+// AINC-NOTE-0815
+
+package ctxout
+
+import (
+	"regexp"
+	"strings"
+
+	"github.com/rivo/uniseg"
+)
+
+// LenPrintable returns the length of a string, but only counts printable characters
+// it ignores ANSI escape codes
+// and also ignores the length of the ANSI escape codes
+// also ignores any newlines
+func LenPrintable(s string) int {
+	cleared := StringPure(s)
+	return uniseg.StringWidth(cleared)
+
+}
+
+func StringPure(s string) string {
+	removeChars := []string{
+		"\n",
+		"\t",
+		"\r",
+		"\x08",
+	}
+	for _, c := range removeChars {
+		s = strings.ReplaceAll(s, c, "")
+	}
+	return StringCleanEscapeCodes(s)
+}
+
+func StringCleanEscapeCodes(s string) string {
+	match := "[^\x08]\x08"
+	match += "|\\x1b\\[[0-9;]*[a-zA-Z]"
+	match += "|\\x1b\\[[0-9;]*m"
+
+	re := regexp.MustCompile(match)
+	return re.ReplaceAllString(s, "")
+}

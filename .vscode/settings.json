@@ -5,6 +5,7 @@
         "struct",
         "Subdirs",
         "swaros",
+        "systools",
         "yacl",
         "yamc",
         "Ymac"

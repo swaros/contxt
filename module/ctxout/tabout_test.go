@@ -1,0 +1,863 @@
+package ctxout_test
+
+import (
+	"fmt"
+	"strings"
+	"testing"
+
+	"github.com/swaros/contxt/module/ctxout"
+)
+
+func TestPadString(t *testing.T) {
+	str := ctxout.PadStrLeft("this is a test", 20, " ")
+	if str != "this is a test      " {
+		t.Errorf("Expected 'this is a test      ' but got '%s'", str)
+	}
+
+	str = ctxout.PadStrLeft("we will now check that the text is cutted before we reach mor then 20 chars", 20, "-")
+	if str != "we will now chec ..." {
+		t.Errorf("Expected 'we will now chec ...' but got '%s'", str)
+	}
+}
+
+func TestPadStringToRight(t *testing.T) {
+	str := ctxout.PadStrRight("this is a test", 20, " ")
+	if str != "      this is a test" {
+		t.Errorf("Expected '      this is a test' but got '%s'", str)
+	}
+
+	str = ctxout.PadStrRight("we will now check that the text is cutted before we reach mor then 20 chars", 20, "-")
+	if str != "we will now chec ..." {
+		t.Errorf("Expected 'we will now check th' but got '%s'", str)
+	}
+
+	str = ctxout.PadStrRight("", 20, ".")
+	if str != "...................." {
+		t.Errorf("Expected '....................' but got '%s'", str)
+	}
+
+}
+
+func TestBasicTabout(t *testing.T) {
+	to := ctxout.NewTabOut()
+	output1 := to.Command("<table>")
+	output2 := to.Command("<row><tab size='23'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row>")
+	output3 := to.Command("<row><tab size='23'>second line</tab><tab size='25' origin='2'>we do it different</tab></row>")
+	output4 := to.Command("</table>")
+
+	expect := ""
+	if output1 != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output1)
+	}
+
+	expect = ""
+	if output2 != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output2)
+	}
+
+	expect = ""
+	if output3 != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output3)
+	}
+
+	expect = `this is a test          and this is another test
+second line                   we do it different`
+	if output4 != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output4)
+	}
+}
+
+func TestSizedTabout(t *testing.T) {
+	to := ctxout.NewTabOut()
+	info := ctxout.PostFilterInfo{
+		Width:      80,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+	to.Update(info)
+	output1 := to.Command("<table>")
+	output2 := to.Command("<row><tab fill='.' size='50'>this is a test</tab><tab fill='+' size='50' origin='2'>and this is another test</tab></row>")
+	output3 := to.Command("<row><tab fill='_' size='50'>second line</tab><tab fill='-' size='50' origin='2'>we do it different</tab></row>")
+	output4 := to.Command("</table>")
+
+	expect := ""
+	if output1 != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output1)
+	}
+
+	expect = ""
+	if output2 != expect {
+		t.Errorf("Expected '%s' but got\n'%s'\n", expect, output2)
+	}
+
+	expect = ""
+	if output3 != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output3)
+	}
+
+	// len of text should exactly match the size 80 chars multiplied by 2 rows
+	if ctxout.LenPrintable(output4) != 160 {
+		t.Errorf("Expected 160 chars but got %d", len(output4))
+	}
+
+	expect = `this is a test..........................++++++++++++++++and this is another test
+second line_____________________________----------------------we do it different`
+	if output4 != expect {
+		t.Errorf("Expected\n%s\nbut got\n%s", expect, output4)
+	}
+}
+
+func TestSizedTaboutWithDrawModes(t *testing.T) {
+	to := ctxout.NewTabOut()
+	info := ctxout.PostFilterInfo{
+		Width:      80,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+	to.Update(info)
+	output1 := to.Command("<table>")
+	output2 := to.Command("<row><tab fill='.' draw='content' size='50'>this is a test</tab><tab fill='-' size='50' draw='extend' origin='2'>and this is another test</tab></row>")
+	output3 := to.Command("<row><tab fill='.' draw='content' size='50'>second line</tab><tab fill='-' size='50' draw='extend' origin='2'>we do it different</tab></row>")
+	output4 := to.Command("</table>")
+
+	expect := ""
+	if output1 != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output1)
+	}
+
+	expect = ""
+	if output2 != expect {
+		t.Errorf("Expected '%s' but got\n'%s'\n", expect, output2)
+	}
+
+	expect = ""
+	if output3 != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output3)
+	}
+
+	// len of text should exactly match the size 80 chars multiplied by 2 rows
+	if ctxout.LenPrintable(output4) != 160 {
+		t.Errorf("Expected 160 chars but got %d", len(output4))
+	}
+
+	expect = `this is a test------------------------------------------and this is another test
+second line...------------------------------------------------we do it different`
+	if output4 != expect {
+		t.Errorf("Expected\n%s\nbut got\n%s", expect, output4)
+	}
+}
+
+func TestSizedTaboutNotClosedExtra(t *testing.T) {
+	to := ctxout.NewTabOut()
+
+	output1 := to.Command("<table>")
+	output2 := to.Command("<row><tab fill='.' size='50'>this is a test</tab><tab fill='+' size='50' origin='2'>and this is another test</tab></row>")
+	output3 := to.Command("<row><tab fill='_' size='50'>second line</tab><tab fill='-' size='50' origin='2'>we do it different</tab></row></table>")
+
+	expect := ""
+	if output1 != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output1)
+	}
+
+	expect = ""
+	if output2 != expect {
+		t.Errorf("Expected\n%s\nbut got\n'%s'\n", expect, output2)
+	}
+
+	expect = `this is a test....................................++++++++++++++++++++++++++and this is another test
+second line_______________________________________--------------------------------we do it different`
+	if output3 != expect {
+		t.Errorf("Expected\n%s\n but got\n%s\n__", expect, output3)
+	}
+
+}
+
+// testing single row in a table. all in one in one line
+func TestTableTabout(t *testing.T) {
+	to := ctxout.NewTabOut()
+	output := to.Command("<table><row><tab size='23'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row></table>")
+
+	expect := "this is a test          and this is another test"
+	if output != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output)
+	}
+}
+
+func TestGettingEscape(t *testing.T) {
+	escapInStr := "Hello \033[33m" + "World" + "\033[0m"
+
+	lastEscape := ctxout.GetLastEscapeSequence(escapInStr)
+
+	if lastEscape != "\033[0m" {
+		t.Errorf("Expected '%s' but got '%s'", "\033[0m", lastEscape)
+	}
+}
+
+func TestRowOnlyOut(t *testing.T) {
+
+	to := ctxout.NewTabOut()
+
+	content := "<row><tab size='23'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row>"
+	output := to.Command(content)
+	if !to.IsRow(content) {
+		t.Errorf("Expected content is a row but got false")
+	}
+	expect := "this is a test          and this is another test"
+	if output != expect {
+		t.Errorf("Expected '%s' but got '%s'", expect, output)
+	}
+
+	// now we test again but now we fake a working terminal
+	info := ctxout.PostFilterInfo{
+		Width:      80,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+	to.Update(info)
+
+	type rowTesting struct {
+		Row string
+		Out string
+	}
+
+	tests := []rowTesting{
+		{
+			Row: "<row><tab size='23'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row>",
+			Out: "this is a test    and this is anoth...",
+		},
+		{
+			Row: "<row><tab size='23'>this is a test</tab><tab size='25' origin='1'>and this is another test</tab></row>",
+			Out: "this is a test    ...s is another test",
+		},
+		{
+			Row: "<row><tab size='2'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row>",
+			Out: "..and this is anoth...",
+		},
+	}
+
+	for _, test := range tests {
+		output := to.Command(test.Row)
+		if output != test.Out {
+			t.Errorf("Expected\n'%s'\n  but got \n'%s'\nlength check %d ? %d ", test.Out, output, len(output), len(test.Out))
+		}
+	}
+
+}
+
+func TestFilterBehavior(t *testing.T) {
+
+	// create a string that is longer than the terminal
+	longText := "this is a very long text that should be cut off at the end of the line."
+	for i := 0; i < 10; i++ {
+		longText += fmt.Sprintf("[%v]", i) + longText
+	}
+
+	content := "<row><tab size='50'>" + longText + "</tab><tab size='50' origin='2'>and this is another test " + longText + "</tab></row>"
+	// now we test again but now we fake a working terminal
+	size := 800
+	info := ctxout.PostFilterInfo{
+		Width:      size,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+	to := ctxout.NewTabOut()
+	to.Update(info)
+
+	output := to.Command(content)
+	realLen := len(output)
+	if realLen != size {
+		t.Errorf("Expected length is not equal than %d but got %d", size, realLen)
+		t.Log(output)
+	}
+
+}
+
+func TestFilterBehavior2(t *testing.T) {
+	// here we want to test the table output if the filter is disabled
+
+	// create a string that is longer than the terminal
+	longText := "this is a very long text that should be cut off at the end of the line."
+	for i := 0; i < 2; i++ {
+		longText += fmt.Sprintf("[%v]", i) + longText
+	}
+
+	lenPerStr := len(longText)
+	content := "<row><tab size='50'>" + longText + "</tab><tab size='50' origin='2'>" + longText + "</tab></row>"
+	// now we test again but now we fake a working terminal
+	size := 800
+	info := ctxout.PostFilterInfo{
+		Width:      size,
+		IsTerminal: false, // we make sure we have the behavior of a terminal
+		Disabled:   true,
+	}
+	to := ctxout.NewTabOut()
+	to.Update(info)
+
+	output := to.Command(content)
+	realLen := len(output)
+	expectedLen := lenPerStr * 2
+	if realLen != expectedLen {
+		t.Errorf("Expected length is not equal than %d but got %d", expectedLen, realLen)
+		t.Log(output)
+	}
+
+}
+
+func TestPadding(t *testing.T) {
+	abc := "abcdefghijklmnopqrstuvwxyz"
+	cell := ctxout.NewTabCell(nil)
+	cell.SetCutNotifier("").SetOverflowMode("any").SetText(abc).SetFillChar(".").SetOrigin(2)
+	padStr := cell.CutString(10)
+	if padStr != "abcdefghij" {
+		t.Errorf("Expected 'abcdefghij' but got '%s'", padStr)
+	}
+
+	if cell.GetOverflowContent() != "klmnopqrstuvwxyz" {
+		t.Errorf("Expected 'klmnopqrstuvwxyz' but got '%s'", cell.GetOverflowContent())
+	}
+
+	moved := cell.MoveToWrap()
+	if !moved {
+		t.Errorf("Expected moved to be true but got false")
+	}
+	padStr = cell.CutString(10)
+	if padStr != "klmnopqrst" {
+		t.Errorf("Expected 'klmnopqrst' but got '%s'", padStr)
+	}
+	if cell.GetOverflowContent() != "uvwxyz" {
+		t.Errorf("Expected 'uvwxyz' but got '%s'", cell.GetOverflowContent())
+	}
+
+	moved = cell.MoveToWrap()
+	if !moved {
+		t.Errorf("Expected moved to be true but got false")
+	}
+	padStr = cell.CutString(10)
+	if padStr != "....uvwxyz" {
+		t.Errorf("Expected '....uvwxyz' but got '%s'", padStr)
+	}
+	if cell.GetOverflowContent() != "" {
+		t.Errorf("Expected '' but got '%s'", cell.GetOverflowContent())
+	}
+
+	moved = cell.MoveToWrap()
+	if moved {
+		t.Errorf("Expected moved to be false but got true")
+	}
+	padStr = cell.CutString(10)
+	if padStr != ".........." {
+		t.Errorf("Expected '..........' but got '%s'", padStr)
+	}
+
+}
+
+func TestRowDrawing(t *testing.T) {
+	row := ctxout.NewTabRow(nil)
+
+	row.AddCell(ctxout.NewTabCell(nil).SetCutNotifier("...").SetOverflowMode("ignore").SetText("abcdefghijklmnopqrstuvwxyz").SetFillChar(".").SetSize(10))
+	row.AddCell(ctxout.NewTabCell(nil).SetCutNotifier("...").SetOverflowMode("ignore").SetText("0123456789,.-;:!§$%&/()*+#").SetFillChar(".").SetSize(10))
+	rowAsStr, _, _ := row.Render()
+	if row.Err == nil {
+		t.Errorf("Expected an error but got nil")
+	}
+	fmt.Println(rowAsStr)
+
+	table := ctxout.NewTableHandle(ctxout.NewTabOut())
+	table.AddRow(row)
+
+	tableAsString := table.Render()
+	if tableAsString == "" {
+		t.Error("Expected a table but got nothing")
+	} else {
+		if tableAsString != "abcdefg...0123456..." {
+			t.Errorf("Expected 'abcdefg...0123456...' but got '%s'", tableAsString)
+		}
+	}
+}
+
+func TestRowWrap1(t *testing.T) {
+	table := ctxout.NewTableHandle(ctxout.NewTabOut())
+	table.AddRow(
+		ctxout.NewTabRow(nil).
+			AddCell(ctxout.NewTabCell(nil).SetCutNotifier("...").
+				SetOverflowMode("any").
+				SetText("abcdefghijklmnopqrstuvwxyz").
+				SetFillChar(".").
+				SetSize(10)))
+	tableAsString := table.Render()
+	expected := "abcdefghij\nklmnopqrst\nuvwxyz...."
+	if tableAsString != expected {
+		t.Errorf("Expected \n%s<<<\n>>>> but got \n%s<<", expected, tableAsString)
+	}
+}
+
+func TestRowWrap2(t *testing.T) {
+	table := ctxout.NewTableHandle(ctxout.NewTabOut())
+	table.AddRow(
+		ctxout.NewTabRow(nil).
+			AddCell(ctxout.NewTabCell(nil).SetCutNotifier("...").
+				SetOverflowMode("any").
+				SetText("abcdefghijklmnopqrstuvwxyz").
+				SetFillChar(".").
+				SetOrigin(2).
+				SetSize(10)))
+	tableAsString := table.Render()
+	expected := "abcdefghij\nklmnopqrst\n....uvwxyz"
+	if tableAsString != expected {
+		t.Errorf("Expected \n%s<<<\n>>>> but got \n%s<<", expected, tableAsString)
+	}
+
+}
+
+func TestRowWrap3(t *testing.T) {
+	table := ctxout.NewTableHandle(ctxout.NewTabOut())
+
+	table.AddRow(
+		ctxout.NewTabRow(table).
+			AddCell(
+				ctxout.NewTabCell(nil).
+					SetCutNotifier("...").
+					SetOverflowMode("any").
+					SetText("abcdefghijklmnopqrstuvwxyz").
+					SetFillChar(".").
+					SetOrigin(2).
+					SetSize(10),
+			).AddCell(
+			ctxout.NewTabCell(nil).
+				SetCutNotifier("...").
+				SetOverflowMode("any").
+				SetText("0123456789,.-;:_!§$%&/()=?").
+				SetFillChar("-").
+				SetOrigin(0).
+				SetSize(10),
+		),
+	)
+	tableAsString := table.Render()
+	expected := "abcdefghij0123456789\nklmnopqrst,.-;:_!§$%\n....uvwxyz&/()=?----"
+	if tableAsString != expected {
+		t.Errorf("Expected \n%s<<<\n>>>> but got \n%s<<", expected, tableAsString)
+	}
+
+}
+
+func TestMultiple(t *testing.T) {
+
+	to := ctxout.NewTabOut()
+	type rowTesting struct {
+		Info        *ctxout.PostFilterInfo // post filter info
+		TestInput   string                 // input
+		Out         string                 // expected output with post filter
+		Raw         string                 // expected output without post filter
+		ExpectedLen int
+	}
+	resetInfo := &ctxout.PostFilterInfo{
+		Width:      100,
+		IsTerminal: false, // we make sure we have the behavior of a terminal
+	}
+	info := &ctxout.PostFilterInfo{
+		Width:      80,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	tests := []rowTesting{
+
+		{
+			TestInput: "<row><tab overflow='any' fill='.' size='10'>0123456789</tab><tab fill='-' size='10' overflow='any' origin='0'>abcdefghijklmnopqrstuvwxyz</tab></row>",
+			Out:       "01234567abcdefgh\n89......ijklmnop\n........qrstuvwx\n........yz------",
+			Raw:       "0123456789abcdefghij\n..........klmnopqrst\n..........uvwxyz----",
+			Info:      info,
+		},
+
+		{
+			TestInput: "<row><tab overflow='any' size='5'>0123456789</tab><tab size='10' overflow='any' origin='0'>abcdefghijklmnopqrstuvwxyz</tab></row>",
+			Out:       "0123abcdefgh\n4567ijklmnop\n89  qrstuvwx\n    yz      ",
+			Raw:       "01234abcdefghij\n56789klmnopqrst\n     uvwxyz    ",
+			Info:      info,
+		},
+		{
+			TestInput: "<row><tab size='23'>this is a test</tab><tab size='25' origin='2'>and this is another test</tab></row>",
+			Out:       "this is a test    and this is anoth...",
+			Raw:       "this is a test          and this is another test",
+			Info:      info,
+		},
+		{
+			TestInput: "<row><tab overflow='wordwrap' size='23'>this is a test about wordwarpping</tab><tab overflow='wordwrap' size='25' origin='2'>itisakwardtosplitlingtextifwedonothaveanywhhitespace</tab></row>",
+			Out:       "this is a test    itisakwardtosplitlin\n about            gtextifwedonothavean\n wordwarpping             ywhhitespace",
+			Raw:       "this is a test about   itisakwardtosplitlingtext\n wordwarpping          ifwedonothaveanywhhitespa\n                                              ce",
+			Info:      info,
+		},
+	}
+
+	for round, test := range tests {
+		to.Update(*resetInfo)
+		output := to.Command(test.TestInput)
+		if output != test.Raw {
+			t.Errorf("round [%d] RAW Expected\n\"%s\"\n>>>>> but got \n\"%s\"\n______%s", round, test.Raw, output, strings.Join(strings.Split(output, "\n"), "|"))
+		}
+		to.Update(*test.Info)
+		output = to.Command(test.TestInput)
+		if output != test.Out {
+			t.Errorf("round [%d] OUT Expected\n\"%s\"\n>>>>>  but got \n\"%s\"\n_______%s", round, test.Out, output, strings.Join(strings.Split(output, "\n"), "|"))
+		}
+	}
+
+}
+
+func TestSizeCalculation(t *testing.T) {
+	to := ctxout.NewTabOut()
+
+	info := &ctxout.PostFilterInfo{
+		Width:      80,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	// stop spamming the console with debug messages
+	// if we get a couple of errors already
+	maxErrors := 10
+
+	to.Update(*info)
+
+	for width := 10; width < 200; width++ {
+		info.Width = width
+		to.Update(*info)
+		runCnt := 0
+		for i := 6; i < 96; i++ {
+			runCnt++
+			right := i
+			left := 100 - i
+			// just to make sure left + right is always 100
+			if left+right != 100 {
+				t.Errorf("left + right should be 100 but is %d", left+right)
+			}
+
+			if width == -1 && left == 25 && right == 75 {
+				fmt.Println("breakpoint here")
+			}
+
+			testStr := ctxout.OTR +
+				ctxout.TD("hello", ctxout.Prop("size", left), ctxout.Prop("fill", "+"), ctxout.Prop("origin", 1)) +
+				ctxout.TD("world", ctxout.Prop("size", right), ctxout.Prop("fill", "-"), ctxout.Prop("origin", 1)) +
+				ctxout.CRT
+
+			result := to.Command(testStr)
+
+			if len(result) != width {
+				t.Errorf("round[%d] origin[1,1] Expected length %d but got %d [left %d right %d]", runCnt, width, len(result), left, right)
+				maxErrors--
+			}
+
+			testStr = ctxout.OTR +
+				ctxout.TD("hello", ctxout.Prop("size", left), ctxout.Prop("fill", "+"), ctxout.Prop("origin", 2)) +
+				ctxout.TD("world", ctxout.Prop("size", right), ctxout.Prop("fill", "-"), ctxout.Prop("origin", 1)) +
+				ctxout.CRT
+
+			result = to.Command(testStr)
+			if len(result) != width {
+				t.Errorf("round[%d] Origin[2,1] Expected length %d but got %d [left %d right %d]", runCnt, width, len(result), left, right)
+				maxErrors--
+			}
+
+			testStr = ctxout.OTR +
+				ctxout.TD("hello", ctxout.Prop("size", left), ctxout.Prop("fill", "+"), ctxout.Prop("origin", 1)) +
+				ctxout.TD("world", ctxout.Prop("size", right), ctxout.Prop("fill", "-"), ctxout.Prop("origin", 2)) +
+				ctxout.CRT
+
+			result = to.Command(testStr)
+			if len(result) != width {
+				t.Errorf("round[%d] Origin[1,2] Expected length %d but got %d [left %d right %d]", runCnt, width, len(result), left, right)
+				maxErrors--
+			}
+
+			testStr = ctxout.OTR +
+				ctxout.TD("hello", ctxout.Prop("size", left), ctxout.Prop("fill", "+"), ctxout.Prop("origin", 2)) +
+				ctxout.TD("world", ctxout.Prop("size", right), ctxout.Prop("fill", "-"), ctxout.Prop("origin", 2)) +
+				ctxout.CRT
+
+			result = to.Command(testStr)
+			if len(result) != width {
+				t.Errorf("round[%d] Origin[2,2] Expected length %d but got %d [left %d right %d]", runCnt, width, len(result), left, right)
+				maxErrors--
+			}
+			if maxErrors <= 0 {
+				t.Errorf("Too many errors, aborting")
+				return
+			}
+		}
+
+	}
+
+}
+
+func TestUtf8Chars(t *testing.T) {
+	type utfTesting struct {
+		left  string
+		right string
+	}
+	to := ctxout.NewTabOut()
+
+	info := &ctxout.PostFilterInfo{
+		Width:      100,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	to.Update(*info)
+
+	utf8Chars := []utfTesting{
+		{"testing left", "testing right"},
+		{"\u2588 check", "\u2588 also check"},
+		{"\u2588", "\u2588\u2588"},
+		{"verify \u2588\u2588 is okay?", "block \u2588 check"},
+		{"plain", "🖵"},
+	}
+	for _, utf8Char := range utf8Chars {
+		testStr := ctxout.OTR +
+			ctxout.TD(utf8Char.left, ctxout.Prop("size", 50), ctxout.Prop("fill", "+"), ctxout.Prop("origin", 1)) +
+			ctxout.TD(utf8Char.right, ctxout.Prop("size", 50), ctxout.Prop("fill", "-"), ctxout.Prop("origin", 1)) +
+			ctxout.CRT
+
+		result := to.Command(testStr)
+		// resulting length should be 100.
+		// but be aware that we need to count the visible characters and they required space on screen.
+		// so we need to count the utf8 characters and add the space they require (not the bytes)
+		// and ignore escape sequences and other invisible characters
+		// thats why we use ctxout.LenPrintable instead of len
+		if ctxout.LenPrintable(result) != 100 {
+			t.Errorf("Expected length %d but got %d", 100, len(result))
+		}
+	}
+}
+
+// here we are testing the size of the table
+// depending on different terminal sizes
+// and table render options
+
+type testSetups struct {
+	terminalWith int
+	tableSource  string
+	expectedSize int
+}
+
+func newTestSetup(terminalWith int, tableSource string, expectedSize int) *testSetups {
+	return &testSetups{
+		terminalWith: terminalWith,
+		tableSource:  tableSource,
+		expectedSize: expectedSize,
+	}
+}
+
+func new100Setup(tableSource string, expectedSize int) *testSetups {
+	return &testSetups{
+		terminalWith: 100,
+		tableSource:  tableSource,
+		expectedSize: expectedSize,
+	}
+}
+
+func (test *testSetups) assertSize(t *testing.T) *testSetups {
+	t.Helper()
+	to := ctxout.NewTabOut()
+
+	info := &ctxout.PostFilterInfo{
+		Width:      test.terminalWith,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	to.Update(*info)
+
+	result := to.Command(test.tableSource)
+	if ctxout.LenPrintable(result) != test.expectedSize {
+		t.Errorf("Expected length %d but got %d", test.expectedSize, ctxout.LenPrintable(result))
+	}
+	return test
+}
+
+func (test *testSetups) assertContent(t *testing.T, expected string) *testSetups {
+	t.Helper()
+	to := ctxout.NewTabOut()
+
+	info := &ctxout.PostFilterInfo{
+		Width:      test.terminalWith,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	to.Update(*info)
+
+	result := to.Command(test.tableSource)
+	if result != expected {
+		t.Errorf("content is not matching the expectation")
+		t.Errorf(result)
+		t.Errorf("----------- expectation ------------")
+		t.Errorf(expected)
+	}
+	return test
+}
+
+// compare the created markup with the expected markup
+func (test *testSetups) assertTableSource(t *testing.T, expected string) *testSetups {
+	t.Helper()
+	if test.tableSource != expected {
+		t.Errorf("table source is not matching the expectation")
+		t.Errorf(test.tableSource)
+		t.Errorf("---------- expectation -------------")
+		t.Errorf(expected)
+	}
+	return test
+}
+
+// compare if the output, split by an sperator, have allways the same length for all rows
+func (test *testSetups) assertRowLength(t *testing.T, separator string) *testSetups {
+	t.Helper()
+	t.Helper()
+	to := ctxout.NewTabOut()
+
+	info := &ctxout.PostFilterInfo{
+		Width:      test.terminalWith,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+
+	to.Update(*info)
+
+	result := to.Command(test.tableSource)
+	rows := strings.Split(result, separator)
+	firstRowSize := -1
+	for _, row := range rows {
+		if firstRowSize == -1 {
+			firstRowSize = ctxout.LenPrintable(row)
+		} else {
+			if firstRowSize != ctxout.LenPrintable(row) && ctxout.LenPrintable(row) != 0 {
+				t.Errorf("row length is not matching the expectation. fist row size is %d but one of the next row size is %d", firstRowSize, ctxout.LenPrintable(row))
+
+			}
+		}
+	}
+	return test
+}
+
+func TestSizes(t *testing.T) {
+
+	table := ctxout.Row(
+		ctxout.TD(
+			"hello",
+			ctxout.Prop("size", 50),
+			ctxout.Prop("fill", "+"),
+			ctxout.Prop("origin", 1),
+		),
+	)
+	new100Setup(table, 50).
+		assertSize(t).
+		assertTableSource(t, "<row><tab size='50' fill='+' origin='1'>hello</tab></row>")
+	newTestSetup(50, table, 25).
+		assertSize(t).
+		assertContent(t, "hello++++++++++++++++++++")
+
+	table = ctxout.Row(
+		ctxout.TD(
+			"this will be the text for the first row what should be a long text",
+			ctxout.Size(75),
+			ctxout.Fill("+"),
+			ctxout.Right(),
+		),
+		ctxout.TD(
+			"this is the second row and have also a long text to check if we still get the right size",
+			ctxout.Size(25),
+			ctxout.Fill("-"),
+			ctxout.Left(),
+		),
+	)
+	new100Setup(table, 100).
+		assertSize(t).
+		assertTableSource(t, "<row><tab size='75' fill='+' origin='2'>this will be the text for the first row what should be a long text</tab><tab size='25' fill='-' origin='1'>this is the second row and have also a long text to check if we still get the right size</tab></row>").
+		assertContent(t, "+++++++++this will be the text for the first row what should be a long text...ill get the right size")
+
+	newTestSetup(50, table, 50).
+		assertSize(t).
+		assertContent(t, "this will be the text for the first......ight size")
+
+	newTestSetup(25, table, 25).
+		assertSize(t).
+		assertContent(t, "this will be the......ize")
+
+	// test combination of content size and extended size
+	table = ctxout.Row(
+		ctxout.TD(
+			"this will be the text for the first row what should be a long text",
+			ctxout.Size(75),
+			ctxout.Fill("+"),
+			ctxout.Content(),
+		),
+		ctxout.TD(
+			"this is the second row and have also a long text to check if we still get the right size",
+			ctxout.Size(25),
+			ctxout.Fill("-"),
+			ctxout.Extend(),
+		),
+	)
+	new100Setup(table, 100).
+		assertSize(t).
+		assertTableSource(t, "<row><tab size='75' fill='+' draw='content'>this will be the text for the first row what should be a long text</tab><tab size='25' fill='-' draw='extend'>this is the second row and have also a long text to check if we still get the right size</tab></row>").
+		assertContent(t, "this will be the text for the first row what should be a long textthis is the second row and have...")
+
+}
+
+func TestMarginExample(t *testing.T) {
+
+	// here the same as i the simple example. so the commented lines are the difference
+	text := " -just-to-fill-some-space- "
+	for i := 0; i < 10; i++ {
+		text += text
+	}
+	text = " : " + text
+
+	//row separator is char alt + 186
+	rowSep := "│"
+
+	ctxout.AddPostFilter(ctxout.NewTabOut())
+
+	// create a table that will have 2 cells per row
+	// and sperate them with the vertical line char, between the cells
+	table := ctxout.Table(
+		ctxout.Row(
+			ctxout.TD(
+				"hello"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1), // the margin of the cell in percent of the cell width. this is used to reserve space for the border sign
+
+			),
+			rowSep, // the border sign. we reserved space for it with the margin
+			ctxout.TD(
+				"world"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1),
+			),
+			rowSep, // the border sign
+		),
+		ctxout.Row(
+			ctxout.TD(
+				"hola"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1), // again first row spend space for the border sign
+			),
+			rowSep, // here again we add the row sign
+			ctxout.TD(
+				"mundo"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1),
+			),
+			rowSep,
+		), // and so on...
+		ctxout.Row(
+			ctxout.TD(
+				"hallo"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1),
+			),
+			rowSep,
+			ctxout.TD(
+				"welt"+text,
+				ctxout.Size(50),
+				ctxout.Margin(1),
+			),
+			rowSep,
+		),
+	)
+	new100Setup(table, 300).
+		assertSize(t).
+		assertRowLength(t, rowSep)
+
+}

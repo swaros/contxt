@@ -9,7 +9,9 @@ require (
 	github.com/swaros/contxt/module/configure v0.0.0-20221206091003-553c703b0561
 	github.com/swaros/contxt/module/dirhandle v0.0.0-20221206091003-553c703b0561
 	github.com/swaros/contxt/module/systools v0.0.0-20221206091003-553c703b0561
-	github.com/swaros/manout v0.2.1
+	github.com/swaros/contxt/module/trigger v0.4.0
+	github.com/swaros/contxt/module/yamc v0.0.0-20230531064521-09943a54576e
+	github.com/swaros/manout v0.2.0
 	github.com/tidwall/sjson v1.2.5
 	golang.org/x/term v0.12.0
 	gopkg.in/yaml.v2 v2.4.0

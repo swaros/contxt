@@ -1,4 +1,28 @@
-package trigger
+// MIT License
+//
+// Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the Software), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+// AINC-NOTE-0815
+
+ package trigger
 
 import (
 	"errors"
@@ -6,9 +30,10 @@ import (
 )
 
 type Event struct {
-	name     string
-	args     []interface{}
-	listener []Listener
+	name         string
+	args         []interface{}
+	listenerLst  []Listener
+	errorInChain error
 }
 
 // NewEvent creates a new Event and register it
@@ -41,18 +66,18 @@ func (event *Event) GetName() string {
 
 // AddListener adds listener to the event
 func (event *Event) AddListener(lst ...Listener) error {
-	if _, found := eventMap.Load(event.name); found {
-		event.listener = append(event.listener, lst...)
-		eventMap.Store(event.name, event)
+	if _, found := eventMapStore.Load(event.name); found {
+		event.listenerLst = append(event.listenerLst, lst...)
+		eventMapStore.Store(event.name, event)
 		return nil
 	}
 	return errors.New("this event is not registered")
 }
 
 func (event *Event) ClearListener() error {
-	if _, found := eventMap.Load(event.name); found {
-		event.listener = []Listener{}
-		eventMap.Store(event.name, event)
+	if _, found := eventMapStore.Load(event.name); found {
+		event.listenerLst = []Listener{}
+		eventMapStore.Store(event.name, event)
 		return nil
 	}
 	return errors.New("this event is not registered")
@@ -60,47 +85,54 @@ func (event *Event) ClearListener() error {
 
 // SetArguments adds or changes the arguments for the event
 func (event *Event) SetArguments(args ...interface{}) error {
-	if _, found := eventMap.Load(event.name); found {
+	if _, found := eventMapStore.Load(event.name); found {
 		event.args = args
-		eventMap.Store(event.name, event)
+		eventMapStore.Store(event.name, event)
 		return nil
 	}
 	return errors.New("this event is not registered")
 }
 
 // Send calls any assigned callback
-func (event *Event) Send() {
-	for _, listen := range event.listener {
+func (event *Event) Send() error {
+	if event.errorInChain != nil {
+		return event.errorInChain
+	}
+	if event.listenerLst == nil || len(event.listenerLst) == 0 {
+		return errors.New("no listener for this event")
+	}
+	for _, listen := range event.listenerLst {
 		listen.Trigger(event.args)
 	}
+	return nil
 }
 
-// eventMap contains any registered event
-var eventMap sync.Map
+// eventMapStore contains any registered event
+var eventMapStore sync.Map
 
 // addEvent adds a new event. it will not override
 // exiting events. if an event already exists
 // it returns false. otherwise true is returned
 func addEvent(event *Event) bool {
-	if _, found := eventMap.Load(event.name); found {
+	if _, found := eventMapStore.Load(event.name); found {
 		return false
 	}
-	eventMap.Store(event.name, event)
+	eventMapStore.Store(event.name, event)
 	return true
 }
 
 func GetEvent(name string) (*Event, error) {
-	if evt, found := eventMap.Load(name); found {
+	if evt, found := eventMapStore.Load(name); found {
 		return evt.(*Event), nil
 	}
 	return nil, errors.New("Event not exists " + name)
 }
 
 func updateEvent(eventName string, updateCallBack func(*Event) error) error {
-	if evt, found := eventMap.Load(eventName); found {
+	if evt, found := eventMapStore.Load(eventName); found {
 		event := evt.(*Event)
 		updateCallBack(event)
-		eventMap.Store(event.name, event)
+		eventMapStore.Store(event.name, event)
 	} else {
 		return errors.New("event " + eventName + " not exists")
 	}
@@ -108,8 +140,8 @@ func updateEvent(eventName string, updateCallBack func(*Event) error) error {
 }
 
 func ResetAllEvents() {
-	eventMap.Range(func(key, value any) bool {
-		eventMap.Delete(key)
+	eventMapStore.Range(func(key, value any) bool {
+		eventMapStore.Delete(key)
 		return true
 	})
 	ResetAllListener()

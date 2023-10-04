@@ -1,0 +1,28 @@
+workspace:
+  project: samira
+  role: root
+  version: "1.0.2"
+
+task:
+  - id: defaults
+    script:
+      - echo "a) CTX_PWD ${CTX_PWD}"
+      - echo "b) CTX_PROJECT ${CTX_PROJECT}"
+      - echo "c) CTX_ROLE ${CTX_ROLE}"
+      - echo "d) CTX_VERSION ${CTX_VERSION}"
+      - echo "e) CTX_OS ${CTX_OS}"
+      - echo "f) CTX_ARCH ${CTX_ARCH}"
+      - echo "g) CTX_USER ${CTX_USER}"
+      - echo "h) CTX_HOST ${CTX_HOST}"
+      - echo "i) CTX_HOME ${CTX_HOME}"
+      - echo "j) CTX_DATE ${CTX_DATE}"
+      - echo "k) CTX_TIME ${CTX_TIME}"
+      - echo "l) CTX_DATETIME ${CTX_DATETIME}"
+      - echo "m) CTX_BUILD_NO ${CTX_BUILD_NO}"
+      - echo "n) CTX_TARGET ${CTX_TARGET}"
+      - echo "o) CTX_FORCE ${CTX_FORCE}"
+      - echo "p) CTX_WS ${CTX_WS}"
+      - echo "q) CTX_WS_KEYS ${CTX_WS_KEYS}"
+      - echo "r) WS0_samira_root ${WS0_samira_root}"
+      - echo "s) WS0_samira_website ${WS0_samira_website}"
+      - echo "t) WS0_samira_backend ${WS0_samira_backend}"

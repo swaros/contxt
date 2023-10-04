@@ -550,6 +550,25 @@ func TestNeedWithArgs(t *testing.T) {
 	})
 }
 
+func TestJsonExec(t *testing.T) {
+	folderRunner("./../../docs/test/execjson", t, func(t *testing.T) {
+		taskrun.RunTargets("test-load", false)
+		found, json := taskrun.GetData("JSON")
+		if !found {
+			t.Error("expected to find JSON data")
+		} else {
+			if _, ok := json["0"]; !ok {
+				t.Error("expected to find key 0 in JSON data")
+			}
+		}
+
+		lastLogLine := taskrun.GetPH("RUN.test-load.LOG.LAST")
+		if lastLogLine != "buildkit.dockerfile.v0" {
+			t.Error("expected to find buildkit.dockerfile.v0 in log")
+		}
+	})
+}
+
 func TestConcurrent(t *testing.T) {
 	expected := ""
 	folderRunner("./../../docs/test/01concurrent", t, func(t *testing.T) {

@@ -1,0 +1,5 @@
+release:
+  main: "cmd/cmd-contxt/main.go" # main file for the release
+development:
+  main: "cmd/v2/main.go" # main file for the development
+
