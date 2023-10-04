@@ -21,6 +21,8 @@ const (
 	DefaultVersionConf = "version.conf"
 )
 
+// SharedHelper is a helper to handle shared content
+// that is hosted on github
 type SharedHelper struct {
 	basePath       string
 	defaultSubPath string
@@ -42,6 +44,7 @@ func NewSharedHelperWithPath(basePath string) *SharedHelper {
 	return &SharedHelper{basePath, DefaultSubPath, DefaultVersionConf, mimiclog.NewNullLogger()}
 }
 
+// SetLogger sets the logger for the shared helper. the default is a null logger
 func (sh *SharedHelper) SetLogger(logger mimiclog.Logger) {
 	sh.logger = logger
 }
@@ -66,6 +69,7 @@ func (sh *SharedHelper) GetSharedPath(sharedName string) string {
 func (sh *SharedHelper) CheckOrCreateUseConfig(externalUseCase string) (string, error) {
 	sh.logger.Info("trying to solve usecase", externalUseCase)
 	path := ""                                      // just as default
+	var defaultError error                          // just as default
 	sharedPath := sh.GetSharedPath(externalUseCase) // get the main path for shared content
 	if sharedPath != "" {                           // no error and not an empty path
 		isThere, dirError := dirhandle.Exists(sharedPath) // do we have the main shared directory?
@@ -75,7 +79,11 @@ func (sh *SharedHelper) CheckOrCreateUseConfig(externalUseCase string) (string, 
 		} else {
 			if !isThere { // directory not exists
 				sh.logger.Info("shared directory not exists. try to checkout by git (github)")
-				path = sh.createUseByGit(externalUseCase, sharedPath) // create dirs and checkout content if possible. fit the path also
+				path, defaultError = sh.createUseByGit(externalUseCase, sharedPath) // create dirs and checkout content if possible. fit the path also
+				if defaultError != nil {
+					sh.logger.Error("unable to create shared usecase", externalUseCase, defaultError)
+					return "", defaultError
+				}
 
 			} else { // directory exists
 				path = sh.getSourcePath(sharedPath)
@@ -91,7 +99,13 @@ func (sh *SharedHelper) CheckOrCreateUseConfig(externalUseCase string) (string, 
 	return path, nil
 }
 
-func (sh *SharedHelper) createUseByGit(usecase, pathTouse string) string {
+// createUseByGit creates the local directory and uses git to clone the content
+// the version.conf will be created also and the current hashes will be stored
+// in them.
+// if the git checkout fails, it will check if the local directory exists
+// and uses them instead
+// if the local directory also not exists, it will exit with an error
+func (sh *SharedHelper) createUseByGit(usecase, pathTouse string) (string, error) {
 	usecase, version := sh.GetUseInfo(usecase, pathTouse) // get needed git ref and usecase by the requested usage (like from swaros/ctx-gt@v0.0.1)
 	sh.logger.Info("trying to checkout", usecase, "by git.", pathTouse, " version:", version)
 	path := ""
@@ -123,16 +137,17 @@ func (sh *SharedHelper) createUseByGit(usecase, pathTouse string) string {
 		if exists {
 			existsSource, _ := dirhandle.Exists(sh.getSourcePath(pathTouse))
 			if existsSource {
-				return sh.getSourcePath(pathTouse)
+				return sh.getSourcePath(pathTouse), nil
 			}
 		}
-
+		// this is not working at all. so we exit with a error
 		sh.logger.Critical("Local Usage folder not exists (+ ./source)", pathTouse)
-		systools.Exit(internalExitCode)
+		return "", fmt.Errorf("invalid github repository and local usage folder not exists (+ ./source) [%s]", pathTouse)
 	}
-	return path
+	return path, nil
 }
 
+// GetUseInfo returns the usecase and the version from the given usecase-string
 func (sh *SharedHelper) GetUseInfo(usecase, _ string) (string, string) {
 	parts := strings.Split(usecase, "@")
 	version := "refs/heads/main"
@@ -161,13 +176,11 @@ func (sh *SharedHelper) getOrCreateRepoConfig(ref, hash, usecase, pathTouse stri
 
 	// check if the useage folder exists and create them if not
 	if pathWErr := sh.createSharedUsageDir(pathTouse); pathWErr != nil {
-		manout.Error("error while create directory:", pathWErr)
 		return versionConf, pathWErr
 	}
 
 	hashChk, hashError := dirhandle.Exists(versionFilename)
 	if hashError != nil {
-		manout.Error("error while checking directory:", hashError)
 		return versionConf, hashError
 	} else if !hashChk {
 

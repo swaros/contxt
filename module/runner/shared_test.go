@@ -36,7 +36,20 @@ func TestCheckOrCreateUseConfig(t *testing.T) {
 				t.Error("unexpected path", libPaqth, "expected:", expectedPath)
 			}
 		}
-
 	}
+}
 
+func TestCheckOrCreateUseConfigNotExists(t *testing.T) {
+	if path, err := os.MkdirTemp("", "testCase*"); err != nil {
+		t.Error(err)
+	} else {
+		defer os.RemoveAll(path)
+		shared := runner.NewSharedHelperWithPath(path)
+		if libPaqth, gitError := shared.CheckOrCreateUseConfig("swaros/ctx-notThere"); gitError == nil {
+			if libPaqth != "" {
+				t.Error("should return an empty path")
+			}
+			t.Error("should return an error, because the repo does not exists")
+		}
+	}
 }
