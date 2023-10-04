@@ -114,6 +114,7 @@ func (c *SessionCobra) getSharedCmd() *cobra.Command {
 	}
 	shared.AddCommand(
 		c.sharedCmdList(),
+		c.getSharedUpdateCmd(),
 	)
 	return shared
 }
@@ -126,6 +127,25 @@ func (c *SessionCobra) sharedCmdList() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			c.checkDefaultFlags(cmd, args)
 			c.ExternalCmdHndl.PrintShared()
+		},
+	}
+}
+
+func (c *SessionCobra) getSharedUpdateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "update",
+		Short: "update shared libraries",
+		Long:  "update shared libraries",
+		Run: func(cmd *cobra.Command, args []string) {
+			c.checkDefaultFlags(cmd, args)
+			shared := NewSharedHelper()
+			useCases, err := shared.ListUseCases(true)
+			if err == nil {
+				for _, path := range useCases {
+					c.println("check usage ", ctxout.ForeBlue, path, ctxout.CleanTag)
+					shared.UpdateUseCase(path)
+				}
+			}
 		},
 	}
 }
