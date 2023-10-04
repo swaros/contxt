@@ -2,8 +2,8 @@ github.com/swaros/contxt/module/configure v0.0.0-20230531064521-09943a54576e h1:
 github.com/swaros/contxt/module/configure v0.0.0-20230531064521-09943a54576e/go.mod h1:ELBh1Lf8n9iVF4foYiK73gJPAHZtDcTc92ZfVLZBXGU=
 github.com/swaros/contxt/module/dirhandle v0.0.0-20230531064521-09943a54576e h1:BXctly7klpnJPOGsXAqXw0Nbc5O32oL9io1FiNVRl4M=
 github.com/swaros/contxt/module/dirhandle v0.0.0-20230531064521-09943a54576e/go.mod h1:uadGIHB1hjP67Fu//UH09imK4xV1HL9edn/GgtGhK2Y=
-github.com/swaros/manout v0.2.0 h1:YiukV36UDKw6bzu+InTnTK9S7RkNgKlLzXZdPUpKvbg=
-github.com/swaros/manout v0.2.0/go.mod h1:uLr3/KG+BKYkuS9egz8yBEI5TVvOJEc4a3LHo87ZnSA=
+github.com/swaros/manout v0.2.1 h1:vahzXmDrqgtm30CE36vvPnMQWfh+p5PwwIBbfz8IrPY=
+github.com/swaros/manout v0.2.1/go.mod h1:jShapWGngejTppzXUDyISFXH7ZaRLQaGiKlagQhZuic=
 github.com/swaros/outinject v0.0.4 h1:i9/qMaUTGaAE3vNU6rStX78eMXnVEtEKfxqR7sgaVLg=
 github.com/swaros/outinject v0.0.4/go.mod h1:wcIOa87m1ijBNaDFVvLBgo7wLOfE6s1fdDIHCy4RYb4=
 golang.org/x/sys v0.12.0 h1:CM0HF96J0hcLAwsHPJZjfdNzs0gftsLfgKt57wWHJ0o=
