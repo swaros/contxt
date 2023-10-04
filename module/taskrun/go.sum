@@ -78,8 +78,8 @@ github.com/swaros/contxt/module/trigger v0.4.0 h1:pHnWtwk2rD4EKjtIZbyuzKCxsjACEu
 github.com/swaros/contxt/module/trigger v0.4.0/go.mod h1:yL8Bus43pQmqPGgD1D/eGx+HSpEeNQulbQDKnGG8wLU=
 github.com/swaros/contxt/module/yamc v0.0.0-20230531064521-09943a54576e h1:CAAOzOw1gM1I8BuWR1onXyg/mPnCGmk0sHi6T7HvjUU=
 github.com/swaros/contxt/module/yamc v0.0.0-20230531064521-09943a54576e/go.mod h1:cIg7oGvql9qRzTSUTiL/5SORSmWoWLmN9Bdkxc5r4yc=
-github.com/swaros/manout v0.2.0 h1:YiukV36UDKw6bzu+InTnTK9S7RkNgKlLzXZdPUpKvbg=
-github.com/swaros/manout v0.2.0/go.mod h1:uLr3/KG+BKYkuS9egz8yBEI5TVvOJEc4a3LHo87ZnSA=
+github.com/swaros/manout v0.2.1 h1:vahzXmDrqgtm30CE36vvPnMQWfh+p5PwwIBbfz8IrPY=
+github.com/swaros/manout v0.2.1/go.mod h1:jShapWGngejTppzXUDyISFXH7ZaRLQaGiKlagQhZuic=
 github.com/swaros/outinject v0.0.4 h1:i9/qMaUTGaAE3vNU6rStX78eMXnVEtEKfxqR7sgaVLg=
 github.com/swaros/outinject v0.0.4/go.mod h1:wcIOa87m1ijBNaDFVvLBgo7wLOfE6s1fdDIHCy4RYb4=
 github.com/tidwall/gjson v1.14.2/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
