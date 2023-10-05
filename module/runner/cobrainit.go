@@ -430,8 +430,23 @@ func (c *SessionCobra) GetLintCmd() *cobra.Command {
 	}
 
 	lCmd.Flags().BoolVarP(&showAll, "show-issues", "i", false, "show all issues")
+	lCmd.AddCommand(c.GetLintTemplateCmd())
 
 	return lCmd
+}
+
+// a lint sub command to display the current loaded template
+// as yaml
+func (c *SessionCobra) GetLintTemplateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "yaml",
+		Short: "show the current loaded template",
+		Long:  "show the current loaded template as yaml",
+		Run: func(cmd *cobra.Command, args []string) {
+			c.checkDefaultFlags(cmd, args)
+			c.ExternalCmdHndl.PrintTemplate()
+		},
+	}
 }
 
 // -- Run cmd

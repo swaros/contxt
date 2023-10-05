@@ -435,14 +435,13 @@ func (sh *SharedHelper) takeCareAboutRepo(pathTouse string, config configure.Git
 func (sh *SharedHelper) MergeRequiredPaths(ctemplate *configure.RunConfig, templateHandler *ctemplate.Template) error {
 	if len(ctemplate.Config.Require) > 0 {
 		for _, reqSource := range ctemplate.Config.Require {
-			sh.logger.Info("handle required ", reqSource)
+			sh.logger.Info("shared: handle required ", reqSource)
 			fullPath, pathError := sh.CheckOrCreateUseConfig(reqSource)
 			if pathError == nil {
-				sh.logger.Debug("merge required", fullPath)
-				//subTemplate, tError := GetPwdTemplate(fullPath + string(os.PathSeparator) + DefaultExecYaml)
+				sh.logger.Debug("shared: merge required", fullPath)
 				subTemplate, tError := templateHandler.LoadV2ByAbsolutePath(fullPath + string(os.PathSeparator) + DefaultExecYaml)
 				if tError == nil {
-					mergo.Merge(&ctemplate, subTemplate, mergo.WithOverride, mergo.WithAppendSlice)
+					return mergo.Merge(ctemplate, subTemplate, mergo.WithOverride, mergo.WithAppendSlice)
 				} else {
 					return tError
 				}
@@ -451,7 +450,7 @@ func (sh *SharedHelper) MergeRequiredPaths(ctemplate *configure.RunConfig, templ
 			}
 		}
 	} else {
-		sh.logger.Debug("no required files configured")
+		sh.logger.Debug("shared: there are no files defined for requirement")
 	}
 	return nil
 }

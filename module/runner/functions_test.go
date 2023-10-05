@@ -851,7 +851,7 @@ User  Peter 46
 		        EOF
 	*/
 	output.ClearAndLog()
-	if err := runCobraCmd(app, "run letter"); err != nil {
+	if err := runCobraCmd(app, "run letter --loglevel debug"); err != nil {
 		t.Errorf("Expected no error, got '%v'", err)
 	}
 	expected := `
@@ -972,4 +972,43 @@ samira
 
 	assertSplitTestInMessage(t, output, expected)
 
+}
+
+func TestImportRequired(t *testing.T) {
+	ChangeToRuntimeDir(t)
+	app, output, appErr := SetupTestApp("projects01", time.Now().Format(time.RFC3339)+"ctx_projects.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	output.SetKeepNewLines(true)
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "testRequired_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+
+	// change into the test directory
+	// especially here to the first projectwe have there.
+	if err := os.Chdir(getAbsolutePath("projects01/testrequire")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	// print the targets
+	if err := runCobraCmd(app, "run"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "first")
+	assertInMessage(t, output, "docker-stop-all")
+	assertInMessage(t, output, "docker-show-ip")
+
+	output.ClearAndLog()
+	// lint yaml to get the merged context
+	if err := runCobraCmd(app, "lint yaml"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "- id: first")
+	assertInMessage(t, output, "- id: docker-stop-all")
+	assertInMessage(t, output, "- id: docker-show-ip")
+	assertInMessage(t, output, "- swaros/ctx-docker")
 }

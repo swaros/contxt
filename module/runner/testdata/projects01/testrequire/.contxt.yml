@@ -1,0 +1,8 @@
+config:
+  require:
+    - swaros/ctx-docker
+
+task:
+  - id: first
+    script:
+      - echo "first"

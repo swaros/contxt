@@ -66,10 +66,11 @@ func (ih *ImportHandler) handleFileImportsToVars(imports []string) error {
 		parts := strings.Split(filenameFull, " ")
 		filename := parts[0]
 		// loading the file ad parses the template markup inside
-		if content, err := ih.template.GetFileParsed(filename); err != nil {
+		if content, err := ih.template.TryHandleTemplate(filename); err != nil {
 			ih.logger.Error("error while loading import", filename)
 			return err
 		} else {
+			ih.logger.Debug("HandleImports: import file loaded", filename)
 			if len(parts) > 1 {
 				keyname = parts[1]
 			}

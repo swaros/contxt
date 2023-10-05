@@ -12,8 +12,9 @@ import (
 
 // create a output handler to catch the created output while testing
 type TestOutHandler struct {
-	Msgs    []string
-	logFile string
+	Msgs         []string
+	logFile      string
+	keepNewLines bool
 }
 
 func NewTestOutHandler() *TestOutHandler {
@@ -37,6 +38,11 @@ func filterMessages(msgs []string) []string {
 	return filtered
 }
 
+// enable or disable the new line filter
+func (t *TestOutHandler) SetKeepNewLines(keep bool) {
+	t.keepNewLines = keep
+}
+
 func (t *TestOutHandler) Stream(msg ...interface{}) {
 	t.Msgs = append(t.Msgs, fmt.Sprint(msg...))
 }
@@ -47,6 +53,9 @@ func (t *TestOutHandler) StreamLn(msg ...interface{}) {
 
 // get all the messages as a string
 func (t *TestOutHandler) String() string {
+	if t.keepNewLines {
+		return fmt.Sprintln(strings.Join(t.Msgs, "\n"))
+	}
 	return fmt.Sprintln(strings.Join(filterMessages(t.Msgs), "\n"))
 }
 

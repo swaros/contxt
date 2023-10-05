@@ -130,14 +130,20 @@ func (t *Template) FindTemplateFileName() (string, bool) {
 // FindIncludeFileName returns the full path to the include file if it exists
 // the bool value indicates if the file exists or not
 // the default include file name is .inc.contxt.yml in the current directory
-func (t *Template) FindIncludeFileName() (string, bool) {
-	if err := t.Init(); err != nil {
-		panic(err)
+func (t *Template) FindIncludeFileName(path string) (string, bool) {
+	stats, err := os.Stat(path)
+	if err != nil {
+		return "", false
 	}
-	fileName := t.path + string(os.PathSeparator) + DefaultIncludeFile
+	if !stats.IsDir() {
+		path = filepath.Dir(path)
+	}
+	fileName := path + string(os.PathSeparator) + DefaultIncludeFile
 	if _, err := os.Stat(fileName); err == nil {
+		t.logger.Debug("found include file:", fileName)
 		return fileName, true
 	} else {
+		t.logger.Debug("include file NOT found:", fileName)
 		return "", false
 	}
 }
@@ -146,7 +152,8 @@ func (t *Template) FindIncludeFileName() (string, bool) {
 // and make sure that any template placeholders are processed.
 // this function is injected in the yacl. load process.
 func (t *Template) customTemplateLoader(path string) ([]byte, error) {
-	parsedContent, err := t.readAsTemplate()
+	t.logger.Debug("customTemplateLoader for loading and parsing content:", path)
+	parsedContent, err := t.readPathAsTemplate(path)
 	if err != nil {
 		return nil, err
 	}
@@ -194,30 +201,67 @@ func (t *Template) LoadV2() (configure.RunConfig, error) {
 	return template, nil
 }
 
-// readAsTemplate reads the template file and returns the parsed content
-func (t *Template) readAsTemplate() (string, error) {
-	path, ok := t.FindTemplateFileName()
-	if !ok {
-		return "", errors.New("no template file found")
+// readPathAsTemplate reads the template file from given path and returns the parsed content
+func (t *Template) readPathAsTemplate(path string) (string, error) {
+	t.logger.Debug("readPathAsTemplate:", path)
+	// check if file exists
+	if stat, err := os.Stat(path); err != nil || stat.IsDir() {
+		return "", errors.New("file not exists or is a directory")
 	}
-	return t.GetFileParsed(path)
+
+	return t.HandleContxtTemplate(path)
 }
 
-// GetFileParsed parses a template file and returns the parsed content
+// HandleContxtTemplate parses a template file and returns the parsed content
 // by using all the the include files.
 // the usage is the same as the go template parser. so you can use {{ .var }} to access the variables
-func (t *Template) GetFileParsed(path string) (string, error) {
+// in this case it is expected, we have a .inc.contxt.yml file in the same directory, that defines
+// the include files. if no include file is found, the template file will be parsed as go/template
+// these definition is required, because all these files containing the values, they are used for parsing
+// by using go/template
+func (t *Template) HandleContxtTemplate(path string) (string, error) {
+	// lets try to get the absolute path from it. ignore errors
+	if xpath, perr := filepath.Abs(path); perr == nil {
+		path = xpath
+	}
+
 	templateData, ferr := os.ReadFile(path) // read the content of the file for later use
 	if ferr != nil {
 		return "", ferr
 	}
-	if _, _, err := t.LoadInclude(); err != nil { // load the include files
+	t.logger.Debug("HandleContxtTemplate: file succesfully loaded:", path, "size:", len(templateData))
+	if _, loaded, err := t.LoadInclude(path); err != nil { // load the include files
 		return "", err // if we have an error here we can not continue
+	} else {
+		if !loaded {
+			t.logger.Debug("no include files are loaded. Skip parsing as go/template", path)
+			return string(templateData), nil // no include file is also fine. so no error
+		}
 	}
 
 	// now use the template parser to parse the template file
+	return t.ParseGoTemplate(string(templateData))
+}
+
+// Different to HandleContxtTemplate, here we do not expect the include definition file
+// .inc.contxt.yml. We just try to parse the template file togehter with the current data map
+func (t *Template) TryHandleTemplate(path string) (string, error) {
+	// lets try to get the absolute path from it. ignore errors
+	if xpath, perr := filepath.Abs(path); perr == nil {
+		path = xpath
+	}
+
+	templateData, ferr := os.ReadFile(path) // read the content of the file for later use
+	if ferr != nil {
+		return "", ferr
+	}
+	t.logger.Debug("TryHandleTemplate: file succesfully loaded:", path, "size:", len(templateData))
+	return t.ParseGoTemplate(string(templateData))
+}
+
+func (t *Template) ParseGoTemplate(data string) (string, error) {
 	t.tplParser.SetData(t.GetOriginMap())
-	if templateParsed, err := t.tplParser.ParseTemplateString(string(templateData)); err != nil {
+	if templateParsed, err := t.tplParser.ParseTemplateString(data); err != nil {
 		return "", err
 	} else {
 		return templateParsed, nil
@@ -250,14 +294,15 @@ func (t *Template) Load() (configure.RunConfig, bool, error) {
 // LoadInclude loads the include files and returns the parsed content.
 // these files are defined in the default include file named .inc.contxt.yml
 // any of these files can have template placeholders, they will processed
-func (t *Template) LoadInclude() (configure.IncludePaths, bool, error) {
+func (t *Template) LoadInclude(path string) (configure.IncludePaths, bool, error) {
 	// just check if we have a include file
-	_, ok := t.FindIncludeFileName()
+	_, ok := t.FindIncludeFileName(path)
 	if !ok {
 		return configure.IncludePaths{}, false, nil // no include file is also fine. so no error
 	}
 	var include configure.IncludePaths
 	// try to load the included files. can be json or yaml
+	t.logger.Debug("load include file:", path)
 	if err := yacl.New(&include, yamc.NewYamlReader(), yamc.NewJsonReader()).SetSingleFile(DefaultIncludeFile).Load(); err != nil {
 		return include, false, err
 	}
@@ -271,7 +316,7 @@ func (t *Template) LoadInclude() (configure.IncludePaths, bool, error) {
 func (t *Template) parseIncludes() error {
 	if len(t.includeConfig.Include.Folders) > 0 {
 		for _, include := range t.includeConfig.Include.Folders {
-
+			t.logger.Debug("parseIncludes:", include)
 			if mapData, err := t.ImportFolder(include); err != nil {
 				return err
 			} else {

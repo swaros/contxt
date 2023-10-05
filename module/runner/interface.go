@@ -49,4 +49,5 @@ type CmdExecutor interface {
 	GetCurrentWorkSpace() string                       // get current workspace
 	Lint(bool) error                                   // lint the current workspace
 	PrintShared()                                      // print out all shared libs
+	PrintTemplate()                                    // print out the current template as yaml
 }

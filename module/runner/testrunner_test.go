@@ -34,7 +34,6 @@ func ChangeToRuntimeDir(t *testing.T) {
 }
 
 // this are some helper functions especially for testing the runner
-
 // Setup the test app
 // create the application. set up the config folder name, and the name of the config file.
 // the testapp bevavior is afterwards different, because it uses the config
@@ -90,6 +89,13 @@ func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error)
 	}
 
 	app := runner.NewCmdSession()
+
+	// set the TemplateHndl OnLoad function to parse required files
+	// like it is done in the real application
+	onLoadFn := func(template *configure.RunConfig) error {
+		return app.SharedHelper.MergeRequiredPaths(template, app.TemplateHndl)
+	}
+	app.TemplateHndl.SetOnLoad(onLoadFn)
 
 	functions := runner.NewCmd(app)
 	// init the main functions
@@ -230,13 +236,18 @@ func runCobraCmd(app *runner.CmdSession, cmd string) error {
 func assertSplitTestInMessage(t *testing.T, output *TestOutHandler, msg string) {
 	t.Helper()
 	parts := strings.Split(msg, "\n")
+	errorHappen := false
 	for _, part := range parts {
 		if part == "" {
 			continue
 		}
 		if !output.Contains(part) {
-			t.Errorf("Expected \n%s\nin the output \n%v", part, output.String())
+			errorHappen = true
+			t.Errorf("Expected [%s]not found in the output", part)
 		}
+	}
+	if errorHappen {
+		t.Error("this is the source output\n", output.String())
 	}
 }
 
