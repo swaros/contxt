@@ -32,7 +32,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/imdario/mergo"
 	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/ctemplate"
 	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/systools"
@@ -43,6 +45,7 @@ import (
 const (
 	DefaultSubPath     = "/.contxt/shared/"
 	DefaultVersionConf = "version.conf"
+	DefaultExecYaml    = string(os.PathSeparator) + ".contxt.yml"
 )
 
 // SharedHelper is a helper to handle shared content
@@ -427,4 +430,27 @@ func (sh *SharedHelper) takeCareAboutRepo(pathTouse string, config configure.Git
 	}
 	config.Path = sh.getSourcePath(pathTouse)
 	return config
+}
+
+func (sh *SharedHelper) MergeRequiredPaths(ctemplate *configure.RunConfig, templateHandler *ctemplate.Template) error {
+	if len(ctemplate.Config.Require) > 0 {
+		for _, reqSource := range ctemplate.Config.Require {
+			sh.logger.Info("shared: handle required ", reqSource)
+			fullPath, pathError := sh.CheckOrCreateUseConfig(reqSource)
+			if pathError == nil {
+				sh.logger.Debug("shared: merge required", fullPath)
+				subTemplate, tError := templateHandler.LoadV2ByAbsolutePath(fullPath + string(os.PathSeparator) + DefaultExecYaml)
+				if tError == nil {
+					return mergo.Merge(ctemplate, subTemplate, mergo.WithOverride, mergo.WithAppendSlice)
+				} else {
+					return tError
+				}
+			} else {
+				return pathError
+			}
+		}
+	} else {
+		sh.logger.Debug("shared: there are no files defined for requirement")
+	}
+	return nil
 }

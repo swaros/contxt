@@ -39,6 +39,7 @@ import (
 	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
 	"github.com/swaros/contxt/module/yaclint"
+	"gopkg.in/yaml.v2"
 )
 
 type CmdExecutorImpl struct {
@@ -674,5 +675,25 @@ func (c *CmdExecutorImpl) PrintShared() {
 	sharedDirs, _ := sharedRun.ListUseCases(false)
 	for _, sharedPath := range sharedDirs {
 		c.Println(sharedPath)
+	}
+}
+
+// displays the current version of contxt template as a yaml string
+func (c *CmdExecutorImpl) PrintTemplate() {
+	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
+		c.Println(ctxout.ForeRed, "yaml export failed: ", ctxout.CleanTag, err.Error())
+		c.Print(ctxout.ForeRed, "error while loading template: ", ctxout.CleanTag, err.Error())
+	} else {
+		if exists {
+			c.Println("...loading config ", ctxout.ForeGreen, "ok", ctxout.CleanTag)
+			// map the template to a yaml string
+			if yamlStr, err := yaml.Marshal(template); err != nil {
+				c.Println(ctxout.ForeRed, "yaml export failed: ", ctxout.CleanTag, err.Error())
+			} else {
+				c.Println(string(yamlStr))
+			}
+		} else {
+			c.Println(ctxout.ForeRed, "yaml export failed: ", ctxout.CleanTag, "no template found")
+		}
 	}
 }

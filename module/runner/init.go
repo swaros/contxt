@@ -26,6 +26,7 @@ import (
 	"runtime"
 
 	"github.com/sirupsen/logrus"
+	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
@@ -36,6 +37,13 @@ import (
 func Init() error {
 	// create the application session
 	app := NewCmdSession()
+
+	// set the TemplateHndl OnLoad function to parse required files
+	onLoadFn := func(template *configure.RunConfig) error {
+		return app.SharedHelper.MergeRequiredPaths(template, app.TemplateHndl)
+	}
+	app.TemplateHndl.SetOnLoad(onLoadFn)
+
 	// set the default log level
 	app.Log.Logger.SetLevel(logrus.ErrorLevel)
 	// create the the command executor instance

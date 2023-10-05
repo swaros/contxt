@@ -34,6 +34,7 @@ type CmdSession struct {
 	OutPutHdnl       ctxout.StreamInterface // used for output stream
 	Printer          ctxout.PrintInterface  // used formated printing to the console
 	DefaultVariables map[string]string      // DefaultVariables are variables which are set for every task. they are predefines. not the used variables itself
+	SharedHelper     *SharedHelper          // SharedHelper is responsible for the shared tasks.
 }
 
 type SessionLogger struct {
@@ -48,6 +49,7 @@ func NewCmdSession() *CmdSession {
 		Printer:          ctxout.NewMOWrap(),
 		Cobra:            NewCobraCmds(),
 		TemplateHndl:     ctemplate.New(),
+		SharedHelper:     NewSharedHelper(),
 		DefaultVariables: make(map[string]string),
 		Log: &SessionLogger{
 			LogLevel: "error",
@@ -55,5 +57,7 @@ func NewCmdSession() *CmdSession {
 		},
 	}
 	mimiclog.ApplyLogger(logger, session.TemplateHndl)
+	mimiclog.ApplyIfPossible(logger, session.TemplateHndl)
+	mimiclog.ApplyIfPossible(logger, session.SharedHelper)
 	return session
 }
