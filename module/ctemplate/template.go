@@ -44,17 +44,19 @@ const (
 )
 
 type Template struct {
-	includeFile   string
-	user          *user.User
-	path          string
-	includeConfig configure.IncludePaths
-	dataMap       sync.Map
-	tplParser     CtxTemplate
-	linter        *yaclint.Linter
-	linting       bool
-	logger        mimiclog.Logger
+	includeFile   string                           // the include file name what is usual .inc.contxt.yml in the current directory
+	user          *user.User                       // the current user (set in Init)
+	path          string                           // the current path (set in Init)
+	includeConfig configure.IncludePaths           // the include config contains all the files to include
+	dataMap       sync.Map                         // the data map contains all key values they are used for parsing go/template files
+	tplParser     CtxTemplate                      // the template parser that is parsing any text file with go/template placeholders
+	linter        *yaclint.Linter                  // the linter is used to lint the template files
+	linting       bool                             // if linting is enabled we need to track the files
+	logger        mimiclog.Logger                  // the logger interface
+	onLoadFn      func(*configure.RunConfig) error // if this callback is set it will be called after the template file is loaded
 }
 
+// create a new Template struct
 func New() *Template {
 	return &Template{
 		includeFile: DefaultIncludeFile,
@@ -63,14 +65,22 @@ func New() *Template {
 	}
 }
 
+// set the callback function that is called after the template file is loaded
+func (t *Template) SetOnLoad(fn func(*configure.RunConfig) error) {
+	t.onLoadFn = fn
+}
+
+// SetLogger sets the logger interface
 func (t *Template) SetLogger(logger mimiclog.Logger) {
 	t.logger = logger
 }
 
+// SetLinting enables or disables the linting process
 func (t *Template) SetLinting(linting bool) {
 	t.linting = linting
 }
 
+// GetLinter returns the linter interface
 func (t *Template) GetLinter() (*yaclint.Linter, error) {
 	if t.linter == nil {
 		return nil, errors.New("linter not initialized. You need to call SetLinting(true) first")
@@ -86,6 +96,8 @@ func (t *Template) GetIncludeFile() string {
 	return t.includeFile
 }
 
+// Init initializes the Template struct
+// this is ment to be called before any other function
 func (t *Template) Init() error {
 	usr, err := user.Current()
 	if err != nil {
@@ -100,6 +112,9 @@ func (t *Template) Init() error {
 	return nil
 }
 
+// FindTemplateFileName searchs for Template files in the current directory
+// the bool value indicates if the file exists or not
+// the default template file name is .contxt.yml in the current directory
 func (t *Template) FindTemplateFileName() (string, bool) {
 	if err := t.Init(); err != nil {
 		panic(err)
@@ -112,6 +127,9 @@ func (t *Template) FindTemplateFileName() (string, bool) {
 	}
 }
 
+// FindIncludeFileName returns the full path to the include file if it exists
+// the bool value indicates if the file exists or not
+// the default include file name is .inc.contxt.yml in the current directory
 func (t *Template) FindIncludeFileName() (string, bool) {
 	if err := t.Init(); err != nil {
 		panic(err)
@@ -124,17 +142,40 @@ func (t *Template) FindIncludeFileName() (string, bool) {
 	}
 }
 
+// the customTemplateLoader is used to load the template file,
+// and make sure that any template placeholders are processed.
+// this function is injected in the yacl. load process.
+func (t *Template) customTemplateLoader(path string) ([]byte, error) {
+	parsedContent, err := t.readAsTemplate()
+	if err != nil {
+		return nil, err
+	}
+	return []byte(parsedContent), nil
+}
+
+// LoadV2ByAbsolutePath loads the template file and returns the parsed content.
+// this is ment for loading a template file from a different location.
+func (t *Template) LoadV2ByAbsolutePath(absolutePath string) (configure.RunConfig, error) {
+	var template configure.RunConfig
+	confLoader := yacl.New(&template, yamc.NewYamlReader()).
+		SetFileAndPathsByFullFilePath(absolutePath).
+		SetCustomFileLoader(t.customTemplateLoader)
+
+	if err := confLoader.Load(); err != nil {
+		return template, err
+	}
+	return template, nil
+}
+
+// LoadV2 loads the template file and returns the parsed content.
+// this is ment for loading the default template file.
+// if you like to load a template file from a different location
+// use LoadV2ByAbsolutePath
 func (t *Template) LoadV2() (configure.RunConfig, error) {
 	var template configure.RunConfig
 	confLoader := yacl.New(&template, yamc.NewYamlReader()).
 		SetSingleFile(DefaultTemplateFile).
-		SetCustomFileLoader(func(path string) ([]byte, error) {
-			parsedContent, err := t.readAsTemplate()
-			if err != nil {
-				return nil, err
-			}
-			return []byte(parsedContent), nil
-		})
+		SetCustomFileLoader(t.customTemplateLoader)
 
 	// if linting is enabled we need to track the files
 	if t.linting {
@@ -153,6 +194,7 @@ func (t *Template) LoadV2() (configure.RunConfig, error) {
 	return template, nil
 }
 
+// readAsTemplate reads the template file and returns the parsed content
 func (t *Template) readAsTemplate() (string, error) {
 	path, ok := t.FindTemplateFileName()
 	if !ok {
@@ -182,6 +224,10 @@ func (t *Template) GetFileParsed(path string) (string, error) {
 	}
 }
 
+// Load loads the template file and returns the parsed content.
+// this is ment for loading the default template file.
+// so anything here is depending the default template file name,
+// and the current directory.
 func (t *Template) Load() (configure.RunConfig, bool, error) {
 	if _, ok := t.FindTemplateFileName(); !ok {
 		return configure.RunConfig{}, false, nil
@@ -190,10 +236,20 @@ func (t *Template) Load() (configure.RunConfig, bool, error) {
 	if Template, err := t.LoadV2(); err != nil {
 		return configure.RunConfig{}, false, err
 	} else {
+		// if we have a callback function we call it here to let the user do some stuff
+		// and maybe change the template file
+		if t.onLoadFn != nil {
+			if err := t.onLoadFn(&Template); err != nil {
+				return Template, false, err
+			}
+		}
 		return Template, true, nil
 	}
 }
 
+// LoadInclude loads the include files and returns the parsed content.
+// these files are defined in the default include file named .inc.contxt.yml
+// any of these files can have template placeholders, they will processed
 func (t *Template) LoadInclude() (configure.IncludePaths, bool, error) {
 	// just check if we have a include file
 	_, ok := t.FindIncludeFileName()
