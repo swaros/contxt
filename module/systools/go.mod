@@ -5,12 +5,12 @@ go 1.18
 require (
 	github.com/swaros/contxt/module/dirhandle v0.0.0-20230531064521-09943a54576e
 	github.com/swaros/manout v0.2.1
-	golang.org/x/term v0.12.0
+	golang.org/x/term v0.13.0
 
 )
 
 require (
 	github.com/swaros/contxt/module/configure v0.0.0-20230531064521-09943a54576e // indirect
 	github.com/swaros/outinject v0.0.4 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 )
