@@ -50,4 +50,5 @@ type CmdExecutor interface {
 	Lint(bool) error                                   // lint the current workspace
 	PrintShared()                                      // print out all shared libs
 	PrintTemplate()                                    // print out the current template as yaml
+	SetPreValue(name string, value string)             // set a pre value
 }

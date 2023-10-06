@@ -50,8 +50,9 @@ type CobraOptions struct {
 	ShowFullTargets bool
 	ShowBuild       bool
 	LastDirIndex    bool
-	UseContext      string // flag to switch to a workspace in the context of another workspace
-	InContext       bool   // flag to use the current workspace as context
+	UseContext      string            // flag to switch to a workspace in the context of another workspace
+	InContext       bool              // flag to use the current workspace as context
+	PreVars         map[string]string // preset variables they will set variables from commandline. they will be overwritten by the template
 }
 
 // this is the main entry point for the cobra command
@@ -84,6 +85,7 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 	c.RootCmd.PersistentFlags().BoolVar(&c.Options.DisableTable, "notable", false, "disable table format output")
 	c.RootCmd.PersistentFlags().StringVar(&c.Options.UseContext, "usecontext", "", "use a different workspace as context")
 	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.InContext, "incontext", "I", false, "use the current workspace as context")
+	c.RootCmd.PersistentFlags().StringToStringVarP(&c.Options.PreVars, "var", "v", nil, "set variables by keyname and value.")
 
 	c.RootCmd.AddCommand(
 		c.GetWorkspaceCmd(),
@@ -851,6 +853,13 @@ func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {
 	if c.Options.DisableTable {
 		// overwrite the table plugin with a disabled one
 		ctxout.UpdateFilterByRef(ctxout.NewTabOut(), ctxout.PostFilterInfo{Disabled: true})
+	}
+
+	// preset all variables from command line
+	// set variables by argument.
+	for preKey, preValue := range c.Options.PreVars {
+		c.log().Debug("preset Value", preKey, preValue)
+		c.ExternalCmdHndl.SetPreValue(preKey, preValue)
 	}
 
 	// forces to change to the current used workspace and the assosiated path

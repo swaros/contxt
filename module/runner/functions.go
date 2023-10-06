@@ -697,3 +697,12 @@ func (c *CmdExecutorImpl) PrintTemplate() {
 		}
 	}
 }
+
+// Set the given variable to the current session Default Variables.
+// this will end up by using them as variables for the template, and are reset for any run.
+// this is also an different Behavior to V1 where the variables are set for the wohle runtime, and if
+// they changed by a task, they are changed for the whole runtime.
+// this is not happen anymore, and the variables are just set for the current run.
+func (c *CmdExecutorImpl) SetPreValue(name string, value string) {
+	c.session.DefaultVariables[name] = value
+}

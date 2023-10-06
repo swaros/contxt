@@ -1012,3 +1012,99 @@ func TestImportRequired(t *testing.T) {
 	assertInMessage(t, output, "- id: docker-show-ip")
 	assertInMessage(t, output, "- swaros/ctx-docker")
 }
+
+// testing if the prevalues are working as expected.
+// this is the used context file:
+/*
+config:
+  variables:
+     username: "master"
+     password: "check12345"
+
+task:
+  - id: values
+    script:
+      - echo "props [${username}] [${password}]"
+
+  - id: rewrite
+    variables:
+      username: "jon-doe"
+      password: "mysecret"
+    script:
+      - echo "reused [${username}] [${password}]"
+
+*/
+func TestSetPrevalues(t *testing.T) {
+	ChangeToRuntimeDir(t)
+	app, output, appErr := SetupTestApp("projects01", time.Now().Format(time.RFC3339)+"ctx_projects.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	output.SetKeepNewLines(false)
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "testPrevalues_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+
+	// change into the test directory
+	// especially here to the first projectwe have there.
+	if err := os.Chdir(getAbsolutePath("projects01/prevalues")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	// just lint
+	if err := runCobraCmd(app, "lint"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	// first without any prevalues
+	if err := runCobraCmd(app, "run values"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "props [master] [check12345]")
+
+	output.ClearAndLog()
+	// next just replace the username
+	if err := runCobraCmd(app, "run values -v username=root"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "props [root] [check12345]")
+	output.ClearAndLog()
+
+	// next just replace the password and again the username
+	if err := runCobraCmd(app, "run values -v password=889977 -v username=mimi"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "props [mimi] [889977]")
+	output.ClearAndLog()
+
+	// here we check if variables are still be set, if the defined in the task definition
+	if err := runCobraCmd(app, "run rewrite -v password=889977 -v username=mimi"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "reused [jon-doe] [mysecret]")
+	output.ClearAndLog()
+
+	// next we check the chain usage of prevalues and rewrite after launch them one after the other
+	if err := runCobraCmd(app, "run values rewrite -v password=kmmgt -v username=rumble"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "props [rumble] [kmmgt]")
+	assertInMessage(t, output, "reused [jon-doe] [mysecret]")
+	output.ClearAndLog()
+
+	// next in different order
+	// TODO: commented, because this is the behavior from V1, but now we have a new behavior. and i am not sure what is more useful
+
+	/*
+		if err := runCobraCmd(app, "run rewrite values -v password=ppoker -v username=lucker"); err != nil {
+			t.Errorf("Expected no error, got '%v'", err)
+		}
+		assertInMessage(t, output, "props [jon-doe] [mysecret]")
+		assertInMessage(t, output, "reused [jon-doe] [mysecret]")
+		output.ClearAndLog()
+	*/
+
+}
