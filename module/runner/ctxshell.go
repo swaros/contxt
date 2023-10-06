@@ -23,12 +23,11 @@ package runner
 
 import (
 	"runtime"
-	"strings"
-	"time"
 
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/ctxshell"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/systools"
 )
 
 func shellRunner(c *CmdExecutorImpl) {
@@ -45,8 +44,20 @@ func shellRunner(c *CmdExecutorImpl) {
 	// some of the commands are not working well async, because they
 	// are switching between workspaces. so we have to disable async
 	// for them
-	shell.SetNeverAsyncCmd("workspace", "dir")
+	shell.SetNeverAsyncCmd("workspace")
 
+	// add native exit command
+	exitCmd := ctxshell.NewNativeCmd("exit", "exit the shell", func(args []string) error {
+		ctxout.PrintLn(ctxout.ForeBlue, "bye bye", ctxout.CleanTag)
+		systools.Exit(0)
+		return nil
+	})
+	exitCmd.SetCompleterFunc(func(line string) []string {
+		return []string{"exit"}
+	})
+	shell.AddNativeCmd(exitCmd)
+
+	/* disable this for now
 	// add native commands to menu
 	// this one is for testing only
 	demoCmd := ctxshell.NewNativeCmd("demo", "demo command", func(args []string) error {
@@ -58,6 +69,7 @@ func shellRunner(c *CmdExecutorImpl) {
 		return nil
 	})
 
+
 	// while developing, you can use this to test the completer
 	// and the command itself
 	demoCmd.SetCompleterFunc(func(line string) []string {
@@ -65,6 +77,7 @@ func shellRunner(c *CmdExecutorImpl) {
 	})
 
 	shell.AddNativeCmd(demoCmd)
+	*/
 
 	// set the prompt handler
 	shell.SetPromptFunc(func() string {
@@ -72,24 +85,7 @@ func shellRunner(c *CmdExecutorImpl) {
 		if dir, err := dirhandle.Current(); err == nil {
 			tpl = dir
 		}
-		template, exists, err := c.session.TemplateHndl.Load()
-		if err != nil {
 
-			c.session.Log.Logger.Error(err)
-			if runtime.GOOS == "windows" {
-				return windowsPrompt(tpl, err)
-			} else {
-				return linuxPrompt(tpl, err)
-			}
-		}
-		if exists {
-			tpl = template.Workspace.Project
-			if template.Workspace.Role != "" {
-				tpl += "/" + template.Workspace.Role
-			}
-		} else {
-			tpl = "no template"
-		}
 		// depends runtime.GOOS
 		if runtime.GOOS == "windows" {
 			return windowsPrompt(tpl, nil)
@@ -102,7 +98,7 @@ func shellRunner(c *CmdExecutorImpl) {
 	shell.SetAsyncCobraExec(true).SetAsyncNativeCmd(true).Run()
 }
 
-func windowsPrompt(tpl string, err error) string {
+func windowsPrompt(path string, err error) string {
 	if err != nil {
 		return ctxout.ToString(
 			ctxout.NewMOWrap(),
@@ -113,7 +109,7 @@ func windowsPrompt(tpl string, err error) string {
 			ctxout.ForeRed,
 			" › ",
 			ctxout.ForeBlue,
-			tpl,
+			path,
 			ctxout.CleanTag,
 		)
 	}
@@ -121,7 +117,7 @@ func windowsPrompt(tpl string, err error) string {
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
 		ctxout.ForeBlue,
-		tpl,
+		path,
 		" ",
 		ctxout.ForeCyan,
 		"› ",
@@ -129,7 +125,7 @@ func windowsPrompt(tpl string, err error) string {
 	)
 }
 
-func linuxPrompt(tpl string, err error) string {
+func linuxPrompt(path string, err error) string {
 	if err != nil {
 		return ctxout.ToString(
 			ctxout.NewMOWrap(),
@@ -143,7 +139,7 @@ func linuxPrompt(tpl string, err error) string {
 			ctxout.ForeRed,
 			"",
 			"<f:white><b:blue>",
-			tpl,
+			path,
 			"</><f:blue></> ",
 		)
 	}
@@ -152,7 +148,7 @@ func linuxPrompt(tpl string, err error) string {
 		ctxout.NewMOWrap(),
 		ctxout.BackWhite,
 		ctxout.ForeBlue,
-		tpl,
+		path,
 		ctxout.BackBlue,
 		ctxout.ForeWhite,
 		"ctx<f:yellow>shell:</><f:blue></> ",
