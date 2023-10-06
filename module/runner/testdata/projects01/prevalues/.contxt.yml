@@ -1,0 +1,16 @@
+config:
+  variables:
+     username: "master"
+     password: "check12345"
+
+task:
+  - id: values
+    script:
+      - echo "props [${username}] [${password}]"
+  
+  - id: rewrite
+    variables:
+      username: "jon-doe"
+      password: "mysecret"
+    script:
+      - echo "reused [${username}] [${password}]"
