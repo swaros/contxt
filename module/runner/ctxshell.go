@@ -23,6 +23,7 @@ package runner
 
 import (
 	"runtime"
+	"time"
 
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/ctxshell"
@@ -85,7 +86,6 @@ func shellRunner(c *CmdExecutorImpl) {
 		if dir, err := dirhandle.Current(); err == nil {
 			tpl = dir
 		}
-
 		// depends runtime.GOOS
 		if runtime.GOOS == "windows" {
 			return windowsPrompt(tpl, nil)
@@ -95,7 +95,11 @@ func shellRunner(c *CmdExecutorImpl) {
 	})
 	c.session.OutPutHdnl = shell
 	// start the shell
-	shell.SetAsyncCobraExec(true).SetAsyncNativeCmd(true).Run()
+	shell.SetAsyncCobraExec(true).
+		SetAsyncNativeCmd(true).
+		UpdatePromptEnabled(true).
+		UpdatePromptPeriod(1 * time.Second).
+		Run()
 }
 
 func windowsPrompt(path string, err error) string {
@@ -126,6 +130,12 @@ func windowsPrompt(path string, err error) string {
 }
 
 func linuxPrompt(path string, err error) string {
+
+	// display the current time in the prompt
+	// this is just for testing
+
+	timeNowAsString := time.Now().Format("15:04:05")
+
 	if err != nil {
 		return ctxout.ToString(
 			ctxout.NewMOWrap(),
@@ -146,6 +156,11 @@ func linuxPrompt(path string, err error) string {
 
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
+		ctxout.BackBlue,
+		ctxout.ForeWhite,
+		"",
+		timeNowAsString,
+		" ",
 		ctxout.BackWhite,
 		ctxout.ForeBlue,
 		path,

@@ -35,26 +35,29 @@ import (
 )
 
 type Cshell struct {
-	CobraRootCmd      *cobra.Command     // the root command of the cobra command tree
-	navtiveCmds       []*NativeCmd       // commands that are not part of the cobra command tree
-	getPrompt         func() string      // function that returns the prompt string
-	exitCmdStr        string             // the command string that exits the shell
-	rlInstance        *readline.Instance // the readline instance
-	asyncCobraExec    bool               // if true, cobra commands are executed in a separate goroutine. a general rule.
-	asyncNativeCmd    bool               // if true, native commands are executed in a separate goroutine. a general rule.
-	tickTimerDuration time.Duration      // the duration of the tick timer for print the buffered messages
-	messages          *CshellMsgFifo     // the message buffer
-	neverAsncCmds     []string           // commands that are never executed in a separate goroutine
-	ignoreCobraCmds   []string           // commands that are ignored by the cobra command tree
+	CobraRootCmd        *cobra.Command     // the root command of the cobra command tree
+	navtiveCmds         []*NativeCmd       // commands that are not part of the cobra command tree
+	getPrompt           func() string      // function that returns the prompt string
+	exitCmdStr          string             // the command string that exits the shell
+	rlInstance          *readline.Instance // the readline instance
+	asyncCobraExec      bool               // if true, cobra commands are executed in a separate goroutine. a general rule.
+	asyncNativeCmd      bool               // if true, native commands are executed in a separate goroutine. a general rule.
+	tickTimerDuration   time.Duration      // the duration of the tick timer for print the buffered messages
+	messages            *CshellMsgFifo     // the message buffer
+	neverAsncCmds       []string           // commands that are never executed in a separate goroutine
+	ignoreCobraCmds     []string           // commands that are ignored by the cobra command tree
+	updatePromptPeriod  time.Duration      // the period for updating the prompt
+	updatePromptEnabled bool               // if true, the prompt is updated periodically
 
 }
 
 func NewCshell() *Cshell {
 	return &Cshell{
-		exitCmdStr:        "exit",
-		tickTimerDuration: 100 * time.Millisecond,
-		messages:          NewCshellMsgScope(100),
-		neverAsncCmds:     []string{},
+		exitCmdStr:         "exit",
+		tickTimerDuration:  100 * time.Millisecond,
+		messages:           NewCshellMsgScope(100),
+		updatePromptPeriod: 5 * time.Second,
+		neverAsncCmds:      []string{},
 	}
 }
 
@@ -67,6 +70,18 @@ func (t *Cshell) SetNeverAsyncCmds(cmds []string) *Cshell {
 // defines a command that are never executed in a separate goroutine
 func (t *Cshell) SetNeverAsyncCmd(cmd ...string) *Cshell {
 	t.neverAsncCmds = append(t.neverAsncCmds, cmd...)
+	return t
+}
+
+// set the duration for updating the prompt
+func (t *Cshell) UpdatePromptPeriod(d time.Duration) *Cshell {
+	t.updatePromptPeriod = d
+	return t
+}
+
+// enable or disable the periodic update of the prompt
+func (t *Cshell) UpdatePromptEnabled(onoff bool) *Cshell {
+	t.updatePromptEnabled = onoff
 	return t
 }
 
@@ -271,7 +286,7 @@ func (t *Cshell) init() error {
 		InterruptPrompt:     "^C",
 		EOFPrompt:           "exit",
 		HistorySearchFold:   true,
-		FuncFilterInputRune: filterInput,
+		FuncFilterInputRune: t.inputFilterFunc,
 		UniqueEditLine:      true,
 	})
 	return err
@@ -292,6 +307,12 @@ func (t *Cshell) RunOnceWithCmd(cmd func()) error {
 
 }
 
+func (t *Cshell) updatePrompt() {
+	if t.getPrompt != nil {
+		t.rlInstance.SetPrompt(t.getPrompt())
+	}
+}
+
 // Run starts the shell
 func (t *Cshell) Run() error {
 	// create the completer
@@ -304,7 +325,7 @@ func (t *Cshell) Run() error {
 		InterruptPrompt:     "^C",
 		EOFPrompt:           "exit",
 		HistorySearchFold:   true,
-		FuncFilterInputRune: filterInput,
+		FuncFilterInputRune: t.inputFilterFunc,
 		UniqueEditLine:      true,
 	})
 	if err != nil {
@@ -313,16 +334,13 @@ func (t *Cshell) Run() error {
 	defer t.rlInstance.Close()
 	t.rlInstance.CaptureExitSignal()
 	log.SetOutput(t.rlInstance.Stderr())
-	if t.getPrompt != nil {
-		t.rlInstance.SetPrompt(t.getPrompt())
-	}
+	t.updatePrompt()
 	// start the message provider they prints the messages
 	// any time defined by tickTimerDuration
 	t.StartMessageProvider()
-
+	t.StartBackgroundPromptUpate()
 	// the main loop
 	for {
-
 		ln := t.rlInstance.Line()
 		if ln.CanContinue() {
 			continue
@@ -397,15 +415,39 @@ func (t *Cshell) Run() error {
 		}
 		// move to the next line
 		t.rlInstance.Write([]byte("\n"))
-		if t.getPrompt != nil {
-			t.rlInstance.SetPrompt(t.getPrompt())
-		}
+		t.updatePrompt()
 
 	}
 	return nil
 }
 
-func filterInput(r rune) (rune, bool) {
+func (t *Cshell) StartBackgroundPromptUpate() {
+	if t.rlInstance == nil {
+		return
+	}
+
+	done := make(chan struct{})
+	go func(tp *Cshell) {
+
+	promptLoop:
+		for {
+			select {
+			case <-time.After(time.Duration(tp.updatePromptPeriod)):
+				// only update the prompt if we are not in complete mode and is it enabled
+				if tp.updatePromptEnabled && !tp.rlInstance.Operation.IsInCompleteMode() {
+					tp.updatePrompt()
+					tp.rlInstance.Refresh()
+				}
+			case <-done:
+				break promptLoop
+			}
+		}
+		done <- struct{}{}
+	}(t)
+
+}
+
+func (t *Cshell) inputFilterFunc(r rune) (rune, bool) {
 	switch r {
 	// block CtrlZ feature
 	case readline.CharCtrlZ:
