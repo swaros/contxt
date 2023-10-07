@@ -2,6 +2,7 @@ package runner_test
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/swaros/contxt/module/runner"
@@ -9,8 +10,8 @@ import (
 
 func TestGetPath(t *testing.T) {
 	shared := runner.NewSharedHelperWithPath("/home/user")
-	if shared.GetSharedPath("test") != "/home/user/.contxt/shared/test" {
-		t.Error("unexpected path")
+	if shared.GetSharedPath("test") != filepath.Clean("/home/user/.contxt/shared/test") {
+		t.Error("unexpected path:", shared.GetSharedPath("test"))
 	}
 }
 
@@ -32,7 +33,7 @@ func TestCheckOrCreateUseConfig(t *testing.T) {
 			t.Error(gitError)
 		} else {
 			expectedPath := path + "/.contxt/shared/swaros/ctx-git/source" // like /tmp/testCase4133459873/.contxt/shared/swaros/ctx-git/source
-			if libPaqth != expectedPath {
+			if libPaqth != filepath.Clean(expectedPath) {
 				t.Error("unexpected path", libPaqth, "expected:", expectedPath)
 			}
 		}
