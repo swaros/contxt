@@ -71,6 +71,32 @@ func TestPrintableString(t *testing.T) {
 	}
 }
 
+func TestNoEscapeString(t *testing.T) {
+
+	type test struct {
+		in  string
+		out string
+	}
+
+	tests := []test{
+		{"0.4.6", "0.4.6"},
+		{"0.4.6-rc1", "0.4.6-rc1"},
+		{"0.4.6-rc1+build1", "0.4.6-rc1+build1"},
+		{"yamama", "yamama"},
+		{"\\m/", "\\m/"},
+		{"\033[1;32mCHECK\033[0m", "CHECK"},
+		{"??.'", "??.'"},
+		{"\033[1;32mCHECK\033[0m\033[1;31mCHECK\033[0m\033[1;33mCHECK\033[0m", "CHECKCHECKCHECK"},
+	}
+
+	for i, v := range tests {
+		str := systools.NoEscapeSequences(v.in)
+		if str != v.out {
+			t.Error("unexpected string: [", str, "] for string ", v.in, " test ", i)
+		}
+	}
+}
+
 func TestStrLen(t *testing.T) {
 	len := systools.StrLen("hello world")
 

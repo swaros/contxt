@@ -34,6 +34,10 @@ import (
 // these colors have to readable in the combination of foreground and background.
 // also we store the used colors per run in memory, with the name of the task as key.
 
+var (
+	lastInstace *RandColorStore
+)
+
 type RandColor struct {
 	foreroundColor  string
 	backgroundColor string
@@ -41,6 +45,13 @@ type RandColor struct {
 
 type RandColorStore struct {
 	colors sync.Map
+}
+
+func TryGetLastInstance() *RandColorStore {
+	if lastInstace == nil {
+		lastInstace = NewRandColorStore()
+	}
+	return lastInstace
 }
 
 var (
@@ -67,9 +78,11 @@ var (
 )
 
 func NewRandColorStore() *RandColorStore {
-	return &RandColorStore{
+	rn := &RandColorStore{
 		colors: sync.Map{},
 	}
+	lastInstace = rn
+	return rn
 }
 
 func PickRandColor() RandColor {

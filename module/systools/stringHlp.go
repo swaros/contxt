@@ -79,6 +79,27 @@ func PrintableChars(str string) string {
 	return string(result)
 }
 
+func NoEscapeSequences(str string) string {
+	// we need to remove any escape sequences from the string
+	// for output without colors and countingchars they are visible
+	// and will break the output
+
+	var result []rune
+	var escape bool
+	for _, r := range str {
+		if r == 27 {
+			escape = true
+		}
+		if !escape {
+			result = append(result, r)
+		}
+		if r == 109 {
+			escape = false
+		}
+	}
+	return string(result)
+}
+
 func PrintableCharsByUnquote(str string) (string, error) {
 	s2, err := strconv.Unquote(`"` + str + `"`)
 	if err != nil {

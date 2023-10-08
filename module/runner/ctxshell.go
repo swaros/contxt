@@ -23,7 +23,6 @@ package runner
 
 import (
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -46,6 +45,7 @@ type CtxShell struct {
 	shell          *ctxshell.Cshell
 	Modus          int
 	MaxTasks       int
+	CollectedTasks []string
 	SynMutex       sync.Mutex
 	LabelForeColor string
 	LabelBackColor string
@@ -85,6 +85,14 @@ func shellRunner(c *CmdExecutorImpl) {
 		return []string{"exit"}
 	})
 	shell.AddNativeCmd(exitCmd)
+
+	cleanTasksCmd := ctxshell.NewNativeCmd("taskreset", "resets all tasks", func(args []string) error {
+		return tasks.NewGlobalWatchman().ResetAllTasksIfPossible()
+	})
+	cleanTasksCmd.SetCompleterFunc(func(line string) []string {
+		return []string{"taskreset"}
+	})
+	shell.AddNativeCmd(cleanTasksCmd)
 
 	/* disable this for now
 	// add native commands to menu
@@ -153,32 +161,46 @@ func (cs *CtxShell) taskLabel(label string) string {
 	if len(watchers) > 0 {
 		cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
 		taskCount := 0
+		taskBar := ""
 		for _, watcher := range watchers {
 			watchMan := tasks.GetWatcherInstance(watcher)
 			if watchMan != nil {
 				allRunnungs := watchMan.GetAllRunningTasks()
 				if len(allRunnungs) > 0 {
 					taskCount += len(allRunnungs)
+					// add the tasks to the collected tasks they are not already in
+					for _, task := range allRunnungs {
+						if !systools.StringInSlice(task, cs.CollectedTasks) {
+							cs.CollectedTasks = append(cs.CollectedTasks, task)
+						}
+					}
+				}
+				// build the taskbar
+				runningChar := cs.getABraillCharByTime()
+				doneChar := "✓"
+				for _, task := range cs.CollectedTasks {
+					if watchMan.TaskRunning(task) {
+						taskBar += ctxout.ForeWhite + runningChar
+					} else {
+						taskBar += ctxout.ForeBlack + doneChar
+					}
 				}
 			}
 		}
+
 		if taskCount > 0 {
-			if cs.MaxTasks < taskCount {
-				cs.MaxTasks = taskCount
-			}
-			bChar := cs.getABraillCharByTime()
-			taskCountAsString := ctxout.ForeWhite + strings.Repeat(bChar, taskCount)
-			taskDoneAsString := ctxout.ForeDarkGrey + strings.Repeat("⠿", cs.MaxTasks-taskCount)
-			label += ctxout.BackBlack + taskCountAsString + taskDoneAsString + ctxout.BackWhite
-			cs.LabelForeColor = ctxout.ForeBlue
+			label += taskBar
+			cs.LabelForeColor = ctxout.ForeWhite
 			cs.LabelBackColor = ctxout.BackDarkGrey
 		}
 
 	} else {
+		// no tasks running, so reset the all the task related stuff
 		cs.shell.UpdatePromptPeriod(1 * time.Second)
 		cs.LabelForeColor = ctxout.ForeBlue
 		cs.LabelBackColor = ctxout.BackWhite
 		cs.MaxTasks = 0
+		cs.CollectedTasks = []string{}
 	}
 	return ctxout.ToString(label)
 }
@@ -213,14 +235,16 @@ func (cs *CtxShell) linuxPrompt(reason int, label string) string {
 
 	timeNowAsString := time.Now().Format("15:04:05")
 	// the maximum labe size is half of the terminal width
-	w, _, err := systools.GetStdOutTermSize()
-	if err != nil {
-		w = 80
-	}
-	maxLen := w / 2
-	if len(label) > maxLen {
-		label = label[len(label)-maxLen:] + "..."
-	}
+	// TODO: still getting the wrong amount of chars from the label with escape sequences
+	/*
+		w, _, err := systools.GetStdOutTermSize()
+		if err != nil {
+			w = 80
+		}
+		maxLen := w / 2
+		if systools.StrLen(systools.NoEscapeSequences(label)) > maxLen {
+			label = label[systools.StrLen(label)-maxLen:] + "..."
+		}*/
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
 		ctxout.BackBlue,
@@ -233,6 +257,6 @@ func (cs *CtxShell) linuxPrompt(reason int, label string) string {
 		label,
 		ctxout.BackBlue,
 		ctxout.ForeWhite,
-		"ctx<f:yellow>shell:</><f:blue></> ",
+		"ctx<f:black>:</><f:blue></> ",
 	)
 }
