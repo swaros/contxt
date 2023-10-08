@@ -23,17 +23,45 @@ package runner
 
 import (
 	"runtime"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/ctxshell"
 	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/systools"
+	"github.com/swaros/contxt/module/tasks"
 )
+
+const (
+	ModusInit = 1
+	ModusRun  = 2
+	ModusTask = 3
+	ModusIdle = 4
+)
+
+type CtxShell struct {
+	cmdSession     *CmdExecutorImpl
+	shell          *ctxshell.Cshell
+	Modus          int
+	MaxTasks       int
+	SynMutex       sync.Mutex
+	LabelForeColor string
+	LabelBackColor string
+}
 
 func shellRunner(c *CmdExecutorImpl) {
 	// run the context shell
 	shell := ctxshell.NewCshell()
+	shellHandler := &CtxShell{
+		cmdSession:     c,
+		shell:          shell,
+		Modus:          ModusInit,
+		MaxTasks:       0,
+		LabelForeColor: ctxout.ForeBlue,
+		LabelBackColor: ctxout.BackWhite,
+	}
 
 	// add cobra commands to the shell, so they can be used there too.
 	// first we need to define the exceptions
@@ -81,16 +109,31 @@ func shellRunner(c *CmdExecutorImpl) {
 	*/
 
 	// set the prompt handler
-	shell.SetPromptFunc(func() string {
-		tpl := ""
-		if dir, err := dirhandle.Current(); err == nil {
-			tpl = dir
+	shell.SetPromptFunc(func(reason int) string {
+
+		label := ""
+		if reason == ctxshell.UpdateByInput {
+			if dir, err := dirhandle.Current(); err == nil {
+				label = dir
+			}
 		}
+		/*
+			switch reason {
+			case ctxshell.UpdateByInput:
+				label = "input"
+			case ctxshell.UpdateBySignal:
+				label = "signal"
+			case ctxshell.UpdateByPeriod:
+				label = "period"
+
+			}
+		*/
+		label = shellHandler.taskLabel(label)
 		// depends runtime.GOOS
 		if runtime.GOOS == "windows" {
-			return windowsPrompt(tpl, nil)
+			return shellHandler.windowsPrompt(reason, label)
 		} else {
-			return linuxPrompt(tpl, nil)
+			return shellHandler.linuxPrompt(reason, label)
 		}
 	})
 	c.session.OutPutHdnl = shell
@@ -102,26 +145,60 @@ func shellRunner(c *CmdExecutorImpl) {
 		Run()
 }
 
-func windowsPrompt(path string, err error) string {
-	if err != nil {
-		return ctxout.ToString(
-			ctxout.NewMOWrap(),
-			ctxout.ForeRed,
-			"error loading template: ",
-			ctxout.ForeYellow,
-			err.Error(),
-			ctxout.ForeRed,
-			" › ",
-			ctxout.ForeBlue,
-			path,
-			ctxout.CleanTag,
-		)
+// adds an additonial task label to the prompt and increases the prompt update period
+// if there are running tasks.
+// if no tasks are running, the prompt update period will be set to 1 second.
+func (cs *CtxShell) taskLabel(label string) string {
+	watchers := tasks.ListWatcherInstances()
+	if len(watchers) > 0 {
+		cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
+		taskCount := 0
+		for _, watcher := range watchers {
+			watchMan := tasks.GetWatcherInstance(watcher)
+			if watchMan != nil {
+				allRunnungs := watchMan.GetAllRunningTasks()
+				if len(allRunnungs) > 0 {
+					taskCount += len(allRunnungs)
+				}
+			}
+		}
+		if taskCount > 0 {
+			if cs.MaxTasks < taskCount {
+				cs.MaxTasks = taskCount
+			}
+			bChar := cs.getABraillCharByTime()
+			taskCountAsString := ctxout.ForeWhite + strings.Repeat(bChar, taskCount)
+			taskDoneAsString := ctxout.ForeDarkGrey + strings.Repeat("⠿", cs.MaxTasks-taskCount)
+			label += ctxout.BackBlack + taskCountAsString + taskDoneAsString + ctxout.BackWhite
+			cs.LabelForeColor = ctxout.ForeBlue
+			cs.LabelBackColor = ctxout.BackDarkGrey
+		}
+
+	} else {
+		cs.shell.UpdatePromptPeriod(1 * time.Second)
+		cs.LabelForeColor = ctxout.ForeBlue
+		cs.LabelBackColor = ctxout.BackWhite
+		cs.MaxTasks = 0
 	}
+	return ctxout.ToString(label)
+}
+
+func (cs *CtxShell) getABraillCharByTime() string {
+	// we need to return a braille char
+	// depending on the milliseconds of the current time
+	braillTableString := "⠄⠆⠇⠋⠙⠸⠰⠠⠐⠈"
+	braillTable := []rune(braillTableString)
+	millis := time.Now().UnixNano() / int64(time.Millisecond)
+	index := int(millis % int64(len(braillTable)))
+	return string(braillTable[index])
+}
+
+func (cs *CtxShell) windowsPrompt(reason int, label string) string {
 
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
 		ctxout.ForeBlue,
-		path,
+		label,
 		" ",
 		ctxout.ForeCyan,
 		"› ",
@@ -129,31 +206,21 @@ func windowsPrompt(path string, err error) string {
 	)
 }
 
-func linuxPrompt(path string, err error) string {
+func (cs *CtxShell) linuxPrompt(reason int, label string) string {
 
 	// display the current time in the prompt
 	// this is just for testing
 
 	timeNowAsString := time.Now().Format("15:04:05")
-
+	// the maximum labe size is half of the terminal width
+	w, _, err := systools.GetStdOutTermSize()
 	if err != nil {
-		return ctxout.ToString(
-			ctxout.NewMOWrap(),
-			ctxout.BackYellow,
-			ctxout.ForeRed,
-			"error loading template: ",
-			ctxout.BackRed,
-			ctxout.ForeYellow,
-			err.Error(),
-			ctxout.BackBlue,
-			ctxout.ForeRed,
-			"",
-			"<f:white><b:blue>",
-			path,
-			"</><f:blue></> ",
-		)
+		w = 80
 	}
-
+	maxLen := w / 2
+	if len(label) > maxLen {
+		label = label[len(label)-maxLen:] + "..."
+	}
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
 		ctxout.BackBlue,
@@ -161,9 +228,9 @@ func linuxPrompt(path string, err error) string {
 		"",
 		timeNowAsString,
 		" ",
-		ctxout.BackWhite,
-		ctxout.ForeBlue,
-		path,
+		cs.LabelForeColor,
+		cs.LabelBackColor,
+		label,
 		ctxout.BackBlue,
 		ctxout.ForeWhite,
 		"ctx<f:yellow>shell:</><f:blue></> ",
