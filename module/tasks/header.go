@@ -134,7 +134,7 @@ func (t *targetExecuter) reInitialize() {
 	}
 	// if no task watcher is set, we create a new one
 	if t.watch == nil {
-		t.watch = NewWatchman()
+		t.watch = NewGlobalWatchman()
 	}
 	// assign the Tasks to the targetExecuter
 

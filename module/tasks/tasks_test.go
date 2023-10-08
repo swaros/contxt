@@ -18,7 +18,20 @@ import (
 
 // this test would fail because the requirment handler is not set
 
+func ResetWatchmanTaskList(t *testing.T) {
+	t.Helper()
+	wman := tasks.NewGlobalWatchman()
+	if wman == nil {
+		t.Errorf("Error creating watchman")
+		t.FailNow()
+	}
+	if err := wman.ResetAllTasksIfPossible(); err != nil {
+		t.Errorf("Error resetting watchman: %v", err)
+	}
+}
+
 func TestFailureBecauseNoRequirementCheck(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	messages := []string{}
 	// we hook into the output handler to capture the output
 	ctxout.PreHook = func(msg ...interface{}) bool {
@@ -47,6 +60,7 @@ func TestFailureBecauseNoRequirementCheck(t *testing.T) {
 }
 
 func TestWithRequirementCheck(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	// we create a slice to store the output
 	messages := []string{}
 
@@ -100,6 +114,7 @@ func TestWithRequirementCheck(t *testing.T) {
 }
 
 func TestMultipleTask(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	// we create a slice to store the output
 	messages := []string{}
 
@@ -177,6 +192,7 @@ func TestMultipleTask(t *testing.T) {
 }
 
 func TestTargetWithNeeds(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 task:
   - id: test
@@ -231,6 +247,7 @@ task:
 }
 
 func TestTargetWithRunTargets(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 task:
   - id: test
@@ -285,6 +302,7 @@ task:
 }
 
 func TestTargetWithNext(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 task:
   - id: test
@@ -339,6 +357,7 @@ task:
 }
 
 func TestTargetComplexWith2Needs(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 task:
   - id: test
@@ -402,6 +421,7 @@ task:
 }
 
 func TestTargetComplexWith2NestedNeeds(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 task:
   - id: test
@@ -471,6 +491,7 @@ task:
 }
 
 func TestTargetVariables(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 config:
     variables:
@@ -519,6 +540,7 @@ task:
 }
 
 func TestVariables(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 config:
     variables:
@@ -558,6 +580,7 @@ task:
 }
 
 func TestTryParse(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 config:
     variables:
@@ -586,6 +609,7 @@ task:
 }
 
 func TestCheats(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 config:
     variables:
@@ -727,6 +751,7 @@ task:
 }
 
 func TestTryParseCheatsWithErrors(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	// testing the errorcases of the cheats
 	source := `
 config:
@@ -872,6 +897,7 @@ task:
 }
 
 func TestTriggerExecution(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 task:
@@ -903,6 +929,7 @@ task:
 }
 
 func TestTriggerExecutionWithTarget(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 task:
@@ -952,6 +979,7 @@ func assertErrormsgContains(t *testing.T, expected string, actual []error) bool 
 }
 
 func TestTriggerError(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 task:
@@ -989,6 +1017,7 @@ task:
 }
 
 func TestTriggerErrorIgnored(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping test on windows")
 	}
@@ -1028,6 +1057,7 @@ task:
 }
 
 func TestRunError2(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 task:
@@ -1055,6 +1085,7 @@ task:
 }
 
 func TestTriggerExecutionStopReason(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 task:
@@ -1085,6 +1116,7 @@ task:
 }
 
 func TestTriggerInSomeCombinations(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 task:
@@ -1195,7 +1227,7 @@ task:
 					messages = []string{}
 					errorMsg = []error{}
 					targetUpdates = []string{}
-
+					ResetWatchmanTaskList(t)
 					code := taskMain.RunTarget(testRun.target, true) // we run the task
 					if code != testRun.expectedCode {                // we expect a code 0
 						t.Errorf("Expected code %d, got %d", testRun.expectedCode, code)
@@ -1234,6 +1266,7 @@ task:
 }
 
 func TestRequire(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 config:
@@ -1267,6 +1300,7 @@ task:
 }
 
 func TestRequire2(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 config:
@@ -1300,6 +1334,7 @@ task:
 }
 
 func TestRequire3(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 task:
   - id: subTarget
@@ -1340,6 +1375,7 @@ task:
 }
 
 func TestRequire4(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 config:
@@ -1373,6 +1409,7 @@ task:
 }
 
 func TestRequire5(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 config:
@@ -1406,6 +1443,7 @@ task:
 }
 
 func TestRequire6(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 config:
@@ -1439,6 +1477,7 @@ task:
 }
 
 func TestRequire7(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 config:
@@ -1471,6 +1510,7 @@ task:
 }
 
 func TestRequire8(t *testing.T) {
+	ResetWatchmanTaskList(t)
 	if os.Getenv("OLDPWD") == "" {
 		t.Skip("OLDPWD is empty")
 	}
@@ -1510,6 +1550,7 @@ func TestRequire9(t *testing.T) {
 	if os.Getenv("OLDPWD") == "hello" {
 		t.Skip("OLDPWD is hello")
 	}
+	ResetWatchmanTaskList(t)
 	source := `
 version: "1"
 task:
