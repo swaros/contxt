@@ -47,7 +47,7 @@ type RandColorStore struct {
 	colors sync.Map
 }
 
-func TryGetLastInstance() *RandColorStore {
+func LastRandColorInstance() *RandColorStore {
 	if lastInstace == nil {
 		lastInstace = NewRandColorStore()
 	}
@@ -74,6 +74,18 @@ var (
 		{foreroundColor: "magenta", backgroundColor: "black"},
 		{foreroundColor: "cyan", backgroundColor: "black"},
 		{foreroundColor: "white", backgroundColor: "dark-grey"},
+		{foreroundColor: "blue", backgroundColor: "yellow"},
+		{foreroundColor: "blue", backgroundColor: "green"},
+		{foreroundColor: "blue", backgroundColor: "magenta"},
+		{foreroundColor: "blue", backgroundColor: "cyan"},
+		{foreroundColor: "blue", backgroundColor: "white"},
+		{foreroundColor: "blue", backgroundColor: "black"},
+		{foreroundColor: "yellow", backgroundColor: "green"},
+		{foreroundColor: "yellow", backgroundColor: "blue"},
+		{foreroundColor: "yellow", backgroundColor: "magenta"},
+		{foreroundColor: "yellow", backgroundColor: "cyan"},
+		{foreroundColor: "yellow", backgroundColor: "white"},
+		{foreroundColor: "yellow", backgroundColor: "black"},
 	}
 )
 

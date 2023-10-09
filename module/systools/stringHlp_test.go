@@ -97,6 +97,21 @@ func TestNoEscapeString(t *testing.T) {
 	}
 }
 
+func TestShortLabel(t *testing.T) {
+	testChars := []string{
+		"hello-my-friend",
+		"hello_my_friend",
+		"hello my friend",
+		"hello.my.friend",
+	}
+	for _, v := range testChars {
+		str := systools.ShortLabel(v, 3)
+		if str != "hmf" {
+			t.Error("unexpected string: [", str, "] for string ", v)
+		}
+	}
+}
+
 func TestStrLen(t *testing.T) {
 	len := systools.StrLen("hello world")
 

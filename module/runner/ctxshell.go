@@ -94,50 +94,23 @@ func shellRunner(c *CmdExecutorImpl) {
 	})
 	shell.AddNativeCmd(cleanTasksCmd)
 
-	/* disable this for now
-	// add native commands to menu
-	// this one is for testing only
-	demoCmd := ctxshell.NewNativeCmd("demo", "demo command", func(args []string) error {
-		c.Println("demo command executed:", strings.Join(args, " "))
-		for i := 0; i < 5000; i++ {
-			time.Sleep(10 * time.Millisecond)
-			c.Println("i do something .. we are in round ", i)
-		}
-		return nil
-	})
-
-
-	// while developing, you can use this to test the completer
-	// and the command itself
-	demoCmd.SetCompleterFunc(func(line string) []string {
-		return []string{"demo"}
-	})
-
-	shell.AddNativeCmd(demoCmd)
-	*/
-
 	// set the prompt handler
 	shell.SetPromptFunc(func(reason int) string {
 
 		label := ""
-		if reason == ctxshell.UpdateByInput {
+		// in idle or init mode we display the current directory
+		if shellHandler.Modus == ModusIdle || shellHandler.Modus == ModusInit {
 			if dir, err := dirhandle.Current(); err == nil {
-				label = dir
+				label += dir
+			} else {
+				label += err.Error()
 			}
+		} else {
+			label += ctxout.ToString(shellHandler.Modus)
 		}
-		/*
-			switch reason {
-			case ctxshell.UpdateByInput:
-				label = "input"
-			case ctxshell.UpdateBySignal:
-				label = "signal"
-			case ctxshell.UpdateByPeriod:
-				label = "period"
-
-			}
-		*/
-		label = shellHandler.taskLabel(label)
-		// depends runtime.GOOS
+		label = shellHandler.autoSetLabel(label)
+		// depends runtime.GOOS we have oure own prompt handler
+		// becaue on windows we have not all the features we have on linux
 		if runtime.GOOS == "windows" {
 			return shellHandler.windowsPrompt(reason, label)
 		} else {
@@ -156,11 +129,13 @@ func shellRunner(c *CmdExecutorImpl) {
 // adds an additonial task label to the prompt and increases the prompt update period
 // if there are running tasks.
 // if no tasks are running, the prompt update period will be set to 1 second.
-func (cs *CtxShell) taskLabel(label string) string {
+// also it sets the mode to ModusTask if any tasks are running.
+func (cs *CtxShell) autoSetLabel(label string) string {
 	watchers := tasks.ListWatcherInstances()
+	taskCount := 0
+	// this is only saying, we have some watchers found. it is not saying, that there are any tasks running
+	// for this we have to check the watchers one by one
 	if len(watchers) > 0 {
-		cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
-		taskCount := 0
 		taskBar := ""
 		for _, watcher := range watchers {
 			watchMan := tasks.GetWatcherInstance(watcher)
@@ -187,22 +162,46 @@ func (cs *CtxShell) taskLabel(label string) string {
 				}
 			}
 		}
-
+		// do we have any tasks running?
 		if taskCount > 0 {
+			cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
 			label += taskBar
 			cs.LabelForeColor = ctxout.ForeWhite
 			cs.LabelBackColor = ctxout.BackDarkGrey
+			cs.Modus = ModusTask
+			label = ctxout.ToString(ctxout.NewMOWrap(), label)
+			return cs.fitStringLen(label, ctxout.ToString("t", taskCount))
+		} else {
+			// no tasks running, so reset the all the task related stuff
+			cs.shell.UpdatePromptPeriod(1 * time.Second)
+			cs.LabelForeColor = ctxout.ForeBlue
+			cs.LabelBackColor = ctxout.BackWhite
+			cs.MaxTasks = 0
+			cs.Modus = ModusIdle
+			cs.CollectedTasks = []string{}
 		}
-
-	} else {
-		// no tasks running, so reset the all the task related stuff
-		cs.shell.UpdatePromptPeriod(1 * time.Second)
-		cs.LabelForeColor = ctxout.ForeBlue
-		cs.LabelBackColor = ctxout.BackWhite
-		cs.MaxTasks = 0
-		cs.CollectedTasks = []string{}
 	}
-	return ctxout.ToString(label)
+	return cs.fitStringLen(label, "")
+
+}
+
+// fit the string length to the half of the terminal width, if an fallback is set, it will be returned
+func (cs *CtxShell) fitStringLen(label string, fallBack string) string {
+	w, _, err := systools.GetStdOutTermSize()
+	if err != nil {
+		w = 80
+	}
+	maxLen := w / 2
+	if systools.StrLen(systools.NoEscapeSequences(label)) > maxLen {
+		// if fallback is set, we return it
+		if fallBack != "" {
+			return fallBack
+		}
+		// if no fallback is set, we reduce the label
+		label = systools.StringSubLeft(label, maxLen)
+
+	}
+	return label
 }
 
 func (cs *CtxShell) getABraillCharByTime() string {
@@ -234,17 +233,7 @@ func (cs *CtxShell) linuxPrompt(reason int, label string) string {
 	// this is just for testing
 
 	timeNowAsString := time.Now().Format("15:04:05")
-	// the maximum labe size is half of the terminal width
-	// TODO: still getting the wrong amount of chars from the label with escape sequences
-	/*
-		w, _, err := systools.GetStdOutTermSize()
-		if err != nil {
-			w = 80
-		}
-		maxLen := w / 2
-		if systools.StrLen(systools.NoEscapeSequences(label)) > maxLen {
-			label = label[systools.StrLen(label)-maxLen:] + "..."
-		}*/
+
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
 		ctxout.BackBlue,

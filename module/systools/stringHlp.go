@@ -100,6 +100,46 @@ func NoEscapeSequences(str string) string {
 	return string(result)
 }
 
+func ShortLabel(label string, max int) string {
+	label = FindStartChars(NoEscapeSequences(label))
+	if len := StrLen(label); len <= max {
+		return label
+	} else {
+		runes := []rune(label)
+		return string(runes[0:max])
+	}
+}
+
+// create a string that is an shortcut of the given string
+// so hello-my-friend will be hmf
+// or hello_my_friend will be hmf
+// or hello my friend will be hmf
+func FindStartChars(str string) string {
+	var result []rune
+	hit := false
+	for _, r := range str {
+		if r > 64 && r < 91 {
+			if !hit {
+				result = append(result, r)
+				hit = true
+			}
+		} else if r > 96 && r < 123 {
+			if !hit {
+				result = append(result, r)
+				hit = true
+			}
+		} else if r > 47 && r < 58 {
+			if !hit {
+				result = append(result, r)
+				hit = true
+			}
+		} else {
+			hit = false
+		}
+	}
+	return string(result)
+}
+
 func PrintableCharsByUnquote(str string) (string, error) {
 	s2, err := strconv.Unquote(`"` + str + `"`)
 	if err != nil {
