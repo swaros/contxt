@@ -11,7 +11,7 @@ func TestOutImpBase(t *testing.T) {
 	shell := ctxshell.NewCshell()
 
 	// we have to use RunOnceWithCmd, because without
-	// an nitialized readline, the output will be
+	// an initialized readline, the output will be
 	// written to stdout. this is the fallback for non interactive
 	// shells like the one used in the tests.
 	shell.RunOnceWithCmd(func() {

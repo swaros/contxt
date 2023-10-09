@@ -117,6 +117,8 @@ func shellRunner(c *CmdExecutorImpl) {
 			return shellHandler.linuxPrompt(reason, label)
 		}
 	})
+	// rebind the the session output handler
+	// so any output will be handled by the shell
 	c.session.OutPutHdnl = shell
 	// start the shell
 	shell.SetAsyncCobraExec(true).
@@ -204,9 +206,9 @@ func (cs *CtxShell) fitStringLen(label string, fallBack string) string {
 	return label
 }
 
+// a braille char
+// depending on the milliseconds of the current time
 func (cs *CtxShell) getABraillCharByTime() string {
-	// we need to return a braille char
-	// depending on the milliseconds of the current time
 	braillTableString := "⠄⠆⠇⠋⠙⠸⠰⠠⠐⠈"
 	braillTable := []rune(braillTableString)
 	millis := time.Now().UnixNano() / int64(time.Millisecond)
@@ -214,6 +216,8 @@ func (cs *CtxShell) getABraillCharByTime() string {
 	return string(braillTable[index])
 }
 
+// returns the prompt for windows.
+// here we are limited to the ascii chars we can use.
 func (cs *CtxShell) windowsPrompt(reason int, label string) string {
 
 	return ctxout.ToString(
@@ -227,6 +231,7 @@ func (cs *CtxShell) windowsPrompt(reason int, label string) string {
 	)
 }
 
+// returns the prompt for linux.
 func (cs *CtxShell) linuxPrompt(reason int, label string) string {
 
 	// display the current time in the prompt
