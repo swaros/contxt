@@ -27,6 +27,7 @@ func TestWatchmanInc(t *testing.T) {
 }
 
 func TestWatchmanDoneCheck(t *testing.T) {
+
 	wm := tasks.NewWatchman()
 	runCnt := 100
 	overAllOk := helpsRunAsync(runCnt, []string{"task1", "task1", "task2", "task1", "task2"}, func(name string, cnt int) bool {

@@ -23,16 +23,45 @@ package runner
 
 import (
 	"runtime"
+	"sync"
+	"time"
 
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/ctxshell"
 	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/systools"
+	"github.com/swaros/contxt/module/tasks"
 )
+
+const (
+	ModusInit = 1
+	ModusRun  = 2
+	ModusTask = 3
+	ModusIdle = 4
+)
+
+type CtxShell struct {
+	cmdSession     *CmdExecutorImpl
+	shell          *ctxshell.Cshell
+	Modus          int
+	MaxTasks       int
+	CollectedTasks []string
+	SynMutex       sync.Mutex
+	LabelForeColor string
+	LabelBackColor string
+}
 
 func shellRunner(c *CmdExecutorImpl) {
 	// run the context shell
 	shell := ctxshell.NewCshell()
+	shellHandler := &CtxShell{
+		cmdSession:     c,
+		shell:          shell,
+		Modus:          ModusInit,
+		MaxTasks:       0,
+		LabelForeColor: ctxout.ForeBlue,
+		LabelBackColor: ctxout.BackWhite,
+	}
 
 	// add cobra commands to the shell, so they can be used there too.
 	// first we need to define the exceptions
@@ -57,67 +86,143 @@ func shellRunner(c *CmdExecutorImpl) {
 	})
 	shell.AddNativeCmd(exitCmd)
 
-	/* disable this for now
-	// add native commands to menu
-	// this one is for testing only
-	demoCmd := ctxshell.NewNativeCmd("demo", "demo command", func(args []string) error {
-		c.Println("demo command executed:", strings.Join(args, " "))
-		for i := 0; i < 5000; i++ {
-			time.Sleep(10 * time.Millisecond)
-			c.Println("i do something .. we are in round ", i)
-		}
-		return nil
+	cleanTasksCmd := ctxshell.NewNativeCmd("taskreset", "resets all tasks", func(args []string) error {
+		return tasks.NewGlobalWatchman().ResetAllTasksIfPossible()
 	})
-
-
-	// while developing, you can use this to test the completer
-	// and the command itself
-	demoCmd.SetCompleterFunc(func(line string) []string {
-		return []string{"demo"}
+	cleanTasksCmd.SetCompleterFunc(func(line string) []string {
+		return []string{"taskreset"}
 	})
-
-	shell.AddNativeCmd(demoCmd)
-	*/
+	shell.AddNativeCmd(cleanTasksCmd)
 
 	// set the prompt handler
-	shell.SetPromptFunc(func() string {
-		tpl := ""
-		if dir, err := dirhandle.Current(); err == nil {
-			tpl = dir
+	shell.SetPromptFunc(func(reason int) string {
+
+		label := ""
+		// in idle or init mode we display the current directory
+		if shellHandler.Modus == ModusIdle || shellHandler.Modus == ModusInit {
+			if dir, err := dirhandle.Current(); err == nil {
+				label += dir
+			} else {
+				label += err.Error()
+			}
 		}
 
-		// depends runtime.GOOS
+		label = shellHandler.autoSetLabel(label)
+		// depends runtime.GOOS we have oure own prompt handler
+		// becaue on windows we have not all the features we have on linux
 		if runtime.GOOS == "windows" {
-			return windowsPrompt(tpl, nil)
+			return shellHandler.windowsPrompt(reason, label)
 		} else {
-			return linuxPrompt(tpl, nil)
+			return shellHandler.linuxPrompt(reason, label)
 		}
 	})
+	// rebind the the session output handler
+	// so any output will be handled by the shell
 	c.session.OutPutHdnl = shell
 	// start the shell
-	shell.SetAsyncCobraExec(true).SetAsyncNativeCmd(true).Run()
+	shell.SetAsyncCobraExec(true).
+		SetAsyncNativeCmd(true).
+		UpdatePromptEnabled(true).
+		UpdatePromptPeriod(1 * time.Second).
+		Run()
 }
 
-func windowsPrompt(path string, err error) string {
-	if err != nil {
-		return ctxout.ToString(
-			ctxout.NewMOWrap(),
-			ctxout.ForeRed,
-			"error loading template: ",
-			ctxout.ForeYellow,
-			err.Error(),
-			ctxout.ForeRed,
-			" › ",
-			ctxout.ForeBlue,
-			path,
-			ctxout.CleanTag,
-		)
+// adds an additonial task label to the prompt and increases the prompt update period
+// if there are running tasks.
+// if no tasks are running, the prompt update period will be set to 1 second.
+// also it sets the mode to ModusTask if any tasks are running.
+func (cs *CtxShell) autoSetLabel(label string) string {
+	watchers := tasks.ListWatcherInstances()
+	taskCount := 0
+	// this is only saying, we have some watchers found. it is not saying, that there are any tasks running
+	// for this we have to check the watchers one by one
+	if len(watchers) > 0 {
+		taskBar := ""
+		for _, watcher := range watchers {
+			watchMan := tasks.GetWatcherInstance(watcher)
+			if watchMan != nil {
+				allRunnungs := watchMan.GetAllRunningTasks()
+				if len(allRunnungs) > 0 {
+					taskCount += len(allRunnungs)
+					// add the tasks to the collected tasks they are not already in
+					for _, task := range allRunnungs {
+						if !systools.StringInSlice(task, cs.CollectedTasks) {
+							cs.CollectedTasks = append(cs.CollectedTasks, task)
+						}
+					}
+				}
+				// build the taskbar
+				runningChar := cs.getABraillCharByTime()
+				doneChar := "✓"
+				for _, task := range cs.CollectedTasks {
+					if watchMan.TaskRunning(task) {
+						taskBar += ctxout.ForeWhite + runningChar
+					} else {
+						taskBar += ctxout.ForeBlack + doneChar
+					}
+				}
+			}
+		}
+		// do we have any tasks running?
+		if taskCount > 0 {
+			cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
+			label += taskBar
+			cs.LabelForeColor = ctxout.ForeWhite
+			cs.LabelBackColor = ctxout.BackDarkGrey
+			cs.Modus = ModusTask
+			label = ctxout.ToString(ctxout.NewMOWrap(), label)
+			return cs.fitStringLen(label, ctxout.ToString("t", taskCount))
+		} else {
+			// no tasks running, so reset the all the task related stuff
+			cs.shell.UpdatePromptPeriod(1 * time.Second)
+			cs.LabelForeColor = ctxout.ForeBlue
+			cs.LabelBackColor = ctxout.BackWhite
+			cs.MaxTasks = 0
+			cs.Modus = ModusIdle
+			cs.CollectedTasks = []string{}
+		}
 	}
+	return cs.fitStringLen(label, "")
+
+}
+
+// fit the string length to the half of the terminal width, if an fallback is set, it will be returned
+func (cs *CtxShell) fitStringLen(label string, fallBack string) string {
+	w, _, err := systools.GetStdOutTermSize()
+	if err != nil {
+		w = 80
+	}
+	maxLen := w / 2
+	if systools.StrLen(systools.NoEscapeSequences(label)) > maxLen {
+		// if fallback is set, we return it
+		if fallBack != "" {
+			return fallBack
+		}
+		// if no fallback is set, we reduce the label
+		label = systools.StringSubLeft(label, maxLen)
+
+	}
+	return label
+}
+
+// a braille char
+// depending on the milliseconds of the current time
+func (cs *CtxShell) getABraillCharByTime() string {
+	braillTableString := "⠄⠆⠇⠋⠙⠸⠰⠠⠐⠈"
+	braillTable := []rune(braillTableString)
+	millis := time.Now().UnixNano() / int64(time.Millisecond)
+	index := int(millis % int64(len(braillTable)))
+	return string(braillTable[index])
+}
+
+// returns the prompt for windows.
+// here we are limited to the ascii chars we can use.
+func (cs *CtxShell) windowsPrompt(reason int, label string) string {
 
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
 		ctxout.ForeBlue,
-		path,
+		label,
 		" ",
 		ctxout.ForeCyan,
 		"› ",
@@ -125,32 +230,26 @@ func windowsPrompt(path string, err error) string {
 	)
 }
 
-func linuxPrompt(path string, err error) string {
-	if err != nil {
-		return ctxout.ToString(
-			ctxout.NewMOWrap(),
-			ctxout.BackYellow,
-			ctxout.ForeRed,
-			"error loading template: ",
-			ctxout.BackRed,
-			ctxout.ForeYellow,
-			err.Error(),
-			ctxout.BackBlue,
-			ctxout.ForeRed,
-			"",
-			"<f:white><b:blue>",
-			path,
-			"</><f:blue></> ",
-		)
-	}
+// returns the prompt for linux.
+func (cs *CtxShell) linuxPrompt(reason int, label string) string {
+
+	// display the current time in the prompt
+	// this is just for testing
+
+	timeNowAsString := time.Now().Format("15:04:05")
 
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
-		ctxout.BackWhite,
-		ctxout.ForeBlue,
-		path,
 		ctxout.BackBlue,
 		ctxout.ForeWhite,
-		"ctx<f:yellow>shell:</><f:blue></> ",
+		"",
+		timeNowAsString,
+		" ",
+		cs.LabelForeColor,
+		cs.LabelBackColor,
+		label,
+		ctxout.BackBlue,
+		ctxout.ForeWhite,
+		"ctx<f:black>:</><f:blue></> ",
 	)
 }

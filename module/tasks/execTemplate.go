@@ -47,7 +47,7 @@ type TaskListExec struct {
 func NewTaskListExec(config configure.RunConfig, adds ...interface{}) *TaskListExec {
 	return &TaskListExec{
 		config: config,
-		watch:  NewWatchman(),
+		watch:  NewGlobalWatchman(),
 		args:   adds,
 	}
 }
@@ -62,7 +62,7 @@ func NewStdTaskListExec(config configure.RunConfig, adds ...interface{}) *TaskLi
 
 	return &TaskListExec{
 		config: config,
-		watch:  NewWatchman(),
+		watch:  NewGlobalWatchman(),
 		args:   adds,
 	}
 }

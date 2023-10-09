@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package main
+package main
 
 import "github.com/swaros/contxt/module/ctxshell"
 

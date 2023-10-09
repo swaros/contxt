@@ -21,8 +21,54 @@
 // SOFTWARE.
 package tasks
 
-import "sync"
+import (
+	"fmt"
+	"sync"
 
+	"github.com/google/uuid"
+)
+
+const GlobalName = "global"
+
+var (
+	instances     = make(map[string]*Watchman)
+	instanceMutex sync.Mutex
+)
+
+// Track watchman instances
+// in a global sync map
+
+func storeNewInstance(wm *Watchman) {
+	uuidString := uuid.New().String()
+	storeNamedInstance(wm, uuidString)
+}
+
+func storeNamedInstance(wm *Watchman, name string) {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+	instances[name] = wm
+}
+
+func GetWatcherInstance(uuidString string) *Watchman {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+	if wm, found := instances[uuidString]; found {
+		return wm
+	}
+	return nil
+}
+
+func ListWatcherInstances() []string {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+	var inst []string
+	for k := range instances {
+		inst = append(inst, k)
+	}
+	return inst
+}
+
+// the watchman implementation
 type Watchman struct {
 	// contains filtered or unexported fields
 	watchTaskList sync.Map
@@ -38,8 +84,22 @@ type TaskDef struct {
 	doneCount int
 }
 
+func NewGlobalWatchman() *Watchman {
+	wm := GetWatcherInstance(GlobalName)
+	if wm == nil {
+		wm := &Watchman{
+			watchTaskList: sync.Map{},
+		}
+		storeNamedInstance(wm, GlobalName)
+		return wm
+	}
+	return wm
+}
+
 func NewWatchman() *Watchman {
-	return &Watchman{}
+	wm := &Watchman{}
+	storeNewInstance(wm)
+	return wm
 }
 
 func (w *Watchman) getTask(target string) (TaskDef, bool) {
@@ -102,6 +162,26 @@ func (w *Watchman) TaskRunning(target string) bool {
 	return found && info != nil && info.(TaskDef).count > 0 && info.(TaskDef).count != info.(TaskDef).doneCount
 }
 
+// returns the list of all running tasks as string slice by the task name
+func (w *Watchman) GetAllRunningTasks() []string {
+	var tasks []string
+	w.watchTaskList.Range(func(key, _ interface{}) bool {
+		if w.TaskRunning(key.(string)) {
+			tasks = append(tasks, key.(string))
+		}
+		return true
+	})
+	return tasks
+}
+
+func (w *Watchman) ResetAllTasksIfPossible() error {
+	if len(w.GetAllRunningTasks()) == 0 {
+		w.ResetAllTaskInfos()
+		return nil
+	}
+	return fmt.Errorf("can not reset watchman, because there are still %v running tasks", len(w.GetAllRunningTasks()))
+}
+
 // checks if a task was at least started X times
 func (w *Watchman) TaskRunsAtLeast(target string, atLeast int) bool {
 	if info, found := w.watchTaskList.Load(target); found {
@@ -136,4 +216,13 @@ func (w *Watchman) GetTaskStarted(target string) bool {
 		return info.(TaskDef).started
 	}
 	return false
+}
+
+func (w *Watchman) ListTasks() []string {
+	var tasks []string
+	w.watchTaskList.Range(func(key, _ interface{}) bool {
+		tasks = append(tasks, key.(string))
+		return true
+	})
+	return tasks
 }
