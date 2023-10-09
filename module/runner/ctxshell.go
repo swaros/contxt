@@ -105,9 +105,8 @@ func shellRunner(c *CmdExecutorImpl) {
 			} else {
 				label += err.Error()
 			}
-		} else {
-			label += ctxout.ToString(shellHandler.Modus)
 		}
+
 		label = shellHandler.autoSetLabel(label)
 		// depends runtime.GOOS we have oure own prompt handler
 		// becaue on windows we have not all the features we have on linux
