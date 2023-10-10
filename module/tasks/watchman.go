@@ -75,15 +75,6 @@ type Watchman struct {
 	mu            sync.Mutex
 }
 
-// TaskDef holds information about running
-// and finished tasks
-type TaskDef struct {
-	started   bool
-	count     int
-	done      bool
-	doneCount int
-}
-
 func NewGlobalWatchman() *Watchman {
 	wm := GetWatcherInstance(GlobalName)
 	if wm == nil {
@@ -102,12 +93,21 @@ func NewWatchman() *Watchman {
 	return wm
 }
 
-func (w *Watchman) getTask(target string) (TaskDef, bool) {
+func (w *Watchman) GetTask(target string) (TaskDef, bool) {
+	taskInfo, found := w.watchTaskList.Load(target)
+	if found && taskInfo != nil {
+		return taskInfo.(TaskDef), true
+	}
+	return TaskDef{}, false
+}
+
+func (w *Watchman) getTaskOrCreate(target string) (TaskDef, bool) {
 	taskInfo, found := w.watchTaskList.Load(target)
 	if found && taskInfo != nil {
 		return taskInfo.(TaskDef), true
 	}
 	nwTask := TaskDef{
+		uuid:      uuid.New().String(),
 		count:     0,
 		done:      false,
 		doneCount: 0,
@@ -118,10 +118,29 @@ func (w *Watchman) getTask(target string) (TaskDef, bool) {
 
 }
 
+func (w *Watchman) UpdateTask(target string, task TaskDef) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	// we need to make sure that the task is already done.
+	// the update is not allowed to create a new task
+	// or update an task with a different uuid
+	taskInfo, found := w.watchTaskList.Load(target)
+	if found && taskInfo != nil {
+		if taskInfo.(TaskDef).uuid == task.uuid {
+			w.watchTaskList.Store(target, task)
+			return nil
+		} else {
+			return fmt.Errorf("can not update task %q, because the uuid is different", target)
+		}
+	}
+	return fmt.Errorf("can not update task %q, because it does not exists", target)
+
+}
+
 func (w *Watchman) IncTaskCount(target string) int {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	taskInfo, _ := w.getTask(target)
+	taskInfo, _ := w.getTaskOrCreate(target)
 	taskInfo.started = true
 	taskInfo.count++
 	w.watchTaskList.Store(target, taskInfo)
@@ -131,7 +150,7 @@ func (w *Watchman) IncTaskCount(target string) int {
 func (w *Watchman) IncTaskDoneCount(target string) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	taskInfo, exists := w.getTask(target)
+	taskInfo, exists := w.getTaskOrCreate(target)
 	if !exists {
 		return false
 	}

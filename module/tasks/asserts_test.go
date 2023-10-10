@@ -84,6 +84,20 @@ func assertStrEqual(t *testing.T, expected string, actual string) {
 	}
 }
 
+func assertIntEqual(t *testing.T, expected int, actual int) {
+	t.Helper()
+	if expected != actual {
+		t.Errorf("expected [%d], but got [%d]", expected, actual)
+	}
+}
+
+func assertNoError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Errorf("expected no error, but got %v", err)
+	}
+}
+
 func assertPositionInSliceBefore(t *testing.T, slice []string, substr string, before string) {
 	t.Helper()
 	substrIndex := -1

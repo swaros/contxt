@@ -337,7 +337,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			// preparing codelines by execute second level commands
 			// that can affect the whole script
 			abort, returnCode, _ = t.TryParse(script.Script, func(codeLine string) (bool, int) {
-				lineAbort, lineExitCode := t.lineExecuter(codeLine, script)
+				lineAbort, lineExitCode := t.targetTaskExecuter(codeLine, script, t.watch)
 				return lineExitCode, lineAbort
 			})
 			if abort {

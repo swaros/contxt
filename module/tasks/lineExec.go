@@ -34,10 +34,10 @@ import (
 	"github.com/swaros/contxt/module/systools"
 )
 
-// lineExecuter is the main function to execute a script line
+// targetTaskExecuter is the main function to execute a script line
 // it returns the exit code of the executed command
 // and a boolean value if the execution was successful
-func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Task) (int, bool) {
+func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configure.Task, watchman *Watchman) (int, bool) {
 	replacedLine := codeLine
 	if t.phHandler != nil {
 		replacedLine = t.phHandler.HandlePlaceHolderWithScope(codeLine, t.arguments) // placeholders
@@ -93,6 +93,16 @@ func (t *targetExecuter) lineExecuter(codeLine string, currentTask configure.Tas
 			pidStr := fmt.Sprintf("%d", process.Pid) // we use them as info for the user only
 			t.setPh("RUN.PID", pidStr)
 			t.setPh("RUN."+t.target+".PID", pidStr)
+			// update watchman with the process infos, if there is an task for this target
+			// this should be the case always by any watchman target update, but we check it anyway
+			if wtask, found := watchman.GetTask(t.target); found {
+				wtask.StartTrackProcess(process)
+				wtask.LogCmd(runCmd, runArgs, replacedLine)
+				if err := watchman.UpdateTask(t.target, wtask); err != nil {
+					t.getLogger().Error("can not update task", err)
+					t.out(MsgError(MsgError{Err: err, Reference: codeLine, Target: currentTask.ID}))
+				}
+			}
 			if currentTask.Options.Displaycmd {
 				t.out(MsgPid(process.Pid), MsgProcess("started"))
 			}
@@ -216,7 +226,7 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 						t.getLogger().Debug("TRIGGER SCRIPT ACTION", triggerScript)
 						subRun := t.CopyToTarget(t.target)
 						subRun.SetArgs(dummyArgs)
-						subRun.lineExecuter(triggerScript, *currentTask)
+						subRun.targetTaskExecuter(triggerScript, *currentTask, t.watch)
 					}
 
 				}

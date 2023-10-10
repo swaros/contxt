@@ -153,3 +153,11 @@ func (s *shellRunner) ExecSilentAndReturnLast(command string) (string, int) {
 	}, func(p *os.Process) {})
 	return last, code
 }
+
+func (s *shellRunner) GetCmd() string {
+	return s.cmd
+}
+
+func (s *shellRunner) GetArgs() []string {
+	return s.args
+}
