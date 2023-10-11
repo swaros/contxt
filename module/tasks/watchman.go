@@ -70,11 +70,11 @@ func ListWatcherInstances() []string {
 	return inst
 }
 
-func ShutDownProcesses() {
+func ShutDownProcesses(reportFn func(target string, time int, succeed bool)) {
 	instanceMutex.Lock()
 	defer instanceMutex.Unlock()
 	for _, wm := range instances {
-		wm.StopAllTasks(nil)
+		wm.StopAllTasks(reportFn)
 	}
 }
 

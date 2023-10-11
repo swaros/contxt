@@ -137,6 +137,9 @@ func TestWatchManTaskInfo(t *testing.T) {
 
 }
 
+// Linux only
+// running a simple ps -ef and check if the command is found
+// returns any finding as a slice of strings.
 func helperForFindTask(t *testing.T, cmdlike string) []string {
 	t.Helper()
 	// we use linux special features here
@@ -160,6 +163,9 @@ func helperForFindTask(t *testing.T, cmdlike string) []string {
 	return result
 }
 
+// Linux only
+// running a simple kill -9 <pid> to stop a process
+// returns any output as a slice of strings.
 func helperKillTask(t *testing.T, pid string) []string {
 	t.Helper()
 	// we use linux special features here
@@ -181,12 +187,15 @@ func helperKillTask(t *testing.T, pid string) []string {
 	return result
 }
 
-func helperLaunchShellCmdInBackround(t *testing.T, command, target string, wman *tasks.Watchman, forceStop bool) {
+// testing the process tracking by an background task.
+// this function is just start any command in the default shell in the background
+func helperLaunchShellCmdInBackround(t *testing.T, command, target string, wman *tasks.Watchman, forceStop bool, waitForPid bool) int {
 	t.Helper()
 	runner := tasks.GetShellRunner()
 	// make sure we create a new task
 	wman.IncTaskCount(target)
-
+	pid := 0
+	procRecived := false
 	go runner.Exec(
 		command,
 		func(msg string, err error) bool {
@@ -209,9 +218,24 @@ func helperLaunchShellCmdInBackround(t *testing.T, command, target string, wman 
 				if !wtask.IsProcessRunning() {
 					t.Error("expected process to be running, but it is not")
 				}
+				pid = proc.Pid
+				procRecived = true
 			}
 		},
 	)
+	if waitForPid {
+		maxTicks := 100
+		tick := 0
+		for !procRecived {
+			time.Sleep(10 * time.Millisecond)
+			tick++
+			if tick > maxTicks {
+				t.Error("expected to get process, but it did not happen")
+				break
+			}
+		}
+	}
+	return pid
 }
 
 // testing the process tracking by an background task, and stop it
@@ -241,7 +265,8 @@ func TestTaskTracking(t *testing.T) {
 	// this is the watchman we want to use
 	wman := tasks.NewWatchman()
 	// we use the helper to launch the command in the background
-	helperLaunchShellCmdInBackround(t, command, target, wman, false)
+	pid := helperLaunchShellCmdInBackround(t, command, target, wman, false, true)
+	assertIntGreater(t, 0, pid)
 
 	// wait till the process is started
 	if success, timeUsed := wman.WaitForProcessStart(target, 10*time.Millisecond, 10); !success {
@@ -297,7 +322,7 @@ func TestTaskStoppingByWatchman(t *testing.T) {
 	command := "sleep 10"
 	target := "watchmanKillTask"
 	wman := tasks.NewWatchman()
-	helperLaunchShellCmdInBackround(t, command, target, wman, false)
+	helperLaunchShellCmdInBackround(t, command, target, wman, false, false)
 
 	if success, timeUsed := wman.WaitForProcessStart(target, 10*time.Millisecond, 10); !success {
 		t.Error("failed to start process in time", timeUsed)
@@ -341,7 +366,7 @@ func TestMultipleTaskManagement(t *testing.T) {
 	}
 
 	for target, command := range targets {
-		helperLaunchShellCmdInBackround(t, command, target, wman, false)
+		helperLaunchShellCmdInBackround(t, command, target, wman, false, false)
 	}
 
 	for target := range targets {
@@ -349,7 +374,7 @@ func TestMultipleTaskManagement(t *testing.T) {
 			t.Error("failed to start process in time", timeUsed)
 		}
 	}
-	tasks.ShutDownProcesses()
+	tasks.ShutDownProcesses(nil)
 	for target := range targets {
 		_, found := wman.GetTask(target)
 		if !found {
@@ -372,7 +397,7 @@ func TestMultipleTaskManagementWithChildProcs(t *testing.T) {
 	}
 
 	for target, command := range targets {
-		helperLaunchShellCmdInBackround(t, command, target, wman, false)
+		helperLaunchShellCmdInBackround(t, command, target, wman, false, false)
 	}
 
 	for target := range targets {
