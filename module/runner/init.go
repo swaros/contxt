@@ -32,6 +32,71 @@ import (
 	"github.com/swaros/contxt/module/tasks"
 )
 
+func setShutDownBehavior() {
+	// add exit listener for shutting down all processes
+	systools.AddExitListener("main", func(code int) systools.ExitBehavior {
+		ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, " stop all tasks: ", ctxout.CleanTag)
+		tasks.ShutDownProcesses(func(target string, time int, succeed bool) {
+			if succeed {
+				ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "  task stopped: ", ctxout.ForeBlue, target, ctxout.CleanTag)
+			} else {
+				ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "  stop faulire: ", ctxout.ForeRed, target, ctxout.CleanTag)
+			}
+		})
+		return systools.Continue
+	})
+
+	// add exit listener for shutting down all processes
+	// different to the main listener, this one will kill all processes
+	// that are not stopped by the main listener.
+	// this depends on the behavior of the system, where it is hard to get all child processes
+	// so we use the HandleAllMyPid function to get all child processes.
+	// this function wraps the ps command and filters the output for the current pid on linux.
+	systools.AddExitListener("killProcs", func(code int) systools.ExitBehavior {
+		ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, " Cleanup all child Processes if possible. ", ctxout.CleanTag)
+		tasks.HandleAllMyPid(func(pid int) error {
+
+			if proc, err := os.FindProcess(pid); err == nil {
+				if err := proc.Kill(); err != nil {
+					if err == os.ErrProcessDone {
+						ctxout.PrintLn(
+							ctxout.NewMOWrap(),
+							ctxout.ForeDarkGrey,
+							"  task is already stopped: ",
+							ctxout.ForeCyan,
+							pid,
+							ctxout.CleanTag,
+						)
+					} else {
+						ctxout.PrintLn(
+							ctxout.NewMOWrap(),
+							ctxout.ForeDarkGrey,
+							"  error while stooping task: ",
+							ctxout.ForeCyan,
+							pid,
+							ctxout.ForeRed,
+							err.Error(),
+							ctxout.CleanTag,
+						)
+					}
+					return err
+				} else {
+					ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "  stopped: ", ctxout.ForeBlue, pid, ctxout.CleanTag)
+				}
+			} else {
+				ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "  failed to stop: ", ctxout.ForeRed, pid, ctxout.CleanTag)
+				return err
+			}
+			return nil
+		})
+		return systools.Continue
+	})
+	// capture the sigterm signal so we are able to cleanup all processes
+	// nil means that we use the default behavior for the exit control flow
+	// so any systool.Exit() call will trigger the exit listeners
+	systools.WatchSigTerm(nil)
+}
+
 // Init initializes the application
 // and starts the main loop
 func Init() error {
@@ -88,6 +153,8 @@ func Init() error {
 	// initialize the application functions
 	functions.MainInit()
 
+	// set the shutdown behavior
+	setShutDownBehavior()
 	// initialize the cobra commands
 	if err := app.Cobra.Init(functions); err != nil {
 		return err

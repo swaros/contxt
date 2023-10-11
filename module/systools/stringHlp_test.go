@@ -156,3 +156,10 @@ func TestPathStringSub(t *testing.T) {
 	}
 
 }
+
+func TestStringTrimAllSpaces(t *testing.T) {
+	str := systools.TrimAllSpaces("hello   my friend")
+	if str != "hello my friend" {
+		t.Error("string should be reduced: ", str)
+	}
+}

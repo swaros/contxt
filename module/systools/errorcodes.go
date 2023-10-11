@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package systools
+package systools
 
 const (
 	ExitOk               = 0   // Everything is fine

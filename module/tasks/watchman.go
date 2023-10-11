@@ -24,8 +24,10 @@ package tasks
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/swaros/contxt/module/mimiclog"
 )
 
 const GlobalName = "global"
@@ -68,20 +70,20 @@ func ListWatcherInstances() []string {
 	return inst
 }
 
+func ShutDownProcesses(reportFn func(target string, time int, succeed bool)) {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+	for _, wm := range instances {
+		wm.StopAllTasks(reportFn)
+	}
+}
+
 // the watchman implementation
 type Watchman struct {
 	// contains filtered or unexported fields
 	watchTaskList sync.Map
 	mu            sync.Mutex
-}
-
-// TaskDef holds information about running
-// and finished tasks
-type TaskDef struct {
-	started   bool
-	count     int
-	done      bool
-	doneCount int
+	logger        mimiclog.Logger
 }
 
 func NewGlobalWatchman() *Watchman {
@@ -89,6 +91,7 @@ func NewGlobalWatchman() *Watchman {
 	if wm == nil {
 		wm := &Watchman{
 			watchTaskList: sync.Map{},
+			logger:        mimiclog.NewNullLogger(),
 		}
 		storeNamedInstance(wm, GlobalName)
 		return wm
@@ -97,17 +100,117 @@ func NewGlobalWatchman() *Watchman {
 }
 
 func NewWatchman() *Watchman {
-	wm := &Watchman{}
+	wm := &Watchman{
+		logger:        mimiclog.NewNullLogger(),
+		watchTaskList: sync.Map{},
+	}
 	storeNewInstance(wm)
 	return wm
 }
 
-func (w *Watchman) getTask(target string) (TaskDef, bool) {
+func (w *Watchman) GetTask(target string) (TaskDef, bool) {
+	taskInfo, found := w.watchTaskList.Load(target)
+	if found && taskInfo != nil {
+		return taskInfo.(TaskDef), true
+	}
+	return TaskDef{}, false
+}
+
+func (w *Watchman) SetLogger(logger mimiclog.Logger) {
+	w.logger = logger
+}
+
+func (w *Watchman) StopAllTasks(reportFn func(target string, time int, succeed bool)) {
+	w.watchTaskList.Range(func(key, _ interface{}) bool {
+		target := key.(string)
+		done, timeNeeded := w.WaitForStopProcess(target, 100*time.Millisecond, 10)
+		if reportFn != nil {
+			reportFn(target, timeNeeded, done)
+		}
+		return true
+	})
+}
+
+// WaitForProcessStart waits until the process is started
+// or the timeout is reached
+// the timeout is defined by the tickDuration multiplied by the maxTicks
+func (w *Watchman) WaitForProcessStart(target string, tickDuration time.Duration, maxTicks int) (bool, int) {
+	// repeat until the process is started
+	// or the timeout is reached
+	// or the process is not running anymore
+	currentTick := 0
+	for {
+		if wtask, found := w.GetTask(target); found {
+			if wtask.IsProcessRunning() {
+				return true, currentTick * int(tickDuration)
+			}
+		}
+		time.Sleep(tickDuration)
+		currentTick++
+		if currentTick >= maxTicks {
+			return false, currentTick * int(tickDuration)
+		}
+	}
+}
+
+func (w *Watchman) WaitForStopProcess(target string, tickDuration time.Duration, maxTicks int) (bool, int) {
+	// repeat until the process is started
+	// or the timeout is reached
+	// or the process is not running anymore
+	currentTick := 0
+	alreadyTryToStop := false
+	for {
+		if wtask, found := w.GetTask(target); found {
+			if !wtask.IsProcessRunning() {
+				w.logger.Debug("process is not running anymore", target)
+				return true, currentTick * int(tickDuration)
+			}
+			// send the stop signal once.
+			// we do not want to spam the process with signals
+			// instead we will ry to kill it if it is still running
+			if !alreadyTryToStop && wtask.IsProcessRunning() {
+				w.logger.Debug("try to stop process with os.Interrupt ", target)
+				if err := wtask.StopProcessIfRunning(); err != nil {
+					w.logger.Warn("failed to stop process with os.Interrupt ", target, err)
+					alreadyTryToStop = true
+				}
+			}
+			time.Sleep(tickDuration)
+			currentTick++
+			if currentTick == maxTicks {
+				// in the last tick we try to kill the process
+				if wtask.IsProcessRunning() {
+					w.logger.Debug("try to stop process with os.Kill ", target)
+					if err := wtask.KillProcess(); err != nil {
+						w.logger.Warn("failed to stop process with os.Kill ", target, err)
+						return false, currentTick * int(tickDuration)
+					} else {
+						w.logger.Debug("process stopped with os.Kill ", target)
+						return true, currentTick * int(tickDuration)
+					}
+				}
+			}
+			if currentTick > maxTicks {
+				// overtime, so we we just report the process as stopped or not
+				isRunning := wtask.IsProcessRunning()
+				w.logger.Debug("process is running(?)", target, isRunning)
+				return isRunning, currentTick * int(tickDuration)
+			}
+		} else {
+			// no task found, so we can stop
+			w.logger.Debug("no task found ", target)
+			return true, currentTick * int(tickDuration)
+		}
+	}
+}
+
+func (w *Watchman) getTaskOrCreate(target string) (TaskDef, bool) {
 	taskInfo, found := w.watchTaskList.Load(target)
 	if found && taskInfo != nil {
 		return taskInfo.(TaskDef), true
 	}
 	nwTask := TaskDef{
+		uuid:      uuid.New().String(),
 		count:     0,
 		done:      false,
 		doneCount: 0,
@@ -118,10 +221,29 @@ func (w *Watchman) getTask(target string) (TaskDef, bool) {
 
 }
 
+func (w *Watchman) UpdateTask(target string, task TaskDef) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	// we need to make sure that the task is already done.
+	// the update is not allowed to create a new task
+	// or update an task with a different uuid
+	taskInfo, found := w.watchTaskList.Load(target)
+	if found && taskInfo != nil {
+		if taskInfo.(TaskDef).uuid == task.uuid {
+			w.watchTaskList.Store(target, task)
+			return nil
+		} else {
+			return fmt.Errorf("can not update task %q, because the uuid is different", target)
+		}
+	}
+	return fmt.Errorf("can not update task %q, because it does not exists", target)
+
+}
+
 func (w *Watchman) IncTaskCount(target string) int {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	taskInfo, _ := w.getTask(target)
+	taskInfo, _ := w.getTaskOrCreate(target)
 	taskInfo.started = true
 	taskInfo.count++
 	w.watchTaskList.Store(target, taskInfo)
@@ -131,7 +253,7 @@ func (w *Watchman) IncTaskCount(target string) int {
 func (w *Watchman) IncTaskDoneCount(target string) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	taskInfo, exists := w.getTask(target)
+	taskInfo, exists := w.getTaskOrCreate(target)
 	if !exists {
 		return false
 	}
@@ -145,9 +267,11 @@ func (w *Watchman) IncTaskDoneCount(target string) bool {
 // ResetAllTaskInfos resets all task infos
 func (w *Watchman) ResetAllTaskInfos() {
 	w.watchTaskList.Range(func(key, _ interface{}) bool {
+		w.WaitForStopProcess(key.(string), 100*time.Millisecond, 10)
 		w.watchTaskList.Delete(key)
 		return true
 	})
+
 }
 
 // TaskExists checks if a task is already created

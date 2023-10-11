@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package systools
+package systools
 
 // Just maps the term functions and use StdOut as default
 import (

@@ -22,6 +22,7 @@
 package runner
 
 import (
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -70,6 +71,9 @@ func shellRunner(c *CmdExecutorImpl) {
 	// afterwards we can add the commands by injecting the root command
 	shell.SetCobraRootCommand(c.session.Cobra.RootCmd)
 
+	// rename the exit command to quit
+	shell.SetExitCmdStr("quit")
+
 	// some of the commands are not working well async, because they
 	// are switching between workspaces. so we have to disable async
 	// for them
@@ -77,15 +81,16 @@ func shellRunner(c *CmdExecutorImpl) {
 
 	// add native exit command
 	exitCmd := ctxshell.NewNativeCmd("exit", "exit the shell", func(args []string) error {
-		ctxout.PrintLn(ctxout.ForeBlue, "bye bye", ctxout.CleanTag)
 		systools.Exit(0)
 		return nil
 	})
+	// completer function for the exit command
 	exitCmd.SetCompleterFunc(func(line string) []string {
 		return []string{"exit"}
 	})
 	shell.AddNativeCmd(exitCmd)
 
+	// add task clean command
 	cleanTasksCmd := ctxshell.NewNativeCmd("taskreset", "resets all tasks", func(args []string) error {
 		return tasks.NewGlobalWatchman().ResetAllTasksIfPossible()
 	})
@@ -93,6 +98,39 @@ func shellRunner(c *CmdExecutorImpl) {
 		return []string{"taskreset"}
 	})
 	shell.AddNativeCmd(cleanTasksCmd)
+
+	// add task stop command
+	stoppAllCmd := ctxshell.NewNativeCmd("stoptasks", "stop all the running processes", func(args []string) error {
+		ctxshell.NewCshell().SetStopOutput(true)
+		tasks.NewGlobalWatchman().StopAllTasks(func(target string, time int, succeed bool) {
+			if succeed {
+				ctxout.PrintLn(ctxout.NewMOWrap(), "stopped process: ", target)
+			} else {
+				ctxout.PrintLn(ctxout.NewMOWrap(), "failed to stop processes: ", target)
+			}
+		})
+		ctxshell.NewCshell().SetStopOutput(false)
+		tasks.HandleAllMyPid(func(pid int) error {
+			ctxout.PrintLn(ctxout.NewMOWrap(), "killing process: ", pid)
+			if proc, err := os.FindProcess(pid); err == nil {
+				if err := proc.Kill(); err != nil {
+					return err
+				} else {
+					ctxout.PrintLn(ctxout.NewMOWrap(), "killed process: ", pid)
+				}
+			} else {
+				ctxout.PrintLn(ctxout.NewMOWrap(), "failed to kill process: ", pid)
+				return err
+			}
+			return nil
+		})
+
+		return nil
+	})
+	stoppAllCmd.SetCompleterFunc(func(line string) []string {
+		return []string{"stoptasks"}
+	})
+	shell.AddNativeCmd(stoppAllCmd)
 
 	// set the prompt handler
 	shell.SetPromptFunc(func(reason int) string {

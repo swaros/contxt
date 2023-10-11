@@ -66,8 +66,10 @@ func (t *Cshell) StartMessageProvider() error {
 			select {
 			case <-time.After(time.Duration(t.tickTimerDuration)):
 				msgs := t.messages.GetAllMessages()
-				for _, msg := range msgs {
-					t.rlInstance.Stdout().Write([]byte(msg.Msg))
+				if !t.StopOutput {
+					for _, msg := range msgs {
+						t.rlInstance.Stdout().Write([]byte(msg.Msg))
+					}
 				}
 			case <-done:
 				break loop
