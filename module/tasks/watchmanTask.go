@@ -1,6 +1,31 @@
+// MIT License
+//
+// Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the Software), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+// AINC-NOTE-0815
+
 package tasks
 
 import (
+	"fmt"
 	"os"
 	"syscall"
 )
@@ -36,12 +61,15 @@ func (ts *TaskDef) StartTrackProcess(proc *os.Process) {
 	}
 }
 
-func (ts *TaskDef) StopTrackProcess() {
-	ts.process = nil
-}
-
 func (ts *TaskDef) GetProcess() *ProcessDef {
 	return ts.process
+}
+
+func (ts *TaskDef) GetProcessPid() (int, bool) {
+	if ts.process != nil && ts.process.processInfo != nil {
+		return ts.process.processInfo.Pid, true
+	}
+	return 0, false
 }
 
 func (ts *TaskDef) LogCmd(cmd string, args []string, command string) {
@@ -58,10 +86,7 @@ func (ts *TaskDef) LogCmd(cmd string, args []string, command string) {
 }
 
 func (ts *TaskDef) IsProcessRunning() bool {
-	if ts.process == nil {
-		return false
-	}
-	if ts.process.processInfo != nil {
+	if ts.process != nil && ts.process.processInfo != nil {
 		if ts.process.processInfo.Pid > 0 {
 			proc, err := os.FindProcess(ts.process.processInfo.Pid)
 			if err == nil {
@@ -77,4 +102,39 @@ func (ts *TaskDef) IsProcessRunning() bool {
 
 func (ts *TaskDef) GetProcessLog() []ProcessLog {
 	return ts.processLog
+}
+
+func (ts *TaskDef) KillProcess() error {
+	if ts.process != nil && ts.process.processInfo != nil {
+		if ts.IsProcessRunning() {
+			return ts.process.processInfo.Kill()
+		} else {
+			return fmt.Errorf("process %d is not running", ts.process.processInfo.Pid)
+		}
+	}
+	return fmt.Errorf("no process to kill")
+}
+
+// StopProcessIfRunning sends an interrupt signal to the process
+// if the process is running
+// if the process is not running, nothing happens. will not reported as error
+func (ts *TaskDef) StopProcessIfRunning() error {
+	if ts.process != nil && ts.process.processInfo != nil {
+		if ts.IsProcessRunning() {
+			return ts.process.processInfo.Signal(os.Interrupt)
+		}
+	}
+	return nil
+}
+
+func (ts *TaskDef) WaitProcess() error {
+	if ts.process != nil && ts.process.processInfo != nil {
+		if ts.IsProcessRunning() {
+			_, err := ts.process.processInfo.Wait()
+			return err
+		} else {
+			return fmt.Errorf("process %d is not running", ts.process.processInfo.Pid)
+		}
+	}
+	return fmt.Errorf("no process to wait for")
 }

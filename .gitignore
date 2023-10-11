@@ -27,3 +27,6 @@ contxt.code-workspace
 #any directory callec xxx_local.only_xxx
 *_local.only_*
 
+# temporary
+*.tmp
+*.temp

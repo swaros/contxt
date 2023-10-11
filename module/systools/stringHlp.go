@@ -79,6 +79,20 @@ func PrintableChars(str string) string {
 	return string(result)
 }
 
+// returns the string where any spaces, with an length of more than 1
+// are replaced by one space
+// so "hello   my friend" will be "hello my friend"
+func TrimAllSpaces(s string) string {
+	sp := strings.Split(s, " ")
+	newSl := []string{}
+	for _, v := range sp {
+		if v != "" {
+			newSl = append(newSl, v)
+		}
+	}
+	return strings.Join(newSl, " ")
+}
+
 func NoEscapeSequences(str string) string {
 	// we need to remove any escape sequences from the string
 	// for output without colors and countingchars they are visible

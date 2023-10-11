@@ -94,6 +94,15 @@ func shellRunner(c *CmdExecutorImpl) {
 	})
 	shell.AddNativeCmd(cleanTasksCmd)
 
+	stoppAllCmd := ctxshell.NewNativeCmd("stoptasks", "stop all the running processes", func(args []string) error {
+		tasks.NewGlobalWatchman().StopAllTasks(nil)
+		return nil
+	})
+	stoppAllCmd.SetCompleterFunc(func(line string) []string {
+		return []string{"stoptasks"}
+	})
+	shell.AddNativeCmd(stoppAllCmd)
+
 	// set the prompt handler
 	shell.SetPromptFunc(func(reason int) string {
 

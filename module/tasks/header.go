@@ -135,6 +135,7 @@ func (t *targetExecuter) reInitialize() {
 	// if no task watcher is set, we create a new one
 	if t.watch == nil {
 		t.watch = NewGlobalWatchman()
+		t.watch.SetLogger(t.getLogger())
 	}
 	// assign the Tasks to the targetExecuter
 
@@ -158,6 +159,9 @@ func (t *targetExecuter) CopyToTarget(target string) *targetExecuter {
 
 func (t *targetExecuter) SetLogger(logger mimiclog.Logger) *targetExecuter {
 	t.Logger = logger
+	if t.watch != nil {
+		t.watch.SetLogger(logger)
+	}
 	return t
 }
 
