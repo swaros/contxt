@@ -56,6 +56,7 @@ type Cshell struct {
 	updatePromptDuration time.Duration      // the period for updating the prompt
 	updatePromptEnabled  bool               // if true, the prompt is updated periodically
 	lastInput            string             // the last input
+	StopOutput           bool               // stop printing the output to stdout
 
 }
 
@@ -67,6 +68,12 @@ func NewCshell() *Cshell {
 		updatePromptDuration: 5 * time.Second,
 		neverAsncCmds:        []string{},
 	}
+}
+
+// enable or disable the output to stdout
+func (t *Cshell) SetStopOutput(b bool) *Cshell {
+	t.StopOutput = b
+	return t
 }
 
 // defines commands that are never executed in a separate goroutine

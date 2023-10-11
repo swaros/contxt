@@ -127,18 +127,9 @@ func (ts *TaskDef) StopProcessIfRunning() error {
 		if ts.IsProcessRunning() {
 			return ts.process.processInfo.Signal(os.Interrupt)
 		}
+	} else {
+		fmt.Println("no process to stop")
 	}
-	return nil
-}
 
-func (ts *TaskDef) WaitProcess() error {
-	if ts.process != nil && ts.process.processInfo != nil {
-		if ts.IsProcessRunning() {
-			_, err := ts.process.processInfo.Wait()
-			return err
-		} else {
-			return fmt.Errorf("process %d is not running", ts.process.processInfo.Pid)
-		}
-	}
-	return fmt.Errorf("no process to wait for")
+	return nil
 }

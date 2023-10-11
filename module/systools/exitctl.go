@@ -22,9 +22,12 @@
 
 // AINC-NOTE-0815
 
- package systools
+package systools
 
-import "os"
+import (
+	"os"
+	"os/signal"
+)
 
 type ExitBehavior struct {
 	proceedWithExit bool
@@ -56,4 +59,24 @@ func Exit(code int) bool {
 	}
 	os.Exit(code)
 	return true
+}
+
+// WatchSigTerm adds a callback function
+// that will be executed if the app receives
+// a SIGTERM signal
+// if no callback is given, the app will exit
+// with code 0 and all registered callbacks will
+// be executed
+func WatchSigTerm(callback func(os.Signal)) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for sig := range c {
+			if callback != nil {
+				callback(sig)
+			} else {
+				Exit(0)
+			}
+		}
+	}() // exit
 }
