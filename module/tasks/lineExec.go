@@ -193,7 +193,11 @@ func Execute(dCmd string, dCmdArgs []string, command string, callback func(strin
 		m := scanner.Text()
 		keepRunning := callback(m, nil)
 		if !keepRunning {
-			cmd.Process.Kill()
+			if runtime.GOOS == "linux" {
+				syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			} else {
+				cmd.Process.Kill()
+			}
 			return systools.ExitByStopReason, 0, err
 		}
 
