@@ -27,6 +27,7 @@ package tasks
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"syscall"
 )
 
@@ -107,6 +108,9 @@ func (ts *TaskDef) GetProcessLog() []ProcessLog {
 func (ts *TaskDef) KillProcess() error {
 	if ts.process != nil && ts.process.processInfo != nil {
 		if ts.IsProcessRunning() {
+			if runtime.GOOS == "linux" {
+				return syscall.Kill(-ts.process.processInfo.Pid, syscall.SIGKILL)
+			}
 			return ts.process.processInfo.Kill()
 		} else {
 			return fmt.Errorf("process %d is not running", ts.process.processInfo.Pid)

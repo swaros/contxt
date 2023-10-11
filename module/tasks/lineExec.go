@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"syscall"
 
 	"github.com/swaros/contxt/module/configure"
@@ -164,9 +165,18 @@ func (t *targetExecuter) ExecuteScriptLine(dCmd string, dCmdArgs []string, comma
 	return Execute(dCmd, dCmdArgs, command, callback, startInfo)
 }
 
+// Execute executes a command and returns the internal exit code, the command exit code and an error
+// the callback function is called for each line of the output
+// the startInfo function is called if the process started and the process id is available
 func Execute(dCmd string, dCmdArgs []string, command string, callback func(string, error) bool, startInfo func(*os.Process)) (int, int, error) {
 	cmdArg := append(dCmdArgs, command)
 	cmd := exec.Command(dCmd, cmdArg...)
+	// on linux we need to set the process group id to kill the whole process tree
+	// now any kill command have to add -pgid to kill the whole process tree
+	// like: syscall.Kill(-ts.process.processInfo.Pid, syscall.SIGKILL)
+	if runtime.GOOS == "linux" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	}
 	stdoutPipe, _ := cmd.StdoutPipe()
 	cmd.Stderr = cmd.Stdout
 
