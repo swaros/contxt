@@ -27,7 +27,7 @@ package ctxout
 import "strings"
 
 const (
-	// terminal reser code
+	// terminal reset code
 	ResetCode = "\033[0m"
 	// CleanTag is the tag to reset to default
 	CleanTag = "</>"
