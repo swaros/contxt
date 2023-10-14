@@ -98,6 +98,9 @@ func (tr *tabRow) getLenByIndex(index int) (int, bool) {
 	return 0, false
 }
 
+// GetSize calculates the size of the cell
+// depending the index of the cell in the row
+// and how the cell should be drawn.
 func (tr *tabRow) GetSize(cell *tabCell, index int) int {
 	if tr.parent.parent.GetInfo().IsTerminal { // only calculate the size if we are in a terminal
 		if tr.parent.parent.RowCalcMode == 0 { // relative to terminal width

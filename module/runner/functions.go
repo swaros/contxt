@@ -522,18 +522,19 @@ func (c *CmdExecutorImpl) PrintPaths(plain bool, showFulltask bool) {
 					"<row>",
 					indexColor,
 					"<tab size='5' fill=' ' draw='fixed' origin='2'>",
-					indexStr, " ",
+					indexStr+" ",
 					"</tab>",
 					add,
 					"<tab size='65' draw='content' fill=' ' cut-add='///..' origin='1'>",
 					path, " ",
 					"</tab>",
 					ctxout.CleanTag,
-					"<tab fill=' ' prefix='<f:yellow>' suffix='</>'  overflow='"+taskDrawMode+"' draw='extend' size='30' cut-add='<f:light-blue>...more</>' origin='2'>",
+					"<tab size='29' fill=' ' prefix='<f:yellow>' suffix='</>'  overflow='"+taskDrawMode+"' draw='extend' cut-add='<f:light-blue> ..<f:yellow>.' origin='2'>",
 					outTasks,
 					"</tab>",
 					"</row>",
 				)
+
 			} else {
 				c.Print(ctxout.Message("       path: ", ctxout.Dim, " no ", ctxout.ForeYellow, index, " ", pathColor, path, ctxout.ForeRed, " error while loading template: ", err.Error()))
 			}

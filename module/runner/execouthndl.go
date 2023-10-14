@@ -65,7 +65,7 @@ func (c *CmdExecutorImpl) drawRowWithLabels(leftLabel, rightLabel, label, labelC
 				content,
 				ctxout.Prop(ctxout.AttrSize, 85),
 				ctxout.Prop(ctxout.AttrPrefix, contentColor),
-				ctxout.Prop(ctxout.AttrOverflow, "wrap"),
+				ctxout.Prop(ctxout.AttrOverflow, "wordwrap"),
 				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
 			),
 			ctxout.TD(

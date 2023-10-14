@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package ctxout
+package ctxout
 
 import (
 	"strings"
@@ -100,7 +100,18 @@ func (td *tabCell) SetCutNotifier(cutNotifier string) *tabCell {
 
 func (td *tabCell) SetOverflowMode(overflowMode string) *tabCell {
 	td.overflowMode = overflowMode
+	td.autoFixOverflow()
 	return td
+}
+
+func (td *tabCell) autoFixOverflow() {
+	if td.overflowMode == OfAny {
+		td.overflowMode = OfWrap
+		return
+	}
+	if td.overflowMode != OfWordWrap && td.overflowMode != OfWrap && td.overflowMode != OfIgnore {
+		td.overflowMode = OfIgnore
+	}
 }
 
 func (td *tabCell) SetIndex(index int) *tabCell {
@@ -159,89 +170,144 @@ func (td *tabCell) MoveToWrap() bool {
 	return false
 }
 
-func (td *tabCell) CutString(max int) string {
-	if max < 1 {
-		return ""
+// addNotifiers adds the notifier to the text if we have enough space
+// here it is not about detecting the overflow, but just to add the notifier.
+// the detection of the overflow, and reduce the string to the expected length, must be done before.
+// we expect an string that is already cutted to the expected length
+func (td *tabCell) addNotifiers(str string, applyToProp bool) string {
+	if td.cutNotifier != "" && VisibleLen(td.cutNotifier) < VisibleLen(str) {
+		// we have enough space for applying the notifier
+		switch td.Origin {
+		case OriginRight:
+			str = td.cutNotifier + str[VisibleLen(td.cutNotifier):]
+		default:
+			str = str[:VisibleLen(str)-VisibleLen(td.cutNotifier)] + td.cutNotifier
+		}
 	}
-	originMax := max
-	tSize := LenPrintable(td.Text)
+	if applyToProp {
+		td.Text = str
+	}
+	return str
+}
+
+func (td *tabCell) WrapText(max int) (text string, overflow string) {
+	// add margin if we have one and there are higher than 0.
+	// tis reduces the max size of the cell
 	if td.margin > 0 {
 		max = max - td.margin
 	}
-	if tSize == max {
-		return td.Text
+	// here we get the text and the overflow content if we have any newline in the text
+	firstLine, overflowText := td.GetNewLineContext()
+	// do we have an overflow?
+	size := VisibleLen(firstLine)
+	theIfWeHaveOverflowFlag := 0 // asume we have no overflow
+	if size > max {
+		theIfWeHaveOverflowFlag = 1 // we have an overflow. so the current text have to be cutted
+	} else if size == max {
+		theIfWeHaveOverflowFlag = 2 // we hit the excact size
 	}
-	if tSize > max {
-		runes := []rune(td.Text)
-		add := td.cutNotifier
-		left := LenPrintable(td.Text) - max
-		td.overflow = true
-		if td.overflowMode == "any" {
-			add = "" // if we keep the overflow, we do not add the cut notifier
-			switch td.Origin {
-			case 0:
-				td.overflowContent = string(runes[max:])
-			case 1:
-				td.overflowContent = string(runes[left:])
-			case 2:
-				td.overflowContent = string(runes[max:])
-			}
-		} else if td.overflowMode == "wordwrap" {
-			add = ""
 
+	switch td.overflowMode {
+
+	// ignore the overflow and just fit the string to the max size
+	// if the string is bigger than the max size, then it will be cutted
+	// and the rest of the string will NOT be added to the overflow, because thats the ignore mode
+	case OfIgnore:
+
+		overflowText = ""
+		td.overflow = false
+
+		switch theIfWeHaveOverflowFlag {
+		case 0: // no overflow
+			td.Text = td.fillString(firstLine, max)
+		case 1: // overflow. so the firstline is bigger than the max. we need to cut it, and add the rest of the text to the overflow
+			var textr string
+			// check again if we do not have the ignore case, so we do not handle overflow
+			switch td.Origin {
+			case OriginRight:
+				textr, _ = StringCutFromRight(firstLine, max) // on ignore, we do not care about overflow
+			default:
+				textr, _ = StringCut(firstLine, max) // on ignore, we do not care about overflow
+			}
+
+			td.addNotifiers(textr, true)
+
+		case 2: // excact size
+			td.Text = td.fillString(firstLine, max)
+		}
+
+	case OfWrap:
+		// wrap the text but to not care about wrapping by words
+		wrapStr := wrap.String(firstLine, max)
+		reslize, restStr := getNlSlice(wrapStr)
+		td.Text = td.fillString(reslize, max)
+		overflowText = restStr + overflowText
+		td.overflow = true
+
+	case OfWordWrap:
+		// we now using the wordwrap library to wrap the text
+		// by words
+		/*
 			wrp := wordwrap.NewWriter(max)
 			wrp.Breakpoints = []rune{':', ',', ' ', '\n'}
 			wrp.Newline = []rune{'\n'}
-			wrp.Write([]byte(td.Text))
+			wrp.Write([]byte(firstLine)) // we use the first line
 			wordWrap := wrp.String()
 			if wordWrap == "" {
-				wordWrap = td.Text
+				wordWrap = firstLine
 			}
 			wrapped := wrap.String(wordWrap, max)
-			rows := strings.SplitN(wrapped, "\n", 2)
-			if len(rows) > 1 {
-				td.Text = rows[0]
-				td.overflowContent = string(runes[len(td.Text):])
-			}
-			tSize := LenPrintable(td.Text)
-			td.fillUpString(max, tSize) // fill up the cell
-			return td.forceCut(max)
-		} else {
+		*/
 
-			max -= LenPrintable(td.cutNotifier)
-			if max < 1 {
-				max = 0
+		wrapped := wrap.String(wordwrap.String(firstLine, max), max)
+
+		// but now we have also taking care about the newlines into the text
+		// of the first line
+		clean, afterNl := getNlSlice(wrapped)
+
+		td.Text = td.fillString(clean, max)
+		if afterNl != "" {
+			if overflowText != "" {
+				overflowText = afterNl + "\n" + overflowText
+			} else {
+				overflowText = afterNl
 			}
-			left = LenPrintable(td.Text) - max
 		}
-		// we changed the max, so we need to use originMax
-		switch td.Origin {
-		case 0:
-			td.Text = string(runes[0:max]) + add
-		case 1:
-			td.Text = add + string(runes[left:])
-		case 2:
-			td.Text = string(runes[0:max]) + add
-		}
-		return td.forceCut(originMax)
+		td.overflow = true
 	}
-	/*
-		diff := max - tSize
-		switch td.Origin {
-		case 0:
-			return td.Text + strings.Repeat(td.fillChar, diff)
-		case 1:
-			return td.Text + strings.Repeat(td.fillChar, diff)
-		case 2:
-			return strings.Repeat(td.fillChar, diff) + td.Text
-		}*/
-	td.fillUpString(max, tSize)
-	return td.forceCut(max)
+	td.overflowContent = overflowText
+	return td.Text, td.overflowContent
+}
+
+func (td *tabCell) GetNewLineContext() (string, string) {
+	containsNewLine := strings.Contains(td.Text, "\n")
+	if containsNewLine {
+		return getNlSlice(td.Text)
+	}
+	return td.Text, ""
+}
+
+func getNlSlice(text string) (string, string) {
+	containsNewLine := strings.Contains(text, "\n")
+	if containsNewLine {
+		rows := strings.Split(text, "\n")
+		return rows[0], strings.Join(rows[1:], "\n")
+	}
+	return text, ""
+
+}
+
+// CutString cuts the string to the given max size
+// if the string is bigger than the max size, then it will be cutted
+// if the string is smaller than the max size, then it will be filled up with the fillChar
+func (td *tabCell) CutString(max int) string {
+	td.WrapText(max)
+	return td.Text
 }
 
 // whatever we add to the cell, we need to make sure it is not bigger than max
 func (td *tabCell) forceCut(max int) string {
-	tSize := LenPrintable(td.Text)
+	tSize := VisibleLen(td.Text)
 	if tSize > max {
 		runes := []rune(td.Text)
 		switch td.Origin {
@@ -269,4 +335,19 @@ func (td *tabCell) fillUpString(max, tSize int) {
 	case 2:
 		td.Text = strings.Repeat(td.fillChar, diff) + td.Text
 	}
+}
+
+func (td *tabCell) fillString(text string, max int) string {
+	tSize := VisibleLen(text)
+	diff := max - tSize
+	if diff < 1 {
+		return text
+	}
+	switch td.Origin {
+	default:
+		text = text + strings.Repeat(td.fillChar, diff)
+	case 2:
+		text = strings.Repeat(td.fillChar, diff) + text
+	}
+	return text
 }

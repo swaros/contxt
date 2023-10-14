@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package main
+package main
 
 import (
 	"bytes"
@@ -229,7 +229,7 @@ func tableFilter() {
 						rndWord2,
 						ctxout.Prop(ctxout.AttrSize, 50),
 						ctxout.Prop(ctxout.AttrOrigin, 1),
-						ctxout.Prop(ctxout.AttrOverflow, ctxout.OverflowWordWrap),
+						ctxout.Prop(ctxout.AttrOverflow, ctxout.OfWordWrap),
 						ctxout.Prop(ctxout.AttrPrefix, oddBackground+ctxout.ForeDarkGrey),
 						ctxout.Prop(ctxout.AttrSuffix, ctxout.ResetCode),
 					),
@@ -238,7 +238,7 @@ func tableFilter() {
 						rndWord3,
 						ctxout.Prop(ctxout.AttrSize, 40),
 						ctxout.Prop(ctxout.AttrOrigin, 2),
-						ctxout.Prop(ctxout.AttrOverflow, ctxout.OverflowWordWrap),
+						ctxout.Prop(ctxout.AttrOverflow, ctxout.OfWordWrap),
 						ctxout.Prop(ctxout.AttrPrefix, oddBackground+ctxout.ForeLightYellow),
 						ctxout.Prop(ctxout.AttrSuffix, ctxout.ResetCode),
 					),

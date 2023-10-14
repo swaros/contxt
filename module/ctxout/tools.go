@@ -28,17 +28,22 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/muesli/reflow/ansi"
 	"github.com/rivo/uniseg"
 )
 
-// LenPrintable returns the length of a string, but only counts printable characters
+// UniseqLen returns the length of a string, but only counts printable characters
 // it ignores ANSI escape codes
 // and also ignores the length of the ANSI escape codes
-// also ignores any newlines
-func LenPrintable(s string) int {
-	cleared := StringPure(s)
-	return uniseg.StringWidth(cleared)
+func UniseqLen(s string) int {
+	return uniseg.StringWidth(s)
+}
 
+// returns the length of a string, but only counts printable characters
+// it ignores ANSI escape codes
+// makes use of the ansi package from muesli
+func VisibleLen(s string) int {
+	return ansi.PrintableRuneWidth(s)
 }
 
 func StringPure(s string) string {
@@ -61,4 +66,36 @@ func StringCleanEscapeCodes(s string) string {
 
 	re := regexp.MustCompile(match)
 	return re.ReplaceAllString(s, "")
+}
+
+// splits a string into two parts. one part is the cut string, the other part is the rest
+// the cut string is the first part of the string with the given size
+// the rest is the remaining part of the string
+func StringCut(s string, size int) (cutStr string, rest string) {
+	if size <= 0 {
+		return "", s
+	}
+	if size >= VisibleLen(s) {
+		return s, ""
+	}
+	left := s[:size]
+	right := s[size:]
+	return left, right
+}
+
+// splits a string into two parts. one part is the cut string, the other part is the rest
+// the cut string is the last part of the string with the given size starting from the right side
+// the rest is the remaining part of the string
+// so if you have a string "1234567890" and you call StringCutFromRight("1234567890", 5)
+// then the result will be "67890" and "12345"
+func StringCutFromRight(s string, size int) (cutStr string, rest string) {
+	if size <= 0 {
+		return "", s
+	}
+	if size >= VisibleLen(s) {
+		return s, ""
+	}
+	left := s[:len(s)-size]
+	right := s[len(s)-size:]
+	return right, left
 }

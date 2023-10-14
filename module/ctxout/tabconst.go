@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package ctxout
+package ctxout
 
 import (
 	"fmt"
@@ -99,7 +99,7 @@ func Right() string {
 }
 
 func Left() string {
-	return "origin='1'"
+	return "origin='0'"
 }
 
 func Fill(with string) string {
@@ -148,6 +148,10 @@ func OverflowIgnore() string {
 
 func OverflowWrap() string {
 	return "overflow='wrap'"
+}
+
+func OverflowWordWrap() string {
+	return "overflow='wordwrap'"
 }
 
 func OverflowContent(content string) string {

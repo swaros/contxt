@@ -154,7 +154,7 @@ func TestSignWithMessure(t *testing.T) {
 	chk := ctxout.ToString(source)
 
 	expecteSize := 8
-	messure := ctxout.LenPrintable(chk)
+	messure := ctxout.UniseqLen(chk)
 	if messure != expecteSize {
 		t.Errorf("expected '%d' got '%d'", expecteSize, messure)
 		t.Log("1234567890")
