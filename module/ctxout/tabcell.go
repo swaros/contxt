@@ -305,38 +305,6 @@ func (td *tabCell) CutString(max int) string {
 	return td.Text
 }
 
-// whatever we add to the cell, we need to make sure it is not bigger than max
-func (td *tabCell) forceCut(max int) string {
-	tSize := VisibleLen(td.Text)
-	if tSize > max {
-		runes := []rune(td.Text)
-		switch td.Origin {
-		case 0:
-			td.Text = string(runes[0:max])
-		case 1:
-			td.Text = string(runes[len(td.Text)-max:])
-		case 2:
-			td.Text = string(runes[0:max])
-		}
-	}
-	return td.Text
-}
-
-func (td *tabCell) fillUpString(max, tSize int) {
-	diff := max - tSize
-	if diff < 1 {
-		return
-	}
-	switch td.Origin {
-	case 0:
-		td.Text = td.Text + strings.Repeat(td.fillChar, diff)
-	case 1:
-		td.Text = td.Text + strings.Repeat(td.fillChar, diff)
-	case 2:
-		td.Text = strings.Repeat(td.fillChar, diff) + td.Text
-	}
-}
-
 func (td *tabCell) fillString(text string, max int) string {
 	tSize := VisibleLen(text)
 	diff := max - tSize
