@@ -197,6 +197,8 @@ func (td *tabCell) WrapText(max int) (text string, overflow string) {
 		max = max - td.margin
 	}
 	// here we get the text and the overflow content if we have any newline in the text
+	// so the firstline is the text until the first newline
+	// and the overflowText is the rest of the text including the newlines
 	firstLine, overflowText := td.GetNewLineContext()
 	// do we have an overflow?
 	size := VisibleLen(firstLine)
@@ -245,33 +247,34 @@ func (td *tabCell) WrapText(max int) (text string, overflow string) {
 		td.overflow = true
 
 	case OfWordWrap:
-		// we now using the wordwrap library to wrap the text
-		// by words
-		/*
-			wrp := wordwrap.NewWriter(max)
-			wrp.Breakpoints = []rune{':', ',', ' ', '\n'}
-			wrp.Newline = []rune{'\n'}
-			wrp.Write([]byte(firstLine)) // we use the first line
-			wordWrap := wrp.String()
-			if wordWrap == "" {
-				wordWrap = firstLine
+		// this is mostly the case for the first line
+		if theIfWeHaveOverflowFlag == 1 {
+			td.Text = FitWordsToMaxLen(td.Text, max)
+			wrapped := wrap.String(wordwrap.String(td.Text, max), max)
+			overflowText = ""
+
+			// but now we have also taking care about the newlines into the text
+			// of the first line
+			clean, afterNl := getNlSlice(wrapped)
+			// just fill the string with the fillChar
+			td.Text = td.fillString(clean, max)
+
+			// now lets proceed with the overflow. we have to add the rest of the text to the overflow
+			// if we have any
+			if afterNl != "" {
+				// this is the case, there was overflow before, so we add the rest of the text to the overflow
+				if overflowText != "" {
+					overflowText = afterNl + " " + overflowText
+				} else {
+					// this is the case, there was no overflow before, so we set them now
+					overflowText = afterNl
+				}
 			}
-			wrapped := wrap.String(wordWrap, max)
-		*/
-
-		wrapped := wrap.String(wordwrap.String(firstLine, max), max)
-
-		// but now we have also taking care about the newlines into the text
-		// of the first line
-		clean, afterNl := getNlSlice(wrapped)
-
-		td.Text = td.fillString(clean, max)
-		if afterNl != "" {
-			if overflowText != "" {
-				overflowText = afterNl + "\n" + overflowText
-			} else {
-				overflowText = afterNl
-			}
+		} else {
+			// the firstline is not bigger than the max size
+			// so we just need to fill the string
+			// the overflow is already handled by the overflowText
+			td.Text = td.fillString(firstLine, max)
 		}
 		td.overflow = true
 	}

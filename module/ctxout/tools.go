@@ -99,3 +99,46 @@ func StringCutFromRight(s string, size int) (cutStr string, rest string) {
 	right := s[len(s)-size:]
 	return right, left
 }
+
+// FitWordsToMaxLen fits the words of a string to the given max length
+// and add a new line if the word would exceed the max length
+// and then proceed with the next line until the string is done
+// if the string contains words, they are longer than the max length
+// then the words will not be cutted. they will be placed on a new line.
+// result := ctxout.FitWordsToMaxLen("ab 1234567890 cdef", 5)
+// result will be "ab\n1234567890\ncdef"
+func FitWordsToMaxLen(line string, max int) string {
+	// we use \r as replacement for the new line
+	// so we recover the new line later
+	// and replace it with a real new line
+	// but to do this, we have to make sure that the \r is not part of the string
+	// butbecause it is a control character,that we don't need to display, we can just remove it
+	// and to not replace it later.
+	line = strings.ReplaceAll(line, "\r", "")
+	line = strings.ReplaceAll(line, "\n", "\r")
+	words := strings.Split(line, " ")
+	var buffer strings.Builder
+	var lineLen int
+	first := true
+	for _, word := range words {
+		wordLen := VisibleLen(word)
+		if lineLen+wordLen > max {
+			// we need to add a new line if the buffer is not empty
+			if buffer.Len() > 0 {
+				buffer.WriteString("\n")
+				lineLen = 0
+			}
+
+		} else {
+			// without the check, the first word would have a space in front of it
+			if !first {
+				buffer.WriteString(" ")
+			}
+			first = false
+		}
+		buffer.WriteString(word)
+
+		lineLen += wordLen + 1
+	}
+	return strings.ReplaceAll(buffer.String(), "\r", "\n")
+}

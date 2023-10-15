@@ -49,9 +49,9 @@ func TestCutStringWithNewLine(t *testing.T) {
 		t.Errorf("TestCutStringWithNewLine: expected '1234567890' got '%s'", outcome)
 	}
 
-	expexcted := "abcdef\nghijkl\nmnopqrstuvwxyz"
-	if overlow != "abcdef\nghijkl\nmnopqrstuvwxyz" {
-		t.Errorf("TestCutStringWithNewLine: expected\\got\n'%s'\n'%s'", GetWithSpecialChars(expexcted), GetWithSpecialChars(overlow))
+	expected := "abcdef\nghijkl\nmnopqrstuv\nwxyz"
+	if overlow != expected {
+		t.Errorf("TestCutStringWithNewLine: expected\\got\n'%s'\n'%s'", GetWithSpecialChars(expected), GetWithSpecialChars(overlow))
 	}
 
 }
