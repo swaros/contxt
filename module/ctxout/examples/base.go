@@ -270,7 +270,7 @@ func tableFilter() {
 	printNextExampleHeader("table right use")
 	// here we use the table right
 	// and as long as the table is not closed, the content is not printed
-	ctxout.PrintLn("wait for it ...")
+	fmt.Print("wait for it ...")
 	ctxout.PrintLn(ctxout.OpenTable)
 	for i := 0; i < 20; i++ {
 		rndWord1 := createRandomWords(90)
@@ -285,8 +285,10 @@ func tableFilter() {
 		)
 
 		// wait a little bit
+		fmt.Print(".")
 		time.Sleep(time.Millisecond * 100)
 	}
+	fmt.Println("done")
 	// close the table
 	ctxout.PrintLn(ctxout.CloseTable)
 	ctxout.PrintLn(" ---- TADAAAAA")
@@ -305,10 +307,13 @@ func cursorAndTableFilter() {
 			rndWord1 := createRandomWords(90)
 			rndWord2 := createRandomWords(90)
 			rndWord3 := createRandomWords(90)
+			// TODO: somethimes the with is not calculated correctly in terms of the percentage
+			// 	 	it seems this is mostly the case if the size is somehow lower than 10
+			//      might be a problem with the calculation of the size if the first rows starts on lower percentage
 			ctxout.PrintLn(
 				ctxout.NewMOWrap(),
 				ctxout.OTR,
-				ctxout.TD(m, "size=5", "origin=2", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeLightYellow),
+				ctxout.TD(m, "size=4", "origin=2", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeLightYellow),
 				ctxout.TD(i, "size=5", "origin=2", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeLightBlue+ctxout.BackBlue),
 				ctxout.TD(rndWord1, "size=20", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeGreen),
 				ctxout.TD(rndWord2, "size=30", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeDarkGrey),
