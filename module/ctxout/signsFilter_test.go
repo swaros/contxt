@@ -116,7 +116,7 @@ func TestSignAdded(t *testing.T) {
 	}
 
 	source := "hello <sign danger>"
-	expected := "hello <!danger>"
+	expected := "hello "
 	ctxout.AddPostFilter(sf)
 	sf.Enable()
 	chk := ctxout.ToString(source)
@@ -160,4 +160,33 @@ func TestSignWithMessure(t *testing.T) {
 		t.Log("1234567890")
 		t.Log(chk)
 	}
+}
+
+func TestForceDisabled(t *testing.T) {
+	ctxout.ClearPostFilters()
+	// create a new filter
+	sf := ctxout.NewSignFilter(nil)
+	if sf == nil {
+		t.Error("NewSignFilter should not return nil")
+	}
+
+	source := "hello <sign info> this is a test <sign success>"
+	expected := "hello  this is a test "
+	ctxout.AddPostFilter(sf)
+
+	// force the filter to return nothing
+	sf.ForceEmpty(true)
+
+	chk := ctxout.ToString(source)
+
+	if chk != expected {
+		t.Errorf("expected '%s' got '%s'", expected, chk)
+	}
+
+	sf.Disable()
+	chk = ctxout.ToString(source)
+	if chk != expected {
+		t.Errorf("expected '%s' got '%s'", expected, chk)
+	}
+
 }

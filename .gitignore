@@ -30,3 +30,4 @@ contxt.code-workspace
 # temporary
 *.tmp
 *.temp
+*.ignore/

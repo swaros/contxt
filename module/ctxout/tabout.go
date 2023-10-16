@@ -86,7 +86,7 @@ type TabOut struct {
 
 func NewTabOut() *TabOut {
 	return &TabOut{
-		markup:   *NewMarkup(),
+		markup:   *NewMarkup().SetAccepptedTags([]string{"table", "row", "tab"}),
 		calcSize: NewRoundSerial(),
 	}
 }
