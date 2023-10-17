@@ -37,6 +37,11 @@ import (
 var (
 	// random color helper
 	randColors = NewRandColorStore()
+	// color for the state label
+	stateColorPreDef = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeLightCyan+ctxout.BoldTag+ctxout.BackBlue)
+	processPreDef    = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeLightCyan+ctxout.BackBlack)
+	pidPreDef        = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeLightYellow+ctxout.BackBlack)
+	commentPreDef    = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeLightBlue+ctxout.BackBlack)
 )
 
 // short for drawRowWithLabels("", "", label, labelColor, content, contentColor, info, infoColor)
@@ -84,6 +89,7 @@ func (c *CmdExecutorImpl) drawRowWithLabels(leftLabel, rightLabel, label, labelC
 				ctxout.Prop(ctxout.AttrOrigin, 2),
 				ctxout.Prop(ctxout.AttrPrefix, infoColor),
 				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+				ctxout.Margin(1), // 1 space for being sure
 			),
 		),
 	)
@@ -101,6 +107,47 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 		for _, m := range msg {
 			// hanlde the message type
 			switch tm := m.(type) {
+
+			case tasks.MsgPid:
+				targetColor, ok := randColors.GetOrSetRandomColor(tm.Target)
+				if !ok {
+					targetColor = RandColor{foreColor: "white", backColor: "black"}
+				}
+				c.Println(
+					ctxout.Row(
+
+						ctxout.TD(
+							"PROCESS PID "+ctxout.BaseSignScreen+" ",
+							ctxout.Prop(ctxout.AttrSize, 10),
+							ctxout.Right(),
+							ctxout.Prop(ctxout.AttrPrefix, processPreDef),
+							ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+						),
+
+						ctxout.TD(
+							tm.Pid,
+							ctxout.Right(),
+							ctxout.Prop(ctxout.AttrSize, 5),
+							ctxout.Prop(ctxout.AttrPrefix, pidPreDef),
+							ctxout.Prop(ctxout.AttrOverflow, "ignore"),
+							ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+						),
+						ctxout.TD(
+							" .... ",
+							ctxout.Prop(ctxout.AttrSize, 70),
+							ctxout.Prop(ctxout.AttrPrefix, commentPreDef),
+							ctxout.Prop(ctxout.AttrOverflow, "ignore"),
+							ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+						),
+						ctxout.TD(
+							" "+tm.Target,
+							ctxout.Prop(ctxout.AttrSize, 14),
+							ctxout.Prop(ctxout.AttrPrefix, targetColor.ColorMarkup()),
+							ctxout.Prop(ctxout.AttrOverflow, "ignore"),
+							ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+						),
+					),
+				)
 
 			case tasks.MsgCommand:
 				c.drawRow(
@@ -120,7 +167,7 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				// we look for the target color
 				targetColor, ok := randColors.GetOrSetRandomColor(tm.Target)
 				if !ok {
-					targetColor = RandColor{foreroundColor: "white", backgroundColor: "black"}
+					targetColor = RandColor{foreColor: "white", backColor: "black"}
 				}
 				switch tm.Context {
 
@@ -219,13 +266,56 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					tm,
 					ctxout.CleanTag,
 				)
+			// something depending the process is changed.
+			// could be one of these:
+			// - started
+			// - stopped
+			// - aborted
+			// the comment contains more details.
+			// on started it contains the command that is executed
+			// on stopped it contains the exit codes (first the real code from the process, second the code from the command)
+			// on aborted it contains the reason why the process is aborted. this is a controlled abort. nothing from system side.
+			//            this depends on a defined stopreason, so contxt itself is aborting the process.
 			case tasks.MsgProcess:
+				targetColor, ok := randColors.GetOrSetRandomColor(tm.Target)
+				if !ok {
+					targetColor = RandColor{foreColor: "white", backColor: "black"}
+				}
 				c.Println(
-					ctxout.ForeLightBlue,
-					"PROCESS",
-					ctxout.ForeBlue,
-					tm,
-					ctxout.CleanTag,
+					ctxout.Row(
+
+						ctxout.TD(
+							"PROCESS "+ctxout.BaseSignScreen+" ",
+							ctxout.Prop(ctxout.AttrSize, 10),
+							ctxout.Right(),
+							ctxout.Prop(ctxout.AttrPrefix, processPreDef),
+							ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+						),
+
+						ctxout.TD(
+							" "+tm.StatusChange+" ",
+							ctxout.Prop(ctxout.AttrSize, 5),
+							ctxout.Right(),
+							ctxout.Prop(ctxout.AttrPrefix, stateColorPreDef),
+							ctxout.Prop(ctxout.AttrOverflow, "ignore"),
+							ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+						),
+						ctxout.TD(
+							" "+tm.Comment,
+							ctxout.Prop(ctxout.AttrSize, 70),
+							ctxout.Prop(ctxout.AttrPrefix, commentPreDef),
+							ctxout.Prop(ctxout.AttrOverflow, "ignore"),
+							ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+						),
+
+						ctxout.TD(
+							" "+tm.Target,
+							ctxout.Prop(ctxout.AttrSize, 14),
+							ctxout.Prop(ctxout.AttrPrefix, targetColor.ColorMarkup()),
+							ctxout.Prop(ctxout.AttrOverflow, "ignore"),
+							ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+						),
+					),
 				)
 			case tasks.MsgError:
 				c.drawRow(
@@ -235,14 +325,6 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					ctxout.ForeLightRed,
 					" "+ctxout.BaseSignError+" ",
 					//"error",
-					ctxout.ForeYellow+ctxout.BoldTag+ctxout.BackRed,
-				)
-				c.drawRow(
-					"error ref: "+tm.Target,
-					ctxout.ForeWhite+ctxout.BoldTag+ctxout.BackRed,
-					tm.Reference+" ",
-					ctxout.ForeLightYellow,
-					" "+ctxout.BaseSignError+" ",
 					ctxout.ForeYellow+ctxout.BoldTag+ctxout.BackRed,
 				)
 
@@ -269,15 +351,19 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				)
 
 			default:
+				// uncomment for dispaying the type of the message that is not handled yet
 
-				c.drawRow(
-					ctxout.BaseSignWarning+" ",
-					ctxout.ForeWhite,
-					systools.AnyToStrNoTabs(tm),
-					ctxout.ForeLightGrey,
-					ctxout.BaseSignDebug+" ",
-					ctxout.ForeLightBlue,
-				)
+				/*
+					c.Println(
+						fmt.Sprintf("%T", tm),
+						ctxout.ForeLightYellow,
+						fmt.Sprintf("%v", msg),
+						ctxout.ForeWhite,
+						ctxout.BackBlack,
+						"not implemented yet",
+						ctxout.CleanTag,
+					)
+				*/
 
 			}
 		}

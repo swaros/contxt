@@ -49,8 +49,8 @@ var (
 )
 
 type RandColor struct {
-	foreroundColor  string // foreground color as string
-	backgroundColor string // background color as string
+	foreColor string // foreground color as string
+	backColor string // background color as string
 }
 
 type RandColorStore struct {
@@ -76,49 +76,49 @@ func LastRandColorInstance() *RandColorStore {
 var (
 	// looksGoodCombinations is a list of color combinations that are readable
 	looksGoodCombinations = []RandColor{
-		{foreroundColor: "white", backgroundColor: "black"},
-		{foreroundColor: "green", backgroundColor: "black"},
-		{foreroundColor: "yellow", backgroundColor: "black"},
-		{foreroundColor: "blue", backgroundColor: "black"},
-		{foreroundColor: "magenta", backgroundColor: "black"},
-		{foreroundColor: "cyan", backgroundColor: "black"},
-		{foreroundColor: "dark-grey", backgroundColor: "black"},
-		{foreroundColor: "light-green", backgroundColor: "black"},
-		{foreroundColor: "light-grey", backgroundColor: "black"},
-		{foreroundColor: "light-red", backgroundColor: "black"},
-		{foreroundColor: "light-blue", backgroundColor: "black"},
-		{foreroundColor: "light-yellow", backgroundColor: "black"},
-		{foreroundColor: "light-cyan", backgroundColor: "black"},
-		{foreroundColor: "light-magenta", backgroundColor: "black"},
-		{foreroundColor: "white", backgroundColor: "dark-grey"},
-		{foreroundColor: "light-green", backgroundColor: "dark-grey"},
-		{foreroundColor: "light-blue", backgroundColor: "dark-grey"},
-		{foreroundColor: "light-yellow", backgroundColor: "dark-grey"},
-		{foreroundColor: "light-cyan", backgroundColor: "dark-grey"},
-		{foreroundColor: "light-magenta", backgroundColor: "dark-grey"},
-		{foreroundColor: "yellow", backgroundColor: "dark-grey"},
-		{foreroundColor: "green", backgroundColor: "dark-grey"},
-		{foreroundColor: "cyan", backgroundColor: "dark-grey"},
-		{foreroundColor: "black", backgroundColor: "green"},
-		{foreroundColor: "blue", backgroundColor: "green"},
-		{foreroundColor: "white", backgroundColor: "green"},
-		{foreroundColor: "magenta", backgroundColor: "green"},
-		{foreroundColor: "black", backgroundColor: "yellow"},
-		{foreroundColor: "black", backgroundColor: "blue"},
-		{foreroundColor: "black", backgroundColor: "magenta"},
-		{foreroundColor: "black", backgroundColor: "cyan"},
-		{foreroundColor: "black", backgroundColor: "white"},
-		{foreroundColor: "white", backgroundColor: "yellow"},
-		{foreroundColor: "white", backgroundColor: "blue"},
-		{foreroundColor: "white", backgroundColor: "magenta"},
-		{foreroundColor: "white", backgroundColor: "cyan"},
-		{foreroundColor: "blue", backgroundColor: "yellow"},
-		{foreroundColor: "blue", backgroundColor: "cyan"},
-		{foreroundColor: "blue", backgroundColor: "white"},
-		{foreroundColor: "yellow", backgroundColor: "blue"},
-		{foreroundColor: "yellow", backgroundColor: "magenta"},
-		{foreroundColor: "yellow", backgroundColor: "cyan"},
-		{foreroundColor: "yellow", backgroundColor: "white"},
+		{foreColor: "white", backColor: "black"},
+		{foreColor: "green", backColor: "black"},
+		{foreColor: "yellow", backColor: "black"},
+		{foreColor: "blue", backColor: "black"},
+		{foreColor: "magenta", backColor: "black"},
+		{foreColor: "cyan", backColor: "black"},
+		{foreColor: "dark-grey", backColor: "black"},
+		{foreColor: "light-green", backColor: "black"},
+		{foreColor: "light-grey", backColor: "black"},
+		{foreColor: "light-red", backColor: "black"},
+		{foreColor: "light-blue", backColor: "black"},
+		{foreColor: "light-yellow", backColor: "black"},
+		{foreColor: "light-cyan", backColor: "black"},
+		{foreColor: "light-magenta", backColor: "black"},
+		{foreColor: "white", backColor: "dark-grey"},
+		{foreColor: "light-green", backColor: "dark-grey"},
+		{foreColor: "light-blue", backColor: "dark-grey"},
+		{foreColor: "light-yellow", backColor: "dark-grey"},
+		{foreColor: "light-cyan", backColor: "dark-grey"},
+		{foreColor: "light-magenta", backColor: "dark-grey"},
+		{foreColor: "yellow", backColor: "dark-grey"},
+		{foreColor: "green", backColor: "dark-grey"},
+		{foreColor: "cyan", backColor: "dark-grey"},
+		{foreColor: "black", backColor: "green"},
+		{foreColor: "blue", backColor: "green"},
+		{foreColor: "white", backColor: "green"},
+		{foreColor: "magenta", backColor: "green"},
+		{foreColor: "black", backColor: "yellow"},
+		{foreColor: "black", backColor: "blue"},
+		{foreColor: "black", backColor: "magenta"},
+		{foreColor: "black", backColor: "cyan"},
+		{foreColor: "black", backColor: "white"},
+		{foreColor: "white", backColor: "yellow"},
+		{foreColor: "white", backColor: "blue"},
+		{foreColor: "white", backColor: "magenta"},
+		{foreColor: "white", backColor: "cyan"},
+		{foreColor: "blue", backColor: "yellow"},
+		{foreColor: "blue", backColor: "cyan"},
+		{foreColor: "blue", backColor: "white"},
+		{foreColor: "yellow", backColor: "blue"},
+		{foreColor: "yellow", backColor: "magenta"},
+		{foreColor: "yellow", backColor: "cyan"},
+		{foreColor: "yellow", backColor: "white"},
 	}
 )
 
@@ -231,20 +231,20 @@ func (rcs *RandColorStore) GetColorAsCtxMarkup(taskName string) (string, string,
 
 // ColorMarkup returns the color combination as ctxout markup
 func (r *RandColor) ColorMarkup() string {
-	return "<f:" + r.foreroundColor + "><b:" + r.backgroundColor + ">"
+	return "<f:" + r.foreColor + "><b:" + r.backColor + ">"
 }
 
 // ForeColor returns the foreground color as ctxout markup
 func (r *RandColor) ForeColor() string {
-	return "<f:" + r.foreroundColor + ">"
+	return "<f:" + r.foreColor + ">"
 }
 
 // BackColor returns the background color as ctxout markup
 func (r *RandColor) BackColor() string {
-	return "<b:" + r.backgroundColor + ">"
+	return "<b:" + r.backColor + ">"
 }
 
 // AsSignColor returns the sign color as ctxout markup
 func (r *RandColor) AsSignColor() string {
-	return "<f:" + r.backgroundColor + ">"
+	return "<f:" + r.backColor + ">"
 }
