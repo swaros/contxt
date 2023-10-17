@@ -955,22 +955,22 @@ func TestOverLappingText(t *testing.T) {
 	content := `2023-10-15 12:48:50,678 INFO n.b.b.l.LoggingLoader [main] Finished initializing logging from [config/logging]
 	2023-10-15 12:48:50,679 DEBUG n.b.b.j.GuardedConfigurationLoader [main] Loading configuration class net.bigpoint.batman.core.config.BatmanConfig
 	2023-10-15 12:48:50,680 INFO n.b.b.j.ConfigurationLoader [main] Reading config BatmanConfig from config...
-	2023-10-15 12:48:50,703 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/batman.jar!/config/00-libcom-default.conf
-	2023-10-15 12:48:50,705 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/batman.jar!/config/05-batman-default.conf
-	2023-10-15 12:48:50,712 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/config/05-batman-default.conf
-	2023-10-15 12:48:50,713 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/batman.jar!/config/05-batman-tracking-default.conf
-	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/batman.jar!/config/10-protocol.conf
-	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/config/10-protocol.conf
-	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/config/101-local-config.conf
-	2023-10-15 12:48:50,715 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/batman.jar!/config/20-sandbox-default.conf
-	2023-10-15 12:48:50,715 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/config/20-sandbox-default.conf
-	2023-10-15 12:48:50,717 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/config/30-runtime.conf
-	2023-10-15 12:48:50,717 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/batman.jar!/config/42-sandbox-data.conf
-	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/batman.jar!/config/43-sandbox-cdn.conf
-	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/batman.jar!/config/44-buildname.conf
-	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/config/44-buildname.conf
-	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/config/99-docker-service.local.conf
-	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/tziegler/develop/projects/bigpoint/batman/batman_playground/run/gateway1/batman.jar!/config/99-tracking-version.conf
+	2023-10-15 12:48:50,703 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/00-libcom-default.conf
+	2023-10-15 12:48:50,705 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/05-batman-default.conf
+	2023-10-15 12:48:50,712 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/05-batman-default.conf
+	2023-10-15 12:48:50,713 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/05-batman-tracking-default.conf
+	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/10-protocol.conf
+	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/10-protocol.conf
+	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/101-local-config.conf
+	2023-10-15 12:48:50,715 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/20-sandbox-default.conf
+	2023-10-15 12:48:50,715 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/20-sandbox-default.conf
+	2023-10-15 12:48:50,717 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/30-runtime.conf
+	2023-10-15 12:48:50,717 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/42-sandbox-data.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/43-sandbox-cdn.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/44-buildname.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/44-buildname.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/99-docker-service.local.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/99-tracking-version.conf
 	2023-10-15 12:48:50,780 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 2 instances of ItemType
 	2023-10-15 12:48:50,785 INFO n.b.b.c.g.AbstractConfigurationPineappleGuiceModule [main-gateway1] Loaded 2 gamedata stock types from: data/0/stock/type.json
 	2023-10-15 12:48:50,849 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 2 instances of InventoryFilterLoaderStub
@@ -1007,16 +1007,40 @@ func TestOverLappingText(t *testing.T) {
 	}
 }
 
-/* TODO: this is not working yet because the file i was using for tesing is on gitignore.
-         i also want to avoid having large logfiles for testing in the repostory, so
-		 i want to come up with some dynamic content generation for testing later
-func assertFileContent(t *testing.T, filePath string) {
-	t.Helper()
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		t.Error(err)
-		t.SkipNow()
-	}
+func TestOverLappingTextWithMargin(t *testing.T) {
+	content := `2023-10-15 12:48:50,678 INFO n.b.b.l.LoggingLoader [main] Finished initializing logging from [config/logging]
+	2023-10-15 12:48:50,679 DEBUG n.b.b.j.GuardedConfigurationLoader [main] Loading configuration class net.bigpoint.batman.core.config.BatmanConfig
+	2023-10-15 12:48:50,680 INFO n.b.b.j.ConfigurationLoader [main] Reading config BatmanConfig from config...
+	2023-10-15 12:48:50,703 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/00-libcom-default.conf
+	2023-10-15 12:48:50,705 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/05-batman-default.conf
+	2023-10-15 12:48:50,712 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/05-batman-default.conf
+	2023-10-15 12:48:50,713 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/05-batman-tracking-default.conf
+	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/10-protocol.conf
+	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/10-protocol.conf
+	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/101-local-config.conf
+	2023-10-15 12:48:50,715 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/20-sandbox-default.conf
+	2023-10-15 12:48:50,715 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/20-sandbox-default.conf
+	2023-10-15 12:48:50,717 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/30-runtime.conf
+	2023-10-15 12:48:50,717 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/42-sandbox-data.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/43-sandbox-cdn.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/44-buildname.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/44-buildname.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/99-docker-service.local.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/99-tracking-version.conf
+	2023-10-15 12:48:50,780 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 2 instances of ItemType
+	2023-10-15 12:48:50,785 INFO n.b.b.c.g.AbstractConfigurationPineappleGuiceModule [main-gateway1] Loaded 2 gamedata stock types from: data/0/stock/type.json
+	2023-10-15 12:48:50,849 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 2 instances of InventoryFilterLoaderStub
+	2023-10-15 12:48:50,851 INFO n.b.b.c.g.AbstractConfigurationPineappleGuiceModule [main-gateway1] Loaded 2 gamedata stock filter from: data/0/stock/filter
+	2023-10-15 12:48:50,885 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 14 instances of ItemData
+	2023-10-15 12:48:50,886 INFO n.b.b.c.g.AbstractConfigurationPineappleGuiceModule [main-gateway1] Loaded 14 gamedata stock items from: data/0/stock/item
+	2023-10-15 12:48:50,894 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 4 instances of ItemList
+	2023-10-15 12:48:50,895 INFO n.b.b.c.g.AbstractConfigurationPineappleGuiceModule [main-gateway1] Loaded 4 gamedata default items from: data/0/stock/item
+	2023-10-15 12:48:50,895 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 0 instances of CooldownData
+	2023-10-15 12:48:50,896 INFO n.b.b.c.g.AbstractConfigurationPineappleGuiceModule [main-gateway1] Loaded 0 gamedata default cooldowns from: data/0/cooldown
+	2023-10-15 12:48:51,663 DEBUG o.a.h.i.n.c.PoolingNHttpClientConnectionManager [Finalizer] Connection manager is shutting down
+	2023-10-15 12:48:51,665 DEBUG o.a.h.i.n.c.PoolingNHttpClientConnectionManager [Finalizer] Connection manager shut down
+	2023-10-15 12:48:51,666 DEBUG o.a.h.i.n.c.PoolingNHttpClientConnectionManager [Finalizer] Connection manager is shutting down
+	2023-10-15 12:48:51,666 DEBUG o.a.h.i.n.c.PoolingNHttpClientConnectionManager [Finalizer] Connection manager shut down`
 	ctxout.AddPostFilter(ctxout.NewTabOut())
 	tableCnt := ctxout.Table( // new table
 		ctxout.Row( // new row
@@ -1026,16 +1050,117 @@ func assertFileContent(t *testing.T, filePath string) {
 
 			),
 			ctxout.TD( // the next cell
-				string(content),
+				content,
 				ctxout.Size(50),
-				//ctxout.Overflow(ctxout.OfIgnore),
+				ctxout.Overflow(ctxout.OfWordWrap),
+				ctxout.Margin(4),
 			),
 		),
 	)
 	drawCnt := ctxout.ToString(ctxout.NewMOWrap(), tableCnt)
-	expectedLen := 100
-	if ctxout.UniseqLen(drawCnt) != expectedLen {
-		t.Errorf("Expected length %d but got %d", expectedLen, ctxout.UniseqLen(drawCnt))
+	expectedLen := 96 // 100 - 4 (margin)
+	lines := strings.Split(drawCnt, "\n")
+	for nr, line := range lines {
+		if ctxout.UniseqLen(line) != expectedLen {
+			t.Errorf("line no(%d) Expected length %d but got %d", nr, expectedLen, ctxout.UniseqLen(line))
+		}
 	}
 }
-*/
+
+func TestOverLappingTextWithMarginAndPrefix(t *testing.T) {
+	content := `2023-10-15 12:48:50,678 INFO n.b.b.l.LoggingLoader [main] Finished initializing logging from [config/logging]
+	2023-10-15 12:48:50,679 DEBUG n.b.b.j.GuardedConfigurationLoader [main] Loading configuration class net.bigpoint.batman.core.config.BatmanConfig
+	2023-10-15 12:48:50,680 INFO n.b.b.j.ConfigurationLoader [main] Reading config BatmanConfig from config...
+	2023-10-15 12:48:50,703 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/00-libcom-default.conf
+	2023-10-15 12:48:50,705 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/05-batman-default.conf
+	2023-10-15 12:48:50,712 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/05-batman-default.conf
+	2023-10-15 12:48:50,713 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/05-batman-tracking-default.conf
+	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/10-protocol.conf
+	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/10-protocol.conf
+	2023-10-15 12:48:50,714 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/101-local-config.conf
+	2023-10-15 12:48:50,715 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/20-sandbox-default.conf
+	2023-10-15 12:48:50,715 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/20-sandbox-default.conf
+	2023-10-15 12:48:50,717 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/30-runtime.conf
+	2023-10-15 12:48:50,717 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/42-sandbox-data.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/43-sandbox-cdn.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/44-buildname.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/44-buildname.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file file:///home/developer/develop/wsd/run/gateway1/config/99-docker-service.local.conf
+	2023-10-15 12:48:50,718 INFO n.b.b.j.ConfigurationLoader [main] Loading BatmanConfig configuration file jar:file:/home/developer/develop/wsd/run/gateway1/batman.jar!/config/99-tracking-version.conf
+	2023-10-15 12:48:50,780 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 2 instances of ItemType
+	2023-10-15 12:48:50,785 INFO n.b.b.c.g.AbstractConfigurationPineappleGuiceModule [main-gateway1] Loaded 2 gamedata stock types from: data/0/stock/type.json
+	2023-10-15 12:48:50,849 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 2 instances of InventoryFilterLoaderStub
+	2023-10-15 12:48:50,851 INFO n.b.b.c.g.AbstractConfigurationPineappleGuiceModule [main-gateway1] Loaded 2 gamedata stock filter from: data/0/stock/filter
+	2023-10-15 12:48:50,885 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 14 instances of ItemData
+	2023-10-15 12:48:50,886 INFO n.b.b.c.g.AbstractConfigurationPineappleGuiceModule [main-gateway1] Loaded 14 gamedata stock items from: data/0/stock/item
+	2023-10-15 12:48:50,894 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 4 instances of ItemList
+	2023-10-15 12:48:50,895 INFO n.b.b.c.g.AbstractConfigurationPineappleGuiceModule [main-gateway1] Loaded 4 gamedata default items from: data/0/stock/item
+	2023-10-15 12:48:50,895 INFO n.b.b.c.g.GameDataJSONLoader [main-gateway1] Loaded 0 instances of CooldownData
+	2023-10-15 12:48:50,896 INFO n.b.b.c.g.AbstractConfigurationPineappleGuiceModule [main-gateway1] Loaded 0 gamedata default cooldowns from: data/0/cooldown
+	2023-10-15 12:48:51,663 DEBUG o.a.h.i.n.c.PoolingNHttpClientConnectionManager [Finalizer] Connection manager is shutting down
+	2023-10-15 12:48:51,665 DEBUG o.a.h.i.n.c.PoolingNHttpClientConnectionManager [Finalizer] Connection manager shut down
+	2023-10-15 12:48:51,666 DEBUG o.a.h.i.n.c.PoolingNHttpClientConnectionManager [Finalizer] Connection manager is shutting down
+	2023-10-15 12:48:51,666 DEBUG o.a.h.i.n.c.PoolingNHttpClientConnectionManager [Finalizer] Connection manager shut down`
+	ctxout.AddPostFilter(ctxout.NewTabOut())
+	tableCnt := ctxout.Table( // new table
+		ctxout.Row( // new row
+			ctxout.TD( // new cell
+				"LABEL",         // the text content, must be a string and the first argument
+				ctxout.Size(50), // the size of the cell in percent of the table width
+
+			),
+			ctxout.TD( // the next cell
+				content,
+				ctxout.Size(50),
+				ctxout.Overflow(ctxout.OfWordWrap),
+				ctxout.Margin(4),
+				ctxout.Prop(ctxout.AttrSuffix, "-start-"),
+			),
+		),
+	)
+	drawCnt := ctxout.ToString(ctxout.NewMOWrap(), tableCnt)
+	expectedLen := 96 // 100 - 4 (margin)
+	lines := strings.Split(drawCnt, "\n")
+	for nr, line := range lines {
+		if ctxout.UniseqLen(line) != expectedLen {
+			t.Errorf("line no(%d) Expected length %d but got %d", nr, expectedLen, ctxout.UniseqLen(line))
+		}
+	}
+}
+
+func TestPrefixAndPostFix(t *testing.T) {
+	content := `lsdkyl lasjkgflagf  89789ncm.ks klalslfga alskjfjjfl öalsfkfahf löaösjjj. ------- slhgsg666 akshfk`
+	ctxout.AddPostFilter(ctxout.NewTabOut())
+	tableCnt := ctxout.Table( // new table
+		ctxout.Row( // new row
+			ctxout.TD( // new cell
+				"LABEL",
+				ctxout.Size(40),
+				ctxout.Prop(ctxout.AttrPrefix, "LS|"),
+				ctxout.Prop(ctxout.AttrSuffix, "LE|"),
+			),
+			ctxout.TD( // the next cell
+				content,
+				ctxout.Size(30),
+				ctxout.Overflow(ctxout.OfWordWrap),
+				ctxout.Prop(ctxout.AttrPrefix, "-start-"),
+				ctxout.Prop(ctxout.AttrSuffix, "-end-"),
+			),
+			ctxout.TD( // the next cell
+				content,
+				ctxout.Size(30),
+				ctxout.Overflow(ctxout.OfWrap),
+				ctxout.Prop(ctxout.AttrPrefix, "-start-"),
+				ctxout.Prop(ctxout.AttrSuffix, "-end-"),
+			),
+		),
+	)
+	drawCnt := ctxout.ToString(ctxout.NewMOWrap(), tableCnt)
+	expectedLen := 100 // 100 - 4 (margin)
+	lines := strings.Split(drawCnt, "\n")
+	for nr, line := range lines {
+		if ctxout.UniseqLen(line) != expectedLen {
+			t.Errorf("line no(%d) Expected length %d but got %d", nr, expectedLen, ctxout.UniseqLen(line))
+		}
+	}
+}

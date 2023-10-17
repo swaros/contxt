@@ -26,6 +26,7 @@ package runner
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/swaros/contxt/module/ctxout"
@@ -38,10 +39,17 @@ var (
 	randColors = NewRandColorStore()
 )
 
+// short for drawRowWithLabels("", "", label, labelColor, content, contentColor, info, infoColor)
 func (c *CmdExecutorImpl) drawRow(label, labelColor, content, contentColor, info, infoColor string) {
 	c.drawRowWithLabels("", "", label, labelColor, content, contentColor, info, infoColor)
 }
 
+// draws a row with labels and colors
+// leftLabel and rightLabel are optional
+// labelColor is the color markup for the label
+// contentColor is the color markup for the content
+// infoColor is the color markup for the info
+// label, content and info are the strings to print
 func (c *CmdExecutorImpl) drawRowWithLabels(leftLabel, rightLabel, label, labelColor, content, contentColor, info, infoColor string) {
 	if leftLabel == "" {
 		leftLabel = "<sign runident> "
@@ -49,22 +57,24 @@ func (c *CmdExecutorImpl) drawRowWithLabels(leftLabel, rightLabel, label, labelC
 	if rightLabel == "" {
 		rightLabel = "<sign stopident> "
 	}
+	leftLabel = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeYellow+leftLabel+labelColor)
+	rightLabel = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeYellow+rightLabel+contentColor)
 	c.Println(
 		ctxout.Row(
-			ctxout.ForeYellow, leftLabel, ctxout.CleanTag,
+
 			ctxout.TD(
 				label,
 				ctxout.Prop(ctxout.AttrSize, 10),
 				ctxout.Prop(ctxout.AttrOrigin, 2),
-				ctxout.Prop(ctxout.AttrPrefix, labelColor),
+				ctxout.Prop(ctxout.AttrPrefix, leftLabel),
 				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
-				ctxout.Margin(4), // 4 spaces (run + space * 2 )
+				//ctxout.Margin(4), // 4 spaces (run + space * 2 )
 			),
-			ctxout.ForeYellow, rightLabel, ctxout.CleanTag,
+
 			ctxout.TD(
 				content,
 				ctxout.Prop(ctxout.AttrSize, 85),
-				ctxout.Prop(ctxout.AttrPrefix, contentColor),
+				ctxout.Prop(ctxout.AttrPrefix, rightLabel),
 				ctxout.Prop(ctxout.AttrOverflow, "wordwrap"),
 				ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
 			),
@@ -80,13 +90,16 @@ func (c *CmdExecutorImpl) drawRowWithLabels(leftLabel, rightLabel, label, labelC
 }
 
 // handles all the incomming messages from the tasks
-// depending on the message type it will print the message
+// depending on the message type it will print the message.
+// for this we parsing at the fist level the message type for each message.
+
 func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 	return func(msg ...interface{}) {
 		var m sync.Mutex
 		m.Lock()
+		// go through all messages
 		for _, m := range msg {
-
+			// hanlde the message type
 			switch tm := m.(type) {
 
 			case tasks.MsgCommand:
@@ -99,13 +112,23 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					ctxout.ForeYellow,
 				)
 
+			// this is a special case where we need to
+			// check against the context of the message
 			case tasks.MsgTarget:
+				// we get the command for the target
+				// because we handle a target message,
+				// we look for the target color
+				targetColor, ok := randColors.GetOrSetRandomColor(tm.Target)
+				if !ok {
+					targetColor = RandColor{foreroundColor: "white", backgroundColor: "black"}
+				}
 				switch tm.Context {
+
 				case "command":
 					c.drawRow(
 						tm.Target,
-						ctxout.ForeYellow+ctxout.BoldTag,
-						tm.Info,
+						targetColor.ColorMarkup(),
+						"cmd: "+tm.Info,
 						ctxout.ForeDarkGrey,
 						ctxout.BaseSignScreen+" ",
 						ctxout.ForeYellow,
@@ -114,8 +137,8 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				case "needs_required":
 					c.drawRow(
 						tm.Target,
-						ctxout.ForeLightCyan,
-						tm.Info,
+						targetColor.ColorMarkup(),
+						"require: "+strings.Join(strings.Split(tm.Info, ","), " "),
 						ctxout.ForeDarkGrey,
 						ctxout.BaseSignDebug,
 						ctxout.ForeBlue,
@@ -124,8 +147,8 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 				case "needs_execute":
 					c.drawRow(
 						tm.Target,
-						ctxout.ForeWhite+ctxout.BackLightBlue,
-						"needs "+tm.Info,
+						targetColor.ColorMarkup(),
+						"execute: "+tm.Info,
 						ctxout.ForeDarkGrey+ctxout.BoldTag+ctxout.Dim,
 						ctxout.BaseSignScreen+" ",
 						ctxout.ForeMagenta,
@@ -166,7 +189,7 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 						ctxout.CleanTag,
 					)
 				}
-
+				// end of switch tm.Context
 			case tasks.MsgReason, tasks.MsgType:
 				msg := fmt.Sprintf("%v", tm)
 				if msg == "target-async-group-created" {

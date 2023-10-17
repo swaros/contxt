@@ -128,7 +128,7 @@ func (td *tabCell) GetOverflowContent() string {
 }
 
 func (td *tabCell) GetText() string {
-	return td.anyPrefix + td.Text + td.anySuffix
+	return td.Text
 }
 
 func (td *tabCell) GetSize() int {
@@ -184,6 +184,7 @@ func (td *tabCell) addNotifiers(str string, applyToProp bool) string {
 			str = str[:VisibleLen(str)-VisibleLen(td.cutNotifier)] + td.cutNotifier
 		}
 	}
+	str = td.anyPrefix + str + td.anySuffix
 	if applyToProp {
 		td.Text = str
 	}
@@ -196,6 +197,15 @@ func (td *tabCell) WrapText(max int) (text string, overflow string) {
 	if td.margin > 0 {
 		max = max - td.margin
 	}
+
+	// handle the prefix and suffix
+	if td.anyPrefix != "" {
+		max = max - VisibleLen(td.anyPrefix)
+	}
+	if td.anySuffix != "" {
+		max = max - VisibleLen(td.anySuffix)
+	}
+
 	// here we get the text and the overflow content if we have any newline in the text
 	// so the firstline is the text until the first newline
 	// and the overflowText is the rest of the text including the newlines
@@ -221,7 +231,7 @@ func (td *tabCell) WrapText(max int) (text string, overflow string) {
 
 		switch theIfWeHaveOverflowFlag {
 		case 0: // no overflow
-			td.Text = td.fillString(firstLine, max)
+			td.Text = td.anyPrefix + td.fillString(firstLine, max) + td.anySuffix
 		case 1: // overflow. so the firstline is bigger than the max. we need to cut it, and add the rest of the text to the overflow
 			var textr string
 			// check again if we do not have the ignore case, so we do not handle overflow
@@ -231,18 +241,18 @@ func (td *tabCell) WrapText(max int) (text string, overflow string) {
 			default:
 				textr, _ = StringCut(firstLine, max) // on ignore, we do not care about overflow
 			}
-
+			// this will assign the text and also adds prefix and suffix
 			td.addNotifiers(textr, true)
 
 		case 2: // excact size
-			td.Text = td.fillString(firstLine, max)
+			td.Text = td.anyPrefix + td.fillString(firstLine, max) + td.anySuffix
 		}
 
 	case OfWrap:
 		// wrap the text but to not care about wrapping by words
 		wrapStr := wrap.String(firstLine, max)
 		reslize, restStr := getNlSlice(wrapStr)
-		td.Text = td.fillString(reslize, max)
+		td.Text = td.anyPrefix + td.fillString(reslize, max) + td.anySuffix
 		overflowText = restStr + overflowText
 		td.overflow = true
 
@@ -257,7 +267,7 @@ func (td *tabCell) WrapText(max int) (text string, overflow string) {
 			// of the first line
 			clean, afterNl := getNlSlice(wrapped)
 			// just fill the string with the fillChar
-			td.Text = td.fillString(clean, max)
+			td.Text = td.anyPrefix + td.fillString(clean, max) + td.anySuffix
 
 			// now lets proceed with the overflow. we have to add the rest of the text to the overflow
 			// if we have any
@@ -274,7 +284,7 @@ func (td *tabCell) WrapText(max int) (text string, overflow string) {
 			// the firstline is not bigger than the max size
 			// so we just need to fill the string
 			// the overflow is already handled by the overflowText
-			td.Text = td.fillString(firstLine, max)
+			td.Text = td.anyPrefix + td.fillString(firstLine, max) + td.anySuffix
 		}
 		td.overflow = true
 	}

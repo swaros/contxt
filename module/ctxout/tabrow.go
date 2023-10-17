@@ -175,7 +175,7 @@ func (tr *tabRow) Render() (string, *tabRow, error) {
 				size := tr.GetSize(cell, indx)
 				// we just ignore any cell with a size of 0
 				if size > 0 {
-					result = append(result, cell.anyPrefix+cell.CutString(size)+cell.anySuffix)
+					result = append(result, cell.CutString(size))
 				}
 
 			} else {

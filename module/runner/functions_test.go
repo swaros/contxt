@@ -411,7 +411,8 @@ func TestRunBasic2(t *testing.T) {
 	}
 
 	assertInMessage(t, output, "testing-1-working")
-	assertInMessage(t, output, "test1 DONE")
+	assertInMessage(t, output, "test1")
+	assertInMessage(t, output, "DONE")
 	assertNotInMessage(t, output, "testing-2-working")
 	output.ClearAndLog()
 
@@ -420,7 +421,8 @@ func TestRunBasic2(t *testing.T) {
 	}
 
 	assertInMessage(t, output, "testing-2-working")
-	assertInMessage(t, output, "test2 DONE")
+	assertInMessage(t, output, "test2")
+	assertInMessage(t, output, "DONE")
 	assertNotInMessage(t, output, "testing-1-working")
 	output.ClearAndLog()
 
