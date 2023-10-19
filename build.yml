@@ -3,3 +3,25 @@ release:
 development:
   main: "cmd/v2/main.go" # main file for the development
 
+build:
+  preset: # preset is ment as a default value for all targets
+    ldflags: # the default flags for all targets. this will not be overwritten by the target flags. they will be appended
+      - ${configmodul}.minversion=${minor-version}
+      - ${configmodul}.midversion=${mid-version}
+      - ${configmodul}.mainversion=${main-version}
+      - ${configmodul}.build=${build-hash}
+  targets:
+    release:
+      is_release: true
+      mainfile: "cmd/cmd-contxt/main.go"
+      output: "cmd-contxt"
+      version_verify: "version"
+    development:
+      is_release: false
+      mainfile: "cmd/v2/main.go"
+      output: "ctxv2"
+      version_verify: "version --build"
+      ldflags:
+        - ${configmodul}.shortcut=v2ctx
+        - ${configmodul}.binaryName=ctxv2
+        - ${configmodul}.cnShortCut=v2cn
