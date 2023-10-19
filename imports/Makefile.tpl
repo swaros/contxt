@@ -1,13 +1,16 @@
 build: test	build-no-test
 
 build-no-test:
-	go build -ldflags "-X ${configmodul}.minversion=${minor-version} -X ${configmodul}.midversion=${mid-version} -X ${configmodul}.mainversion=${main-version} -X ${configmodul}.build=${build-hash}" -o ./bin/contxt {{$.release.main}}
+{{- range $targetName, $targets := $.build.targets}}
+{{- if $targets.is_release}}
+	go build -ldflags "{{- range $k, $ldflag := $.build.preset.ldflags }} -X {{ $ldflag }} {{- end -}} {{- range $k, $ldflag := $targets.ldflags }} -X {{ $ldflag }} {{- end -}}" -o ./bin/{{ $targets.output }} {{ $targets.mainfile }}
+{{- end }}
+{{- end }}
 
-install-local: build
-	./bin/contxt run install-local
-
-install-local-no-test: build-no-test
-	./bin/contxt run install-local
+{{- range $targetName, $targets := $.build.targets}}
+build-{{ $targetName }}:
+	go build -ldflags "{{- range $k, $ldflag := $.build.preset.ldflags }} -X {{ $ldflag }} {{- end -}} {{- range $k, $ldflag := $targets.ldflags }} -X {{ $ldflag }} {{- end -}}" -o ./bin/{{ $targets.output }} {{ $targets.mainfile }}
+{{- end }}
 
 clean:
 	rm -f ./bin/contxt

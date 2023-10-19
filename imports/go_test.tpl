@@ -2,15 +2,12 @@
 ### Any change you are doing here is overwritten while the next contxt build
 ### change go_test.tpl instead
 name: wip-test
-on:
-  push:
-    branches:
-      - "wip/**"
+on: push
 
 jobs:
-
+  ## testing if the build is running
   build:
-    name: Build
+    name: Test-Build
     runs-on: ubuntu-latest
     steps:
 
@@ -23,9 +20,19 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v3
 
-    - name: Build contxt bin
-      run: go build -ldflags "-X github.com/swaros/contxt/configure.minversion={{ $.release.version.minor }} -X github.com/swaros/contxt/configure.midversion={{ $.release.version.mid }} -X github.com/swaros/contxt/configure.mainversion={{ $.release.version.main }} -X github.com/swaros/contxt/configure.build=`date -u +.%Y%m%d.%H%M%S`" -o ./bin/contxt {{$.release.main}}
+## test build
+    {{- range $targetName, $targets := $.build.targets}}
+    {{- if $targets.is_release}}
+    - name: Build-{{ $targetName }}
+      run: go build -ldflags "{{- range $k, $ldflag := $.build.preset.ldflags }} -X {{ $ldflag }} {{- end -}} {{- range $k, $ldflag := $targets.ldflags }} -X {{ $ldflag }} {{- end -}}" -o ./bin/{{ $targets.output }} {{ $targets.mainfile }}
+    {{- end -}}
+    {{- end }}
 
-    - name: Test
-      run: |
-          ./bin/contxt run test-each
+## tests
+    {{- range $k, $test := $.module }}
+    {{- if $test.local}}
+    # test {{ $test.modul }}
+    - name: Test-{{ $test.modul }}
+      run: go test  -failfast ./module/{{ $test.modul }}/./...
+    {{- end }}
+    {{- end }}

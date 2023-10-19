@@ -16,7 +16,6 @@ builds:
     main: ./cmd/cmd-contxt/main.go
     ldflags:
       - -X github.com/swaros/contxt/configure.mainversion={{.Version}}
-      #- -X github.com/swaros/contxt/configure.midversion={{.Commit}}
       - -X github.com/swaros/contxt/configure.build={{.Date}}
 
 archives:

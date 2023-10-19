@@ -20,8 +20,9 @@ config:
     - ./imports/go_test.tpl test-action
     - ./imports/codehead.tpl codehead
     - ./imports/Dockerfile.ubuntu docker
+    - ./imports/build.sh build-sh
+    - ./imports/winbuild.bat winbuild-bat
   variables:
-      build-main-file: {{$.release.main}}
       include-dev-externals: ""
       configmodul: github.com/swaros/contxt/module/configure
       coverage-report: ""
@@ -42,8 +43,7 @@ task:
       - echo " --- required build version        [ - {{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.minor}} - ]"
       - echo " --- targets build version         [ - {{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}} - ]"
       - echo " --- self version                  [ - ${CTX_VERSION} - ]"
-      - echo " --- operating system              [ - ${CTX_OS} - ]"
-      - echo " --- build main file               [ - ${build-main-file} - ]"
+      - echo " --- operating system              [ - ${CTX_OS} - ]"      
 {{- if $.WS0_contxt_root}} # always check if is set. without project info, this is not exists
       - echo " --- WS0_contxt_root = go/template [ - {{$.WS0_contxt_root}} - ]"
 {{- end}}
@@ -62,7 +62,6 @@ task:
   - id: dev
     variables:
       build-info: "-dev"
-      build-main-file: {{$.development.main}}
 ######
   - id: dev-external
     variables:
@@ -141,11 +140,14 @@ task:
   ## update mai task
  
   - id: update-all
+    needs:
+      - set-version
     runTargets:
       - modules-verify
       - makefile-update
       - licence-header-check
       - update-dependencies
+      - build-script-update
     script:
       - echo "update all" 
 
@@ -155,6 +157,20 @@ task:
       - set-version
     script:
     - "#@var-to-file makefile Makefile"
+
+  ## update build script
+  - id: build-script-update
+    needs:
+      - set-version
+    script:
+    - "#@var-to-file build-sh build.sh"
+    - "#@var-to-file winbuild-bat winbuild.bat"
+
+  - id: build-script-update
+    require:
+      system: linux
+    script:
+    - chmod +x ./build.sh
 
   ## update github actions
   - id: github-actions-update
@@ -375,6 +391,61 @@ task:
     {{- end }}
     {{- end }}
 
+### BUILD SECTION ####
+### this is the build section to build any binarys
+
+# iterate over all targets
+# {{- range $targetName, $targets := $.build.targets }}
+
+# if this is flagged as release, include them to the regular build
+# {{- if $targets.is_release}}
+  - id: build
+# {{- else}}
+  - id: build-{{ $targetName }}
+# {{- end}}
+    options:
+      displaycmd: false
+      invisible: false
+    require:
+      system: linux
+    needs:
+      - test
+      - modules-verify
+      - set-version
+    script:
+      - echo "build binary    <f:blue>{{ $targets.output }}</>"
+      - echo "  main file     <f:blue>{{ $targets.mainfile }}</>"
+      - echo "  target        <f:blue>./bin/{{ $targets.output }}${bin_add}</>"
+      - echo "  ldflags       <f:blue>{{ $targets.ldflags }}</>"
+      # creating the ldflags for the build
+      # first we use the default ldflags from the build section build.preset.ldflags
+      # {{- range $k, $ldflag := $.build.preset.ldflags }}
+      # {{- if eq $k 0 }}
+      - "#@set LDFLAGS -X {{ $ldflag }} " # set ld flaggs for first entry
+      # {{- else}}
+      - "#@add LDFLAGS -X {{ $ldflag }} " # add ld flaggs for all other entrys
+      # {{- end}}
+      # {{- end }}
+
+      # now we add the ldflags from the target
+      # {{- range $k, $ldflag := $targets.ldflags }}
+      - "#@add LDFLAGS -X {{ $ldflag }} " # add ld flaggs for all other entrys
+      # {{- end }}
+
+      # here we create the build command
+      - "#@set BUILD-COMMAND go build -ldflags \"${LDFLAGS}\" -o ./bin/{{ $targets.output }}${bin_add} {{ $targets.mainfile }}"
+      - echo "  BUILD-COMMAND <f:yellow>${BUILD-COMMAND}</>"
+      # execute the build command
+      - ${BUILD-COMMAND}
+      - echo "  build done"
+      - echo "  check version [<f:blue>./bin/{{ $targets.output }}${bin_add} {{ $targets.version_verify}}</>]"
+      # just execute the binary to check the version. if this is not working, the build is not working
+      - ./bin/{{ $targets.output }}${bin_add} {{ $targets.version_verify}}
+# {{- end }}
+##### END OF BUILD SECTION #####
+
+##### Versions update #####
+  # copy the version from the release secion in build.yml into local variables
   - id: set-version
     options:
       invisible: true
@@ -388,12 +459,11 @@ task:
       displaycmd: false
       invisible: true
     variables:
-      bin-out: contxt
+      bin_add: ""
     require:
       system: linux
     script:
       - "#@var build-hash date -u +.%Y%m%d.%H%M%S-linux${build-info}"
-      - "#@set bin-out contxt"
 
   - id: set-version
     options:
@@ -406,53 +476,16 @@ task:
       system: windows
     script:
       - "#@var build-hash Get-Date -UFormat \"%m.%d.%Y.%R-windows${build-info}\""
-      - "#@set bin-out contxt.exe"
+      - "#@set bin_add .exe"
 
   - id: set-version
     options:
       displaycmd: false
       invisible: true
     script:
-     - echo "version ${main-version}.${mid-version}.${minor-version} ${build-hash} out ${bin-out}"
+     - echo "version ${main-version}.${mid-version}.${minor-version} ${build-hash} bin-add [${bin_add}]"
 
-  - id: build
-    needs:
-      - modules-verify
-      - set-version
-    next:
-      - build-exec
-
-  - id: build-exec
-    options:
-      displaycmd: false
-      invisible: true
-    require:
-      variables:
-        main-version: "*"
-        mid-version: "*"
-        minor-version: "*"
-        bin-out: "*"
-    next:
-      - verify-build
-    script:
-      - echo "start the build"
-      - echo "   target  --> ${bin-out}"
-      - echo "   version --> ${main-version}.${mid-version}.${minor-version} ${build-hash}"
-      - echo "   main    --> ${build-main-file}"
-      - go build -ldflags "-X ${configmodul}.minversion=${minor-version} -X ${configmodul}.midversion=${mid-version} -X ${configmodul}.mainversion=${main-version} -X ${configmodul}.build=${build-hash}" -o ./bin/${bin-out} ${build-main-file}
-      - echo "   build   <-- done "
-
-  - id: verify-build
-    options:
-      displaycmd: false
-      invisible: true
-    require:
-      exists:
-        - bin/${bin-out}
-    script:
-       - echo "verifiy build version. expected [${main-version}.${mid-version}.${minor-version} build ${build-hash}]"
-       - bin/${bin-out} version
-
+# for building the docker image we need to create a dockerfile
   - id: build-docker
     needs:
       - build
@@ -467,89 +500,6 @@ task:
   - id: say-hello
     script:
       - echo "hello world"
-
-## install local. this is used by the Makefile
-## because contxt can not update himself while it is running,
-## or is just not installed yet
-## so make runs the new builded contxt binary
-
-  - id: install-local
-    variables:
-      local-install: "yes"
-    needs:
-      - build
-    next:
-      - install-local-bin
-
-## check for ~/bin
-  - id: install-local-bin
-    script:
-      - echo "try the ${HOME}/bin usage"
-
-## success for local bin/
-  - id: install-local-bin
-    options:
-      displaycmd: true
-    require:
-      exists:
-        - ${HOME}/bin
-      system: linux
-      variables:
-        local-install: "=yes"
-        bin-out: "*"
-    script:
-      - echo "we will use /bin/${bin-out}"
-      - yes | cp -i bin/${bin-out} $HOME/bin/${bin-out} # # to solve the cp -i alias issue
-      - echo "check versions"
-      - contxt version
-
-
-## fail for local bin/
-  - id: install-local-bin
-    options:
-      displaycmd: true
-    require:
-      notExists:
-        - ${HOME}/bin
-      system: linux
-      variables:
-        local-install: "=yes"
-        bin-out: "*"
-    script:
-      - echo "${HOME}/bin not exists. will not be used"
-    next:
-      - install-local-dot-bin
-
-  - id: install-local-dot-bin
-    script:
-      - echo "try $HOME/.local/bin/"
-
-  ## fail test .local/bin
-  - id: install-local-dot-bin
-    require:
-      notExists:
-        - ${HOME}/.local/bin/
-      system: linux
-      variables:
-        local-install: "=yes"
-        bin-out: "*"
-    script:
-      - echo "no .local/bin dir"
-
-## if exists ...copy file
-  - id: install-local-dot-bin
-    require:
-      exists:
-        - ${HOME}/.local/bin/
-      system: linux
-      variables:
-        local-install: "=yes"
-        bin-out: "*"
-    script:
-      - echo "using ~/.local/bin/ to copy ${bin-out}"
-      - yes | cp -i bin/${bin-out} $HOME/.local/bin/${bin-out}  # to solve the cp -i alias issue
-      - echo "check versions"
-      - contxt version
 
 ### licence check
   - id: licence-header-check
