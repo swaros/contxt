@@ -1,5 +1,49 @@
-release:
-  main: "cmd/cmd-contxt/main.go" # main file for the release
-development:
-  main: "cmd/v2/main.go" # main file for the development
+release:      # this is the release target
+  version:    # the version number of the release min.mid.main
+     main: 0
+     mid: 5
+     minor: 3
+
+# this section contains all build related information
+build:
+  version: # this contxt version is required for the build process. depending structure of .contxt.yml
+     main: 0
+     mid: 5
+     minor: 0
+  preset: # preset is ment as a default value for all targets
+    ldflags: # the default flags for all targets. this will not be overwritten by the target flags. they will be appended
+      - ${configmodul}.minversion=${minor-version}
+      - ${configmodul}.midversion=${mid-version}
+      - ${configmodul}.mainversion=${main-version}
+      - ${configmodul}.build=${build-hash}
+
+  # all the build targets
+  # structure
+  # <targetname>:
+  #   is_release: <true|false> # if true the version will be used for the regular build for the release
+  #   mainfile: <path to mainfile> # the path to the mainfile
+  #   output: <output name> # the name of the output file. this is the executable
+  #   version_verify: <command> # the command to verify the version. this is used to verify the version of the executable
+  #   ldflags: # the ldflags for this target. this will be appended to the preset ldflags
+  #     - <flag>
+  #     - <flag>
+  #     - <flag>
+  targets:
+
+    release:
+      is_release: true
+      mainfile: "cmd/cmd-contxt/main.go"
+      output: "contxt"
+      version_verify: "version"
+
+    development:
+      is_release: false
+      mainfile: "cmd/v2/main.go"
+      output: "ctxv2"
+      version_verify: "version --build"
+      ldflags:
+        - ${configmodul}.shortcut=v2ctx
+        - ${configmodul}.binaryName=ctxv2
+        - ${configmodul}.cnShortCut=v2cn
+
 

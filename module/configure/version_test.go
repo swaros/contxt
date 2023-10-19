@@ -37,4 +37,19 @@ func TestDefaultValues(t *testing.T) {
 	if configure.GetOs() != strings.ToLower(runtime.GOOS) {
 		t.Error("what the .... how could this fail?")
 	}
+	//the default binary name is contxt
+	if configure.GetBinaryName() != "contxt" {
+		t.Error("unexpected binaray name:", configure.GetBinaryName())
+	}
+
+	ctx, cn, bin := configure.GetShortcusAndBinaryName()
+	if ctx != "ctx" {
+		t.Error("unexpected shortcut for context:", ctx)
+	}
+	if cn != "cn" {
+		t.Error("unexpected shortcut for context cn:", cn)
+	}
+	if bin != "contxt" {
+		t.Error("unexpected binary name:", bin)
+	}
 }

@@ -33,6 +33,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/mimiclog"
@@ -112,7 +113,7 @@ func (si *shellInstall) FishUpdate(cmd *cobra.Command) error {
 
 // FishCompletionUpdate updates the fish completion file
 func (si *shellInstall) FishCompletionUpdate(cmd *cobra.Command) error {
-
+	shortCut, _, binName := configure.GetShortcusAndBinaryName()
 	if si.userHomePath != "" {
 		// completion dir Exists ?
 		exists, err := dirhandle.Exists(si.userHomePath + "/.config/fish/completions")
@@ -127,28 +128,28 @@ func (si *shellInstall) FishCompletionUpdate(cmd *cobra.Command) error {
 	cmd.Root().GenFishCompletion(cmpltn, true)
 
 	origin := cmpltn.String()
-	ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
-	if _, err := systools.WriteFileIfNotExists(si.userHomePath+"/.config/fish/completions/contxt.fish", origin); err != nil {
+	ctxCmpltn := strings.ReplaceAll(origin, binName, shortCut)
+	if _, err := systools.WriteFileIfNotExists(si.userHomePath+"/.config/fish/completions/"+binName+".fish", origin); err != nil {
 		return err
 	}
-	if _, err := systools.WriteFileIfNotExists(si.userHomePath+"/.config/fish/completions/ctx.fish", ctxCmpltn); err != nil {
+	if _, err := systools.WriteFileIfNotExists(si.userHomePath+"/.config/fish/completions/"+shortCut+".fish", ctxCmpltn); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (si *shellInstall) FishFunctionUpdate() error {
-
-	fishFunc := `function ctx
-    contxt $argv
+	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
+	fishFunc := `function ` + shortCut + `
+    ` + binName + ` $argv
     switch $argv[1]
        case switch
-          cd (contxt dir --last)
-          contxt dir paths --coloroff --nohints
+          cd (` + binName + ` dir --last)
+          ` + binName + ` dir paths --coloroff --nohints
     end
 end`
-	cnFunc := `function cn
-	cd (contxt dir find $argv)
+	cnFunc := `function ` + cnShort + `
+	cd (` + binName + ` dir find $argv)
 end`
 
 	usrDir := si.userHomePath
@@ -167,54 +168,55 @@ end`
 			}
 		}
 
-		funcExists, funcErr := dirhandle.Exists(usrDir + "/.config/fish/functions/ctx.fish")
+		funcExists, funcErr := dirhandle.Exists(usrDir + "/.config/fish/functions/" + shortCut + ".fish")
 		if funcErr == nil && !funcExists {
-			os.WriteFile(usrDir+"/.config/fish/functions/ctx.fish", []byte(fishFunc), 0644)
+			os.WriteFile(usrDir+"/.config/fish/functions/"+shortCut+".fish", []byte(fishFunc), 0644)
 		} else if funcExists {
-			return errors.New("ctx function already exists. did not change that")
+			return errors.New(shortCut + " function already exists. did not change that")
 
 		}
 
-		funcExists, funcErr = dirhandle.Exists(usrDir + "/.config/fish/functions/cn.fish")
+		funcExists, funcErr = dirhandle.Exists(usrDir + "/.config/fish/functions/" + cnShort + ".fish")
 		if funcErr == nil && !funcExists {
-			os.WriteFile(usrDir+"/.config/fish/functions/cn.fish", []byte(cnFunc), 0644)
+			os.WriteFile(usrDir+"/.config/fish/functions/"+cnShort+".fish", []byte(cnFunc), 0644)
 		} else if funcExists {
-			return errors.New("cn function already exists. did not change that")
+			return errors.New(cnShort + " function already exists. did not change that")
 		}
 	}
 	return nil
 }
 
 func (si *shellInstall) BashUserInstall() error {
+	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
 	bashrcAdd := `
-### begin contxt bashrc
-function cn() { cd $(contxt dir find "$@"); }
-function ctx() {        
-	contxt "$@";
+### begin ` + binName + ` bashrc
+function ` + cnShort + `() { cd $(` + binName + ` dir find "$@"); }
+function ` + shortCut + `() {        
+	` + binName + ` "$@";
 	[ $? -eq 0 ]  || return 1
         case $1 in
           switch)          
-          cd $(contxt dir --last);		  
-          contxt dir paths --coloroff --nohints
+          cd $(` + binName + ` dir --last);		  
+          ` + binName + ` dir paths --coloroff --nohints
           ;;
         esac
 }
-function ctxcompletion() {        
-        ORIG=$(contxt completion bash)
-        CM="contxt"
-        CT="ctx"
+function ` + shortCut + `completion() {        
+        ORIG=$(` + binName + ` completion bash)
+        CM="` + binName + `"
+        CT="` + shortCut + `"
         CTXC="${ORIG//$CM/$CT}"
         echo "$CTXC"
 }
-source <(contxt completion bash)
-source <(ctxcompletion)
-### end of contxt bashrc
+source <(` + binName + ` completion bash)
+source <(` + shortCut + `completion)
+### end of ` + binName + ` bashrc
 	`
 	usrDir := si.userHomePath
 	if usrDir != "" {
 		ok, errDh := dirhandle.Exists(usrDir + "/.bashrc")
 		if errDh == nil && ok {
-			fine, errmsg := updateExistingFile(usrDir+"/.bashrc", bashrcAdd, "### begin contxt bashrc")
+			fine, errmsg := updateExistingFile(usrDir+"/.bashrc", bashrcAdd, "### begin "+binName+" bashrc")
 			if !fine {
 				return errors.New("bashrc update failed: " + errmsg)
 			}
@@ -258,19 +260,20 @@ func (si *shellInstall) ZshFuncDir() (string, error) {
 }
 
 func (si *shellInstall) updateZshFunctions(cmd *cobra.Command) error {
+	shortCut, _, binName := configure.GetShortcusAndBinaryName()
 	funcDir, err := si.ZshFuncDir()
 	if err != nil {
 		return err
 	}
 	if funcDir != "" {
-		contxtPath := funcDir + "/_contxt"
-		ctxPath := funcDir + "/_ctx"
+		contxtPath := funcDir + "/_" + binName
+		ctxPath := funcDir + "/_" + shortCut
 
 		cmpltn := new(bytes.Buffer)
 		cmd.Root().GenZshCompletion(cmpltn)
 
 		origin := cmpltn.String()
-		ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
+		ctxCmpltn := strings.ReplaceAll(origin, binName, shortCut)
 
 		systools.WriteFileIfNotExists(contxtPath, origin)
 		systools.WriteFileIfNotExists(ctxPath, ctxCmpltn)
@@ -281,26 +284,27 @@ func (si *shellInstall) updateZshFunctions(cmd *cobra.Command) error {
 }
 
 func (si *shellInstall) ZshUserInstall() error {
+	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
 	zshrcAdd := `
-### begin contxt zshrc
-function cn() { cd $(contxt dir find "$@"); }
-function ctx() {        
-	contxt "$@";
+### begin ` + binName + ` zshrc
+function ` + cnShort + `() { cd $(` + binName + ` dir find "$@"); }
+function ` + shortCut + `() {        
+	` + binName + ` "$@";
 	[ $? -eq 0 ]  || return $?
         case $1 in
           switch)          
-          cd $(contxt dir --last);
-          contxt dir paths --coloroff --nohints
+          cd $(` + binName + ` dir --last);
+          ` + binName + ` dir paths --coloroff --nohints
           ;;
         esac
 }
-### end of contxt zshrc
+### end of ` + binName + ` zshrc
 	`
 	usrDir := si.userHomePath
 	if usrDir != "" {
 		ok, errDh := dirhandle.Exists(usrDir + "/.zshrc")
 		if errDh == nil && ok {
-			fine, errmsg := updateExistingFile(usrDir+"/.zshrc", zshrcAdd, "### begin contxt zshrc")
+			fine, errmsg := updateExistingFile(usrDir+"/.zshrc", zshrcAdd, "### begin "+binName+" zshrc")
 			if !fine {
 				return errors.New("zshrc update failed: " + errmsg)
 			}
@@ -323,18 +327,19 @@ func (si *shellInstall) PwrShellUpdate(cmd *cobra.Command) error {
 }
 
 func (si *shellInstall) PwrShellUser() error {
+	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
 	pwrshrcAdd := `
-### begin contxt pwrshrc
-function cn($path) {
-	Set-Location $(contxt dir find $path)
+### begin ` + binName + ` pwrshrc
+function ` + cnShort + `($path) {
+	Set-Location $(` + binName + ` dir find $path)
 }
-function ctx {
-	& contxt $args
+function ` + shortCut + ` {
+	& ` + binName + ` $args
 }
-### end of contxt pwrshrc
+### end of ` + binName + ` pwrshrc
 `
 	if found, pwrshProfile := si.FindPwrShellProfile(); found {
-		fine, errmsg := updateExistingFile(pwrshProfile, pwrshrcAdd, "### begin contxt pwrshrc")
+		fine, errmsg := updateExistingFile(pwrshProfile, pwrshrcAdd, "### begin "+binName+" pwrshrc")
 		if !fine {
 			return errors.New("pwrshrc update failed: " + errmsg)
 		}
@@ -377,6 +382,7 @@ func (si *shellInstall) PwrShellForceCreateProfile() {
 }
 
 func (si *shellInstall) PwrShellCompletionUpdate(cmd *cobra.Command) error {
+	shortCut, _, binName := configure.GetShortcusAndBinaryName()
 	if !si.PwrShellTestProfile() {
 		errormsg := `missing powershell profile. you can create a profile by running 'New-Item -Type File -Path $PROFILE -Force'`
 		return errors.New(errormsg)
@@ -387,25 +393,25 @@ func (si *shellInstall) PwrShellCompletionUpdate(cmd *cobra.Command) error {
 		cmd.Root().GenPowerShellCompletion(cmpltn)
 		origin := cmpltn.String()
 
-		ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
+		ctxCmpltn := strings.ReplaceAll(origin, binName, shortCut)
 
-		ctxPowerShellPath := si.userHomePath + "/.context/powershell"
+		ctxPowerShellPath := si.userHomePath + "/." + binName + "/powershell"
 		if exists, err := systools.Exists(ctxPowerShellPath); err != nil || !exists {
 			if err := os.MkdirAll(ctxPowerShellPath, 0755); err != nil {
 				return err
 			}
 		}
-		systools.WriteFileIfNotExists(ctxPowerShellPath+"/contxt.ps1", origin)
-		systools.WriteFileIfNotExists(ctxPowerShellPath+"/ctx.ps1", ctxCmpltn)
+		systools.WriteFileIfNotExists(ctxPowerShellPath+"/"+binName+".ps1", origin)
+		systools.WriteFileIfNotExists(ctxPowerShellPath+"/"+shortCut+".ps1", ctxCmpltn)
 
 		profileAdd := `
-### begin contxt powershell profile
-. "` + ctxPowerShellPath + `/contxt.ps1"
-. "` + ctxPowerShellPath + `/ctx.ps1"
-### end of contxt powershell profile
+### begin ` + binName + ` powershell profile
+. "` + ctxPowerShellPath + `/` + binName + `.ps1"
+. "` + ctxPowerShellPath + `/` + shortCut + `.ps1"
+### end of ` + binName + ` powershell profile
 `
 
-		fine, errmsg := updateExistingFile(profile, profileAdd, "### begin contxt powershell profile")
+		fine, errmsg := updateExistingFile(profile, profileAdd, "### begin "+binName+" powershell profile")
 		if !fine {
 			return errors.New("powershell profile update failed: " + errmsg)
 		}
