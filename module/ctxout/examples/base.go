@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package main
+package main
 
 import (
 	"bytes"
@@ -44,38 +44,48 @@ func main() {
 func baseFunc() {
 	printNextExampleHeader("color codes")
 	// simple print with line break. nothing special
+	fmt.Println("... simple output by using: ctxout.PrintLn(\"hello\", \" \", \"world\")")
+	fmt.Println()
 	ctxout.PrintLn("hello", " ", "world")
-	time.Sleep(time.Millisecond * 1400)
+	fmt.Println()
 
 	// print with color. but we will see the color codes
 	// because we have nothing that will handle the color codes
-	ctxout.PrintLn(ctxout.ForeRed, "(okay now we should see markups....) hello", " ", ctxout.ForeGreen, "world", ctxout.ResetCode)
-	time.Sleep(time.Millisecond * 1400)
+	fmt.Println("... output with color codes by using: ctxout.PrintLn(ctxout.ForeRed, \"hello\", \" \", ctxout.ForeGreen, \"world\", ctxout.ResetCode)")
+	fmt.Println()
+	ctxout.PrintLn(ctxout.ForeRed, "hello", " ", ctxout.ForeGreen, "world", ctxout.ResetCode)
+	fmt.Println()
+	fmt.Println("... here you see the markup for the color codes instead of the colors")
+	fmt.Println("... this is because we have nothing that will handle the color codes")
+	fmt.Println("... we will fix this in the next example by injecting a printer interface")
+	fmt.Println()
 
 	// now the colors are shown, because we injected a PrinterInterface
 	// that will handle the color codes
-	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, "(but now colored output) hello", " ", ctxout.ForeGreen, "world", ctxout.ResetCode)
-	time.Sleep(time.Millisecond * 1400)
-
-	// the same as above, but with the PrinterInterface injected in between
-	// the arguments. this is just to point out that the PrinterInterface
-	// should be the first argument. at least before the first color code
-	// or other special code is used
-	ctxout.PrintLn(ctxout.ForeRed, "(and here mixed loutput because of maybe wrong placed printerInterface) hello", " ", ctxout.NewMOWrap(), ctxout.ForeGreen, "world", ctxout.ResetCode)
-	time.Sleep(time.Millisecond * 1400)
-
+	fmt.Println("... output with color codes by using: ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, \"hello\", \" \", ctxout.ForeGreen, \"world\", ctxout.ResetCode)")
+	fmt.Println()
+	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, "hello", " ", ctxout.ForeGreen, "world", ctxout.ResetCode)
+	fmt.Println()
+	fmt.Println("... here you see the colors instead of the markup for the color codes")
+	fmt.Println()
 	// the filter decides depending on the environment if the color codes
 	// should be shown or not.
 	// because this is done automatically, we have to force disabling the
 	// the color codes here.
 	// this is done by setting the NoColored flag to true
 
+	fmt.Println("...again using colorcodes by using: ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, \"hello\", \" \", ctxout.ForeGreen, \"world\", ctxout.ResetCode)")
+	fmt.Println("...but this time we will disbale colorized output by setting the NoColored flag to true")
+	fmt.Println("...this is done by using: ctxout.SetBehavior(ctxout.CtxOutBehavior{NoColored: true})")
+	fmt.Println()
 	// first we keep the default behavior
 	originBehavior := ctxout.GetBehavior()
 	// and set the NoColored flag to true
 	ctxout.SetBehavior(ctxout.CtxOutBehavior{NoColored: true})
 	// and here we will get a clean string, even if the color codes are used
 	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, "hello", " ", ctxout.ForeGreen, "world", ctxout.ResetCode)
+	fmt.Println()
+	fmt.Println("... now the text do not contain any colors, even they are set")
 	time.Sleep(time.Millisecond * 1400)
 
 	// for the next example we will use the the original behavior again
@@ -85,7 +95,7 @@ func baseFunc() {
 func printNextExampleHeader(name string) {
 	ctxout.PrintLn("   ")
 	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.BoldTag, ctxout.ForeWhite, name, ctxout.ResetCode)
-	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.BoldTag, ctxout.ForeWhite, "---------------------------", ctxout.ResetCode)
+	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.BoldTag, ctxout.ForeDarkGrey, "________________________________________", ctxout.ResetCode)
 }
 
 func tableFilter() {
@@ -229,7 +239,7 @@ func tableFilter() {
 						rndWord2,
 						ctxout.Prop(ctxout.AttrSize, 50),
 						ctxout.Prop(ctxout.AttrOrigin, 1),
-						ctxout.Prop(ctxout.AttrOverflow, ctxout.OverflowWordWrap),
+						ctxout.Prop(ctxout.AttrOverflow, ctxout.OfWordWrap),
 						ctxout.Prop(ctxout.AttrPrefix, oddBackground+ctxout.ForeDarkGrey),
 						ctxout.Prop(ctxout.AttrSuffix, ctxout.ResetCode),
 					),
@@ -238,7 +248,7 @@ func tableFilter() {
 						rndWord3,
 						ctxout.Prop(ctxout.AttrSize, 40),
 						ctxout.Prop(ctxout.AttrOrigin, 2),
-						ctxout.Prop(ctxout.AttrOverflow, ctxout.OverflowWordWrap),
+						ctxout.Prop(ctxout.AttrOverflow, ctxout.OfWordWrap),
 						ctxout.Prop(ctxout.AttrPrefix, oddBackground+ctxout.ForeLightYellow),
 						ctxout.Prop(ctxout.AttrSuffix, ctxout.ResetCode),
 					),
@@ -270,7 +280,7 @@ func tableFilter() {
 	printNextExampleHeader("table right use")
 	// here we use the table right
 	// and as long as the table is not closed, the content is not printed
-	ctxout.PrintLn("wait for it ...")
+	fmt.Print("wait for it ...")
 	ctxout.PrintLn(ctxout.OpenTable)
 	for i := 0; i < 20; i++ {
 		rndWord1 := createRandomWords(90)
@@ -285,8 +295,10 @@ func tableFilter() {
 		)
 
 		// wait a little bit
+		fmt.Print(".")
 		time.Sleep(time.Millisecond * 100)
 	}
+	fmt.Println("done")
 	// close the table
 	ctxout.PrintLn(ctxout.CloseTable)
 	ctxout.PrintLn(" ---- TADAAAAA")
@@ -305,10 +317,13 @@ func cursorAndTableFilter() {
 			rndWord1 := createRandomWords(90)
 			rndWord2 := createRandomWords(90)
 			rndWord3 := createRandomWords(90)
+			// TODO: somethimes the with is not calculated correctly in terms of the percentage
+			// 	 	it seems this is mostly the case if the size is somehow lower than 10
+			//      might be a problem with the calculation of the size if the first rows starts on lower percentage
 			ctxout.PrintLn(
 				ctxout.NewMOWrap(),
 				ctxout.OTR,
-				ctxout.TD(m, "size=5", "origin=2", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeLightYellow),
+				ctxout.TD(m, "size=4", "origin=2", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeLightYellow),
 				ctxout.TD(i, "size=5", "origin=2", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeLightBlue+ctxout.BackBlue),
 				ctxout.TD(rndWord1, "size=20", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeGreen),
 				ctxout.TD(rndWord2, "size=30", "suffix="+ctxout.ResetCode, "prefix="+ctxout.ForeDarkGrey),

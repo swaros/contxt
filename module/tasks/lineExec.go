@@ -85,7 +85,8 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 			stopReasonFound, message := t.checkReason(currentTask.Stopreasons, logLine, err) // do we found a defined reason to stop execution
 			if stopReasonFound {
 				if currentTask.Options.Displaycmd {
-					t.out(MsgType("stopreason"), MsgReason(message), MsgProcess("aborted"))
+					t.out(MsgProcess{Target: currentTask.ID, StatusChange: "aborted", Comment: message})
+					//t.out(MsgType("stopreason"), MsgReason(message), MsgProcess("aborted"))
 				}
 				return false
 			}
@@ -105,9 +106,17 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 				}
 			}
 			if currentTask.Options.Displaycmd {
-				t.out(MsgPid(process.Pid), MsgProcess("started"))
+				t.out(MsgPid{Pid: process.Pid, Target: currentTask.ID}, MsgProcess{Target: currentTask.ID, StatusChange: "started", Comment: replacedLine})
 			}
 		})
+
+	if currentTask.Options.Displaycmd {
+		t.out(MsgProcess{
+			Target:       currentTask.ID,
+			StatusChange: "done",
+			Comment:      fmt.Sprintf("command code: %d, internal code %d", realExitCode, execCode),
+		})
+	}
 
 	// check execution codes from the executer
 	if execErr != nil {

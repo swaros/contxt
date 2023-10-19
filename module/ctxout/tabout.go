@@ -47,7 +47,11 @@ const (
 	// fixed = if the calculated size is bigger than the cell size, then we will use the cell size
 	// extend = fill the rest of the row with the space if prevoius fixed or content cells are smaller than the calculated size
 	// content = we will use the max size of the content if they is smaller than the calculated size
-	AttrDraw = "draw"
+	AttrDraw    = "draw"
+	DrawFixed   = "fixed"
+	DrawExtend  = "extend"
+	DrawContent = "content"
+
 	// if the text is cutted, then this string will be added to the end of the text
 	AttrCutAdd = "cut-add"
 	// this is the mode how the overflow is handled. ignore = the text is ignored, wrap = wrap the text
@@ -58,10 +62,16 @@ const (
 	AttrPrefix = "prefix"
 	// additonal margin for the cell. this will be subtracted from the cell size
 	AttrMargin = "margin"
-	// the content will be shown, cuttet and alligned depending the origin value
-	OverflowAny = "any"
-	// we will keep the content and wrap it. this will increase the height of the row if we need more space
-	OverflowWordWrap = "wordwrap"
+
+	// overflow constants
+	OfIgnore   = "ignore"
+	OfWrap     = "wrap"
+	OfWordWrap = "wordwrap"
+	OfAny      = "any"
+
+	// origin constants
+	OriginLeft  = 0
+	OriginRight = 2
 )
 
 type TabOut struct {
@@ -76,13 +86,15 @@ type TabOut struct {
 
 func NewTabOut() *TabOut {
 	return &TabOut{
-		markup:   *NewMarkup(),
+		markup:   *NewMarkup().SetAccepptedTags([]string{"table", "row", "tab"}),
 		calcSize: NewRoundSerial(),
 	}
 }
 
 // Row functions
 
+// Calculate the size of the cell depending on
+// the index of the cell in the row
 func (tr *TabOut) getMaxLenByIndex(index int) int {
 	max := 0
 	for _, row := range tr.table.rows {
@@ -158,7 +170,7 @@ func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 	tabRow := NewTabRow(table)
 	tabCell := NewTabCell(tabRow)
 	for index, token := range tokens {
-		tSize := LenPrintable(token.Text)
+		tSize := VisibleLen(token.Text)
 		tabCell.index = index
 		if token.IsMarkup {
 			if strings.HasPrefix(token.Text, "<tab") {
@@ -168,7 +180,7 @@ func (t *TabOut) ScanForCells(tokens []Parsed, table *tableHandle) *tabRow {
 				tabCell.Origin = token.GetProperty(AttrOrigin, 0).(int)
 				tabCell.drawMode = token.GetProperty(AttrDraw, "relative").(string)
 				tabCell.cutNotifier = token.GetProperty(AttrCutAdd, "...").(string)
-				tabCell.overflowMode = token.GetProperty(AttrOverflow, "ignore").(string)
+				tabCell.overflowMode = token.GetProperty(AttrOverflow, OfIgnore).(string)
 				tabCell.anySuffix = token.GetProperty(AttrSuffix, "").(string)
 				tabCell.anyPrefix = token.GetProperty(AttrPrefix, "").(string)
 				tabCell.margin = token.GetProperty(AttrMargin, 0).(int)
@@ -211,7 +223,7 @@ func (t *TabOut) GetSize(orig int) int {
 			if orig > 100 {
 				orig = 100
 			}
-			//intRes, _, _ := RoundHelp(orig, t.info.Width)
+			// taking care about rounding errors
 			intRes := t.calcSize.Round(orig)
 			return intRes
 		}

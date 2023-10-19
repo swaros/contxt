@@ -24,18 +24,24 @@
 
 package ctxout
 
-import "strings"
+import (
+	"strings"
+)
 
 type SignFilter struct {
 	behaveInfo PostFilterInfo
 	signs      SignSet
 	enabled    bool
+	markup     Markup
+	forceEmpty bool
 }
 
 // NewSignFilter returns a new SignFilter
 // if signSet is nil, the default signs are used
 func NewSignFilter(signSet *SignSet) *SignFilter {
-	sf := &SignFilter{}
+	sf := &SignFilter{
+		markup: *NewMarkup().SetAccepptedTags([]string{"sign"}),
+	}
 	if signSet == nil {
 		sf.signs = *NewBaseSignSet()
 	} else {
@@ -53,6 +59,10 @@ func (sf *SignFilter) Update(info PostFilterInfo) {
 	if info.Disabled || !info.IsTerminal || !info.Colored {
 		sf.enabled = false
 	}
+}
+
+func (sf *SignFilter) ForceEmpty(forceEmpty bool) {
+	sf.forceEmpty = forceEmpty
 }
 
 // Enabled returns true if the filter is enabled
@@ -87,28 +97,33 @@ func (sf *SignFilter) CanHandleThis(text string) bool {
 	return strings.Contains(text, "<sign")
 }
 
-func (sf *SignFilter) Command(cmd string) string {
-	didIt := false
+func (sf *SignFilter) doSign(signSource string) string {
+	if sf.forceEmpty {
+		return ""
+	}
 	for _, sign := range sf.signs.Signs {
 		expectedMarkup := "<sign " + sign.Name + ">"
-		if strings.Contains(cmd, expectedMarkup) {
-			didIt = true
-			cmd = sf.doSignInText(sign, expectedMarkup, cmd)
+		if expectedMarkup == signSource {
+			if sf.enabled {
+				return sign.Glyph
+			} else {
+				return sign.Fallback
+			}
 		}
 
 	}
-	// fallback if the sign is not found
-	// we just clear the markup istead of <sign whatever> we print <!whatever>
-	// as a hint, that this was not working
-	if !didIt {
-		cmd = strings.Replace(cmd, "<sign ", "<!", -1)
-	}
-	return cmd
+	return ""
 }
 
-func (sf *SignFilter) doSignInText(sign Sign, markup, cmd string) string {
-	if sf.enabled {
-		return strings.Replace(cmd, markup, sign.Glyph, -1)
+func (sf *SignFilter) Command(cmd string) string {
+	parsed := sf.markup.Parse(cmd)
+	output := ""
+	for _, p := range parsed {
+		if p.IsMarkup {
+			output += sf.doSign(p.Text)
+		} else {
+			output += p.Text
+		}
 	}
-	return strings.Replace(cmd, markup, sign.Fallback, -1)
+	return output
 }

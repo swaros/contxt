@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package ctxout
+package ctxout
 
 import (
 	"regexp"
@@ -36,9 +36,10 @@ import (
 // and closing it with START-TOKEN + CLOSE-IDENT + something + END-TOKEN
 // the default markup is <something> and </something>
 type Markup struct {
-	startToken rune // the identifier for starting a markup
-	endToken   rune // the identifier for ending a markup
-	closeIdent rune // the identifier for closing a markup
+	startToken   rune     // the identifier for starting a markup
+	endToken     rune     // the identifier for ending a markup
+	closeIdent   rune     // the identifier for closing a markup
+	acceptedTags []string // the accepted tags or empty if all tags are accepted
 }
 
 // Parsed is a single parsed markup. it can be a plain text or a markup
@@ -121,6 +122,13 @@ func (p *Parsed) GetProperty(propertie string, defaultValue interface{}) interfa
 	} else {
 		return defaultValue
 	}
+}
+
+// SetAcceptedTags sets the accepted tags of a markup.
+// anything else is ignored and parsed as content/text
+func (m *Markup) SetAccepptedTags(tags []string) *Markup {
+	m.acceptedTags = tags
+	return m
 }
 
 // SetStartToken sets the start token of a markup
@@ -253,8 +261,24 @@ func (m *Markup) BuildInnerSliceEach(parsed []Parsed, outerMarkup string, handle
 	return result
 }
 
+func (m Markup) isAcceptedTag(tag string) bool {
+	if len(m.acceptedTags) == 0 {
+		return true
+	}
+	tagUpper := strings.ToUpper(tag)
+	for _, t := range m.acceptedTags {
+		upper := strings.ToUpper(t)
+		possibleStarttag := string(m.startToken) + upper
+		possibleEndtag := string(m.startToken) + string(m.closeIdent) + upper
+		if strings.HasPrefix(tagUpper, possibleStarttag) || strings.HasPrefix(tagUpper, possibleEndtag) {
+			return true
+		}
+	}
+	return false
+}
+
 // splitByMarks splits a string by the markups
-// it returns a slice of strings and a bool if it found any markups
+// it returns a slice of strings and a bool if it found any markups.
 func (m *Markup) splitByMarks(orig string) ([]string, bool) {
 	var result []string
 	found := false
@@ -262,8 +286,10 @@ func (m *Markup) splitByMarks(orig string) ([]string, bool) {
 	re := regexp.MustCompile(cmpStr)                                                       // compile and panic on bad things happens
 	newStrs := re.FindAllString(orig, -1)                                                  // use regex to find all patterns
 	for _, s := range newStrs {                                                            // get all markups
-		found = true
-		result = append(result, s)
+		if m.isAcceptedTag(s) {
+			found = true
+			result = append(result, s)
+		}
 
 	}
 

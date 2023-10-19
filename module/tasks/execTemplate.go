@@ -276,17 +276,23 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			// any need can have his own needs they needs to
 			// be executed
 			if len(script.Needs) > 0 {
-				t.out(MsgTarget{Target: target, Context: "needs_required", Info: strings.Join(script.Needs, ",")}, MsgArgs(script.Needs))
+				if script.Options.Displaycmd {
+					t.out(MsgTarget{Target: target, Context: "needs_required", Info: strings.Join(script.Needs, ",")}, MsgArgs(script.Needs))
+				}
 				t.getLogger().Debug("Needs for the script", script.Needs)
 				if runAsync {
 					var needExecs []awaitgroup.FutureStack
 					for _, needTarget := range script.Needs {
 						if t.watch.TaskRunsAtLeast(needTarget, 1) {
-							t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
+							if script.Options.Displaycmd {
+								t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
+							}
 							t.getLogger().Debug("need already handled " + needTarget)
 						} else {
 							t.getLogger().Debug("need name should be added " + needTarget)
-							t.out(MsgTarget{Target: target, Context: "needs_execute", Info: needTarget})
+							if script.Options.Displaycmd {
+								t.out(MsgTarget{Target: target, Context: "needs_execute", Info: needTarget})
+							}
 							needExecs = append(needExecs, awaitgroup.FutureStack{
 								AwaitFunc: func(ctx context.Context) interface{} {
 									argNeed := ctx.Value(awaitgroup.CtxKey{}).(string)
@@ -305,15 +311,18 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 					for _, needTarget := range script.Needs {
 						if t.watch.TaskRunsAtLeast(needTarget, 1) { // do not run needs the already runs
 							t.getLogger().Debug("need already handled " + needTarget)
-							t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
+							if script.Options.Displaycmd {
+								t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
+							}
 						} else {
 							_, argmap := systools.StringSplitArgs(needTarget, "arg")
 							t.executeTemplate(false, needTarget, argmap)
 						}
 					}
 				}
-
-				t.out(MsgTarget{Target: target, Context: "needs_done", Info: strings.Join(script.Needs, ",")}, MsgArgs(script.Needs))
+				if script.Options.Displaycmd {
+					t.out(MsgTarget{Target: target, Context: "needs_done", Info: strings.Join(script.Needs, ",")}, MsgArgs(script.Needs))
+				}
 			}
 
 			// targets that should be started as well

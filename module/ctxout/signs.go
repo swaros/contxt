@@ -24,6 +24,11 @@
 
 package ctxout
 
+import (
+	"errors"
+	"strings"
+)
+
 // defining an sign that can be used to display information as an sign.
 // this sign is an utf-8 character. and a fallback string that is used
 // if the device is not able to display the sign.
@@ -63,7 +68,7 @@ func NewBaseSignSet() *SignSet {
 		{
 			Name:     "error",
 			Glyph:    "⛔",
-			Fallback: "[!!!]",
+			Fallback: "[×]",
 		},
 		{
 			Name:     "success",
@@ -73,12 +78,12 @@ func NewBaseSignSet() *SignSet {
 		{
 			Name:     "debug",
 			Glyph:    "👓",
-			Fallback: "[¿]",
+			Fallback: "[•…]",
 		},
 		{
 			Name:     "screen",
 			Glyph:    "🖵",
-			Fallback: "[«»]",
+			Fallback: "▕░▒░▏",
 		},
 	}
 	return set
@@ -106,6 +111,22 @@ func (s *SignSet) GetSign(name string) Sign {
 }
 
 // AddSign adds an sign to the set
-func (s *SignSet) AddSign(sign Sign) {
+func (s *SignSet) AddSign(sign Sign) error {
+	var err error
+	// remove any markup chars from fallback
+	if s.cleanUpUnwanted(&sign) {
+		err = errors.New("fallback contains unwanted markup chars")
+	}
 	s.Signs = append(s.Signs, sign)
+	return err
+}
+
+func (s *SignSet) cleanUpUnwanted(sign *Sign) bool {
+	signUnwanted := []string{"<", ">"}
+	orig := sign.Fallback
+	for _, signUnwanted := range signUnwanted {
+		sign.Fallback = strings.ReplaceAll(sign.Fallback, signUnwanted, "invalid-fallback-char-removed")
+	}
+	return orig != sign.Fallback
+
 }

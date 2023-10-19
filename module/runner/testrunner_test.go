@@ -101,6 +101,9 @@ func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error)
 	// init the main functions
 	functions.MainInit()
 
+	// signs filter
+	signsFilter := ctxout.NewSignFilter(ctxout.NewBaseSignSet())
+	ctxout.AddPostFilter(signsFilter)
 	// tabout filter
 	tabouOutFilter := ctxout.NewTabOut()
 	ctxout.AddPostFilter(tabouOutFilter)
@@ -112,6 +115,8 @@ func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error)
 		Disabled:   true,
 	}
 	tabouOutFilter.Update(info)
+	signsFilter.Update(info)
+	signsFilter.ForceEmpty(true)
 
 	if err := app.Cobra.Init(functions); err != nil {
 		panic(err)
@@ -255,7 +260,7 @@ func assertSplitTestInMessage(t *testing.T, output *TestOutHandler, msg string) 
 func assertInMessage(t *testing.T, output *TestOutHandler, msg string) {
 	t.Helper()
 	if !output.Contains(msg) {
-		t.Errorf("Expected \n%s\nbut instead we got\n%v", msg, output.String())
+		t.Errorf("Expected \n[%s]\nbut instead we did not found it in\n[%v]", msg, output.String())
 	}
 }
 

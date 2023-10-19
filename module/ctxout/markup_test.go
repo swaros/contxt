@@ -9,6 +9,10 @@ import (
 // print out the diff between the parsed and the expected
 func diffParsed(t *testing.T, parsed []ctxout.Parsed, expected []string) {
 	for i, p := range parsed {
+		if i >= len(expected) {
+			t.Error(i, " not expected got ", p.Text)
+			continue
+		}
 		if p.Text != expected[i] {
 			t.Error(i, " fail [", expected[i], "] got [", p.Text, "]")
 		} else {
@@ -111,6 +115,36 @@ func TestMixedMarkups(t *testing.T) {
 	res := mu.Parse(testStr)
 
 	expected := []string{"<tab size='5' origin='2'>", "0", "</tab>", "<tab size='30' origin='2'>", "/home/testpath/someplace/check", "</tab>", "<tab size='30'>", "no tasks", "</tab>"}
+	if len(res) != len(expected) {
+		t.Error("expected ", len(expected), " got ", len(res))
+		diffParsed(t, res, expected)
+	} else {
+		for i, r := range res {
+			if r.Text != expected[i] {
+				t.Error("expected ", expected[i], " got ", r.Text)
+			}
+		}
+	}
+}
+
+// test for parsing allowed tags only, so we do not mix up markups the parser should ignore
+func TestMixedUnexpectedMarkups(t *testing.T) {
+	testStr := "<tab size='5' origin='2'>0</tab><tab size='30' origin='2'>i have some inner <init>markups</init> they are <unexpected> </tab><tab size='30'>no tasks</tab>"
+	mu := ctxout.NewMarkup()
+	accepted := []string{"tab", "size", "origin"}
+	mu.SetAccepptedTags(accepted)
+	res := mu.Parse(testStr)
+
+	expected := []string{
+		"<tab size='5' origin='2'>",
+		"0",
+		"</tab>",
+		"<tab size='30' origin='2'>",
+		"i have some inner <init>markups</init> they are <unexpected> ",
+		"</tab>", "<tab size='30'>",
+		"no tasks",
+		"</tab>",
+	}
 	if len(res) != len(expected) {
 		t.Error("expected ", len(expected), " got ", len(res))
 		diffParsed(t, res, expected)

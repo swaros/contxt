@@ -142,8 +142,8 @@ func Init() error {
 		if errorEx != nil && code1 == 0 && code2 == 0 {
 			glyps.Disable()
 		} else {
-			glyps.AddSign(ctxout.Sign{Glyph: "🭬", Name: "runident", Fallback: ">"})
-			glyps.AddSign(ctxout.Sign{Glyph: "🭮", Name: "stopident", Fallback: ">"})
+			glyps.AddSign(ctxout.Sign{Glyph: "🭬", Name: "runident", Fallback: "»"})
+			glyps.AddSign(ctxout.Sign{Glyph: "🭮", Name: "stopident", Fallback: "«"})
 		}
 	}
 

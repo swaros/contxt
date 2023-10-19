@@ -38,6 +38,23 @@ func assertConcurrentPrinter(t *testing.T, printer ctxout.StreamInterface, count
 	return addedStrings
 }
 
+func assertTableOutput(t *testing.T, result, expected []string) {
+	t.Helper()
+	lenExpected := len(expected)
+	if len(result) < lenExpected {
+		t.Errorf("expected %d messages, got %d", lenExpected, len(result))
+	}
+	for i, exp := range expected {
+		if i >= lenExpected {
+			t.Error("expected more messages than we got")
+			break
+		}
+		if result[i] != exp {
+			t.Errorf("expected \n[%s]\ngot\n[%s]", exp, result[i])
+		}
+	}
+}
+
 func messageToStrSlice(msg ...interface{}) string {
 	testMu.Lock()
 	defer testMu.Unlock()
@@ -125,5 +142,100 @@ func TestInjectedStreams(t *testing.T) {
 		return []interface{}{"testtask ", jobIndex}
 	})
 	assertTestStreamAContents(t, prnt, added)
+
+}
+
+type testCase struct {
+	label   string
+	content string
+	info    string
+}
+
+func helperDrawTable(t *testing.T, prnt ctxout.PrintInterface, testCases []testCase) []string {
+	t.Helper()
+	result := []string{}
+	for _, tc := range testCases {
+
+		leftLabel := ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeYellow, "<sign debug> ")
+		rightLabel := ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeYellow, "<sign error> ")
+		msg := ctxout.ToString(
+			prnt,
+			ctxout.Row(
+
+				ctxout.TD(
+					tc.label,
+					ctxout.Prop(ctxout.AttrSize, 10),
+					ctxout.Prop(ctxout.AttrOrigin, 2),
+					ctxout.Prop(ctxout.AttrPrefix, leftLabel),
+					ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+				),
+
+				ctxout.TD(
+					tc.content,
+					ctxout.Prop(ctxout.AttrSize, 85),
+					ctxout.Prop(ctxout.AttrPrefix, rightLabel),
+					ctxout.Prop(ctxout.AttrOverflow, "wordwrap"),
+					ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+				),
+				ctxout.TD(
+					tc.info,
+					ctxout.Prop(ctxout.AttrSize, 5),
+					ctxout.Prop(ctxout.AttrOrigin, 2),
+					ctxout.Prop(ctxout.AttrPrefix, ctxout.ForeDarkGrey),
+					ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
+				),
+			),
+		)
+		result = append(result, msg)
+
+	}
+	return result
+}
+
+func TestFilterMixings(t *testing.T) {
+	prnt := ctxout.NewMOWrap()
+
+	taboutFilter := ctxout.NewTabOut()
+	signsFilter := ctxout.NewSignFilter(ctxout.NewBaseSignSet())
+	ctxout.AddPostFilter(signsFilter)
+	ctxout.AddPostFilter(taboutFilter)
+
+	info := ctxout.PostFilterInfo{
+		Width:      100,   // give us a big width so we can render the whole line
+		IsTerminal: true,  //no terminal
+		Colored:    false, // no colors
+		Height:     500,   // give us a big height so we can render the whole line
+		Disabled:   false,
+	}
+	taboutFilter.Update(info)
+	signsFilter.Update(info)
+
+	testCases := []testCase{
+		{
+			label:   "label1",
+			content: "content1",
+			info:    "info1",
+		},
+		{
+			label:   "label2",
+			content: "content2",
+			info:    "info2",
+		},
+	}
+	result := helperDrawTable(t, prnt, testCases)
+	expected := []string{
+		"[•…] ...l1[×] content1                                                                         info1",
+		"[•…] ...l2[×] content2                                                                         info2",
+	}
+	assertTableOutput(t, result, expected)
+
+	signsFilter.ForceEmpty(true)
+
+	expected = []string{
+		"    label1 content1                                                                            info1",
+		"    label2 content2                                                                            info2",
+	}
+	result = helperDrawTable(t, prnt, testCases)
+	assertTableOutput(t, result, expected)
 
 }

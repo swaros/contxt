@@ -85,7 +85,8 @@
             "request": "launch",
             "mode": "auto",
             //"program": "${workspaceFolder}/module/yaclint/example/check_local.only_check/test.go",
-            "program": "${workspaceFolder}/module/awaitgroup/example/flow/main.go",
+            //"program": "${workspaceFolder}/module/awaitgroup/example/flow/main.go",
+            "program": "${workspaceFolder}/module/ctxout/examples/table/.ignore/main.go",
             "env": {},
             "args": [""]
         },

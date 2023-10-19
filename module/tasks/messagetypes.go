@@ -45,8 +45,15 @@ type MsgNumber int
 type MsgArgs []string
 
 // MsgProcess is the process id that is running
-type MsgProcess string
-type MsgPid int
+type MsgProcess struct {
+	Target       string
+	StatusChange string
+	Comment      string
+}
+type MsgPid struct {
+	Pid    int
+	Target string
+}
 type MsgError struct {
 	Err       error
 	Target    string
