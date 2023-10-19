@@ -21,7 +21,6 @@ config:
     - ./imports/codehead.tpl codehead
     - ./imports/Dockerfile.ubuntu docker
   variables:
-      build-main-file: {{$.release.main}}
       include-dev-externals: ""
       configmodul: github.com/swaros/contxt/module/configure
       coverage-report: ""
@@ -61,7 +60,6 @@ task:
   - id: dev
     variables:
       build-info: "-dev"
-      build-main-file: {{$.development.main}}
 ######
   - id: dev-external
     variables:
