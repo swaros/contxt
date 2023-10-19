@@ -43,6 +43,8 @@ var midversion string      // the mid version
 var minversion string      // the min version
 var operatingSystem string // the operating system
 var shortcut string        // the shortcut for the context functions in bash, fish, zsh and powershell
+var cnShortCut string      // the shortcut for the context cn command in bash, fish, zsh and powershell
+var binaryName string      // the name of the binary. default is contxt
 
 // GetVersion delivers the current build version
 func GetVersion() string {
@@ -69,6 +71,13 @@ func GetVersion() string {
 	return outVersion
 }
 
+// GetShortcusAndBinaryName delivers the current shortcuts and binary name
+// for the context functions in bash, fish, zsh and powershell
+// this is the contxt shortcut, then cn shortcut and the binary name
+func GetShortcusAndBinaryName() (string, string, string) {
+	return GetShortcut(), GetCnShortcut(), GetBinaryName()
+}
+
 // GetShortcut delivers the current shortcut
 // for the context functions in bash, fish, zsh and powershell
 // if no shortcut is set, the default is "ctx"
@@ -82,6 +91,33 @@ func GetShortcut() string {
 // ment for testing
 func SetShortcut(newShortcut string) {
 	shortcut = newShortcut
+}
+
+func SetCnShortcut(newShortcut string) {
+	cnShortCut = newShortcut
+}
+
+func SetBinaryName(newBinaryName string) {
+	binaryName = newBinaryName
+}
+
+// GetCnShortcut delivers the current shortcut
+// for the context cn command in bash, fish, zsh and powershell
+// if no shortcut is set, the default is "cn"
+func GetCnShortcut() string {
+	if cnShortCut == "" {
+		return "cn"
+	}
+	return cnShortCut
+}
+
+// GetBinaryName delivers the current binary name
+// if no binary name is set, the default is "contxt"
+func GetBinaryName() string {
+	if binaryName == "" {
+		return "contxt"
+	}
+	return binaryName
 }
 
 // CheckCurrentVersion checks if the current version is greater or equal to the given version

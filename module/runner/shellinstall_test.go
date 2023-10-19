@@ -19,8 +19,15 @@ func TestBashRcInstallFails(t *testing.T) {
 	}
 }
 
+func SetDefaultValues() {
+	configure.SetShortcut("ctx")
+	configure.SetCnShortcut("cn")
+	configure.SetBinaryName("contxt")
+}
+
 func TestBashRcInstall(t *testing.T) {
-	configure.SetShortcut("ctx") // force the shortcut to ctx
+	// defaults
+	SetDefaultValues()
 	defer os.RemoveAll("./test/fakehome/.bashrc")
 	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
@@ -57,6 +64,8 @@ source <(ctxcompletion)
 
 func TestBashRcInstallRenamed(t *testing.T) {
 	configure.SetShortcut("ctxV2")
+	configure.SetCnShortcut("cnV2")
+	configure.SetBinaryName("contxtV2")
 	defer os.RemoveAll("./test/fakehome/.bashrc")
 	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
@@ -65,28 +74,28 @@ func TestBashRcInstallRenamed(t *testing.T) {
 		t.Error("should not return an error, bot got:", err)
 	}
 	expected := `# a fake bashrc
-### begin contxt bashrc
-function cn() { cd $(contxt dir find "$@"); }
+### begin contxtV2 bashrc
+function cnV2() { cd $(contxtV2 dir find "$@"); }
 function ctxV2() {
-	contxt "$@";
+	contxtV2 "$@";
 	[ $? -eq 0 ]  || return 1
         case $1 in
           switch)
-          cd $(contxt dir --last);
-          contxt dir paths --coloroff --nohints
+          cd $(contxtV2 dir --last);
+          contxtV2 dir paths --coloroff --nohints
           ;;
         esac
 }
 function ctxV2completion() {
-        ORIG=$(contxt completion bash)
-        CM="contxt"
+        ORIG=$(contxtV2 completion bash)
+        CM="contxtV2"
         CT="ctxV2"
         CTXC="${ORIG//$CM/$CT}"
         echo "$CTXC"
 }
-source <(contxt completion bash)
+source <(contxtV2 completion bash)
 source <(ctxV2completion)
-### end of contxt bashrc
+### end of contxtV2 bashrc
 `
 	AssertFileContent(t, "./test/fakehome/.bashrc", expected, AcceptContainsNoSpecials)
 }
@@ -100,7 +109,8 @@ func TestZshRcInstallFails(t *testing.T) {
 }
 
 func TestZshRcInstall(t *testing.T) {
-	configure.SetShortcut("ctx") // force the shortcut to ctx
+	// defaults
+	SetDefaultValues()
 	defer os.RemoveAll("./test/fakehome/.zshrc")
 	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
@@ -128,6 +138,8 @@ func TestZshRcInstall(t *testing.T) {
 
 func TestZshRcInstallRenamed(t *testing.T) {
 	configure.SetShortcut("CNTXT") // force the shortcut to ctx
+	configure.SetCnShortcut("DD")  // force the shortcut to ctx
+	configure.SetBinaryName("ZULU")
 	defer os.RemoveAll("./test/fakehome/.zshrc")
 	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
@@ -136,25 +148,26 @@ func TestZshRcInstallRenamed(t *testing.T) {
 		t.Error("should not return an error, bot got:", err)
 	}
 	expected := `# a fake zshrc
-	### begin contxt zshrc
-	function cn() { cd $(contxt dir find "$@"); }
+	### begin ZULU zshrc
+	function DD() { cd $(ZULU dir find "$@"); }
 	function CNTXT() {        
-		contxt "$@";
+		ZULU "$@";
 		[ $? -eq 0 ]  || return $?
 			case $1 in
 			  switch)          
-			  cd $(contxt dir --last);
-			  contxt dir paths --coloroff --nohints
+			  cd $(ZULU dir --last);
+			  ZULU dir paths --coloroff --nohints
 			  ;;
 			esac
 	}
-	### end of contxt zshrc
+	### end of ZULU zshrc
 `
 	AssertFileContent(t, "./test/fakehome/.zshrc", expected, AcceptContainsNoSpecials)
 }
 
 func TestFishRcInstall(t *testing.T) {
-	configure.SetShortcut("ctx") // force the shortcut to ctx
+	// defaults
+	SetDefaultValues()
 	defer os.RemoveAll("./test/fakehome/.config")
 	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
@@ -182,6 +195,8 @@ end`
 
 func TestFishRcInstallRenamed(t *testing.T) {
 	configure.SetShortcut("FctxF") // force the shortcut to ctx
+	configure.SetCnShortcut("KKK") // force the shortcut to ctx
+	configure.SetBinaryName("UINMKOI")
 	defer os.RemoveAll("./test/fakehome/.config")
 	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
@@ -190,25 +205,26 @@ func TestFishRcInstallRenamed(t *testing.T) {
 		t.Error("should not return an error, bot got:", err)
 	}
 	functionFile := "test/fakehome/.config/fish/functions/FctxF.fish"
-	cnFunctionFile := "test/fakehome/.config/fish/functions/cn.fish"
+	cnFunctionFile := "test/fakehome/.config/fish/functions/KKK.fish"
 	AssertFileExists(t, functionFile)
 	fishFunc := `function FctxF
-    contxt $argv
+    UINMKOI $argv
     switch $argv[1]
        case switch
-          cd (contxt dir --last)
-          contxt dir paths --coloroff --nohints
+          cd (UINMKOI dir --last)
+          UINMKOI dir paths --coloroff --nohints
     end
 end`
-	cnFunc := `function cn
-	cd (contxt dir find $argv)
+	cnFunc := `function KKK
+	cd (UINMKOI dir find $argv)
 end`
 	AssertFileContent(t, functionFile, fishFunc, AcceptContainsNoSpecials)
 	AssertFileContent(t, cnFunctionFile, cnFunc, AcceptContainsNoSpecials)
 }
 
 func TestFishCompletionUpdate(t *testing.T) {
-	configure.SetShortcut("ctx") // force the shortcut to ctx
+	// defaults
+	SetDefaultValues()
 	defer os.RemoveAll("./test/fakehome/.config")
 	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
@@ -227,6 +243,8 @@ func TestFishCompletionUpdate(t *testing.T) {
 
 func TestFishCompletionUpdateRenamed(t *testing.T) {
 	configure.SetShortcut("UNU")
+	configure.SetBinaryName("UNUBIN")
+
 	defer os.RemoveAll("./test/fakehome/.config")
 	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
@@ -239,12 +257,13 @@ func TestFishCompletionUpdateRenamed(t *testing.T) {
 	completionFile := "test/fakehome/.config/fish/completions/UNU.fish"
 	AssertFileExists(t, completionFile)
 
-	completionFile = "test/fakehome/.config/fish/completions/contxt.fish"
+	completionFile = "test/fakehome/.config/fish/completions/UNUBIN.fish"
 	AssertFileExists(t, completionFile)
 }
 
 func TestZshFuncDir(t *testing.T) {
-	configure.SetShortcut("ctx") // force the shortcut to ctx
+	// defaults
+	SetDefaultValues()
 	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
 	fpath := "[ABS]/test/fakehome/.zfunc:[ABS]/test/fakehome/zFuncExists:[ABS]/test/fakehome/zFuncNotExists"
@@ -265,7 +284,8 @@ func TestZshFuncDir(t *testing.T) {
 }
 
 func TestZshUser(t *testing.T) {
-	configure.SetShortcut("ctx") // force the shortcut to ctx
+	// defaults
+	SetDefaultValues()
 	os.WriteFile("./test/fakehome/.zshrc", []byte("# a fake zshrc"), 0644)
 	defer os.Remove("./test/fakehome/.zshrc")
 	defer os.Remove("./test/fakehome/zFuncExists/_ctx")
@@ -287,7 +307,8 @@ func TestZshUser(t *testing.T) {
 }
 
 func TestZshUserRenamed(t *testing.T) {
-	configure.SetShortcut("UGA") // force the shortcut to UGA
+	configure.SetShortcut("UGA")    // force the shortcut to UGA
+	configure.SetBinaryName("NANA") // chage binaray name to NANA
 	os.WriteFile("./test/fakehome/.zshrc", []byte("# a fake zshrc"), 0644)
 	defer os.Remove("./test/fakehome/.zshrc")
 	defer os.Remove("./test/fakehome/zFuncExists/_UGA")
@@ -305,5 +326,5 @@ func TestZshUserRenamed(t *testing.T) {
 		t.Error("should not return an error, bot got:", err)
 	}
 	AssertFileExists(t, "test/fakehome/zFuncExists/_UGA")
-	AssertFileExists(t, "test/fakehome/zFuncExists/_contxt")
+	AssertFileExists(t, "test/fakehome/zFuncExists/_NANA")
 }
