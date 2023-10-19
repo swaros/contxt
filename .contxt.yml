@@ -20,6 +20,8 @@ config:
     - ./imports/go_test.tpl test-action
     - ./imports/codehead.tpl codehead
     - ./imports/Dockerfile.ubuntu docker
+    - ./imports/build.sh build-sh
+    - ./imports/winbuild.bat winbuild-bat
   variables:
       include-dev-externals: ""
       configmodul: github.com/swaros/contxt/module/configure
@@ -138,11 +140,14 @@ task:
   ## update mai task
  
   - id: update-all
+    needs:
+      - set-version
     runTargets:
       - modules-verify
       - makefile-update
       - licence-header-check
       - update-dependencies
+      - build-script-update
     script:
       - echo "update all" 
 
@@ -152,6 +157,20 @@ task:
       - set-version
     script:
     - "#@var-to-file makefile Makefile"
+
+  ## update build script
+  - id: build-script-update
+    needs:
+      - set-version
+    script:
+    - "#@var-to-file build-sh build.sh"
+    - "#@var-to-file winbuild-bat winbuild.bat"
+
+  - id: build-script-update
+    require:
+      system: linux
+    script:
+    - chmod +x ./build.sh
 
   ## update github actions
   - id: github-actions-update
@@ -401,9 +420,9 @@ task:
       # creating the ldflags for the build
       # first we use the default ldflags from the build section build.preset.ldflags
       # {{- range $k, $ldflag := $.build.preset.ldflags }}
-      # {{- if eq $k 0 }}      
+      # {{- if eq $k 0 }}
       - "#@set LDFLAGS -X {{ $ldflag }} " # set ld flaggs for first entry
-      # {{- else}}      
+      # {{- else}}
       - "#@add LDFLAGS -X {{ $ldflag }} " # add ld flaggs for all other entrys
       # {{- end}}
       # {{- end }}

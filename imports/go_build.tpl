@@ -25,15 +25,28 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v3
 
-    - name: Build
-      run: go build -ldflags "-X github.com/swaros/contxt/configure.minversion={{ $.release.version.minor }} -X github.com/swaros/contxt/configure.midversion={{ $.release.version.mid }} -X github.com/swaros/contxt/configure.mainversion={{ $.release.version.main }} -X github.com/swaros/contxt/configure.build=`date -u +.%Y%m%d.%H%M%S`" -o ./bin/contxt {{$.release.main}}
+{{- range $targetName, $targets := $.build.targets}}
+  {{- if $targets.is_release}}
+    - name: Build-{{ $targetName }}
+      run: go build -ldflags "{{- range $k, $ldflag := $.build.preset.ldflags }} -X {{ $ldflag }} {{- end -}} {{- range $k, $ldflag := $targets.ldflags }} -X {{ $ldflag }} {{- end -}}" -o ./bin/{{ $targets.output }}.exe {{ $targets.mainfile }}
+ {{- end -}}
+{{- end }}
 
     - name: Test
       run: |
-        ./bin/contxt run test-each        
-    
-    - name: contxt-artifact
+    {{- range $k, $test := $.module }}
+    {{- if $test.local}}
+          go test  -failfast ./module/{{ $test.modul }}/./...
+    {{- end }}
+    {{- end }}
+
+{{- range $targetName, $targets := $.build.targets}}
+  {{- if $targets.is_release}}
+    - name: contxt-artifact-{{ $targetName }}
       uses: actions/upload-artifact@v2
       with:
-        name: "contxt-bin"
-        path: ./bin/contxt
+        name: "contxt-{{ $targetName }}"
+        path: ./bin/{{ $targets.output }}
+
+ {{- end -}}
+{{- end }}

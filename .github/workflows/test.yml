@@ -2,10 +2,7 @@
 ### Any change you are doing here is overwritten while the next contxt build
 ### change go_test.tpl instead
 name: wip-test
-on:
-  push:
-    branches:
-      - "wip/**"
+on: push
 
 jobs:
 
@@ -24,8 +21,42 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Build contxt bin
-      run: go build -ldflags "-X github.com/swaros/contxt/configure.minversion=3 -X github.com/swaros/contxt/configure.midversion=5 -X github.com/swaros/contxt/configure.mainversion=0 -X github.com/swaros/contxt/configure.build=`date -u +.%Y%m%d.%H%M%S`" -o ./bin/contxt cmd/cmd-contxt/main.go
-
-    - name: Test
-      run: |
-          ./bin/contxt run test-each
+      run: go build -ldflags "-X github.com/swaros/contxt/configure.minversion=3 -X github.com/swaros/contxt/configure.midversion=5 -X github.com/swaros/contxt/configure.mainversion=0 -X github.com/swaros/contxt/configure.build=`date -u +.%Y%m%d.%H%M%S`" -o ./bin/contxt <no value>
+    - name: Build-release
+      run: go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=3 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20231019.142959-linux-release" -o ./bin/contxt.exe cmd/cmd-contxt/main.go
+    - name: Test-yacl
+      run: go test  -failfast ./module/yacl/./...
+    - name: Test-yamc
+      run: go test  -failfast ./module/yamc/./...
+    - name: Test-runner
+      run: go test  -failfast ./module/runner/./...
+    - name: Test-ctxtcell
+      run: go test  -failfast ./module/ctxtcell/./...
+    - name: Test-configure
+      run: go test  -failfast ./module/configure/./...
+    - name: Test-dirhandle
+      run: go test  -failfast ./module/dirhandle/./...
+    - name: Test-systools
+      run: go test  -failfast ./module/systools/./...
+    - name: Test-trigger
+      run: go test  -failfast ./module/trigger/./...
+    - name: Test-linehack
+      run: go test  -failfast ./module/linehack/./...
+    - name: Test-ctemplate
+      run: go test  -failfast ./module/ctemplate/./...
+    - name: Test-ctxout
+      run: go test  -failfast ./module/ctxout/./...
+    - name: Test-taskrun
+      run: go test  -failfast ./module/taskrun/./...
+    - name: Test-awaitgroup
+      run: go test  -failfast ./module/awaitgroup/./...
+    - name: Test-shellcmd
+      run: go test  -failfast ./module/shellcmd/./...
+    - name: Test-ctxshell
+      run: go test  -failfast ./module/ctxshell/./...
+    - name: Test-tasks
+      run: go test  -failfast ./module/tasks/./...
+    - name: Test-yaclint
+      run: go test  -failfast ./module/yaclint/./...
+    - name: Test-mimiclog
+      run: go test  -failfast ./module/mimiclog/./...
