@@ -45,3 +45,5 @@ build:
         - ${configmodul}.shortcut=v2ctx
         - ${configmodul}.binaryName=ctxv2
         - ${configmodul}.cnShortCut=v2cn
+
+

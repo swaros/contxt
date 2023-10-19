@@ -5,9 +5,9 @@ name: wip-test
 on: push
 
 jobs:
-
+  ## testing if the build is running
   build:
-    name: Build
+    name: Test-Build
     runs-on: ubuntu-latest
     steps:
 
@@ -20,43 +20,62 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v3
 
-    - name: Build contxt bin
-      run: go build -ldflags "-X github.com/swaros/contxt/configure.minversion=3 -X github.com/swaros/contxt/configure.midversion=5 -X github.com/swaros/contxt/configure.mainversion=0 -X github.com/swaros/contxt/configure.build=`date -u +.%Y%m%d.%H%M%S`" -o ./bin/contxt <no value>
+## test build
     - name: Build-release
-      run: go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=3 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20231019.142959-linux-release" -o ./bin/contxt.exe cmd/cmd-contxt/main.go
+      run: go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=3 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20231019.145117-linux-release" -o ./bin/contxt cmd/cmd-contxt/main.go
+
+## tests
+    # test yacl
     - name: Test-yacl
       run: go test  -failfast ./module/yacl/./...
+    # test yamc
     - name: Test-yamc
       run: go test  -failfast ./module/yamc/./...
+    # test runner
     - name: Test-runner
       run: go test  -failfast ./module/runner/./...
+    # test ctxtcell
     - name: Test-ctxtcell
       run: go test  -failfast ./module/ctxtcell/./...
+    # test configure
     - name: Test-configure
       run: go test  -failfast ./module/configure/./...
+    # test dirhandle
     - name: Test-dirhandle
       run: go test  -failfast ./module/dirhandle/./...
+    # test systools
     - name: Test-systools
       run: go test  -failfast ./module/systools/./...
+    # test trigger
     - name: Test-trigger
       run: go test  -failfast ./module/trigger/./...
+    # test linehack
     - name: Test-linehack
       run: go test  -failfast ./module/linehack/./...
+    # test ctemplate
     - name: Test-ctemplate
       run: go test  -failfast ./module/ctemplate/./...
+    # test ctxout
     - name: Test-ctxout
       run: go test  -failfast ./module/ctxout/./...
+    # test taskrun
     - name: Test-taskrun
       run: go test  -failfast ./module/taskrun/./...
+    # test awaitgroup
     - name: Test-awaitgroup
       run: go test  -failfast ./module/awaitgroup/./...
+    # test shellcmd
     - name: Test-shellcmd
       run: go test  -failfast ./module/shellcmd/./...
+    # test ctxshell
     - name: Test-ctxshell
       run: go test  -failfast ./module/ctxshell/./...
+    # test tasks
     - name: Test-tasks
       run: go test  -failfast ./module/tasks/./...
+    # test yaclint
     - name: Test-yaclint
       run: go test  -failfast ./module/yaclint/./...
+    # test mimiclog
     - name: Test-mimiclog
       run: go test  -failfast ./module/mimiclog/./...
