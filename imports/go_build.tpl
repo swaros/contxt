@@ -28,7 +28,7 @@ jobs:
 {{- range $targetName, $targets := $.build.targets}}
   {{- if $targets.is_release}}
     - name: Build-{{ $targetName }}
-      run: go build -ldflags "{{- range $k, $ldflag := $.build.preset.ldflags }} -X {{ $ldflag }} {{- end -}} {{- range $k, $ldflag := $targets.ldflags }} -X {{ $ldflag }} {{- end -}}" -o ./bin/{{ $targets.output }}.exe {{ $targets.mainfile }}
+      run: go build -ldflags "{{- range $k, $ldflag := $.build.preset.ldflags }} -X {{ $ldflag }} {{- end -}} {{- range $k, $ldflag := $targets.ldflags }} -X {{ $ldflag }} {{- end -}}" -o ./bin/{{ $targets.output }} {{ $targets.mainfile }}
  {{- end -}}
 {{- end }}
 
@@ -43,7 +43,7 @@ jobs:
 {{- range $targetName, $targets := $.build.targets}}
   {{- if $targets.is_release}}
     - name: contxt-artifact-{{ $targetName }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: "contxt-{{ $targetName }}"
         path: ./bin/{{ $targets.output }}
