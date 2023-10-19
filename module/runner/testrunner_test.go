@@ -387,7 +387,9 @@ func AssertFileContent(t *testing.T, file string, expectedContent string, accept
 			// remove the hit from the file slice, so we can check if we have duplicates.
 			// this is also nessary to check if we have the same line multiple times and do
 			// not fail because we found it on the wrong index
-			systools.RemoveFromSliceOnce(fileSlice, fileSlice[hitAtIndex])
+			if hitAtIndex != -1 {
+				systools.RemoveFromSliceOnce(fileSlice, fileSlice[hitAtIndex])
+			}
 			lastHit = hitAtIndex
 		}
 	}

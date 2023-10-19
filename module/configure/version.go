@@ -79,6 +79,11 @@ func GetShortcut() string {
 	return shortcut
 }
 
+// ment for testing
+func SetShortcut(newShortcut string) {
+	shortcut = newShortcut
+}
+
 // CheckCurrentVersion checks if the current version is greater or equal to the given version
 func CheckCurrentVersion(askWithVersion string) bool {
 	curentVersion := GetVersion()

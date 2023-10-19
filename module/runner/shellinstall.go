@@ -33,6 +33,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/mimiclog"
@@ -112,7 +113,7 @@ func (si *shellInstall) FishUpdate(cmd *cobra.Command) error {
 
 // FishCompletionUpdate updates the fish completion file
 func (si *shellInstall) FishCompletionUpdate(cmd *cobra.Command) error {
-
+	shortCut := configure.GetShortcut()
 	if si.userHomePath != "" {
 		// completion dir Exists ?
 		exists, err := dirhandle.Exists(si.userHomePath + "/.config/fish/completions")
@@ -127,19 +128,19 @@ func (si *shellInstall) FishCompletionUpdate(cmd *cobra.Command) error {
 	cmd.Root().GenFishCompletion(cmpltn, true)
 
 	origin := cmpltn.String()
-	ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
+	ctxCmpltn := strings.ReplaceAll(origin, "contxt", shortCut)
 	if _, err := systools.WriteFileIfNotExists(si.userHomePath+"/.config/fish/completions/contxt.fish", origin); err != nil {
 		return err
 	}
-	if _, err := systools.WriteFileIfNotExists(si.userHomePath+"/.config/fish/completions/ctx.fish", ctxCmpltn); err != nil {
+	if _, err := systools.WriteFileIfNotExists(si.userHomePath+"/.config/fish/completions/"+shortCut+".fish", ctxCmpltn); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (si *shellInstall) FishFunctionUpdate() error {
-
-	fishFunc := `function ctx
+	shortCut := configure.GetShortcut()
+	fishFunc := `function ` + shortCut + `
     contxt $argv
     switch $argv[1]
        case switch
@@ -167,11 +168,11 @@ end`
 			}
 		}
 
-		funcExists, funcErr := dirhandle.Exists(usrDir + "/.config/fish/functions/ctx.fish")
+		funcExists, funcErr := dirhandle.Exists(usrDir + "/.config/fish/functions/" + shortCut + ".fish")
 		if funcErr == nil && !funcExists {
-			os.WriteFile(usrDir+"/.config/fish/functions/ctx.fish", []byte(fishFunc), 0644)
+			os.WriteFile(usrDir+"/.config/fish/functions/"+shortCut+".fish", []byte(fishFunc), 0644)
 		} else if funcExists {
-			return errors.New("ctx function already exists. did not change that")
+			return errors.New(shortCut + " function already exists. did not change that")
 
 		}
 
@@ -186,10 +187,11 @@ end`
 }
 
 func (si *shellInstall) BashUserInstall() error {
+	shortCut := configure.GetShortcut()
 	bashrcAdd := `
 ### begin contxt bashrc
 function cn() { cd $(contxt dir find "$@"); }
-function ctx() {        
+function ` + shortCut + `() {        
 	contxt "$@";
 	[ $? -eq 0 ]  || return 1
         case $1 in
@@ -199,15 +201,15 @@ function ctx() {
           ;;
         esac
 }
-function ctxcompletion() {        
+function ` + shortCut + `completion() {        
         ORIG=$(contxt completion bash)
         CM="contxt"
-        CT="ctx"
+        CT="` + shortCut + `"
         CTXC="${ORIG//$CM/$CT}"
         echo "$CTXC"
 }
 source <(contxt completion bash)
-source <(ctxcompletion)
+source <(` + shortCut + `completion)
 ### end of contxt bashrc
 	`
 	usrDir := si.userHomePath
@@ -258,19 +260,20 @@ func (si *shellInstall) ZshFuncDir() (string, error) {
 }
 
 func (si *shellInstall) updateZshFunctions(cmd *cobra.Command) error {
+	shortCut := configure.GetShortcut()
 	funcDir, err := si.ZshFuncDir()
 	if err != nil {
 		return err
 	}
 	if funcDir != "" {
 		contxtPath := funcDir + "/_contxt"
-		ctxPath := funcDir + "/_ctx"
+		ctxPath := funcDir + "/_" + shortCut
 
 		cmpltn := new(bytes.Buffer)
 		cmd.Root().GenZshCompletion(cmpltn)
 
 		origin := cmpltn.String()
-		ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
+		ctxCmpltn := strings.ReplaceAll(origin, "contxt", shortCut)
 
 		systools.WriteFileIfNotExists(contxtPath, origin)
 		systools.WriteFileIfNotExists(ctxPath, ctxCmpltn)
@@ -281,10 +284,11 @@ func (si *shellInstall) updateZshFunctions(cmd *cobra.Command) error {
 }
 
 func (si *shellInstall) ZshUserInstall() error {
+	shortCut := configure.GetShortcut()
 	zshrcAdd := `
 ### begin contxt zshrc
 function cn() { cd $(contxt dir find "$@"); }
-function ctx() {        
+function ` + shortCut + `() {        
 	contxt "$@";
 	[ $? -eq 0 ]  || return $?
         case $1 in
@@ -323,12 +327,13 @@ func (si *shellInstall) PwrShellUpdate(cmd *cobra.Command) error {
 }
 
 func (si *shellInstall) PwrShellUser() error {
+	shortCut := configure.GetShortcut()
 	pwrshrcAdd := `
 ### begin contxt pwrshrc
 function cn($path) {
 	Set-Location $(contxt dir find $path)
 }
-function ctx {
+function ` + shortCut + ` {
 	& contxt $args
 }
 ### end of contxt pwrshrc
@@ -377,6 +382,7 @@ func (si *shellInstall) PwrShellForceCreateProfile() {
 }
 
 func (si *shellInstall) PwrShellCompletionUpdate(cmd *cobra.Command) error {
+	shortCut := configure.GetShortcut()
 	if !si.PwrShellTestProfile() {
 		errormsg := `missing powershell profile. you can create a profile by running 'New-Item -Type File -Path $PROFILE -Force'`
 		return errors.New(errormsg)
@@ -387,7 +393,7 @@ func (si *shellInstall) PwrShellCompletionUpdate(cmd *cobra.Command) error {
 		cmd.Root().GenPowerShellCompletion(cmpltn)
 		origin := cmpltn.String()
 
-		ctxCmpltn := strings.ReplaceAll(origin, "contxt", "ctx")
+		ctxCmpltn := strings.ReplaceAll(origin, "contxt", shortCut)
 
 		ctxPowerShellPath := si.userHomePath + "/.context/powershell"
 		if exists, err := systools.Exists(ctxPowerShellPath); err != nil || !exists {
@@ -396,12 +402,12 @@ func (si *shellInstall) PwrShellCompletionUpdate(cmd *cobra.Command) error {
 			}
 		}
 		systools.WriteFileIfNotExists(ctxPowerShellPath+"/contxt.ps1", origin)
-		systools.WriteFileIfNotExists(ctxPowerShellPath+"/ctx.ps1", ctxCmpltn)
+		systools.WriteFileIfNotExists(ctxPowerShellPath+"/"+shortCut+".ps1", ctxCmpltn)
 
 		profileAdd := `
 ### begin contxt powershell profile
 . "` + ctxPowerShellPath + `/contxt.ps1"
-. "` + ctxPowerShellPath + `/ctx.ps1"
+. "` + ctxPowerShellPath + `/` + shortCut + `.ps1"
 ### end of contxt powershell profile
 `
 
