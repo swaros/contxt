@@ -37,11 +37,12 @@ import (
 //     go tool nm bin/contxt | grep version
 // to figure out how the variable can be set
 
-var build string
-var mainversion string
-var midversion string
-var minversion string
-var operatingSystem string
+var build string           // the build number
+var mainversion string     // the main version (main).(mid).(min)
+var midversion string      // the mid version
+var minversion string      // the min version
+var operatingSystem string // the operating system
+var shortcut string        // the shortcut for the context functions in bash, fish, zsh and powershell
 
 // GetVersion delivers the current build version
 func GetVersion() string {
@@ -68,6 +69,17 @@ func GetVersion() string {
 	return outVersion
 }
 
+// GetShortcut delivers the current shortcut
+// for the context functions in bash, fish, zsh and powershell
+// if no shortcut is set, the default is "ctx"
+func GetShortcut() string {
+	if shortcut == "" {
+		return "ctx"
+	}
+	return shortcut
+}
+
+// CheckCurrentVersion checks if the current version is greater or equal to the given version
 func CheckCurrentVersion(askWithVersion string) bool {
 	curentVersion := GetVersion()
 
@@ -77,6 +89,7 @@ func CheckCurrentVersion(askWithVersion string) bool {
 	return CheckVersion(askWithVersion, curentVersion)
 }
 
+// CheckVersion checks if the given version is greater or equal to the verifyAgainst version
 func CheckVersion(askWithVersion string, verifyAgainst string) bool {
 	current, err := semver.NewVersion(askWithVersion)
 	if err != nil {
@@ -98,6 +111,8 @@ func CheckVersion(askWithVersion string, verifyAgainst string) bool {
 	return false
 }
 
+// GetOs returns the current operating system
+// if no operating system is set, the default is the runtime.GOOS
 func GetOs() string {
 	if operatingSystem == "" {
 		return strings.ToLower(runtime.GOOS)
