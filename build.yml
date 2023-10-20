@@ -46,4 +46,24 @@ build:
         - ${configmodul}.binaryName=ctxv2
         - ${configmodul}.cnShortCut=v2cn
 
+# special tests they need some special handling
+# like running the test in loop for a specific time
+testcases:
+  runner: go run ./cmd/cmd-contxt/main.go
+  looptests:
+      TaskNestedNeeds_first:
+        loops: 100
+        timeout: 10s
+        folder: ./module/tasks
+        test: TestTargetComplexWith2NestedNeeds
+      TaskNestedNeeds_second:
+        loops: 100
+        timeout: 10s
+        folder: ./module/tasks
+        test: TestTargetComplexWith2NestedNeeds
+      TaskNestedNeeds_third:
+        loops: 100
+        timeout: 10s
+        folder: ./module/tasks
+        test: TestTargetComplexWith2NestedNeeds
 

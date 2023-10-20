@@ -18,6 +18,7 @@ config:
     - ./imports/vscode.workspace.yml vscode-ws
     - ./imports/go_build.tpl build-action
     - ./imports/go_test.tpl test-action
+    - ./imports/go_test_loop.tpl test-action-loop
     - ./imports/codehead.tpl codehead
     - ./imports/Dockerfile.ubuntu docker
     - ./imports/build.sh build-sh
@@ -177,6 +178,7 @@ task:
     script:
       - "#@var-to-file build-action .github/workflows/go.yml"
       - "#@var-to-file test-action .github/workflows/test.yml"
+      - "#@var-to-file test-action-loop .github/workflows/test-loop.yml"
 
   ## verify the modules
   - id: modules-verify
