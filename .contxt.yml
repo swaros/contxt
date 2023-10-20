@@ -526,3 +526,51 @@ task:
             echo "OK: $gfile"
           fi
        done <<< "$GOFILES"
+
+# special tests defined in build.yml
+# they need some special handling
+
+  - id: test-loops
+    options:
+      displaycmd: false
+      invisible: false
+    needs:
+      - go-check
+{{- range $testName, $test := $.testcases.looptests }}
+      - testing-{{ $testName }}
+{{- end }}
+    require:
+      system: linux
+    script:
+      - echo "test loops done"
+
+{{ range $k, $testcase := $.testcases.looptests }}
+  - id: testing-{{ $k }}
+    options:
+      displaycmd: false
+      invisible: true
+    require:
+      system: linux
+    listener:
+      - trigger:
+          onoutContains:
+           - "FAIL"
+        action:
+          script:
+            - echo "<f:red>Test Failed</> {{ $k }}"
+            - echo "  folder  <f:red>{{ $testcase.folder }}</>"
+            - exit 10  # force error
+    script:
+      - echo "run test {{ $k }}"
+      - echo "  loops   <f:blue>{{ $testcase.loops }}</>"
+      - echo "  timeout <f:blue>{{ $testcase.timeout }}</>"
+      - echo "  folder  <f:blue>{{ $testcase.folder }}</>"
+      - echo "  test    <f:blue>{{ $testcase.test }}</>"
+      - echo "  command <f:blue>go test -count=1 -failfast -timeout {{ $testcase.timeout }} -run {{ $testcase.test }} {{ $testcase.folder }}</>"
+      - |
+        for i in $(seq 1 {{ $testcase.loops }});
+        do
+          echo "loop <f:yellow>$i</> of <f:yellow>{{ $testcase.loops }}</> for test <f:blue>{{ $k }}</>"
+          go test -count=1 -failfast -timeout {{ $testcase.timeout }} -run {{ $testcase.test }} {{ $testcase.folder }}
+        done
+{{ end }}
