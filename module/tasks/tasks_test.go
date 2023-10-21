@@ -366,15 +366,23 @@ func TestTargetComplexWith2Needs(t *testing.T) {
 	source := `
 task:
   - id: test
+    options:
+       displaycmd: true
     needs: 
       - subtask
       - subtask2
     script:
-      - echo test  
+      - echo test
+
   - id: subtask
+    options:
+      displaycmd: true
     script:
       - echo i-am-subtask
+
   - id: subtask2
+    options:
+      displaycmd: true
     script:
       - echo this-is-subtask-2
 `
@@ -397,7 +405,12 @@ task:
 				case tasks.MsgExecOutput: // this will be the output of the command
 					t.Logf("cmd output: %v", msg)
 					messages = append(messages, string(mt.Output))
+				case tasks.MsgTarget:
+					t.Log(
+						"TARGET context:", mt.Context, "target:", mt.Target, "info:", mt.Info,
+					)
 				}
+
 			}
 
 		}

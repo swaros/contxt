@@ -204,6 +204,17 @@ func (w *Watchman) WaitForStopProcess(target string, tickDuration time.Duration,
 	}
 }
 
+// do not sync this function.
+func (w *Watchman) CreateTask(target string) {
+	w.watchTaskList.Store(target, TaskDef{
+		uuid:      uuid.New().String(),
+		count:     0,
+		done:      false,
+		doneCount: 0,
+		started:   false,
+	})
+}
+
 func (w *Watchman) getTaskOrCreate(target string) (TaskDef, bool) {
 	taskInfo, found := w.watchTaskList.Load(target)
 	if found && taskInfo != nil {
@@ -274,12 +285,6 @@ func (w *Watchman) ResetAllTaskInfos() {
 
 }
 
-// TaskExists checks if a task is already created
-func (w *Watchman) TaskExists(target string) bool {
-	_, found := w.watchTaskList.Load(target)
-	return found
-}
-
 // TaskRunning checks if a task is already running
 func (w *Watchman) TaskRunning(target string) bool {
 	info, found := w.watchTaskList.Load(target)
@@ -308,10 +313,42 @@ func (w *Watchman) ResetAllTasksIfPossible() error {
 
 // checks if a task was at least started X times
 func (w *Watchman) TaskRunsAtLeast(target string, atLeast int) bool {
+	w.mu.Lock()
+	instanceMutex.Lock() // we also need to lock the instanceMutex
+	defer instanceMutex.Unlock()
+	defer w.mu.Unlock()
 	if info, found := w.watchTaskList.Load(target); found {
 		return info.(TaskDef).count >= atLeast
 	}
 	return false
+}
+
+func (w *Watchman) TaskIsRegisteredCallBack(target string, handleFn func(bool)) bool {
+	w.mu.Lock()
+	instanceMutex.Lock() // we also need to lock the instanceMutex
+	defer instanceMutex.Unlock()
+	defer w.mu.Unlock()
+	_, found := w.watchTaskList.Load(target)
+	if handleFn != nil {
+		handleFn(found)
+	}
+	return found
+
+}
+
+func (w *Watchman) IncTaskIfCounterIsLessThen(target string, lessThen int) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if info, found := w.watchTaskList.Load(target); found {
+		task := info.(TaskDef)
+		if task.count < lessThen {
+			task.count++
+			w.watchTaskList.Store(target, task)
+			return nil
+		}
+		return fmt.Errorf("can not update task %q, because the count is greater or equal %d", target, lessThen)
+	}
+	return fmt.Errorf("can not update task %q, because it does not exists", target)
 }
 
 func (w *Watchman) GetTaskCount(target string) int {

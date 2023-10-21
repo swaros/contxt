@@ -120,6 +120,7 @@ task:
       - echo "clean all"
       - rm -rfv ./bin/*
       - rm -rfv ./docs/coverage.html
+      - rm -rfv ./*.out.tmp
 
   - id: clean-moduls
     require:
@@ -535,7 +536,7 @@ task:
       displaycmd: false
       invisible: false
     needs:
-      - go-check
+      - test-each
 {{- range $testName, $test := $.testcases.looptests }}
       - testing-{{ $testName }}
 {{- end }}
@@ -558,7 +559,7 @@ task:
         action:
           script:
             - echo "<f:red>Test Failed</> {{ $k }}"
-            - echo "  folder  <f:red>{{ $testcase.folder }}</>"
+            - echo "  folder  <f:yellow>{{ $testcase.folder }}</>"
             - exit 10  # force error
     script:
       - echo "run test {{ $k }}"
@@ -571,6 +572,13 @@ task:
         for i in $(seq 1 {{ $testcase.loops }});
         do
           echo "loop <f:yellow>$i</> of <f:yellow>{{ $testcase.loops }}</> for test <f:blue>{{ $k }}</>"
-          go test -count=1 -failfast -timeout {{ $testcase.timeout }} -run {{ $testcase.test }} {{ $testcase.folder }}
+          OUTPUT=$(go test -count=1 -failfast -timeout {{ $testcase.timeout }} -run {{ $testcase.test }} {{ $testcase.folder }})
+          echo "$OUTPUT" > testing-{{ $k }}-$i-runlog.out.tmp
+          # this will be executed for tests they are not failing
+          if grep "ok" testing-{{ $k }}-$i-runlog.out.tmp; then
+            rm -rfv testing-{{ $k }}-$i-runlog.out.tmp
+          fi
+          # print the output at last
+          echo "  <f:cyan>${OUTPUT}</>"
         done
 {{ end }}

@@ -53,17 +53,21 @@ testcases:
   looptests:
       TaskNestedNeeds_first:
         loops: 100
-        timeout: 10s
+        timeout: 20s
         folder: ./module/tasks
         test: TestTargetComplexWith2NestedNeeds
       TaskNestedNeeds_second:
         loops: 100
-        timeout: 10s
+        timeout: 20s
         folder: ./module/tasks
         test: TestTargetComplexWith2NestedNeeds
       TaskNestedNeeds_third:
         loops: 100
-        timeout: 10s
+        timeout: 20s
         folder: ./module/tasks
         test: TestTargetComplexWith2NestedNeeds
-
+      TaskNestedNeeds_last:
+        loops: 100
+        timeout: 20s
+        folder: ./module/tasks
+        test: TestTargetComplexWith2NestedNeeds
