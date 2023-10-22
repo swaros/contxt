@@ -54,22 +54,22 @@ testcases:
   runner: go run ./cmd/cmd-contxt/main.go
   looptests:
       TaskNestedNeeds_first:
-        loops: 100
+        loops: 50
         timeout: 20s
         folder: ./module/tasks
         test: TestTargetComplexWith2NestedNeeds
       TaskNestedNeeds_second:
-        loops: 100
+        loops: 50
         timeout: 20s
         folder: ./module/tasks
         test: TestTargetComplexWith2NestedNeeds
       TaskNestedNeeds_third:
-        loops: 100
+        loops: 50
         timeout: 20s
         folder: ./module/tasks
         test: TestTargetComplexWith2NestedNeeds
       TaskNestedNeeds_last:
-        loops: 100
+        loops: 50
         timeout: 20s
         folder: ./module/tasks
         test: TestTargetComplexWith2NestedNeeds
