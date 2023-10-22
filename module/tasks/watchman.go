@@ -39,7 +39,6 @@ var (
 
 // Track watchman instances
 // in a global sync map
-
 func storeNewInstance(wm *Watchman) {
 	uuidString := uuid.New().String()
 	storeNamedInstance(wm, uuidString)
@@ -51,6 +50,8 @@ func storeNamedInstance(wm *Watchman, name string) {
 	instances[name] = wm
 }
 
+// GetWatcherInstance returns the watchman instance for a given uuid string
+// or nil if the instance does not exists
 func GetWatcherInstance(uuidString string) *Watchman {
 	instanceMutex.Lock()
 	defer instanceMutex.Unlock()
@@ -60,6 +61,9 @@ func GetWatcherInstance(uuidString string) *Watchman {
 	return nil
 }
 
+// ListWatcherInstances returns a list of all watchman instances
+// as string slice with the uuid string of the
+// watchman instance
 func ListWatcherInstances() []string {
 	instanceMutex.Lock()
 	defer instanceMutex.Unlock()
@@ -70,6 +74,8 @@ func ListWatcherInstances() []string {
 	return inst
 }
 
+// ShutDownProcesses stops all processes in all watchman instances
+// and reports the result to the reportFn if it is not nil
 func ShutDownProcesses(reportFn func(target string, time int, succeed bool)) {
 	instanceMutex.Lock()
 	defer instanceMutex.Unlock()
@@ -84,8 +90,13 @@ type Watchman struct {
 	watchTaskList sync.Map
 	mu            sync.Mutex
 	logger        mimiclog.Logger
+	verifyLock    sync.Mutex
 }
 
+// NewGlobalWatchman returns the global watchman instance.
+// if the global watchman instance does not exists, it will be created
+// this is a shortcut for GetWatcherInstance(GlobalName)
+// and storeNamedInstance(wm, GlobalName) if the instance does not exists
 func NewGlobalWatchman() *Watchman {
 	wm := GetWatcherInstance(GlobalName)
 	if wm == nil {
@@ -99,6 +110,8 @@ func NewGlobalWatchman() *Watchman {
 	return wm
 }
 
+// NewWatchman returns a new watchman instance
+// and stores it in the global watchman instance list
 func NewWatchman() *Watchman {
 	wm := &Watchman{
 		logger:        mimiclog.NewNullLogger(),
@@ -108,6 +121,19 @@ func NewWatchman() *Watchman {
 	return wm
 }
 
+// GetNameOfWatchman returns the name of the watchman instance
+func GetNameOfWatchman(wm *Watchman) (string, bool) {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+	for k, v := range instances {
+		if v == wm {
+			return k, true
+		}
+	}
+	return "", false
+}
+
+// GetTask returns the task info for a given target or false if the task does not exists
 func (w *Watchman) GetTask(target string) (TaskDef, bool) {
 	taskInfo, found := w.watchTaskList.Load(target)
 	if found && taskInfo != nil {
@@ -116,10 +142,14 @@ func (w *Watchman) GetTask(target string) (TaskDef, bool) {
 	return TaskDef{}, false
 }
 
+// SetLogger sets the logger for the watchman
+// fullfills the mimiclog.Logger interface
 func (w *Watchman) SetLogger(logger mimiclog.Logger) {
 	w.logger = logger
 }
 
+// StopAllTasks stops all tasks they are registered in the watchman
+// and reports the result to the reportFn if it is not nil
 func (w *Watchman) StopAllTasks(reportFn func(target string, time int, succeed bool)) {
 	w.watchTaskList.Range(func(key, _ interface{}) bool {
 		target := key.(string)
@@ -204,6 +234,19 @@ func (w *Watchman) WaitForStopProcess(target string, tickDuration time.Duration,
 	}
 }
 
+// do not sync this function.
+func (w *Watchman) CreateTask(target string) {
+	w.watchTaskList.Store(target, TaskDef{
+		uuid:      uuid.New().String(),
+		count:     0,
+		done:      false,
+		doneCount: 0,
+		started:   false,
+	})
+}
+
+// getTaskOrCreate returns the task info for a given target.
+// it makes sure that the task is created if it does not exists
 func (w *Watchman) getTaskOrCreate(target string) (TaskDef, bool) {
 	taskInfo, found := w.watchTaskList.Load(target)
 	if found && taskInfo != nil {
@@ -221,6 +264,7 @@ func (w *Watchman) getTaskOrCreate(target string) (TaskDef, bool) {
 
 }
 
+// Updates the task info for a given target
 func (w *Watchman) UpdateTask(target string, task TaskDef) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -240,6 +284,8 @@ func (w *Watchman) UpdateTask(target string, task TaskDef) error {
 
 }
 
+// Increases the task count for a given target.
+// If the task does not exists it will be created
 func (w *Watchman) IncTaskCount(target string) int {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -250,18 +296,26 @@ func (w *Watchman) IncTaskCount(target string) int {
 	return taskInfo.count
 }
 
-func (w *Watchman) IncTaskDoneCount(target string) bool {
+// Increases the task done count for a given target.
+// If the task does not exists it will not be created. Instead an error will be returned.
+// there is also no check against the count. So it is possible to increase the done count
+// higher than the count of task runs
+func (w *Watchman) IncTaskDoneCount(target string) (bool, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	taskInfo, exists := w.getTaskOrCreate(target)
-	if !exists {
-		return false
+	taskInfo, found := w.watchTaskList.Load(target)
+	if !found {
+		return false, fmt.Errorf("can not increase done count for task %q, because it does not exists", target)
 	}
-	taskInfo.doneCount++
-	taskInfo.done = taskInfo.doneCount == taskInfo.count
-	w.watchTaskList.Store(target, taskInfo)
-	return taskInfo.done
 
+	task := taskInfo.(TaskDef)        // cast to TaskDef
+	if task.doneCount >= task.count { // check if the done count is already higher or equal than the count
+		return false, fmt.Errorf("can not increase done count for task %q, because the done count is already higher than the count", target)
+	}
+	task.doneCount++                         // increase the done counter
+	task.done = task.doneCount == task.count // set the done flag if the done counter is equal to the count
+	w.watchTaskList.Store(target, task)      // store the updated task
+	return true, nil                         // return the done flag
 }
 
 // ResetAllTaskInfos resets all task infos
@@ -272,12 +326,6 @@ func (w *Watchman) ResetAllTaskInfos() {
 		return true
 	})
 
-}
-
-// TaskExists checks if a task is already created
-func (w *Watchman) TaskExists(target string) bool {
-	_, found := w.watchTaskList.Load(target)
-	return found
 }
 
 // TaskRunning checks if a task is already running
@@ -306,12 +354,22 @@ func (w *Watchman) ResetAllTasksIfPossible() error {
 	return fmt.Errorf("can not reset watchman, because there are still %v running tasks", len(w.GetAllRunningTasks()))
 }
 
-// checks if a task was at least started X times
-func (w *Watchman) TaskRunsAtLeast(target string, atLeast int) bool {
-	if info, found := w.watchTaskList.Load(target); found {
-		return info.(TaskDef).count >= atLeast
+// verify if a task already exists. this function does not create a new task.
+// if the handleFn is not nil, it will be called with the result of the check.
+func (w *Watchman) VerifyTaskExists(target string, handleFn func(bool)) bool {
+	_, found := w.watchTaskList.Load(target)
+	if handleFn != nil {
+		// just use TryLock to make sure that we do not have nested calls.
+		// but because there is an wrong usage of this function, we panic
+		if !w.verifyLock.TryLock() {
+			panic("verify lock is already locked. Nested calls of 'VerifyTaskExists' are not allowed")
+		}
+
+		handleFn(found)
+		w.verifyLock.Unlock()
 	}
-	return false
+	return found
+
 }
 
 func (w *Watchman) GetTaskCount(target string) int {
@@ -321,23 +379,9 @@ func (w *Watchman) GetTaskCount(target string) int {
 	return 0
 }
 
-func (w *Watchman) GetTaskDoneCount(target string) int {
-	if info, found := w.watchTaskList.Load(target); found {
-		return info.(TaskDef).doneCount
-	}
-	return 0
-}
-
 func (w *Watchman) GetTaskDone(target string) bool {
 	if info, found := w.watchTaskList.Load(target); found {
 		return info.(TaskDef).done
-	}
-	return false
-}
-
-func (w *Watchman) GetTaskStarted(target string) bool {
-	if info, found := w.watchTaskList.Load(target); found {
-		return info.(TaskDef).started
 	}
 	return false
 }

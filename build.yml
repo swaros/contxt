@@ -1,5 +1,5 @@
 release:      # this is the release target
-  version:    # the version number of the release min.mid.main
+  version:    # the version number of the release main.mid.minor
      main: 0
      mid: 5
      minor: 3
@@ -46,4 +46,30 @@ build:
         - ${configmodul}.binaryName=ctxv2
         - ${configmodul}.cnShortCut=v2cn
 
-
+# special tests they need some special handling
+# to find raise conditions it is needed to run the same test multiple times
+# to increase the chance to find a raise condition.
+# if a test ever failed randomly, this is always a good reason to add them here
+testcases:
+  runner: go run ./cmd/cmd-contxt/main.go
+  looptests:
+      TaskNestedNeeds_first:
+        loops: 50
+        timeout: 20s
+        folder: ./module/tasks
+        test: TestTargetComplexWith2NestedNeeds
+      TaskNestedNeeds_second:
+        loops: 50
+        timeout: 20s
+        folder: ./module/tasks
+        test: TestTargetComplexWith2NestedNeeds
+      TaskNestedNeeds_third:
+        loops: 50
+        timeout: 20s
+        folder: ./module/tasks
+        test: TestTargetComplexWith2NestedNeeds
+      TaskNestedNeeds_last:
+        loops: 50
+        timeout: 20s
+        folder: ./module/tasks
+        test: TestTargetComplexWith2NestedNeeds

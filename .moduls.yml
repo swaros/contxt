@@ -105,6 +105,8 @@ module:
     local: true
     test:
       timeout: 30s
+    clean:
+      - "*.tmp"
   
   - 
     modul: yaclint

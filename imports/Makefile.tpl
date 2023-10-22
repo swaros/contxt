@@ -22,6 +22,9 @@ test:
 	go test  -failfast ./module/{{ $test.modul }}/./...
   {{- end }}
 {{- end }}
+{{- if $.testcases.runner}}
+	{{ $.testcases.runner }} run test-loops
+{{- end }}
 
 info: build
 	./bin/contxt dir

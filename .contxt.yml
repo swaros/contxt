@@ -18,6 +18,7 @@ config:
     - ./imports/vscode.workspace.yml vscode-ws
     - ./imports/go_build.tpl build-action
     - ./imports/go_test.tpl test-action
+    - ./imports/go_test_loop.tpl test-action-loop
     - ./imports/codehead.tpl codehead
     - ./imports/Dockerfile.ubuntu docker
     - ./imports/build.sh build-sh
@@ -119,6 +120,7 @@ task:
       - echo "clean all"
       - rm -rfv ./bin/*
       - rm -rfv ./docs/coverage.html
+      - rm -rfv ./*.out.tmp
 
   - id: clean-moduls
     require:
@@ -177,6 +179,7 @@ task:
     script:
       - "#@var-to-file build-action .github/workflows/go.yml"
       - "#@var-to-file test-action .github/workflows/test.yml"
+      - "#@var-to-file test-action-loop .github/workflows/test-loop.yml"
 
   ## verify the modules
   - id: modules-verify
@@ -524,3 +527,58 @@ task:
             echo "OK: $gfile"
           fi
        done <<< "$GOFILES"
+
+# special tests defined in build.yml
+# they need some special handling
+
+  - id: test-loops
+    options:
+      displaycmd: false
+      invisible: false
+    needs:
+      - test-each
+{{- range $testName, $test := $.testcases.looptests }}
+      - testing-{{ $testName }}
+{{- end }}
+    require:
+      system: linux
+    script:
+      - echo "test loops done"
+
+{{ range $k, $testcase := $.testcases.looptests }}
+  - id: testing-{{ $k }}
+    options:
+      displaycmd: false
+      invisible: true
+    require:
+      system: linux
+    listener:
+      - trigger:
+          onoutContains:
+           - "FAIL"
+        action:
+          script:
+            - echo "<f:red>Test Failed</> {{ $k }}"
+            - echo "  folder  <f:yellow>{{ $testcase.folder }}</>"
+            - exit 10  # force error
+    script:
+      - echo "run test {{ $k }}"
+      - echo "  loops   <f:blue>{{ $testcase.loops }}</>"
+      - echo "  timeout <f:blue>{{ $testcase.timeout }}</>"
+      - echo "  folder  <f:blue>{{ $testcase.folder }}</>"
+      - echo "  test    <f:blue>{{ $testcase.test }}</>"
+      - echo "  command <f:blue>go test -count=1 -failfast -timeout {{ $testcase.timeout }} -run {{ $testcase.test }} {{ $testcase.folder }}</>"
+      - |
+        for i in $(seq 1 {{ $testcase.loops }});
+        do
+          echo "loop <f:yellow>$i</> of <f:yellow>{{ $testcase.loops }}</> for test <f:blue>{{ $k }}</>"
+          OUTPUT=$(go test -count=1 -failfast -timeout {{ $testcase.timeout }} -run {{ $testcase.test }} {{ $testcase.folder }})
+          echo "$OUTPUT" > testing-{{ $k }}-$i-runlog.out.tmp
+          # this will be executed for tests they are not failing
+          if grep "ok" testing-{{ $k }}-$i-runlog.out.tmp; then
+            rm -rfv testing-{{ $k }}-$i-runlog.out.tmp
+          fi
+          # print the output at last
+          echo "  <f:cyan>${OUTPUT}</>"
+        done
+{{ end }}

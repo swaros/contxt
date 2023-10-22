@@ -1,11 +1,11 @@
 build: test	build-no-test
 
 build-no-test:
-	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=3 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20231020.045242-linux-release" -o ./bin/contxt cmd/cmd-contxt/main.go
+	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=3 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20231020.130226-linux-release" -o ./bin/contxt cmd/cmd-contxt/main.go
 build-development:
-	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=3 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20231020.045242-linux-release -X github.com/swaros/contxt/module/configure.shortcut=v2ctx -X github.com/swaros/contxt/module/configure.binaryName=ctxv2 -X github.com/swaros/contxt/module/configure.cnShortCut=v2cn" -o ./bin/ctxv2 cmd/v2/main.go
+	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=3 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20231020.130226-linux-release -X github.com/swaros/contxt/module/configure.shortcut=v2ctx -X github.com/swaros/contxt/module/configure.binaryName=ctxv2 -X github.com/swaros/contxt/module/configure.cnShortCut=v2cn" -o ./bin/ctxv2 cmd/v2/main.go
 build-release:
-	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=3 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20231020.045242-linux-release" -o ./bin/contxt cmd/cmd-contxt/main.go
+	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=3 -X github.com/swaros/contxt/module/configure.midversion=5 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20231020.130226-linux-release" -o ./bin/contxt cmd/cmd-contxt/main.go
 
 clean:
 	rm -f ./bin/contxt
@@ -30,6 +30,7 @@ test:
 	go test  -failfast ./module/tasks/./...
 	go test  -failfast ./module/yaclint/./...
 	go test  -failfast ./module/mimiclog/./...
+	go run ./cmd/cmd-contxt/main.go run test-loops
 
 info: build
 	./bin/contxt dir

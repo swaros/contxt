@@ -225,6 +225,7 @@ func (d *DefaultRequires) CheckReason(checkReason configure.Trigger, output stri
 		checkText = d.variables.HandlePlaceHolder(checkText)
 		if checkText != "" && strings.Contains(output, checkText) {
 			message = fmt.Sprint("reason match because output contains ", checkText)
+			d.logger.Debug("OnoutContains MATCH", mimiclog.Fields{"looking4": checkText, "in": output, "source": checkReason.OnoutContains})
 			return true, message
 		}
 		if checkText != "" {
