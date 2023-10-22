@@ -280,11 +280,13 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 					t.out(MsgTarget{Target: target, Context: "needs_required", Info: strings.Join(script.Needs, ",")}, MsgArgs(script.Needs))
 				}
 				t.getLogger().Debug("Needs for the script", script.Needs)
+				// check if we have to run the needs in threads or not
 				if runAsync {
+					// here we have the "run in threads" part
 					var needExecs []awaitgroup.FutureStack
 					for _, needTarget := range script.Needs {
 
-						t.watch.TaskIsRegisteredCallBack(needTarget, func(taskExists bool) {
+						t.watch.VerifyTaskExists(needTarget, func(taskExists bool) {
 							if taskExists {
 								if script.Options.Displaycmd {
 									t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
@@ -314,17 +316,21 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 
 					t.getLogger().Debug("needs result", results)
 				} else {
-					for _, needTarget := range script.Needs {
-						if t.watch.TaskRunsAtLeast(needTarget, 1) { // do not run needs the already runs
-							t.getLogger().Debug("need already handled " + needTarget)
-							if script.Options.Displaycmd {
-								t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
+					for _, syncTarget := range script.Needs {
+						t.watch.VerifyTaskExists(syncTarget, func(exists bool) {
+							if exists {
+								t.getLogger().Debug("need already handled " + syncTarget)
+								if script.Options.Displaycmd {
+									t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: syncTarget})
+								}
+							} else {
+								_, argmap := systools.StringSplitArgs(syncTarget, "arg")
+								t.executeTemplate(false, syncTarget, argmap)
 							}
-						} else {
-							_, argmap := systools.StringSplitArgs(needTarget, "arg")
-							t.executeTemplate(false, needTarget, argmap)
-						}
+
+						})
 					}
+
 				}
 				if script.Options.Displaycmd {
 					t.out(MsgTarget{Target: target, Context: "needs_done", Info: strings.Join(script.Needs, ",")}, MsgArgs(script.Needs))

@@ -47,7 +47,9 @@ build:
         - ${configmodul}.cnShortCut=v2cn
 
 # special tests they need some special handling
-# like running the test in loop for a specific time
+# to find raise conditions it is needed to run the same test multiple times
+# to increase the chance to find a raise condition.
+# if a test ever failed randomly, this is always a good reason to add them here
 testcases:
   runner: go run ./cmd/cmd-contxt/main.go
   looptests:
