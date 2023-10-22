@@ -25,6 +25,11 @@ func ResetWatchmanTaskList(t *testing.T) {
 		t.Errorf("Error creating watchman")
 		t.FailNow()
 	}
+
+	wman.StopAllTasks(func(target string, time int, succeed bool) {
+		t.Logf("Task %s stopped after %d seconds with success %v", target, time, succeed)
+	})
+
 	if err := wman.ResetAllTasksIfPossible(); err != nil {
 		t.Errorf("Error resetting watchman: %v", err)
 	}
@@ -361,17 +366,25 @@ func TestTargetComplexWith2Needs(t *testing.T) {
 	source := `
 task:
   - id: test
+    options:
+       displaycmd: true
     needs: 
       - subtask
       - subtask2
     script:
-      - echo test  
+      - echo test
+
   - id: subtask
+    options:
+      displaycmd: true
     script:
       - echo i-am-subtask
+
   - id: subtask2
+    options:
+      displaycmd: true
     script:
-      - echo i-am-subtask2
+      - echo this-is-subtask-2
 `
 	var runCfg configure.RunConfig = configure.RunConfig{}
 
@@ -392,7 +405,12 @@ task:
 				case tasks.MsgExecOutput: // this will be the output of the command
 					t.Logf("cmd output: %v", msg)
 					messages = append(messages, string(mt.Output))
+				case tasks.MsgTarget:
+					t.Log(
+						"TARGET context:", mt.Context, "target:", mt.Target, "info:", mt.Info,
+					)
 				}
+
 			}
 
 		}
@@ -411,12 +429,12 @@ task:
 
 		assert.Contains(t, messages, "test")
 		assert.Contains(t, messages, "i-am-subtask")
-		assert.Contains(t, messages, "i-am-subtask2")
+		assert.Contains(t, messages, "this-is-subtask-2")
 		assertContainsCount(t, messages, "test", 1)
 		assertContainsCount(t, messages, "i-am-subtask", 1)
-		assertContainsCount(t, messages, "i-am-subtask2", 1)
+		assertContainsCount(t, messages, "this-is-subtask-2", 1)
 		assertPositionInSliceBefore(t, messages, "i-am-subtask", "test")
-		assertPositionInSliceBefore(t, messages, "i-am-subtask2", "test")
+		assertPositionInSliceBefore(t, messages, "this-is-subtask-2", "test")
 	}
 }
 
@@ -437,7 +455,7 @@ task:
     needs:
       - subtask
     script:
-      - echo i-am-subtask2
+      - echo this-is-subtask-2
 `
 	var runCfg configure.RunConfig = configure.RunConfig{}
 
@@ -481,12 +499,12 @@ task:
 
 		assert.Contains(t, messages, "test")
 		assert.Contains(t, messages, "i-am-subtask")
-		assert.Contains(t, messages, "i-am-subtask2")
+		assert.Contains(t, messages, "this-is-subtask-2")
 		assertContainsCount(t, messages, "test", 2)         // we run the task twice
 		assertContainsCount(t, messages, "i-am-subtask", 1) // any needs should not being executed twice
-		assertContainsCount(t, messages, "i-am-subtask2", 1)
+		assertContainsCount(t, messages, "this-is-subtask-2", 1)
 		assertPositionInSliceBefore(t, messages, "i-am-subtask", "test")
-		assertPositionInSliceBefore(t, messages, "i-am-subtask2", "test")
+		assertPositionInSliceBefore(t, messages, "this-is-subtask-2", "test")
 	}
 }
 

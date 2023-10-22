@@ -1,6 +1,7 @@
 package tasks_test
 
 import (
+	"strings"
 	"sync"
 	"testing"
 
@@ -74,6 +75,7 @@ func assertContainsCount(t *testing.T, slice []string, substr string, count int)
 	}
 	if containsCount != count {
 		t.Errorf("expected slice to contain %d instances of %q, but it contained %d", count, substr, containsCount)
+		t.Log("\n" + strings.Join(slice, "\n"))
 	}
 }
 

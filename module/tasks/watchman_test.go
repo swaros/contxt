@@ -12,6 +12,13 @@ import (
 	"github.com/swaros/contxt/module/tasks"
 )
 
+func assertStringEqual(t *testing.T, expected, actual string) {
+	t.Helper()
+	if expected != actual {
+		t.Errorf("expected\n%s\nbut got\n%s", expected, actual)
+	}
+}
+
 func TestWatchmanInc(t *testing.T) {
 	wm := tasks.NewWatchman()
 	runCnt := 1000
@@ -52,6 +59,52 @@ func TestWatchmanDoneCheck(t *testing.T) {
 
 	if !wm.GetTaskDone("task2") {
 		t.Errorf("expected task2 to be done, but it is not")
+	}
+
+}
+
+func TestIncAndDec(t *testing.T) {
+	wm := tasks.NewWatchman()
+	if ok, err := wm.IncTaskDoneCount("task1"); ok {
+		t.Error("expected to fail, but it did not")
+	} else {
+		assertStringEqual(t, "can not increase done count for task \"task1\", because it does not exists", err.Error())
+	}
+
+	cnt := wm.IncTaskCount("test1")
+	if cnt != 1 {
+		t.Errorf("expected to get 1, but got %d", cnt)
+	}
+	cnt = wm.IncTaskCount("test1")
+	if cnt != 2 {
+		t.Errorf("expected to get 2, but got %d", cnt)
+	}
+	if ok, err := wm.IncTaskDoneCount("test1"); !ok {
+		t.Error("expected to succeed, but it did not")
+		if err != nil {
+			t.Errorf("expected no error, but got %v", err)
+		}
+	}
+
+	if !wm.TaskRunning("test1") {
+		t.Error("expected task to be running, but it is not")
+	}
+
+	cnt = wm.IncTaskCount("test1")
+	if cnt != 3 {
+		t.Errorf("expected to get 3, but got %d", cnt)
+	}
+
+	for i := 0; i < 2; i++ {
+		if ok, err := wm.IncTaskDoneCount("test1"); !ok {
+			t.Error("expected to succeed, but it did not")
+			if err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+		}
+	}
+	if wm.TaskRunning("test1") {
+		t.Error("expected task not to be running, but it is")
 	}
 
 }
@@ -435,5 +488,54 @@ func TestMultipleTaskManagementWithChildProcs(t *testing.T) {
 		}
 
 	}
+
+}
+
+func TestVerify(t *testing.T) {
+	wm := tasks.NewWatchman()
+
+	_, ok := tasks.GetNameOfWatchman(wm)
+	if !ok {
+		t.Error("expected to get the name of the watchman, but it did not")
+	}
+
+	// nothing runs any task1 yet. so they shold be reported as not found
+	wm.VerifyTaskExists("task1", func(b bool) {
+		if b {
+			t.Error("there should be no task1, but it is")
+		}
+	})
+
+	// the check itself should also change nothing dependig the tasks
+	wm.VerifyTaskExists("task1", func(b bool) {
+		if b {
+			t.Error("there should be still no task1, but it is")
+		}
+	})
+}
+
+func TestVerifyNestedLook(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("the verify should panic, because of nested usage, but it did not")
+		}
+	}()
+	wm := tasks.NewWatchman()
+
+	_, ok := tasks.GetNameOfWatchman(wm)
+	if !ok {
+		t.Error("expected to get the name of the watchman, but it did not")
+	}
+
+	// nested verifys are an issue at all? (sync.locks)
+	wm.VerifyTaskExists("task1", func(b bool) {
+
+		wm.VerifyTaskExists("task1", func(b bool) {
+			if b {
+				t.Error("there should be no task1, but it is")
+			}
+		})
+
+	})
 
 }
