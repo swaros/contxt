@@ -59,7 +59,7 @@ type CobraOptions struct {
 func NewCobraCmds() *SessionCobra {
 	return &SessionCobra{
 		RootCmd: &cobra.Command{
-			Use:   "contxt",
+			Use:   configure.GetBinaryName(),
 			Short: "organize workspaces in the shell",
 			Long: `contxt is a tool to manage your projects.
 it setups your shell environment to fast switch between projects

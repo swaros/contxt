@@ -59,7 +59,7 @@ source <(contxt completion bash)
 source <(ctxcompletion)
 ### end of contxt bashrc
 `
-	AssertFileContent(t, "./test/fakehome/.bashrc", expected, AcceptContainsNoSpecials)
+	assertFileContent(t, "./test/fakehome/.bashrc", expected, AcceptContainsNoSpecials)
 }
 
 func TestBashRcInstallRenamed(t *testing.T) {
@@ -97,7 +97,7 @@ source <(contxtV2 completion bash)
 source <(ctxV2completion)
 ### end of contxtV2 bashrc
 `
-	AssertFileContent(t, "./test/fakehome/.bashrc", expected, AcceptContainsNoSpecials)
+	assertFileContent(t, "./test/fakehome/.bashrc", expected, AcceptContainsNoSpecials)
 }
 
 func TestZshRcInstallFails(t *testing.T) {
@@ -133,7 +133,7 @@ func TestZshRcInstall(t *testing.T) {
 	}
 	### end of contxt zshrc
 `
-	AssertFileContent(t, "./test/fakehome/.zshrc", expected, AcceptContainsNoSpecials)
+	assertFileContent(t, "./test/fakehome/.zshrc", expected, AcceptContainsNoSpecials)
 }
 
 func TestZshRcInstallRenamed(t *testing.T) {
@@ -162,7 +162,7 @@ func TestZshRcInstallRenamed(t *testing.T) {
 	}
 	### end of ZULU zshrc
 `
-	AssertFileContent(t, "./test/fakehome/.zshrc", expected, AcceptContainsNoSpecials)
+	assertFileContent(t, "./test/fakehome/.zshrc", expected, AcceptContainsNoSpecials)
 }
 
 func TestFishRcInstall(t *testing.T) {
@@ -177,7 +177,7 @@ func TestFishRcInstall(t *testing.T) {
 	}
 	functionFile := "test/fakehome/.config/fish/functions/ctx.fish"
 	cnFunctionFile := "test/fakehome/.config/fish/functions/cn.fish"
-	AssertFileExists(t, functionFile)
+	assertFileExists(t, functionFile)
 	fishFunc := `function ctx
     contxt $argv
     switch $argv[1]
@@ -189,8 +189,8 @@ end`
 	cnFunc := `function cn
 	cd (contxt dir find $argv)
 end`
-	AssertFileContent(t, functionFile, fishFunc, AcceptContainsNoSpecials)
-	AssertFileContent(t, cnFunctionFile, cnFunc, AcceptContainsNoSpecials)
+	assertFileContent(t, functionFile, fishFunc, AcceptContainsNoSpecials)
+	assertFileContent(t, cnFunctionFile, cnFunc, AcceptContainsNoSpecials)
 }
 
 func TestFishRcInstallRenamed(t *testing.T) {
@@ -206,7 +206,7 @@ func TestFishRcInstallRenamed(t *testing.T) {
 	}
 	functionFile := "test/fakehome/.config/fish/functions/FctxF.fish"
 	cnFunctionFile := "test/fakehome/.config/fish/functions/KKK.fish"
-	AssertFileExists(t, functionFile)
+	assertFileExists(t, functionFile)
 	fishFunc := `function FctxF
     UINMKOI $argv
     switch $argv[1]
@@ -218,8 +218,8 @@ end`
 	cnFunc := `function KKK
 	cd (UINMKOI dir find $argv)
 end`
-	AssertFileContent(t, functionFile, fishFunc, AcceptContainsNoSpecials)
-	AssertFileContent(t, cnFunctionFile, cnFunc, AcceptContainsNoSpecials)
+	assertFileContent(t, functionFile, fishFunc, AcceptContainsNoSpecials)
+	assertFileContent(t, cnFunctionFile, cnFunc, AcceptContainsNoSpecials)
 }
 
 func TestFishCompletionUpdate(t *testing.T) {
@@ -235,10 +235,10 @@ func TestFishCompletionUpdate(t *testing.T) {
 	}
 
 	completionFile := "test/fakehome/.config/fish/completions/ctx.fish"
-	AssertFileExists(t, completionFile)
+	assertFileExists(t, completionFile)
 
 	completionFile = "test/fakehome/.config/fish/completions/contxt.fish"
-	AssertFileExists(t, completionFile)
+	assertFileExists(t, completionFile)
 }
 
 func TestFishCompletionUpdateRenamed(t *testing.T) {
@@ -255,10 +255,10 @@ func TestFishCompletionUpdateRenamed(t *testing.T) {
 	}
 
 	completionFile := "test/fakehome/.config/fish/completions/UNU.fish"
-	AssertFileExists(t, completionFile)
+	assertFileExists(t, completionFile)
 
 	completionFile = "test/fakehome/.config/fish/completions/UNUBIN.fish"
-	AssertFileExists(t, completionFile)
+	assertFileExists(t, completionFile)
 }
 
 func TestZshFuncDir(t *testing.T) {
@@ -302,8 +302,8 @@ func TestZshUser(t *testing.T) {
 	if err := installer.ZshUpdate(cobra.RootCmd); err != nil {
 		t.Error("should not return an error, bot got:", err)
 	}
-	AssertFileExists(t, "test/fakehome/zFuncExists/_ctx")
-	AssertFileExists(t, "test/fakehome/zFuncExists/_contxt")
+	assertFileExists(t, "test/fakehome/zFuncExists/_ctx")
+	assertFileExists(t, "test/fakehome/zFuncExists/_contxt")
 }
 
 func TestZshUserRenamed(t *testing.T) {
@@ -325,6 +325,6 @@ func TestZshUserRenamed(t *testing.T) {
 	if err := installer.ZshUpdate(cobra.RootCmd); err != nil {
 		t.Error("should not return an error, bot got:", err)
 	}
-	AssertFileExists(t, "test/fakehome/zFuncExists/_UGA")
-	AssertFileExists(t, "test/fakehome/zFuncExists/_NANA")
+	assertFileExists(t, "test/fakehome/zFuncExists/_UGA")
+	assertFileExists(t, "test/fakehome/zFuncExists/_NANA")
 }
