@@ -42,7 +42,7 @@ func TestDefaultValues(t *testing.T) {
 		t.Error("unexpected binaray name:", configure.GetBinaryName())
 	}
 
-	ctx, cn, bin := configure.GetShortcusAndBinaryName()
+	ctx, cn, bin := configure.GetShortcutsAndBinaryName()
 	if ctx != "ctx" {
 		t.Error("unexpected shortcut for context:", ctx)
 	}

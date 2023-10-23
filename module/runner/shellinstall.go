@@ -113,7 +113,7 @@ func (si *shellInstall) FishUpdate(cmd *cobra.Command) error {
 
 // FishCompletionUpdate updates the fish completion file
 func (si *shellInstall) FishCompletionUpdate(cmd *cobra.Command) error {
-	shortCut, _, binName := configure.GetShortcusAndBinaryName()
+	shortCut, _, binName := configure.GetShortcutsAndBinaryName()
 	if si.userHomePath != "" {
 		// completion dir Exists ?
 		exists, err := dirhandle.Exists(si.userHomePath + "/.config/fish/completions")
@@ -139,7 +139,7 @@ func (si *shellInstall) FishCompletionUpdate(cmd *cobra.Command) error {
 }
 
 func (si *shellInstall) FishFunctionUpdate() error {
-	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
+	shortCut, cnShort, binName := configure.GetShortcutsAndBinaryName()
 	fishFunc := `function ` + shortCut + `
     ` + binName + ` $argv
     switch $argv[1]
@@ -187,7 +187,7 @@ end`
 }
 
 func (si *shellInstall) BashUserInstall() error {
-	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
+	shortCut, cnShort, binName := configure.GetShortcutsAndBinaryName()
 	bashrcAdd := `
 ### begin ` + binName + ` bashrc
 function ` + cnShort + `() { cd $(` + binName + ` dir find "$@"); }
@@ -260,7 +260,7 @@ func (si *shellInstall) ZshFuncDir() (string, error) {
 }
 
 func (si *shellInstall) updateZshFunctions(cmd *cobra.Command) error {
-	shortCut, _, binName := configure.GetShortcusAndBinaryName()
+	shortCut, _, binName := configure.GetShortcutsAndBinaryName()
 	funcDir, err := si.ZshFuncDir()
 	if err != nil {
 		return err
@@ -284,7 +284,7 @@ func (si *shellInstall) updateZshFunctions(cmd *cobra.Command) error {
 }
 
 func (si *shellInstall) ZshUserInstall() error {
-	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
+	shortCut, cnShort, binName := configure.GetShortcutsAndBinaryName()
 	zshrcAdd := `
 ### begin ` + binName + ` zshrc
 function ` + cnShort + `() { cd $(` + binName + ` dir find "$@"); }
@@ -327,7 +327,7 @@ func (si *shellInstall) PwrShellUpdate(cmd *cobra.Command) error {
 }
 
 func (si *shellInstall) PwrShellUser() error {
-	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
+	shortCut, cnShort, binName := configure.GetShortcutsAndBinaryName()
 	pwrshrcAdd := `
 ### begin ` + binName + ` pwrshrc
 function ` + cnShort + `($path) {
@@ -382,7 +382,7 @@ func (si *shellInstall) PwrShellForceCreateProfile() {
 }
 
 func (si *shellInstall) PwrShellCompletionUpdate(cmd *cobra.Command) error {
-	shortCut, _, binName := configure.GetShortcusAndBinaryName()
+	shortCut, _, binName := configure.GetShortcutsAndBinaryName()
 	if !si.PwrShellTestProfile() {
 		errormsg := `missing powershell profile. you can create a profile by running 'New-Item -Type File -Path $PROFILE -Force'`
 		return errors.New(errormsg)
