@@ -1,6 +1,8 @@
 package runner_test
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -31,6 +33,17 @@ func ChangeToRuntimeDir(t *testing.T) {
 	if err := os.Chdir(dir); err != nil {
 		t.Error(err)
 	}
+}
+
+// shortcut for running a cobra command
+// without any other setup
+func runCobraCommand(runnCallback func(cobra *runner.SessionCobra, writer io.Writer)) string {
+	cobra := runner.NewCobraCmds()
+	cmpltn := new(bytes.Buffer)
+	if runnCallback != nil {
+		runnCallback(cobra, cmpltn)
+	}
+	return cmpltn.String()
 }
 
 // this are some helper functions especially for testing the runner
@@ -238,6 +251,17 @@ func runCobraCmd(app *runner.CmdSession, cmd string) error {
 	return app.Cobra.RootCmd.Execute()
 }
 
+// checks if the given string is part of the output buffer
+// if not, it will fail the test.
+// the special thing about this function is, that it will split the string
+// by new line and check if every line is part of the output buffer.
+// example:
+//
+//	output.ClearAndLog()
+//	if err := runCobraCmd(app, "workspace new ducktale"); err != nil {
+//	   t.Errorf("Expected no error, got '%v'", err)
+//	 }
+//	assertInMessage(t, output, "ducktale\ncreated\nproject")
 func assertSplitTestInMessage(t *testing.T, output *TestOutHandler, msg string) {
 	t.Helper()
 	parts := strings.Split(msg, "\n")
@@ -264,6 +288,7 @@ func assertInMessage(t *testing.T, output *TestOutHandler, msg string) {
 	}
 }
 
+// assert a string is part of the output buffer as regex
 func assertRegexmatchInMessage(t *testing.T, output *TestOutHandler, msg string) {
 	t.Helper()
 	if !output.TestRegexPattern(msg) {
@@ -279,6 +304,7 @@ func assertNotInMessage(t *testing.T, output *TestOutHandler, msg string) {
 	}
 }
 
+// assert a cobra command is returning an error
 func assertCobraError(t *testing.T, app *runner.CmdSession, cmd string, expectedMessageContains string) {
 	t.Helper()
 	if err := runCobraCmd(app, cmd); err == nil {
@@ -309,7 +335,7 @@ var (
 	AcceptContainsNoSpecials = 4
 )
 
-func AssertStringFind(search, searchIn string, acceptableLevel int) bool {
+func assertStringFind(search, searchIn string, acceptableLevel int) bool {
 	if search == "" || searchIn == "" {
 		return true
 	}
@@ -338,16 +364,16 @@ func AssertStringFind(search, searchIn string, acceptableLevel int) bool {
 	return false
 }
 
-func AssertStringFindInArray(search string, searchIn []string, acceptableLevel int) int {
+func assertStringFindInArray(search string, searchIn []string, acceptableLevel int) int {
 	for index, s := range searchIn {
-		if AssertStringFind(search, s, acceptableLevel) {
+		if assertStringFind(search, s, acceptableLevel) {
 			return index
 		}
 	}
 	return -1
 }
 
-func AssertFileExists(t *testing.T, file string) {
+func assertFileExists(t *testing.T, file string) {
 	t.Helper()
 	file, err := filepath.Abs(file)
 	if err != nil {
@@ -358,15 +384,7 @@ func AssertFileExists(t *testing.T, file string) {
 	}
 }
 
-func AssertFileNotExists(t *testing.T, file string) {
-	t.Helper()
-	if _, err := os.Stat(file); os.IsNotExist(err) {
-		return
-	}
-	t.Errorf("Expected file '%s' not exists, but got '%v'", file, nil)
-}
-
-func AssertFileContent(t *testing.T, file string, expectedContent string, acceptableLevel int) {
+func assertFileContent(t *testing.T, file string, expectedContent string, acceptableLevel int) {
 	t.Helper()
 	if content, err := os.ReadFile(file); err != nil {
 		t.Errorf("Expected no error, got '%v'", err)
@@ -377,7 +395,7 @@ func AssertFileContent(t *testing.T, file string, expectedContent string, accept
 		// but we need to make sure if we also have this in order
 		lastHit := -1
 		for _, expected := range expectedSlice {
-			hitAtIndex := AssertStringFindInArray(expected, fileSlice, acceptableLevel)
+			hitAtIndex := assertStringFindInArray(expected, fileSlice, acceptableLevel)
 			if hitAtIndex == -1 {
 				t.Errorf("Expected file '%s' should contains '%s' what seems not be the case", file, expected)
 			}
@@ -392,5 +410,54 @@ func AssertFileContent(t *testing.T, file string, expectedContent string, accept
 			}
 			lastHit = hitAtIndex
 		}
+	}
+}
+
+type find_flags int
+
+const (
+	FindFlagsNone       find_flags = iota
+	IgnoreTabs                     // ignore all tabs in the content and the message
+	IgnoreSpaces                   // ignore all spaces in the content and the message
+	IgnoreNewLines                 // ignore all new lines in the content and the message
+	IgnoreMultiSpaces              // ignore all repeated spaces and tabs in the content and the message
+	IgnoreCaseSensitive            // ignore case sensitive
+)
+
+// assert a string is part of the output buffer where we can ignore some flags
+// like tabs, spaces, new lines, case sensitive
+func assertInContent(t *testing.T, content string, msg string, flags ...find_flags) {
+	t.Helper()
+
+	if len(flags) > 0 {
+		for _, flag := range flags {
+			switch flag {
+			case IgnoreTabs:
+				content = strings.ReplaceAll(content, "\t", "")
+				msg = strings.ReplaceAll(msg, "\t", "")
+			case IgnoreSpaces:
+				content = strings.ReplaceAll(content, " ", "")
+				msg = strings.ReplaceAll(msg, " ", "")
+			case IgnoreNewLines:
+				content = strings.ReplaceAll(content, "\n", "")
+				msg = strings.ReplaceAll(msg, "\n", "")
+			case IgnoreMultiSpaces:
+				content = systools.TrimAllSpaces(content)
+				msg = systools.TrimAllSpaces(msg)
+			case IgnoreCaseSensitive:
+				content = strings.ToLower(content)
+				msg = strings.ToLower(msg)
+			}
+		}
+	}
+	if !strings.Contains(content, msg) {
+		t.Errorf("Expected to find '%s' in string. but did not found", msg)
+	}
+}
+
+func assertStringSliceInContent(t *testing.T, content string, msg []string, flags ...find_flags) {
+	t.Helper()
+	for _, line := range msg {
+		assertInContent(t, content, line, flags...)
 	}
 }

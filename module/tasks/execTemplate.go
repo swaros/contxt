@@ -150,8 +150,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 	}
 
 	// increment task counter
-	cnt := t.watch.IncTaskCount(target)
-	t.out(MsgTarget{Target: target, Context: "task-start-and-count-is-now", Info: fmt.Sprintf("%v", cnt)})
+	t.watch.IncTaskCount(target)
 	defer t.watch.IncTaskDoneCount(target) // save done count at then end
 
 	t.getLogger().Info("executeTemplate LOOKING for target", target)

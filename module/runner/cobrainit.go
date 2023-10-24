@@ -59,7 +59,7 @@ type CobraOptions struct {
 func NewCobraCmds() *SessionCobra {
 	return &SessionCobra{
 		RootCmd: &cobra.Command{
-			Use:   "contxt",
+			Use:   configure.GetBinaryName(),
 			Short: "organize workspaces in the shell",
 			Long: `contxt is a tool to manage your projects.
 it setups your shell environment to fast switch between projects
@@ -719,6 +719,48 @@ func (c *SessionCobra) GetInstallBashCmd() *cobra.Command {
 	return iCmd
 }
 
+func (c *SessionCobra) GetInstallZshBaseFunc() *cobra.Command {
+	iCmd := &cobra.Command{
+		Use:   "base",
+		Short: "get the zsh base functions for completion",
+		Long: `get the zsh base functions for completion.
+		this is sometimes helpfull to get completion in zsh running, because of some
+		restrictions in zsh.
+		`,
+
+		Run: func(cmd *cobra.Command, args []string) {
+			c.ExternalCmdHndl.MainInit()
+			// check the shortcut flag
+			shortcut, _ := cmd.Flags().GetBool("shortcut")
+			installer := NewShellInstall(c.log())
+			fmt.Println(installer.GetBinFunc(c.RootCmd, shortcut))
+
+		},
+	}
+	iCmd.Flags().BoolP("shortcut", "s", false, "show the shortcut functions")
+	return iCmd
+}
+
+func (c *SessionCobra) GetInstallZshShellScript() *cobra.Command {
+	iCmd := &cobra.Command{
+		Use:   "compscript",
+		Short: "creates a script for zsh completion",
+		Long: `creates a script for zsh completion.
+		this script try to create the completions for zsh locally.
+		and uses then sudo to copy the file to the zsh completion dir.
+		`,
+
+		Run: func(cmd *cobra.Command, args []string) {
+			c.ExternalCmdHndl.MainInit()
+
+			installer := NewShellInstall(c.log())
+			fmt.Println(installer.GetScript(c.RootCmd))
+
+		},
+	}
+	return iCmd
+}
+
 func (c *SessionCobra) GetInstallZshCmd() *cobra.Command {
 	iCmd := &cobra.Command{
 		Use:   "zsh",
@@ -733,12 +775,13 @@ func (c *SessionCobra) GetInstallZshCmd() *cobra.Command {
 			c.ExternalCmdHndl.MainInit()
 			installer := NewShellInstall(c.log())
 			if err := installer.ZshUpdate(c.RootCmd); err != nil {
-				c.log().Error(err)
 				return err
 			}
 			return nil
 		},
 	}
+	iCmd.AddCommand(c.GetInstallZshBaseFunc())
+	iCmd.AddCommand(c.GetInstallZshShellScript())
 	return iCmd
 }
 

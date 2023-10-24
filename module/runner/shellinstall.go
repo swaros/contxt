@@ -24,6 +24,7 @@ package runner
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"log"
 	"path/filepath"
 
@@ -113,7 +114,7 @@ func (si *shellInstall) FishUpdate(cmd *cobra.Command) error {
 
 // FishCompletionUpdate updates the fish completion file
 func (si *shellInstall) FishCompletionUpdate(cmd *cobra.Command) error {
-	shortCut, _, binName := configure.GetShortcusAndBinaryName()
+	shortCut, _, binName := configure.GetShortcutsAndBinaryName()
 	if si.userHomePath != "" {
 		// completion dir Exists ?
 		exists, err := dirhandle.Exists(si.userHomePath + "/.config/fish/completions")
@@ -139,7 +140,7 @@ func (si *shellInstall) FishCompletionUpdate(cmd *cobra.Command) error {
 }
 
 func (si *shellInstall) FishFunctionUpdate() error {
-	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
+	shortCut, cnShort, binName := configure.GetShortcutsAndBinaryName()
 	fishFunc := `function ` + shortCut + `
     ` + binName + ` $argv
     switch $argv[1]
@@ -187,7 +188,7 @@ end`
 }
 
 func (si *shellInstall) BashUserInstall() error {
-	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
+	shortCut, cnShort, binName := configure.GetShortcutsAndBinaryName()
 	bashrcAdd := `
 ### begin ` + binName + ` bashrc
 function ` + cnShort + `() { cd $(` + binName + ` dir find "$@"); }
@@ -228,39 +229,77 @@ source <(` + shortCut + `completion)
 	return nil
 }
 
+// updates the zsh functions and completion files.
+// first it trys to create the zsh functions and completion files
+// and then it updates the ~/.zshrc file.
 func (si *shellInstall) ZshUpdate(cmd *cobra.Command) error {
-	if err := si.ZshUserInstall(); err != nil {
-		return err
+	if err := si.updateZshFunctions(cmd); err != nil {
+		fmt.Println("unable to install zsh functions. ERROR[" + err.Error() + "]")
+		fmt.Println()
+		fmt.Println("or you can try to use this WORKAROUND:")
+		fmt.Println()
+		fmt.Println("----------------------------------------")
+		fmt.Println(" >> " + configure.GetBinaryName() + " install zsh compscript > zsh_install.sh")
+		fmt.Println(" >> sh zsh_install.sh")
+		fmt.Println(" >> rm zsh_install.sh")
+		fmt.Println("----------------------------------------")
+		fmt.Println()
+
 	}
-	return si.updateZshFunctions(cmd)
+	return si.ZshUserInstall()
+}
+
+func (si *shellInstall) GetBinFunc(cmd *cobra.Command, shortcut bool) string {
+	cmpltn := new(bytes.Buffer)
+	cmd.Root().GenZshCompletion(cmpltn)
+	origin := cmpltn.String()
+
+	shortCut, _, binName := configure.GetShortcutsAndBinaryName()
+	if shortcut {
+		return strings.ReplaceAll(origin, binName, shortCut)
+	}
+	return origin
+}
+
+func (si *shellInstall) GetScript(cmd *cobra.Command) string {
+	zsh := NewZshHelper()
+	examplePath := "${fpath[1]}"
+	if path, err := zsh.GetFirstExistingPath(); err == nil {
+		examplePath = path
+	}
+	return si.createSudoScript(examplePath)
+}
+
+func (si *shellInstall) createSudoScript(targetPath string) string {
+	binName := configure.GetBinaryName()
+	sudoScript := `#!/bin/sh
+# this script is used to update the zsh functions and completion files.
+# first we create the zsh functions locally
+
+` + binName + ` install zsh base > tmp_` + configure.GetBinaryName() + `
+` + binName + ` install zsh base -s > tmp_` + configure.GetShortcut() + `
+# then we copy the files to the zsh function dir by using sudo
+sudo cp tmp_` + configure.GetBinaryName() + " " + targetPath + "/_" + configure.GetBinaryName() + `
+sudo cp tmp_` + configure.GetShortcut() + " " + targetPath + "/_" + configure.GetShortcut() + `
+
+# then we remove the tmp files
+rm tmp_` + configure.GetBinaryName() + `
+rm tmp_` + configure.GetShortcut() + `
+
+`
+	return sudoScript
 }
 
 // try to get the best path by reading the permission
 // because zsh seems not be used in windows, we stick to linux related
 // permission check
 func (si *shellInstall) ZshFuncDir() (string, error) {
-	fpath := os.Getenv("FPATH")
-	if fpath != "" {
-		paths := strings.Split(fpath, ":")
-		for _, path := range paths {
-			fileStats, err := os.Stat(path)
-			if err != nil {
-				continue
-			}
-			permissions := fileStats.Mode().Perm()
-			if permissions&0b110000000 == 0b110000000 {
-				if aPath, err := filepath.Abs(path); err == nil {
-					return aPath, nil
-				}
-			}
-		}
-		return "", errors.New("could not find zsh function dir that is accessible for writing. [" + fpath + "]")
-	}
-	return "", errors.New("could not find zsh function path. please set FPATH")
+	zsh := NewZshHelper()
+	return zsh.GetFirstFPath()
 }
 
 func (si *shellInstall) updateZshFunctions(cmd *cobra.Command) error {
-	shortCut, _, binName := configure.GetShortcusAndBinaryName()
+	shortCut, _, binName := configure.GetShortcutsAndBinaryName()
 	funcDir, err := si.ZshFuncDir()
 	if err != nil {
 		return err
@@ -268,15 +307,26 @@ func (si *shellInstall) updateZshFunctions(cmd *cobra.Command) error {
 	if funcDir != "" {
 		contxtPath := funcDir + "/_" + binName
 		ctxPath := funcDir + "/_" + shortCut
-
+		fmt.Println("contxtPath: " + contxtPath)
+		fmt.Println("ctxPath   : " + ctxPath)
 		cmpltn := new(bytes.Buffer)
 		cmd.Root().GenZshCompletion(cmpltn)
 
 		origin := cmpltn.String()
 		ctxCmpltn := strings.ReplaceAll(origin, binName, shortCut)
 
-		systools.WriteFileIfNotExists(contxtPath, origin)
-		systools.WriteFileIfNotExists(ctxPath, ctxCmpltn)
+		if code, err := systools.WriteFileIfNotExists(contxtPath, origin); err != nil || code != 0 {
+			if code == 1 {
+				return errors.New("could not write to " + contxtPath + ". file already exists")
+			}
+			return errors.New("could not write to " + contxtPath)
+		}
+		if code, err := systools.WriteFileIfNotExists(ctxPath, ctxCmpltn); err != nil || code != 0 {
+			if code == 1 {
+				return errors.New("could not write to " + ctxPath + ". file already exists")
+			}
+			return errors.New("could not write to " + ctxPath)
+		}
 	} else {
 		return errors.New("could not find zsh function dir")
 	}
@@ -284,7 +334,7 @@ func (si *shellInstall) updateZshFunctions(cmd *cobra.Command) error {
 }
 
 func (si *shellInstall) ZshUserInstall() error {
-	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
+	shortCut, cnShort, binName := configure.GetShortcutsAndBinaryName()
 	zshrcAdd := `
 ### begin ` + binName + ` zshrc
 function ` + cnShort + `() { cd $(` + binName + ` dir find "$@"); }
@@ -327,7 +377,7 @@ func (si *shellInstall) PwrShellUpdate(cmd *cobra.Command) error {
 }
 
 func (si *shellInstall) PwrShellUser() error {
-	shortCut, cnShort, binName := configure.GetShortcusAndBinaryName()
+	shortCut, cnShort, binName := configure.GetShortcutsAndBinaryName()
 	pwrshrcAdd := `
 ### begin ` + binName + ` pwrshrc
 function ` + cnShort + `($path) {
@@ -382,7 +432,7 @@ func (si *shellInstall) PwrShellForceCreateProfile() {
 }
 
 func (si *shellInstall) PwrShellCompletionUpdate(cmd *cobra.Command) error {
-	shortCut, _, binName := configure.GetShortcusAndBinaryName()
+	shortCut, _, binName := configure.GetShortcutsAndBinaryName()
 	if !si.PwrShellTestProfile() {
 		errormsg := `missing powershell profile. you can create a profile by running 'New-Item -Type File -Path $PROFILE -Force'`
 		return errors.New(errormsg)

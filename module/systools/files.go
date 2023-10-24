@@ -30,6 +30,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/swaros/contxt/module/dirhandle"
 )
 
@@ -61,14 +62,16 @@ func CopyFile(source, target string) error {
 // reports 0 if file was written, 1 if file exists, 2 if error
 // on error, error is returned
 func WriteFileIfNotExists(filename, content string) (int, error) {
-	funcExists, funcErr := dirhandle.Exists(filename)
-	if funcErr == nil && !funcExists {
-		os.WriteFile(filename, []byte(content), 0644)
+	fileExists, existsCheckErr := dirhandle.Exists(filename)
+	if existsCheckErr == nil && !fileExists {
+		if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+			return 2, err
+		}
 		return 0, nil
-	} else if funcExists {
+	} else if fileExists {
 		return 1, nil
 	}
-	return 2, funcErr
+	return 2, existsCheckErr
 
 }
 
@@ -115,4 +118,24 @@ func UpdateExistingFileIfNotContains(filename, content, doNotContain string) (bo
 		errmsg = "file update error: file not exists " + filename
 	}
 	return false, errors.New(errmsg)
+}
+
+func IsDirWriteable(path string) bool {
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+	if info, err := os.Stat(path); err == nil && info.IsDir() {
+		tempfile := uuid.New().String() + "_testfilecreate.tmp"
+		file, err := os.CreateTemp(path, tempfile)
+		if err != nil {
+			return false
+		}
+
+		defer os.Remove(file.Name())
+		defer file.Close()
+
+		return true
+	}
+	return false
 }
