@@ -71,10 +71,10 @@ func GetVersion() string {
 	return outVersion
 }
 
-// GetShortcusAndBinaryName delivers the current shortcuts and binary name
+// GetShortcutsAndBinaryName delivers the current shortcuts and binary name
 // for the context functions in bash, fish, zsh and powershell
 // this is the contxt shortcut, then cn shortcut and the binary name
-func GetShortcusAndBinaryName() (string, string, string) {
+func GetShortcutsAndBinaryName() (string, string, string) {
 	return GetShortcut(), GetCnShortcut(), GetBinaryName()
 }
 
