@@ -27,7 +27,6 @@ package runner
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/swaros/contxt/module/systools"
@@ -61,16 +60,17 @@ func (z *ZshHelper) collect() error {
 	if z.collected {
 		return nil
 	}
-	errInst := z.checkZshInstalled()
-	if errInst != nil {
-		return errInst
-	}
-	if z.binpath == "" {
-		return fmt.Errorf("zsh seems not installed")
-	}
+
 	if _, err := z.GetFpathByEnv(); err != nil {
 		// if we, as expected most of the time, not find the fpath in the env
 		// we try to get it by executing zsh -c "echo $fpath"
+		errInst := z.checkZshInstalled()
+		if errInst != nil {
+			return errInst
+		}
+		if z.binpath == "" {
+			return fmt.Errorf("zsh seems not installed")
+		}
 		_, err := z.getFpathByExec()
 		if err != nil {
 			return err
@@ -104,6 +104,20 @@ func (z *ZshHelper) GetFPaths() ([]string, error) {
 		return nil, err
 	}
 	return z.usabalePaths, nil
+}
+
+func (z *ZshHelper) GetFirstExistingPath() (string, error) {
+
+	err := z.collect()
+	if err != nil {
+		return "", err
+	}
+	for _, path := range z.paths {
+		if exists, err := systools.Exists(path); err == nil && exists {
+			return path, nil
+		}
+	}
+	return z.firstUsable, nil
 }
 
 // get the first usable fpath or an error
@@ -148,8 +162,11 @@ func (z *ZshHelper) GetFpathByEnv() (string, error) {
 	if fpaths != "" {
 		envPaths := strings.Split(fpaths, ":")
 		for _, path := range envPaths {
-			if systools.IsWriteable(path) {
+			if systools.IsDirWriteable(path) {
 				z.paths = append(z.paths, path)
+				if z.firstUsable == "" {
+					z.firstUsable = path
+				}
 			}
 		}
 		if len(z.paths) > 0 {
@@ -181,18 +198,8 @@ func (z *ZshHelper) getFpathByExec() (string, error) {
 func (z *ZshHelper) findUsableFpath() {
 
 	for _, path := range z.paths {
-		fileStats, err := os.Stat(path)
-		if err != nil {
-			continue
-		}
-		permissions := fileStats.Mode().Perm()
-		if permissions&0b110000000 == 0b110000000 {
-			if aPath, err := filepath.Abs(path); err == nil {
-				z.usabalePaths = append(z.usabalePaths, aPath)
-				if z.firstUsable == "" {
-					z.firstUsable = aPath
-				}
-			}
+		if systools.IsDirWriteable(path) {
+			z.usabalePaths = append(z.usabalePaths, path)
 		}
 	}
 }

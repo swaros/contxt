@@ -307,12 +307,12 @@ func TestZshUser(t *testing.T) {
 }
 
 func TestZshUserRenamed(t *testing.T) {
-	configure.SetShortcut("UGA")    // force the shortcut to UGA
+	configure.SetShortcut("KATA")   // force the shortcut to UGA
 	configure.SetBinaryName("NANA") // chage binaray name to NANA
 	os.WriteFile("./test/fakehome/.zshrc", []byte("# a fake zshrc"), 0644)
 	defer os.Remove("./test/fakehome/.zshrc")
-	defer os.Remove("./test/fakehome/zFuncExists/_UGA")
-	defer os.Remove("./test/fakehome/zFuncExists/_contxt")
+	defer os.Remove("./test/fakehome/zFuncExists/_KATA")
+	defer os.Remove("./test/fakehome/zFuncExists/_NANA")
 	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	installer.SetUserHomePath("./test/fakehome")
 	fpath := "[ABS]/test/fakehome/.zfunc:[ABS]/test/fakehome/zFuncExists:[ABS]/test/fakehome/zFuncNotExists"
@@ -325,7 +325,7 @@ func TestZshUserRenamed(t *testing.T) {
 	if err := installer.ZshUpdate(cobra.RootCmd); err != nil {
 		t.Error("should not return an error, bot got:", err)
 	}
-	assertFileExists(t, "test/fakehome/zFuncExists/_UGA")
+	assertFileExists(t, "test/fakehome/zFuncExists/_KATA")
 	assertFileExists(t, "test/fakehome/zFuncExists/_NANA")
 }
 
@@ -338,7 +338,10 @@ func TestZshDirFind(t *testing.T) {
 		t.SkipNow()
 	}
 	// defaults
-	SetDefaultValues()
+	fpath := "[ABS]/test/fakehome/.zfunc:[ABS]/test/fakehome/zFuncExists:[ABS]/test/fakehome/zFuncNotExists"
+	abs, _ := filepath.Abs(".")
+	fpath = strings.ReplaceAll(fpath, "[ABS]", abs)
+	os.Setenv("FPATH", fpath)
 	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
 	instDir, err := installer.ZshFuncDir()
 	if err != nil {
