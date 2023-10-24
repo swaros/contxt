@@ -116,3 +116,17 @@ func UpdateExistingFileIfNotContains(filename, content, doNotContain string) (bo
 	}
 	return false, errors.New(errmsg)
 }
+
+func IsWriteable(path string) bool {
+	fileStats, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	permissions := fileStats.Mode().Perm()
+	if permissions&0b110000000 == 0b110000000 {
+		if _, err := filepath.Abs(path); err == nil {
+			return true
+		}
+	}
+	return false
+}

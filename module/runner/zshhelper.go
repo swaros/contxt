@@ -30,6 +30,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
 )
 
@@ -67,9 +68,13 @@ func (z *ZshHelper) collect() error {
 	if z.binpath == "" {
 		return fmt.Errorf("zsh seems not installed")
 	}
-	_, err := z.getFpathByExec()
-	if err != nil {
-		return err
+	if _, err := z.GetFpathByEnv(); err != nil {
+		// if we, as expected most of the time, not find the fpath in the env
+		// we try to get it by executing zsh -c "echo $fpath"
+		_, err := z.getFpathByExec()
+		if err != nil {
+			return err
+		}
 	}
 	z.findUsableFpath()
 	z.found = z.firstUsable != ""
@@ -133,6 +138,27 @@ func (z *ZshHelper) checkZshInstalled() error {
 		return err
 	}
 	return nil
+}
+
+// try to read the fpath from the env. variable FPATH
+// this is not the way that should work in real, but so we can test it.
+// also it can be used to force the fpath.
+func (z *ZshHelper) GetFpathByEnv() (string, error) {
+	fpaths := os.Getenv("FPATH")
+	if fpaths != "" {
+		envPaths := strings.Split(fpaths, ":")
+		for _, path := range envPaths {
+			if systools.IsWriteable(path) {
+				z.paths = append(z.paths, path)
+			}
+		}
+		if len(z.paths) > 0 {
+			return strings.Join(z.paths, " "), nil
+		} else {
+			return "", fmt.Errorf("no usable fpath found in FPATH env")
+		}
+	}
+	return "", fmt.Errorf("no fpath found in env")
 }
 
 // get the fpath by executing zsh -c "echo $fpath"

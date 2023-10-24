@@ -239,24 +239,8 @@ func (si *shellInstall) ZshUpdate(cmd *cobra.Command) error {
 // because zsh seems not be used in windows, we stick to linux related
 // permission check
 func (si *shellInstall) ZshFuncDir() (string, error) {
-	fpath := os.Getenv("FPATH")
-	if fpath != "" {
-		paths := strings.Split(fpath, ":")
-		for _, path := range paths {
-			fileStats, err := os.Stat(path)
-			if err != nil {
-				continue
-			}
-			permissions := fileStats.Mode().Perm()
-			if permissions&0b110000000 == 0b110000000 {
-				if aPath, err := filepath.Abs(path); err == nil {
-					return aPath, nil
-				}
-			}
-		}
-		return "", errors.New("could not find zsh function dir that is accessible for writing. [" + fpath + "]")
-	}
-	return "", errors.New("could not find zsh function path. please set FPATH")
+	zsh := NewZshHelper()
+	return zsh.GetFirstFPath()
 }
 
 func (si *shellInstall) updateZshFunctions(cmd *cobra.Command) error {

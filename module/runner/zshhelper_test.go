@@ -14,8 +14,12 @@ func TestGetFPath(t *testing.T) {
 		t.SkipNow()
 	} else {
 		if fp, ferr := zsh.GetFirstFPath(); ferr != nil {
-			t.Error(ferr)
+			// test also skipped if no first path is found.
+			// it is too much depending on the system to throw an error on this case.
+			t.SkipNow()
 		} else {
+			// this is close the only test we can do.
+			// we can not test if the fpath is correct, because it is too much depending on the system.
 			if fp == "" {
 				t.Error("FirstFPath is empty")
 			}

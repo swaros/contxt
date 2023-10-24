@@ -328,3 +328,45 @@ func TestZshUserRenamed(t *testing.T) {
 	assertFileExists(t, "test/fakehome/zFuncExists/_UGA")
 	assertFileExists(t, "test/fakehome/zFuncExists/_NANA")
 }
+
+func TestZshDirFind(t *testing.T) {
+	// testing depends if zsh is installed
+	zsh := runner.NewZshHelper()
+	zPath, err := zsh.GetBinPath()
+	if err != nil || zPath == "" {
+		t.Log("skipped zsh Testing, because it seems zsh not being installed.")
+		t.SkipNow()
+	}
+	// defaults
+	SetDefaultValues()
+	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
+	instDir, err := installer.ZshFuncDir()
+	if err != nil {
+		t.Error("should not return an error, bot got:", err)
+	}
+
+	if instDir == "" {
+		t.Error("should return a directory, but got:", instDir)
+	}
+
+}
+
+func TestZshDirFindWithFpathSet(t *testing.T) {
+	// testing depends if zsh is installed
+	zsh := runner.NewZshHelper()
+	zPath, err := zsh.GetBinPath()
+	if err != nil || zPath == "" {
+		t.Log("skipped zsh Testing, because it seems zsh not being installed.")
+		t.SkipNow()
+	}
+	// defaults
+	SetDefaultValues()
+	os.Setenv("FPATH", "fpath1:fpath2:fpath3")
+	installer := runner.NewShellInstall(mimiclog.NewNullLogger())
+	_, err = installer.ZshFuncDir()
+	// we expect an error, because the fpath is not a directory
+	if err == nil {
+		t.Error("should return an error, bot got:", err)
+	}
+
+}
