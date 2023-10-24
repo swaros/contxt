@@ -30,6 +30,14 @@ import (
 	"github.com/swaros/contxt/module/mimiclog"
 )
 
+// the watchman implementation
+type Watchman struct {
+	// contains filtered or unexported fields
+	watchTaskList sync.Map
+	mu            sync.Mutex
+	logger        mimiclog.Logger
+}
+
 const GlobalName = "global"
 
 var (
@@ -82,15 +90,6 @@ func ShutDownProcesses(reportFn func(target string, time int, succeed bool)) {
 	for _, wm := range instances {
 		wm.StopAllTasks(reportFn)
 	}
-}
-
-// the watchman implementation
-type Watchman struct {
-	// contains filtered or unexported fields
-	watchTaskList sync.Map
-	mu            sync.Mutex
-	logger        mimiclog.Logger
-	verifyLock    sync.Mutex
 }
 
 // NewGlobalWatchman returns the global watchman instance.
@@ -235,7 +234,7 @@ func (w *Watchman) WaitForStopProcess(target string, tickDuration time.Duration,
 }
 
 // do not sync this function.
-func (w *Watchman) CreateTask(target string) {
+func (w *Watchman) createTask(target string) {
 	w.watchTaskList.Store(target, TaskDef{
 		uuid:      uuid.New().String(),
 		count:     0,
@@ -354,22 +353,17 @@ func (w *Watchman) ResetAllTasksIfPossible() error {
 	return fmt.Errorf("can not reset watchman, because there are still %v running tasks", len(w.GetAllRunningTasks()))
 }
 
-// verify if a task already exists. this function does not create a new task.
+// create a new task if it does not exists.
 // if the handleFn is not nil, it will be called with the result of the check.
-func (w *Watchman) VerifyTaskExists(target string, handleFn func(bool)) bool {
+// it resturns true if the task is created or false if the task already exists
+func (w *Watchman) TryCreate(target string) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	_, found := w.watchTaskList.Load(target)
-	if handleFn != nil {
-		// just use TryLock to make sure that we do not have nested calls.
-		// but because there is an wrong usage of this function, we panic
-		if !w.verifyLock.TryLock() {
-			panic("verify lock is already locked. Nested calls of 'VerifyTaskExists' are not allowed")
-		}
-
-		handleFn(found)
-		w.verifyLock.Unlock()
+	if !found {
+		w.createTask(target)
 	}
-	return found
-
+	return !found
 }
 
 func (w *Watchman) GetTaskCount(target string) int {

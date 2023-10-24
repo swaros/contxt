@@ -264,16 +264,13 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 					systools.Exit(systools.ErrorBySystem)
 				}
 			}
-
 			// just the abort flag.
 			abort := false
-
-			// experimental usage of needs
 
 			// -- NEEDS
 			// needs are task, the have to be startet once
 			// before we continue.
-			// any need can have his own needs they needs to
+			// any need can have his own needs they also needs to
 			// be executed
 			if len(script.Needs) > 0 {
 				if script.Options.Displaycmd {
@@ -285,50 +282,51 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 					// here we have the "run in threads" part
 					var needExecs []awaitgroup.FutureStack
 					for _, needTarget := range script.Needs {
-
-						t.watch.VerifyTaskExists(needTarget, func(taskExists bool) {
-							if taskExists {
-								if script.Options.Displaycmd {
-									t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
-								}
-								t.getLogger().Debug("need already handled " + needTarget)
-							} else {
-								// task is not registered yet, so we will do it
-								t.watch.CreateTask(needTarget)
-								t.getLogger().Debug("need name should be added " + needTarget)
-								if script.Options.Displaycmd {
-									t.out(MsgTarget{Target: target, Context: "needs_execute", Info: needTarget})
-								}
-								needExecs = append(needExecs, awaitgroup.FutureStack{
-									AwaitFunc: func(ctx context.Context) interface{} {
-										argNeed := ctx.Value(awaitgroup.CtxKey{}).(string)
-										_, argmap := systools.StringSplitArgs(argNeed, "arg")
-										t.getLogger().Debug("add need task " + argNeed)
-										return t.executeTemplate(true, argNeed, argmap)
-									},
-									Argument: needTarget})
+						// check if the task is already registered
+						if !t.watch.TryCreate(needTarget) {
+							// task is already registered, so we will not do it
+							if script.Options.Displaycmd {
+								t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
 							}
-						})
-
+							t.getLogger().Debug("need already handled " + needTarget)
+						} else {
+							// task is not registered, so it never runs. we need to run it
+							t.getLogger().Debug("need name should be added " + needTarget)
+							if script.Options.Displaycmd {
+								t.out(MsgTarget{Target: target, Context: "needs_execute", Info: needTarget})
+							}
+							needExecs = append(needExecs, awaitgroup.FutureStack{
+								AwaitFunc: func(ctx context.Context) interface{} {
+									argNeed := ctx.Value(awaitgroup.CtxKey{}).(string)
+									_, argmap := systools.StringSplitArgs(argNeed, "arg")
+									t.getLogger().Debug("add need task " + argNeed)
+									return t.executeTemplate(true, argNeed, argmap)
+								},
+								Argument: needTarget})
+						}
 					}
+
 					futures := awaitgroup.ExecFutureGroup(needExecs) // create the futures and start the tasks
 					results := awaitgroup.WaitAtGroup(futures)       // wait until any task is executed
 
 					t.getLogger().Debug("needs result", results)
 				} else {
+					// here we have the "run in sequence" part
+					// we need to run the needs in sequence
+					// so there is no syncronisation needed for this part of needs,
+					// but others can be run in parallel the same needs, so we still need
+					// to use the watchman to check if the task is already running
 					for _, syncTarget := range script.Needs {
-						t.watch.VerifyTaskExists(syncTarget, func(exists bool) {
-							if exists {
-								t.getLogger().Debug("need already handled " + syncTarget)
-								if script.Options.Displaycmd {
-									t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: syncTarget})
-								}
-							} else {
-								_, argmap := systools.StringSplitArgs(syncTarget, "arg")
-								t.executeTemplate(false, syncTarget, argmap)
+						if !t.watch.TryCreate(syncTarget) {
+							// task is already registered, so we will not do it
+							t.getLogger().Debug("need already handled " + syncTarget)
+							if script.Options.Displaycmd {
+								t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: syncTarget})
 							}
-
-						})
+						} else {
+							_, argmap := systools.StringSplitArgs(syncTarget, "arg")
+							t.executeTemplate(false, syncTarget, argmap)
+						}
 					}
 
 				}
