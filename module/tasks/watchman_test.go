@@ -500,42 +500,44 @@ func TestVerify(t *testing.T) {
 	}
 
 	// nothing runs any task1 yet. so they shold be reported as not found
-	wm.VerifyTaskExists("task1", func(b bool) {
-		if b {
-			t.Error("there should be no task1, but it is")
-		}
-	})
+	if !wm.TryCreate("task1") {
 
-	// the check itself should also change nothing dependig the tasks
-	wm.VerifyTaskExists("task1", func(b bool) {
-		if b {
-			t.Error("there should be still no task1, but it is")
-		}
-	})
-}
+		t.Error("there should be no task1, but it is")
 
-func TestVerifyNestedLook(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("the verify should panic, because of nested usage, but it did not")
-		}
-	}()
-	wm := tasks.NewWatchman()
-
-	_, ok := tasks.GetNameOfWatchman(wm)
-	if !ok {
-		t.Error("expected to get the name of the watchman, but it did not")
 	}
 
-	// nested verifys are an issue at all? (sync.locks)
-	wm.VerifyTaskExists("task1", func(b bool) {
+	// the check itself should also change nothing dependig the tasks
+	if wm.TryCreate("task1") {
 
-		wm.VerifyTaskExists("task1", func(b bool) {
-			if b {
-				t.Error("there should be no task1, but it is")
-			}
-		})
+		t.Error("there should be a task1, but it is not")
+	}
 
+}
+
+// testing VerifyTaskExists with a raise condition.
+// see #178
+// this test is right now there just to hit the race condition
+// on 100 runs we need luck to hit it.
+// on 1000 runs we hit it for sure.
+// --------------------------
+// to fix the raise condition, we will simplify the code
+// and remove the VerifyTaskExists method.
+// instead we use TryCreate to get the task created and having the
+// calback afterwards just to report if the task was created or not.
+// at this point, the lock is released and we can do what ever we want.
+func TestWatchmanVerify(t *testing.T) {
+	wm := tasks.NewWatchman()
+	runCnt := 1000
+	timesCreated := 0
+	helpsRunAsync(runCnt, []string{"task_1", "task_2", "task_1", "task_2", "task_1"}, func(name string, cnt int) bool {
+		if wm.TryCreate(name) {
+			timesCreated++
+		}
+
+		return true
 	})
 
+	if timesCreated != 2 {
+		t.Errorf("expected to create 2 tasks, but created %d", timesCreated)
+	}
 }
