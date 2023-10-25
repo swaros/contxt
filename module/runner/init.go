@@ -94,7 +94,12 @@ func setShutDownBehavior() {
 	// capture the sigterm signal so we are able to cleanup all processes
 	// nil means that we use the default behavior for the exit control flow
 	// so any systool.Exit() call will trigger the exit listeners
-	systools.WatchSigTerm(nil)
+	// this is experimental and is only enabled if the env CTX_SUTDOWN_BEHAVIOR is set to "true"
+	// this is a workaround for the problem that the exit listeners are not called if the application
+	// is killed by the system.
+	if os.Getenv("CTX_SUTDOWN_BEHAVIOR") == "true" {
+		systools.WatchSigTerm(nil)
+	}
 }
 
 // Init initializes the application
