@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/abiosoft/readline"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/ctxshell"
 	"github.com/swaros/contxt/module/dirhandle"
@@ -78,6 +79,9 @@ func shellRunner(c *CmdExecutorImpl) {
 	// are switching between workspaces. so we have to disable async
 	// for them
 	shell.SetNeverAsyncCmd("workspace")
+
+	// capture ctrl+z and do nothing, so we will not send to the background
+	shell.AddKeyBinding(readline.CharCtrlZ, func() bool { return false })
 
 	// add native exit command
 	exitCmd := ctxshell.NewNativeCmd("exit", "exit the shell", func(args []string) error {

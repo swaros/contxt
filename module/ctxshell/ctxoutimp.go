@@ -29,6 +29,20 @@ import (
 	"time"
 )
 
+// here we implement the interface for the ctxout stream provider
+// so we are able to use the ctxout module for the output of the shell.
+// and output from ctxout will be redirected to the readline instance.
+// instead of writing them directly to the stdout, we push them to a message queue
+// and the readline instance will read them from there.
+// this is necessary because the readline instance is running in a separate thread
+// and we have to synchronize the output.
+// the readline instance will read the messages from the queue and write them to the stdout.
+// this is the only way to get the output synchronized.
+// the readline instance will be started in the StartMessageProvider function.
+// these MessageProvider "ticks" by the tickTimerDuration value.
+// this is the time between two ticks.
+// use SetTickTimerDuration to set the tickTimerDuration value.
+
 func (t *Cshell) Stream(msg ...interface{}) {
 	if t.rlInstance != nil {
 		t.messages.Push("stdout", fmt.Sprint(msg...))

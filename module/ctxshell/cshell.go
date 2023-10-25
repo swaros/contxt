@@ -26,6 +26,7 @@ package ctxshell
 
 import (
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -57,7 +58,16 @@ type Cshell struct {
 	updatePromptEnabled  bool               // if true, the prompt is updated periodically
 	lastInput            string             // the last input
 	StopOutput           bool               // stop printing the output to stdout
+	captureExitSignal    bool               // if true, the exit signal is captured
+	keyBindings          []KeyFunc          // key bindings
 
+}
+
+type KeyFilterFunc func(rune) (rune, bool)
+
+type KeyFunc struct {
+	Key rune
+	Fn  func() bool
 }
 
 func NewCshell() *Cshell {
@@ -68,6 +78,25 @@ func NewCshell() *Cshell {
 		updatePromptDuration: 5 * time.Second,
 		neverAsncCmds:        []string{},
 	}
+}
+
+// add a key binding
+// painic if the key is already in the list
+func (t *Cshell) AddKeyBinding(key rune, fn func() bool) *Cshell {
+	// check if the key is already in the list
+	for _, k := range t.keyBindings {
+		if k.Key == key {
+			panic("AddKeyBinding duplicate. key already in list")
+		}
+	}
+	t.keyBindings = append(t.keyBindings, KeyFunc{Key: key, Fn: fn})
+	return t
+}
+
+// enable or disable the capture of the exit signal
+func (t *Cshell) SetCaptureExitSignal(b bool) *Cshell {
+	t.captureExitSignal = b
+	return t
 }
 
 // enable or disable the output to stdout
@@ -303,15 +332,22 @@ func (t *Cshell) getNativeCmd(cmd string) *NativeCmd {
 
 func (t *Cshell) init() error {
 	completer := t.createCompleter()
+	// create a tempfile name that is based os the binary name
+	binFile := os.Args[0]
+	// just replace any slashes, and colons with underscores
+	binFile = strings.ReplaceAll(binFile, "/", "_")
+	binFile = strings.ReplaceAll(binFile, "\\", "_")
+	binFile = strings.ReplaceAll(binFile, ":", "_")
+
 	var err error
 	t.rlInstance, err = readline.NewEx(&readline.Config{
 		Prompt:              " > ",
-		HistoryFile:         "/tmp/readline.tmp",
+		HistoryFile:         "/tmp/cshell_history_" + binFile + ".tmp",
 		AutoComplete:        completer,
 		InterruptPrompt:     "^C",
 		EOFPrompt:           "exit",
 		HistorySearchFold:   true,
-		FuncFilterInputRune: t.inputFilterFunc,
+		FuncFilterInputRune: t.inputFilterFunc, // this is handlind the key-bindings
 		UniqueEditLine:      true,
 	})
 	return err
@@ -332,6 +368,7 @@ func (t *Cshell) RunOnceWithCmd(cmd func()) error {
 
 }
 
+// update the prompt
 func (t *Cshell) updatePrompt(reason int) {
 	if t.getPrompt != nil {
 		if prmpt := t.getPrompt(reason); prmpt != "" {
@@ -342,24 +379,15 @@ func (t *Cshell) updatePrompt(reason int) {
 
 // Run starts the shell
 func (t *Cshell) Run() error {
-	// create the completer
-	completer := t.createCompleter()
-	var err error
-	t.rlInstance, err = readline.NewEx(&readline.Config{
-		Prompt:              " > ",
-		HistoryFile:         "/tmp/readline.tmp",
-		AutoComplete:        completer,
-		InterruptPrompt:     "^C",
-		EOFPrompt:           "exit",
-		HistorySearchFold:   true,
-		FuncFilterInputRune: t.inputFilterFunc,
-		UniqueEditLine:      true,
-	})
+	err := t.init()
 	if err != nil {
 		return err
 	}
 	defer t.rlInstance.Close()
-	t.rlInstance.CaptureExitSignal()
+	// if we want to capture the exit signal, we have to do it here
+	if t.captureExitSignal {
+		t.rlInstance.CaptureExitSignal()
+	}
 	log.SetOutput(t.rlInstance.Stderr())
 	t.updatePrompt(UpdateByInit)
 	// start the message provider they prints the messages
@@ -385,10 +413,13 @@ func (t *Cshell) Run() error {
 			break
 		}
 
+		// cleanup the input
 		line = strings.TrimSpace(line)
 		lineCmd := strings.Split(line, " ")[0]
 		fullArgs := strings.Split(line, " ")
 		t.lastInput = line
+
+		// reset the flag that indicates if we did something
 		weDidSomething := false
 		// native commands just a wrapper for the completion
 		// together with the exec function
@@ -449,6 +480,10 @@ func (t *Cshell) Run() error {
 	return nil
 }
 
+// this is the promt update loop
+// it updates the prompt every updatePromptDuration
+// use UpdatePromptPeriod to set the updatePromptDuration
+// use UpdatePromptEnabled to enable or disable the prompt update
 func (t *Cshell) StartBackgroundPromptUpate() {
 	if t.rlInstance == nil {
 		return
@@ -475,11 +510,14 @@ func (t *Cshell) StartBackgroundPromptUpate() {
 
 }
 
+// filters the key bindings and executes the function
+// if the key is not in the list, the key is returned and the bool is true
 func (t *Cshell) inputFilterFunc(r rune) (rune, bool) {
-	switch r {
-	// block CtrlZ feature
-	case readline.CharCtrlZ:
-		return r, false
+	// check if we have a key binding
+	for _, k := range t.keyBindings {
+		if k.Key == r {
+			return r, k.Fn()
+		}
 	}
 	return r, true
 }
