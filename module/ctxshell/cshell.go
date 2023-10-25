@@ -40,6 +40,7 @@ const (
 	UpdateByPeriod = 1002
 	UpdateBySignal = 1003
 	UpdateByInput  = 1004
+	UpdateByNotify = 1005
 )
 
 type Cshell struct {
@@ -60,14 +61,18 @@ type Cshell struct {
 	StopOutput           bool               // stop printing the output to stdout
 	captureExitSignal    bool               // if true, the exit signal is captured
 	keyBindings          []KeyFunc          // key bindings
+	promptMessages       []Msg              // messages that are printed before the prompt
+	currentMessage       Msg                // the current message
+	currentMsgExpire     time.Time          // the time when the current message expires
+	runOnceCmds          []string           // commands that are executed only once
+	onShutDown           func()             // function that is called on shutdown
 
 }
 
-type KeyFilterFunc func(rune) (rune, bool)
-
+// key binding struct
 type KeyFunc struct {
-	Key rune
-	Fn  func() bool
+	Key rune        // what key to bind
+	Fn  func() bool // what function to call. returning false means do populate the key
 }
 
 func NewCshell() *Cshell {
@@ -90,6 +95,17 @@ func (t *Cshell) AddKeyBinding(key rune, fn func() bool) *Cshell {
 		}
 	}
 	t.keyBindings = append(t.keyBindings, KeyFunc{Key: key, Fn: fn})
+	return t
+}
+
+func (t *Cshell) OnShutDownFunc(fn func()) *Cshell {
+	t.onShutDown = fn
+	return t
+}
+
+// notify the prompt to display a message
+func (t *Cshell) NotifyToPrompt(message Msg) *Cshell {
+	t.promptMessages = append(t.promptMessages, message)
 	return t
 }
 
@@ -355,6 +371,7 @@ func (t *Cshell) init() error {
 
 func (t *Cshell) RunOnceWithCmd(cmd func()) error {
 	// skip if no cmd is given
+
 	if cmd == nil {
 		return nil
 	}
@@ -368,6 +385,15 @@ func (t *Cshell) RunOnceWithCmd(cmd func()) error {
 
 }
 
+func (t *Cshell) RunOnce(cmds []string) error {
+	// skip if no cmd is given
+	if len(cmds) == 0 {
+		return nil
+	}
+	t.runOnceCmds = cmds
+	return t.runShell(true)
+}
+
 // update the prompt
 func (t *Cshell) updatePrompt(reason int) {
 	if t.getPrompt != nil {
@@ -377,8 +403,33 @@ func (t *Cshell) updatePrompt(reason int) {
 	}
 }
 
+func (t *Cshell) error(messages ...string) {
+	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicError, time.Second*5))
+}
+
+func (t *Cshell) message(messages ...string) {
+	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicInfo, time.Second*5))
+}
+
+func (t *Cshell) getOnceCmd() string {
+	if len(t.runOnceCmds) > 0 {
+		cmd := t.runOnceCmds[0]
+		t.runOnceCmds = t.runOnceCmds[1:]
+		return cmd
+	}
+	return ""
+}
+
+func (t *Cshell) haveOnce() bool {
+	return len(t.runOnceCmds) > 0
+}
+
 // Run starts the shell
 func (t *Cshell) Run() error {
+	return t.runShell(false)
+}
+
+func (t *Cshell) runShell(once bool) error {
 	err := t.init()
 	if err != nil {
 		return err
@@ -396,7 +447,23 @@ func (t *Cshell) Run() error {
 	t.StartBackgroundPromptUpate()
 	// the main loop
 	for {
-		ln := t.rlInstance.Line()
+		cmdPreset := ""
+		if once {
+			if cmd := t.getOnceCmd(); cmd != "" {
+				cmdPreset = cmd
+			} else {
+				break
+			}
+		}
+		var ln *readline.Result
+		if cmdPreset != "" {
+			ln = &readline.Result{
+				Line:  cmdPreset,
+				Error: nil,
+			}
+		} else {
+			ln = t.rlInstance.Line()
+		}
 		if ln.CanContinue() {
 			continue
 		} else if ln.CanBreak() {
@@ -428,15 +495,19 @@ func (t *Cshell) Run() error {
 			if t.asyncNativeCmd && !t.isNeverAsyncCmd(lineCmd) {
 				go func() {
 					if err := c.Exec(fullArgs); err != nil {
-						log.Printf("error executing command: %s", err)
+						log.Printf("error executing native command: %s", err)
+						t.error("error executing native command:", err.Error())
 					}
 					t.rlInstance.Write([]byte(lineCmd + "..done\n"))
+					t.message(lineCmd, "done")
 				}()
 			} else {
 				if err := c.Exec(fullArgs); err != nil {
-					log.Printf("error executing command: %s", err)
+					log.Printf("error executing native command: %s", err)
+					t.error("error executing native command:", err.Error())
 				}
 				t.rlInstance.Write([]byte(lineCmd + "..done\n"))
+				t.message(lineCmd, "done")
 			}
 			continue
 		}
@@ -454,15 +525,19 @@ func (t *Cshell) Run() error {
 					if t.asyncCobraExec && !t.isNeverAsyncCmd(c.Name()) {
 						go func() {
 							if err := t.CobraRootCmd.Execute(); err != nil {
-								log.Printf("error executing command: %s", err)
+								log.Printf("error executing cobra command: %s", err)
+								t.error("error executing cobra command:", err.Error())
 							}
 							t.rlInstance.Write([]byte(lineCmd + "..done\n"))
+							t.message(lineCmd, "done")
 						}()
 					} else {
 						if err := t.CobraRootCmd.Execute(); err != nil {
-							log.Printf("error executing command: %s", err)
+							log.Printf("error executing cobra command: %s", err)
+							t.error("error executing cobra command:", err.Error())
 						}
 						t.rlInstance.Write([]byte(lineCmd + "..done\n"))
+						t.message(lineCmd, "done")
 					}
 					continue
 				}
@@ -471,13 +546,39 @@ func (t *Cshell) Run() error {
 		// if we are here, we have no idea what to do
 		if !weDidSomething {
 			log.Printf("unknown command: %s", lineCmd)
+			t.error("unknown command:", lineCmd)
 		}
 		// move to the next line
 		t.rlInstance.Write([]byte("\n"))
 		t.updatePrompt(UpdateByInput)
 
+		if once && !t.haveOnce() {
+			break
+		}
+
+	}
+	if t.onShutDown != nil {
+		t.onShutDown()
 	}
 	return nil
+}
+
+func (t *Cshell) tryGetPromptMessage() (Msg, bool) {
+	if len(t.promptMessages) > 0 {
+		msg := t.promptMessages[0]
+		t.promptMessages = t.promptMessages[1:]
+		t.currentMessage = msg
+		t.currentMsgExpire = time.Now().Add(msg.GetTimeToDisplay())
+		return msg, true
+	}
+	return Msg{}, false
+}
+
+func (t *Cshell) GetCurrentMessage() (bool, Msg) {
+	if time.Now().Before(t.currentMsgExpire) {
+		return true, t.currentMessage
+	}
+	return false, Msg{}
 }
 
 // this is the promt update loop
@@ -498,7 +599,22 @@ func (t *Cshell) StartBackgroundPromptUpate() {
 			case <-time.After(time.Duration(tp.updatePromptDuration)):
 				// only update the prompt if we are not in complete mode and is it enabled
 				if tp.updatePromptEnabled && !tp.rlInstance.Operation.IsInCompleteMode() {
-					tp.updatePrompt(UpdateByPeriod)
+
+					// lets check if we have to provide some messages to the prompt
+					// first we need to check if a message is currently displayed
+					// and still valid. if this is the case we do nothing
+					// if not, we check if we have a message in the buffer
+					promtUpdated := false
+					if ok, _ := tp.GetCurrentMessage(); !ok {
+						// so currently there is no message active. just check if we have a message in the buffer
+						if _, found := tp.tryGetPromptMessage(); found {
+							promtUpdated = true
+							tp.updatePrompt(UpdateByNotify)
+						}
+					}
+					if !promtUpdated {
+						tp.updatePrompt(UpdateByPeriod)
+					}
 					tp.rlInstance.Refresh()
 				}
 			case <-done:

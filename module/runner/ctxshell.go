@@ -280,6 +280,13 @@ func (cs *CtxShell) linuxPrompt(reason int, label string) string {
 
 	timeNowAsString := time.Now().Format("15:04:05")
 
+	if reason == ctxshell.UpdateByNotify {
+		if found, msg := cs.shell.GetCurrentMessage(); found {
+			timeNowAsString = msg.GetMsg()
+		}
+
+	}
+
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
 		ctxout.BackBlue,
