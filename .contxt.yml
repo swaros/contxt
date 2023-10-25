@@ -176,10 +176,16 @@ task:
 
   ## update github actions
   - id: github-actions-update
+    needs:
+      - set-version
     script:
       - "#@var-to-file build-action .github/workflows/go.yml"
       - "#@var-to-file test-action .github/workflows/test.yml"
+# {{- if $.testcases.looptests }}
       - "#@var-to-file test-action-loop .github/workflows/test-loop.yml"
+# {{- else }}
+      - rm -rf .github/workflows/test-loop.yml
+# {{- end }}
 
   ## verify the modules
   - id: modules-verify
