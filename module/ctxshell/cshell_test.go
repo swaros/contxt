@@ -173,3 +173,46 @@ func TestNativeCmdWithError(t *testing.T) {
 		t.Error("did not get notified from error")
 	}
 }
+
+func TestNativeCmdWithErrorAsync(t *testing.T) {
+	errorTriggered := false
+	testFunction := func(shell *ctxshell.Cshell) {
+		// do the setup here
+
+		shell.AddNativeCmd(ctxshell.NewNativeCmd("hello", "the hello function", func(args []string) error {
+			return fmt.Errorf("hello error")
+		}))
+
+		shell.AddNativeCmd(ctxshell.NewNativeCmd("wait", "wait 20 milliseconds", func(args []string) error {
+			time.Sleep(time.Millisecond * 20)
+			return nil
+		}))
+
+		shell.OnErrorFunc(func(err error) {
+			errorTriggered = true
+			expectedError := "error executing native command: hello error"
+			if err.Error() != expectedError {
+				t.Error("expected '", expectedError, "', got[", err.Error(), "]")
+			}
+
+		})
+		// enable async execution. but disable it for the wait command
+		shell.SetAsyncNativeCmd(true).SetNeverAsyncCmd("wait")
+		// this way we have the wait in place just to make sure
+		// we get enough time to handle the error before the shell is destroyed
+
+		// add a shutdown function
+		shell.OnShutDownFunc(func() {
+			expected := "wait"
+			if shell.GetLastInput() != expected {
+				t.Error("expected '", expected, "', got[", shell.GetLastInput(), "]")
+			}
+		})
+	}
+
+	helpCreateShellAndExecute(testFunction, "hello", "wait")
+
+	if !errorTriggered {
+		t.Error("did not get notified from error")
+	}
+}
