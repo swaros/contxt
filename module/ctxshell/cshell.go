@@ -25,6 +25,7 @@
 package ctxshell
 
 import (
+	"errors"
 	"log"
 	"os"
 	"strings"
@@ -66,6 +67,7 @@ type Cshell struct {
 	currentMsgExpire     time.Time          // the time when the current message expires
 	runOnceCmds          []string           // commands that are executed only once
 	onShutDown           func()             // function that is called on shutdown
+	onErrorFn            func(error)        // function that is called on error
 
 }
 
@@ -100,6 +102,11 @@ func (t *Cshell) AddKeyBinding(key rune, fn func() bool) *Cshell {
 
 func (t *Cshell) OnShutDownFunc(fn func()) *Cshell {
 	t.onShutDown = fn
+	return t
+}
+
+func (t *Cshell) OnErrorFunc(fn func(error)) *Cshell {
+	t.onErrorFn = fn
 	return t
 }
 
@@ -405,6 +412,10 @@ func (t *Cshell) updatePrompt(reason int) {
 
 func (t *Cshell) error(messages ...string) {
 	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicError, time.Second*5))
+	if t.onErrorFn != nil {
+		errorMsg := strings.Join(messages, " ")
+		t.onErrorFn(errors.New(errorMsg))
+	}
 }
 
 func (t *Cshell) message(messages ...string) {

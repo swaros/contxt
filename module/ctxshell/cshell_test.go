@@ -1,9 +1,12 @@
 package ctxshell_test
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/swaros/contxt/module/ctxshell"
+	"github.com/swaros/contxt/module/systools"
 )
 
 func TestSimpleRun(t *testing.T) {
@@ -95,5 +98,78 @@ func TestPromptUpdate(t *testing.T) {
 
 	if !gotNotifiedByWorld {
 		t.Error("did not get notified from world command")
+	}
+}
+
+func TestPromtMessage(t *testing.T) {
+
+	messageBuffer := []string{}
+	testFunction := func(shell *ctxshell.Cshell) {
+		// add the promt handler so we can get notified
+		shell.SetPromptFunc(func(reason int) string {
+			if reason == ctxshell.UpdateByNotify {
+				if found, msg := shell.GetCurrentMessage(); found {
+					messageBuffer = append(messageBuffer, msg.GetMsg())
+					return "got a message:>"
+				}
+			}
+			return "promtp:>"
+		})
+		// enable the prompt update by notify and set the update period
+		shell.UpdatePromptEnabled(true).
+			UpdatePromptPeriod(time.Millisecond * 10)
+
+			// define a command that will just wait longer then the update period
+		shell.AddNativeCmd(ctxshell.NewNativeCmd("wait", "wait 20 milliseconds", func(args []string) error {
+			time.Sleep(time.Millisecond * 20)
+			return nil
+		}))
+
+		// add a shutdown function
+		shell.OnShutDownFunc(func() {
+			expected := "hello"
+			if shell.GetLastInput() != expected {
+				t.Error("expected '", expected, "', got[", shell.GetLastInput(), "]")
+			}
+		})
+	}
+
+	helpCreateShellAndExecute(testFunction, "test", "wait", "hello")
+	if !systools.SliceContains(messageBuffer, "unknown command: test") {
+		t.Error("message buffer contains test:", messageBuffer)
+	}
+}
+
+func TestNativeCmdWithError(t *testing.T) {
+	errorTriggered := false
+	testFunction := func(shell *ctxshell.Cshell) {
+		// do the setup here
+
+		shell.AddNativeCmd(ctxshell.NewNativeCmd("hello", "the hello function", func(args []string) error {
+			return fmt.Errorf("hello error")
+		}))
+
+		shell.OnErrorFunc(func(err error) {
+			errorTriggered = true
+			expectedError := "error executing native command: hello error"
+			if err.Error() != expectedError {
+				t.Error("expected '", expectedError, "', got[", err.Error(), "]")
+			}
+
+		})
+
+		// add a shutdown function
+		shell.OnShutDownFunc(func() {
+			expected := "hello"
+			if shell.GetLastInput() != expected {
+				t.Error("expected '", expected, "', got[", shell.GetLastInput(), "]")
+			}
+		})
+	}
+
+	helpCreateShellAndExecute(testFunction, "hello")
+
+	if !errorTriggered {
+		t.Error("did not get notified from error")
 	}
 }
