@@ -40,7 +40,7 @@ func setShutDownBehavior() {
 			if succeed {
 				ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "  task stopped: ", ctxout.ForeBlue, target, ctxout.CleanTag)
 			} else {
-				ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "  stop faulire: ", ctxout.ForeRed, target, ctxout.CleanTag)
+				ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "  stop failure: ", ctxout.ForeRed, target, ctxout.CleanTag)
 			}
 		})
 		return systools.Continue
