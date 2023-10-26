@@ -500,7 +500,10 @@ func (c *contxtConfigure) getAutoInc(maxTrys int) (string, error) {
 		return "", errors.New("error on reading current configuration while detection next index")
 	}
 	checks := []string{}
-	for i := 0; i <= maxTrys; i++ {
+	start := len(cfg.Paths)
+	// we will try to find an index that is not used
+	// and we add the amount of paths to the maxTrys
+	for i := 0; i <= maxTrys+start; i++ {
 		for indx := range cfg.Paths {
 			checks = append(checks, indx)
 			i++
