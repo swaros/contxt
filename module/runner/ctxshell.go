@@ -43,13 +43,15 @@ const (
 )
 
 var (
-	WhiteBlue   = ""
-	Black       = ""
-	Blue        = ""
-	Prompt      = ""
-	ProgressBar = ""
-	Lc          = ""
-	OkSign      = ""
+	WhiteBlue    = ""
+	Black        = ""
+	Blue         = ""
+	Prompt       = ""
+	ProgressBar  = ""
+	Lc           = ""
+	OkSign       = ""
+	MesgStartCol = ""
+	MesgErrorCol = ""
 )
 
 type CtxShell struct {
@@ -71,6 +73,8 @@ func initVars() {
 	ProgressBar = ctxout.ToString("<sign pbar>")
 	Lc = ctxout.ToString(ctxout.NewMOWrap(), ctxout.CleanTag)
 	OkSign = ctxout.ToString(ctxout.BaseSignSuccess)
+	MesgStartCol = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeLightBlue, ctxout.BackBlack)
+	MesgErrorCol = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeLightRed, ctxout.BackBlack)
 }
 
 func shellRunner(c *CmdExecutorImpl) {
@@ -302,17 +306,21 @@ func (cs *CtxShell) linuxPrompt(reason int, label string) string {
 	// this is just for testing
 
 	timeNowAsString := time.Now().Format("15:04:05")
-
+	MessageColor := WhiteBlue
 	if reason == ctxshell.UpdateByNotify {
 		if found, msg := cs.shell.GetCurrentMessage(); found {
-			timeNowAsString = msg.GetMsg()
+			if msg.GetTopic() != ctxshell.TopicError {
+				// not an error
+				timeNowAsString = MesgStartCol + msg.GetMsg()
+			} else {
+				timeNowAsString = MesgErrorCol + msg.GetMsg()
+			}
 		}
-
 	}
 
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
-		WhiteBlue,
+		MessageColor,
 		Prompt,
 		timeNowAsString,
 		" ",

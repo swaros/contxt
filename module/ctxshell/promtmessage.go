@@ -48,6 +48,10 @@ func (m *Msg) GetMsg() string {
 	return m.formatFunc(m.msg)
 }
 
+func (m *Msg) GetTopic() Topic {
+	return m.topic
+}
+
 func (m *Msg) GetTimeToDisplay() time.Duration {
 	return m.timeToDisplay
 }
