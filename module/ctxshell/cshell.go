@@ -58,6 +58,7 @@ type Cshell struct {
 	neverAsncCmds        []string           // commands that are never executed in a separate goroutine
 	ignoreCobraCmds      []string           // commands that are ignored by the cobra command tree
 	updatePromptDuration time.Duration      // the period for updating the prompt
+	messageDisplayTime   time.Duration      // the time a message is displayed
 	updatePromptEnabled  bool               // if true, the prompt is updated periodically
 	lastInput            string             // the last input
 	StopOutput           bool               // stop printing the output to stdout
@@ -84,6 +85,7 @@ func NewCshell() *Cshell {
 		tickTimerDuration:    100 * time.Millisecond,
 		messages:             NewCshellMsgScope(100),
 		updatePromptDuration: 5 * time.Second,
+		messageDisplayTime:   2 * time.Second, // 2 seconds is default for displaying messages
 		neverAsncCmds:        []string{},
 	}
 }
@@ -108,6 +110,11 @@ func (t *Cshell) OnShutDownFunc(fn func()) *Cshell {
 
 func (t *Cshell) OnErrorFunc(fn func(error)) *Cshell {
 	t.onErrorFn = fn
+	return t
+}
+
+func (t *Cshell) SetMessageDisplayTime(d time.Duration) *Cshell {
+	t.messageDisplayTime = d
 	return t
 }
 
@@ -415,7 +422,7 @@ func (t *Cshell) updatePrompt(reason int) {
 // error handler function to register time based messages for the prompt, and
 // executing the error function if defined
 func (t *Cshell) error(messages ...string) {
-	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicError, time.Second*5))
+	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicError, t.messageDisplayTime))
 	if t.onErrorFn != nil {
 		errorMsg := strings.Join(messages, " ")
 		t.onErrorFn(errors.New(errorMsg))
@@ -424,7 +431,7 @@ func (t *Cshell) error(messages ...string) {
 
 // message handler function to register time based messages for the prompt
 func (t *Cshell) message(messages ...string) {
-	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicInfo, time.Second*5))
+	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicInfo, t.messageDisplayTime))
 }
 
 func (t *Cshell) getOnceCmd() string {
