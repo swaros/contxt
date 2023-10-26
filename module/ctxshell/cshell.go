@@ -627,6 +627,10 @@ func (t *Cshell) StartBackgroundPromptUpate() {
 							promtUpdated = true
 							tp.updatePrompt(UpdateByNotify)
 						}
+					} else {
+						// we have a message active. this will be also published by the message provider
+						promtUpdated = true
+						tp.updatePrompt(UpdateByNotify)
 					}
 					if !promtUpdated {
 						tp.updatePrompt(UpdateByPeriod)
