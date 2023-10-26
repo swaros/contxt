@@ -23,7 +23,6 @@ package runner
 
 import (
 	"os"
-	"runtime"
 	"sync"
 	"time"
 
@@ -52,6 +51,11 @@ var (
 	OkSign       = ""
 	MesgStartCol = ""
 	MesgErrorCol = ""
+
+	CurrentLabelSize = 0
+	NeededLabelSize  = 0
+	BaseLabelSize    = 10
+	MaxeLabelSize    = 40
 )
 
 type CtxShell struct {
@@ -144,15 +148,8 @@ func shellRunner(c *CmdExecutorImpl) {
 				label += err.Error()
 			}
 		}
+		return shellHandler.PromtDraw(reason, label)
 
-		label = shellHandler.autoSetLabel(label)
-		// depends runtime.GOOS we have oure own prompt handler
-		// becaue on windows we have not all the features we have on linux
-		if runtime.GOOS == "windows" {
-			return shellHandler.windowsPrompt(reason, label)
-		} else {
-			return shellHandler.linuxPrompt(reason, label)
-		}
 	})
 	// rebind the the session output handler
 	// so any output will be handled by the shell
@@ -200,7 +197,8 @@ func (cs *CtxShell) stopTasks(args []string) error {
 // if there are running tasks.
 // if no tasks are running, the prompt update period will be set to 1 second.
 // also it sets the mode to ModusTask if any tasks are running.
-func (cs *CtxShell) autoSetLabel(label string) string {
+// returns the new label and a bool if there are any tasks running
+func (cs *CtxShell) autoSetLabel(label string) (string, bool) {
 	watchers := tasks.ListWatcherInstances()
 	taskCount := 0
 	// this is only saying, we have some watchers found. it is not saying, that there are any tasks running
@@ -241,7 +239,7 @@ func (cs *CtxShell) autoSetLabel(label string) string {
 			cs.LabelBackColor = ctxout.BackDarkGrey
 			cs.Modus = ModusTask
 			label = ctxout.ToString(ctxout.NewMOWrap(), label)
-			return cs.fitStringLen(label, ctxout.ToString("t", taskCount))
+			return cs.fitStringLen(label, ctxout.ToString("t", taskCount)), true
 		} else {
 			// no tasks running, so reset the all the task related stuff
 			cs.shell.UpdatePromptPeriod(1 * time.Second)
@@ -252,7 +250,7 @@ func (cs *CtxShell) autoSetLabel(label string) string {
 			cs.CollectedTasks = []string{}
 		}
 	}
-	return cs.fitStringLen(label, "")
+	return cs.fitStringLen(label, ""), false
 
 }
 
@@ -262,17 +260,17 @@ func (cs *CtxShell) fitStringLen(label string, fallBack string) string {
 	if err != nil {
 		w = 80
 	}
-	maxLen := w / 2
+	maxLen := int(float64(w)*0.33) - (BaseLabelSize + CurrentLabelSize) // max is one third of the screen minus current label size
 	if systools.StrLen(systools.NoEscapeSequences(label)) > maxLen {
 		// if fallback is set, we return it
 		if fallBack != "" {
 			return fallBack
 		}
 		// if no fallback is set, we reduce the label
-		label = systools.StringSubLeft(label, maxLen)
+		return systools.StringSubLeft(label, maxLen)
 
 	}
-	return label
+	return label + systools.FillString(" ", maxLen-systools.StrLen(systools.NoEscapeSequences(label)))
 }
 
 // a braille char
@@ -285,24 +283,29 @@ func (cs *CtxShell) getABraillCharByTime() string {
 	return string(braillTable[index])
 }
 
-// returns the prompt for windows.
-// here we are limited to the ascii chars we can use.
-func (cs *CtxShell) windowsPrompt(reason int, label string) string {
+func (cs *CtxShell) calcLabelNeeds(forString string) int {
+	len := systools.StrLen(systools.NoEscapeSequences(forString))
+	if len > BaseLabelSize {
+		NeededLabelSize = len - BaseLabelSize
+	} else {
+		NeededLabelSize = 0
+	}
 
-	return ctxout.ToString(
-		ctxout.NewMOWrap(),
-		ctxout.ForeBlue,
-		label,
-		" ",
-		ctxout.ForeCyan,
-		"› ",
-		ctxout.CleanTag,
-	)
+	// some changes to the label size needed?
+	// if so, then mae the updates faster
+	if CurrentLabelSize < NeededLabelSize {
+		CurrentLabelSize++
+		cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
+	} else if CurrentLabelSize > NeededLabelSize {
+		CurrentLabelSize--
+		cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
+	}
+	return BaseLabelSize + CurrentLabelSize
 }
 
 // returns the prompt for linux.
-func (cs *CtxShell) linuxPrompt(reason int, label string) string {
-
+func (cs *CtxShell) PromtDraw(reason int, label string) string {
+	label, _ = cs.autoSetLabel(label)
 	// display the current time in the prompt
 	// this is just for testing
 
@@ -310,7 +313,7 @@ func (cs *CtxShell) linuxPrompt(reason int, label string) string {
 	MessageColor := WhiteBlue
 	if reason == ctxshell.UpdateByNotify {
 		if found, msg := cs.shell.GetCurrentMessage(); found {
-			msgString := systools.PadStringToR(msg.GetMsg(), 30)
+			msgString := systools.PadStringToR(msg.GetMsg(), cs.calcLabelNeeds(msg.GetMsg()))
 			if msg.GetTopic() != ctxshell.TopicError {
 				// not an error
 				timeNowAsString = MesgStartCol + msgString + " "
@@ -320,7 +323,8 @@ func (cs *CtxShell) linuxPrompt(reason int, label string) string {
 			// any time we have a message, we force to a faster update period
 			cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
 		}
-
+	} else {
+		timeNowAsString = systools.PadStringToR(timeNowAsString, cs.calcLabelNeeds(timeNowAsString))
 	}
 
 	return ctxout.ToString(

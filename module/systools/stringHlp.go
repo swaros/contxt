@@ -233,3 +233,10 @@ func SplitQuoted(oristr string, sep string) []string {
 func AnyToStrNoTabs(any interface{}) string {
 	return strings.ReplaceAll(fmt.Sprintf("%v", any), "\t", " ")
 }
+
+func FillString(str string, length int) string {
+	if len(str) > length {
+		return str
+	}
+	return str + strings.Repeat(" ", length-len(str))
+}
