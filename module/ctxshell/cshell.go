@@ -28,6 +28,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -357,15 +358,16 @@ func (t *Cshell) init() error {
 	completer := t.createCompleter()
 	// create a tempfile name that is based os the binary name
 	binFile := os.Args[0]
-	// just replace any slashes, and colons with underscores
+	// just replace any slashes, spaces and colons with underscores
 	binFile = strings.ReplaceAll(binFile, "/", "_")
+	binFile = strings.ReplaceAll(binFile, " ", "_")
 	binFile = strings.ReplaceAll(binFile, "\\", "_")
 	binFile = strings.ReplaceAll(binFile, ":", "_")
 
 	var err error
 	t.rlInstance, err = readline.NewEx(&readline.Config{
 		Prompt:              " > ",
-		HistoryFile:         "/tmp/cshell_history_" + binFile + ".tmp",
+		HistoryFile:         filepath.Clean(os.TempDir() + "/cshell_history_" + binFile + ".tmp"),
 		AutoComplete:        completer,
 		InterruptPrompt:     "^C",
 		EOFPrompt:           "exit",
@@ -410,6 +412,8 @@ func (t *Cshell) updatePrompt(reason int) {
 	}
 }
 
+// error handler function to register time based messages for the prompt, and
+// executing the error function if defined
 func (t *Cshell) error(messages ...string) {
 	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicError, time.Second*5))
 	if t.onErrorFn != nil {
@@ -418,6 +422,7 @@ func (t *Cshell) error(messages ...string) {
 	}
 }
 
+// message handler function to register time based messages for the prompt
 func (t *Cshell) message(messages ...string) {
 	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicInfo, time.Second*5))
 }
@@ -431,6 +436,8 @@ func (t *Cshell) getOnceCmd() string {
 	return ""
 }
 
+// check if we still have commands to execute
+// from the list of commands they are pre defined
 func (t *Cshell) haveOnce() bool {
 	return len(t.runOnceCmds) > 0
 }
@@ -506,18 +513,14 @@ func (t *Cshell) runShell(once bool) error {
 			if t.asyncNativeCmd && !t.isNeverAsyncCmd(lineCmd) {
 				go func() {
 					if err := c.Exec(fullArgs); err != nil {
-						log.Printf("error executing native command: %s", err)
 						t.error("error executing native command:", err.Error())
 					}
-					t.rlInstance.Write([]byte(lineCmd + "..done\n"))
 					t.message(lineCmd, "done")
 				}()
 			} else {
 				if err := c.Exec(fullArgs); err != nil {
-					log.Printf("error executing native command: %s", err)
 					t.error("error executing native command:", err.Error())
 				}
-				t.rlInstance.Write([]byte(lineCmd + "..done\n"))
 				t.message(lineCmd, "done")
 			}
 			continue
@@ -536,18 +539,14 @@ func (t *Cshell) runShell(once bool) error {
 					if t.asyncCobraExec && !t.isNeverAsyncCmd(c.Name()) {
 						go func() {
 							if err := t.CobraRootCmd.Execute(); err != nil {
-								log.Printf("error executing cobra command: %s", err)
 								t.error("error executing cobra command:", err.Error())
 							}
-							t.rlInstance.Write([]byte(lineCmd + "..done\n"))
 							t.message(lineCmd, "done")
 						}()
 					} else {
 						if err := t.CobraRootCmd.Execute(); err != nil {
-							log.Printf("error executing cobra command: %s", err)
 							t.error("error executing cobra command:", err.Error())
 						}
-						t.rlInstance.Write([]byte(lineCmd + "..done\n"))
 						t.message(lineCmd, "done")
 					}
 					continue
@@ -556,7 +555,6 @@ func (t *Cshell) runShell(once bool) error {
 		}
 		// if we are here, we have no idea what to do
 		if !weDidSomething {
-			log.Printf("unknown command: %s", lineCmd)
 			t.error("unknown command:", lineCmd)
 		}
 		// move to the next line
