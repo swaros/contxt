@@ -70,6 +70,7 @@ type Cshell struct {
 	runOnceCmds          []string           // commands that are executed only once
 	onShutDown           func()             // function that is called on shutdown
 	onErrorFn            func(error)        // function that is called on error
+	noMessageDuplication bool               // if true, messages are not duplicated
 
 }
 
@@ -103,6 +104,11 @@ func (t *Cshell) AddKeyBinding(key rune, fn func() bool) *Cshell {
 	return t
 }
 
+func (t *Cshell) SetNoMessageDuplication(b bool) *Cshell {
+	t.noMessageDuplication = b
+	return t
+}
+
 func (t *Cshell) OnShutDownFunc(fn func()) *Cshell {
 	t.onShutDown = fn
 	return t
@@ -120,6 +126,13 @@ func (t *Cshell) SetMessageDisplayTime(d time.Duration) *Cshell {
 
 // notify the prompt to display a message
 func (t *Cshell) NotifyToPrompt(message Msg) *Cshell {
+	if t.noMessageDuplication {
+		for _, m := range t.promptMessages {
+			if m.GetMsg() == message.GetMsg() {
+				return t
+			}
+		}
+	}
 	t.promptMessages = append(t.promptMessages, message)
 	return t
 }
@@ -434,6 +447,11 @@ func (t *Cshell) Message(messages ...string) {
 	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicInfo, t.messageDisplayTime))
 }
 
+// Message handler function to register time based messages for the prompt
+func (t *Cshell) TimedMessage(displayTime time.Duration, messages ...string) {
+	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicInfo, displayTime))
+}
+
 func (t *Cshell) getOnceCmd() string {
 	if len(t.runOnceCmds) > 0 {
 		cmd := t.runOnceCmds[0]
@@ -587,6 +605,8 @@ func (t *Cshell) tryGetPromptMessage() (Msg, bool) {
 		t.currentMsgExpire = time.Now().Add(msg.GetTimeToDisplay())
 		return msg, true
 	}
+	t.currentMessage = Msg{}
+	t.currentMsgExpire = time.Now().Add(-1 * time.Second)
 	return Msg{}, false
 }
 
@@ -621,7 +641,7 @@ func (t *Cshell) StartBackgroundPromptUpate() {
 					// and still valid. if this is the case we do nothing
 					// if not, we check if we have a message in the buffer
 					promtUpdated := false
-					if ok, _ := tp.GetCurrentMessage(); !ok {
+					if haveAnMessage, _ := tp.GetCurrentMessage(); !haveAnMessage {
 						// so currently there is no message active. just check if we have a message in the buffer
 						if _, found := tp.tryGetPromptMessage(); found {
 							promtUpdated = true

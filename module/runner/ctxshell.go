@@ -205,6 +205,7 @@ func (cs *CtxShell) autoSetLabel(label string) string {
 	taskCount := 0
 	// this is only saying, we have some watchers found. it is not saying, that there are any tasks running
 	// for this we have to check the watchers one by one
+	cs.shell.SetNoMessageDuplication(true) // we will spam a lot of messages, so we do not want to have duplicates
 	if len(watchers) > 0 {
 		taskBar := ""
 		for _, watcher := range watchers {
@@ -309,13 +310,17 @@ func (cs *CtxShell) linuxPrompt(reason int, label string) string {
 	MessageColor := WhiteBlue
 	if reason == ctxshell.UpdateByNotify {
 		if found, msg := cs.shell.GetCurrentMessage(); found {
+			msgString := systools.PadStringToR(msg.GetMsg(), 30)
 			if msg.GetTopic() != ctxshell.TopicError {
 				// not an error
-				timeNowAsString = MesgStartCol + msg.GetMsg()
+				timeNowAsString = MesgStartCol + msgString + " "
 			} else {
-				timeNowAsString = MesgErrorCol + msg.GetMsg()
+				timeNowAsString = MesgErrorCol + msgString + " "
 			}
+			// any time we have a message, we force to a faster update period
+			cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
 		}
+
 	}
 
 	return ctxout.ToString(
