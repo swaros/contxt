@@ -190,3 +190,22 @@ func TestForceDisabled(t *testing.T) {
 	}
 
 }
+
+func TestLongString(t *testing.T) {
+	ctxout.ClearPostFilters()
+	// create a new filter
+	sf := ctxout.NewSignFilter(nil)
+	if sf == nil {
+		t.Error("NewSignFilter should not return nil")
+	}
+	ctxout.AddPostFilter(sf)
+	sf.Enable()
+	sf.AddSign(ctxout.Sign{Glyph: "⠄⠆⠇⠋⠙⠸⠰⠠⠐⠈", Name: "progressbar", Fallback: "_\\|/"})
+
+	result := ctxout.ToString("<sign progressbar>")
+	expected := "⠄⠆⠇⠋⠙⠸⠰⠠⠐⠈"
+	if result != expected {
+		t.Errorf("expected '%s' got '%s'", expected, result)
+	}
+
+}

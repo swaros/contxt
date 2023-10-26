@@ -121,6 +121,10 @@ func Init() error {
 
 	// add support for utf-8 signs
 	glyps := ctxout.NewSignFilter(nil)
+	glyps.AddSign(ctxout.Sign{Glyph: "🭬", Name: "runident", Fallback: "»"})
+	glyps.AddSign(ctxout.Sign{Glyph: "🭮", Name: "stopident", Fallback: "«"})
+	glyps.AddSign(ctxout.Sign{Glyph: "", Name: "prompt", Fallback: "»"})
+	glyps.AddSign(ctxout.Sign{Glyph: "⠄⠆⠇⠋⠙⠸⠰⠠⠐⠈", Name: "pbar", Fallback: "-_\\|/"})
 	ctxout.AddPostFilter(glyps)
 
 	// enable the sign filter if possible
@@ -143,12 +147,10 @@ func Init() error {
 		}, func(p *os.Process) {
 
 		})
+
 		// just to be sure, if anything gos wrong by checking the terminal, we disable the sign filter
 		if errorEx != nil && code1 == 0 && code2 == 0 {
 			glyps.Disable()
-		} else {
-			glyps.AddSign(ctxout.Sign{Glyph: "🭬", Name: "runident", Fallback: "»"})
-			glyps.AddSign(ctxout.Sign{Glyph: "🭮", Name: "stopident", Fallback: "«"})
 		}
 	}
 

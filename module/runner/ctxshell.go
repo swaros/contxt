@@ -42,6 +42,16 @@ const (
 	ModusIdle = 4
 )
 
+var (
+	WhiteBlue   = ""
+	Black       = ""
+	Blue        = ""
+	Prompt      = ""
+	ProgressBar = ""
+	Lc          = ""
+	OkSign      = ""
+)
+
 type CtxShell struct {
 	cmdSession     *CmdExecutorImpl
 	shell          *ctxshell.Cshell
@@ -53,7 +63,20 @@ type CtxShell struct {
 	LabelBackColor string
 }
 
+func initVars() {
+	WhiteBlue = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeWhite+ctxout.BackBlue)
+	Black = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeBlack)
+	Blue = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeBlue)
+	Prompt = ctxout.ToString("<sign prompt>")
+	ProgressBar = ctxout.ToString("<sign pbar>")
+	Lc = ctxout.ToString(ctxout.NewMOWrap(), ctxout.CleanTag)
+	OkSign = ctxout.ToString(ctxout.BaseSignSuccess)
+}
+
 func shellRunner(c *CmdExecutorImpl) {
+	// init the vars
+	initVars()
+
 	// run the context shell
 	shell := ctxshell.NewCshell()
 	shellHandler := &CtxShell{
@@ -195,7 +218,7 @@ func (cs *CtxShell) autoSetLabel(label string) string {
 				}
 				// build the taskbar
 				runningChar := cs.getABraillCharByTime()
-				doneChar := "✓"
+				doneChar := OkSign
 				for _, task := range cs.CollectedTasks {
 					if watchMan.TaskRunning(task) {
 						taskBar += ctxout.ForeWhite + runningChar
@@ -250,7 +273,7 @@ func (cs *CtxShell) fitStringLen(label string, fallBack string) string {
 // a braille char
 // depending on the milliseconds of the current time
 func (cs *CtxShell) getABraillCharByTime() string {
-	braillTableString := "⠄⠆⠇⠋⠙⠸⠰⠠⠐⠈"
+	braillTableString := ProgressBar
 	braillTable := []rune(braillTableString)
 	millis := time.Now().UnixNano() / int64(time.Millisecond)
 	index := int(millis % int64(len(braillTable)))
@@ -289,16 +312,22 @@ func (cs *CtxShell) linuxPrompt(reason int, label string) string {
 
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
-		ctxout.BackBlue,
-		ctxout.ForeWhite,
-		"",
+		WhiteBlue,
+		Prompt,
 		timeNowAsString,
 		" ",
 		cs.LabelForeColor,
 		cs.LabelBackColor,
 		label,
-		ctxout.BackBlue,
-		ctxout.ForeWhite,
-		"ctx<f:black>:</><f:blue></> ",
+		WhiteBlue,
+		Prompt,
+		"ctx",
+		Black,
+		":",
+		Lc,
+		Blue,
+		Prompt,
+		Lc,
+		" ",
 	)
 }
