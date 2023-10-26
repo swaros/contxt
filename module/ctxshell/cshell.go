@@ -419,9 +419,9 @@ func (t *Cshell) updatePrompt(reason int) {
 	}
 }
 
-// error handler function to register time based messages for the prompt, and
-// executing the error function if defined
-func (t *Cshell) error(messages ...string) {
+// Error handler function to register time based messages for the prompt, and
+// executing the Error function if defined
+func (t *Cshell) Error(messages ...string) {
 	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicError, t.messageDisplayTime))
 	if t.onErrorFn != nil {
 		errorMsg := strings.Join(messages, " ")
@@ -429,8 +429,8 @@ func (t *Cshell) error(messages ...string) {
 	}
 }
 
-// message handler function to register time based messages for the prompt
-func (t *Cshell) message(messages ...string) {
+// Message handler function to register time based messages for the prompt
+func (t *Cshell) Message(messages ...string) {
 	t.NotifyToPrompt(DefaultPromptMessage(strings.Join(messages, " "), TopicInfo, t.messageDisplayTime))
 }
 
@@ -520,15 +520,15 @@ func (t *Cshell) runShell(once bool) error {
 			if t.asyncNativeCmd && !t.isNeverAsyncCmd(lineCmd) {
 				go func() {
 					if err := c.Exec(fullArgs); err != nil {
-						t.error("error executing native command:", err.Error())
+						t.Error("error executing native command:", err.Error())
 					}
-					t.message(lineCmd, "done")
+					t.Message(lineCmd, "done")
 				}()
 			} else {
 				if err := c.Exec(fullArgs); err != nil {
-					t.error("error executing native command:", err.Error())
+					t.Error("error executing native command:", err.Error())
 				}
-				t.message(lineCmd, "done")
+				t.Message(lineCmd, "done")
 			}
 			continue
 		}
@@ -546,15 +546,15 @@ func (t *Cshell) runShell(once bool) error {
 					if t.asyncCobraExec && !t.isNeverAsyncCmd(c.Name()) {
 						go func() {
 							if err := t.CobraRootCmd.Execute(); err != nil {
-								t.error("error executing cobra command:", err.Error())
+								t.Error("error executing cobra command:", err.Error())
 							}
-							t.message(lineCmd, "done")
+							t.Message(lineCmd, "done")
 						}()
 					} else {
 						if err := t.CobraRootCmd.Execute(); err != nil {
-							t.error("error executing cobra command:", err.Error())
+							t.Error("error executing cobra command:", err.Error())
 						}
-						t.message(lineCmd, "done")
+						t.Message(lineCmd, "done")
 					}
 					continue
 				}
@@ -562,7 +562,7 @@ func (t *Cshell) runShell(once bool) error {
 		}
 		// if we are here, we have no idea what to do
 		if !weDidSomething {
-			t.error("unknown command:", lineCmd)
+			t.Error("unknown command:", lineCmd)
 		}
 		// move to the next line
 		t.rlInstance.Write([]byte("\n"))
