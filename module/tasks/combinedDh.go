@@ -52,6 +52,7 @@ func NewCombinedDataHandler() *CombinedDh {
 		openBracket:        "${",                        // this is the opening bracket for the placeholders
 		closeBracket:       "}",                         // this is the closing bracket for the placeholders
 		inBracketSeperator: ":",                         // this is the seperator for the key in the brackets
+		logger:             mimiclog.NewNullLogger(),
 	}
 	return dh
 }
