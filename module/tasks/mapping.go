@@ -33,7 +33,7 @@ func (t *targetExecuter) out(msg ...interface{}) {
 }
 
 func (t *targetExecuter) haveLogger() bool {
-	return t.Logger != nil
+	return t.Logger != nil && t.Logger != mimiclog.NewNullLogger()
 }
 
 func (t *targetExecuter) getLogger() mimiclog.Logger {
