@@ -201,6 +201,7 @@ func (cs *CtxShell) stopTasks(args []string) error {
 func (cs *CtxShell) autoSetLabel(label string) (string, bool) {
 	watchers := tasks.ListWatcherInstances()
 	taskCount := 0
+
 	// this is only saying, we have some watchers found. it is not saying, that there are any tasks running
 	// for this we have to check the watchers one by one
 	cs.shell.SetNoMessageDuplication(true) // we will spam a lot of messages, so we do not want to have duplicates
@@ -267,7 +268,7 @@ func (cs *CtxShell) fitStringLen(label string, fallBack string) string {
 			return fallBack
 		}
 		// if no fallback is set, we reduce the label
-		return systools.StringSubLeft(label, maxLen)
+		return systools.StringSubRight(label, maxLen)
 
 	}
 	return label + systools.FillString(" ", maxLen-systools.StrLen(systools.NoEscapeSequences(label)))
