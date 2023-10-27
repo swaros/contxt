@@ -119,6 +119,9 @@ func (e *TaskListExec) findOrCreateTask(target string, scopeVars map[string]stri
 				// take the preset also for any new task
 				tExec.SetHardExitOnError(e.presetHardExistOnError)
 				e.subTasks[target] = tExec
+				if e.logger != nil {
+					tExec.SetLogger(e.logger)
+				}
 			}
 		}
 	}
