@@ -63,7 +63,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 	if t.phHandler == nil {
 		panic("placeholderHandler is not set")
 	}
-
+	t.getLogger().Debug("TPARSE: entered")
 	inIteration := false
 	inIfState := false
 	ifState := true
@@ -78,13 +78,14 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 			//parts := strings.Split(line, inlineCmdSep)
 			parts := systools.SplitQuoted(line, inlineCmdSep)
 
-			t.getLogger().Debug("try to parse parts", parts)
+			t.getLogger().Debug("TPARSE: try to parse parts", parts)
 			if len(parts) < 1 {
 				continue
 			}
 			switch parts[0] {
 
 			case osCheck:
+				t.getLogger().Debug("TPARSE: check os")
 				if !inIfState {
 					if len(parts) == 2 {
 						leftEq := parts[1]
@@ -101,6 +102,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				}
 
 			case equalsMark:
+				t.getLogger().Debug("TPARSE: equals")
 				if !inIfState {
 					if len(parts) == 3 {
 						leftEq := parts[1]
@@ -120,6 +122,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				}
 
 			case notEqualsMark:
+				t.getLogger().Debug("TPARSE: not equals")
 				if !inIfState {
 					if len(parts) == 3 {
 						leftEq := parts[1]
@@ -138,17 +141,18 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				}
 
 			case inlineMark:
+				t.getLogger().Debug("TPARSE: inline")
 				if inIteration {
 					iterationLines = append(iterationLines, strings.Replace(line, inlineMark+" ", "", 4))
 					logFields := mimiclog.Fields{"iterationLines": iterationLines}
-					t.getLogger().Debug("append to subscript", logFields)
+					t.getLogger().Debug("TPARSE: append to subscript", logFields)
 				} else {
 					t.out(MsgError(MsgError{Err: errors.New("invalid usage " + inlineMark + " only valid while in iteration"), Reference: line, Target: t.target}))
 					return true, systools.ErrorCheatMacros, parsedScript
 				}
 
 			case fromJSONMark:
-
+				t.getLogger().Debug("TPARSE: from json")
 				if len(parts) >= 3 {
 					err := t.dataHandler.AddJSON(parts[1], strings.Join(parts[2:], ""))
 					if err != nil {
@@ -161,6 +165,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				}
 
 			case fromJSONCmdMark:
+				t.getLogger().Debug("TPARSE: from json exec")
 				if len(parts) >= 3 {
 					returnValue := ""
 					restSlice := parts[2:]
@@ -188,7 +193,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 
 						err := t.dataHandler.AddJSON(keyname, returnValue)
 						if err != nil {
-							t.getLogger().Debug("result of command", returnValue)
+							t.getLogger().Debug("TPARSE: result of command", returnValue)
 							t.out(MsgError(MsgError{Err: errors.New("error while parsing json: " + err.Error()), Reference: line, Target: t.target}))
 							return true, systools.ErrorCheatMacros, parsedScript
 						}
@@ -309,12 +314,12 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 			case endMark:
 
 				if inIfState {
-					t.getLogger().Debug("IF: DONE")
+					t.getLogger().Debug("TPARSE: IF: DONE")
 					inIfState = false
 					ifState = true
 				}
 				if inIteration {
-					t.getLogger().Debug("ITERATION: DONE")
+					t.getLogger().Debug("TPARSE: ITERATION: DONE")
 					inIteration = false
 					abortFound := false
 					returnCode := systools.ExitOk
@@ -327,7 +332,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 							parsedExecLines = append(parsedExecLines, iLine)
 						}
 						logFields := mimiclog.Fields{"key": key, "value": value, "subscript": parsedExecLines}
-						t.getLogger().Debug("... delegate script", logFields)
+						t.getLogger().Debug("TPARSE: ... delegate script", logFields)
 						abort, rCode, subs := t.TryParse(parsedExecLines, regularScript)
 						returnCode = rCode
 						parsedScript = append(parsedScript, subs...)
@@ -352,7 +357,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					} else {
 						inIteration = true
 						iterationCollect = impMap
-						t.getLogger().Debug("ITERATION: START", impMap)
+						t.getLogger().Debug("TPARSE: ITERATION: START", impMap)
 					}
 				} else {
 					t.out(MsgError(MsgError{Err: errors.New("invalid arguments #@iterate needs <name-of-import> <path-to-data>"), Reference: line, Target: t.target}))
@@ -373,10 +378,10 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 					return true, returnCode, parsedScript
 				}
 			} else {
-				t.getLogger().Debug("ignored because of if state", line)
+				t.getLogger().Debug("TPARSE: ignored because of if state", line)
 			}
 		}
 	}
-	t.getLogger().Debug("... parsed result", parsedScript)
+	t.getLogger().Debug("TPARSE: ... parsed result", parsedScript)
 	return false, systools.ExitOk, parsedScript
 }

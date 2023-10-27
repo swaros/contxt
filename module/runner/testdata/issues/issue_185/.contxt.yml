@@ -1,0 +1,47 @@
+config:
+  variables:
+    CFG_USER: "test"
+  imports:
+     - default.yml local-config
+     
+task:
+  - id: local-config
+    require:
+      system: linux
+      exists:
+        - ${CFG_USER}.local.json
+    script:
+      - echo "loading local config file from user ${CFG_USER}.local.json"
+      - "#@import-json-exec local-config cat ${CFG_USER}.local.json"
+
+  - id: build-base-image
+    needs:
+      - local-config
+    script:
+      - echo "testing vars"
+      - "#@set RUNCMD --build-arg CMP_KEYID=${local-config:HIDDEN.CMP_KEYID}"
+      - "#@set RUNCMD ${RUNCMD} --build-arg CMP_ACID=${local-config:HIDDEN.CMP_ACID}"
+      - "#@set RUNCMD ${RUNCMD} --build-arg LICENCE_KEY=${local-config:HIDDEN.LICENCE_KEY}"
+      - echo "${RUNCMD}"
+
+  - id: test-actual-user
+    needs:
+      - local-user-config
+    script:
+      - echo "you are [${USER}]"
+
+  - id: local-user-config
+    require:
+      system: linux
+      exists:
+        - ${USER}.local.json
+    script:
+      - echo "this should not being executed because  ${USER}.local.json should not exist"
+
+  - id: local-user-config
+    require:
+      system: linux
+      notExists:
+        - ${USER}.local.json
+    script:
+      - echo "not loading local config file from user ${USER}.local.json"
