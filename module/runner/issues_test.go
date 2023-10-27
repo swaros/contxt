@@ -119,7 +119,7 @@ func TestIssue185_4(t *testing.T) {
 	defer cleanAllFiles()
 
 	// set the log file with an timestamp
-	logFileName := "issue_185_3_" + time.Now().Format(time.RFC3339) + ".log"
+	logFileName := "issue_185_4_" + time.Now().Format(time.RFC3339) + ".log"
 	output.SetLogFile(getAbsolutePath(logFileName))
 	output.ClearAndLog()
 

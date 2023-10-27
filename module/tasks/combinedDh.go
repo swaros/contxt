@@ -193,7 +193,9 @@ func (d *CombinedDh) GetYamc() *yamc.Yamc {
 }
 
 func (d *CombinedDh) SetPH(key, value string) {
-	d.getLogger().Trace("SetPH: key [" + key + "] value [" + systools.StringSubLeft(value, 40) + " ...]")
+	if d.getLogger().IsTraceEnabled() {
+		d.getLogger().Trace("SetPH: key [" + key + "] value [" + systools.StringSubLeft(value, 40) + " ...]")
+	}
 	d.yamcRoot.Store(key, value)
 }
 
@@ -212,6 +214,9 @@ func (d *CombinedDh) AppendToPH(key, value string) bool {
 
 func (d *CombinedDh) SetIfNotExists(key, value string) {
 	if _, found := d.yamcRoot.Get(key); !found {
+		if d.getLogger().IsTraceEnabled() {
+			d.getLogger().Trace("SetIfNotExists: key [" + key + "] value [" + systools.StringSubLeft(value, 40) + " ...]")
+		}
 		d.yamcRoot.Store(key, value)
 	}
 }
@@ -241,11 +246,26 @@ func (d *CombinedDh) GetPlaceHoldersFnc(inspectFunc func(phKey string, phValue s
 	d.yamcRoot.Range(func(key interface{}, value interface{}) bool {
 		if strValue, ok := value.(string); ok {
 			if keyValue, ok := key.(string); ok {
+				if d.logger.IsTraceEnabled() {
+					d.getLogger().Trace("PARSE PLACEHOLDERs: key [" + keyValue + "] = [" + systools.StringSubLeft(strValue, 40) + " ...]")
+				}
 				inspectFunc(keyValue, strValue)
 			}
 		}
 		return true
 	})
+	// parsing environment variables
+	for _, env := range os.Environ() {
+		envParts := strings.Split(env, "=")
+		if len(envParts) == 2 {
+			envKey := envParts[0]
+			envValue := envParts[1]
+			if d.logger.IsTraceEnabled() {
+				d.getLogger().Trace("PARSE ENVIRONMENT VARIABLEs: key [" + envKey + "] = [" + systools.StringSubLeft(envValue, 40) + " ...]")
+			}
+			inspectFunc(envKey, envValue)
+		}
+	}
 }
 
 // findSeparatorBetweenBrackets finds the separator between brackets

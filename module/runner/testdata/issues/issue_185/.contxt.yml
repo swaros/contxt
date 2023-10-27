@@ -33,6 +33,14 @@ task:
   - id: local-user-config
     require:
       system: linux
+      exists:
+        - ${USER}.local.json
+    script:
+      - echo "this should not being executed because  ${USER}.local.json should not exist"
+
+  - id: local-user-config
+    require:
+      system: linux
       notExists:
         - ${USER}.local.json
     script:

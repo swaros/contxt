@@ -85,6 +85,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 			switch parts[0] {
 
 			case osCheck:
+				t.getLogger().Debug("TPARSE: check os")
 				if !inIfState {
 					if len(parts) == 2 {
 						leftEq := parts[1]
@@ -101,6 +102,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				}
 
 			case equalsMark:
+				t.getLogger().Debug("TPARSE: equals")
 				if !inIfState {
 					if len(parts) == 3 {
 						leftEq := parts[1]
@@ -120,6 +122,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				}
 
 			case notEqualsMark:
+				t.getLogger().Debug("TPARSE: not equals")
 				if !inIfState {
 					if len(parts) == 3 {
 						leftEq := parts[1]
@@ -138,6 +141,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				}
 
 			case inlineMark:
+				t.getLogger().Debug("TPARSE: inline")
 				if inIteration {
 					iterationLines = append(iterationLines, strings.Replace(line, inlineMark+" ", "", 4))
 					logFields := mimiclog.Fields{"iterationLines": iterationLines}
@@ -148,7 +152,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				}
 
 			case fromJSONMark:
-
+				t.getLogger().Debug("TPARSE: from json")
 				if len(parts) >= 3 {
 					err := t.dataHandler.AddJSON(parts[1], strings.Join(parts[2:], ""))
 					if err != nil {
@@ -161,6 +165,7 @@ func (t *targetExecuter) TryParse(script []string, regularScript func(string) (b
 				}
 
 			case fromJSONCmdMark:
+				t.getLogger().Debug("TPARSE: from json exec")
 				if len(parts) >= 3 {
 					returnValue := ""
 					restSlice := parts[2:]
