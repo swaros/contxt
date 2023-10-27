@@ -432,8 +432,13 @@ func (sh *SharedHelper) takeCareAboutRepo(pathTouse string, config configure.Git
 	return config
 }
 
+// Merged the required paths into the given template.
+// this is loading the .contxt.yml from the required path, located in the shared folder
+// and merges them into the given template.
+// so the current template will be extended by the content of these files.
 func (sh *SharedHelper) MergeRequiredPaths(ctemplate *configure.RunConfig, templateHandler *ctemplate.Template) error {
 	if len(ctemplate.Config.Require) > 0 {
+		// we have to check if the required files exists
 		for _, reqSource := range ctemplate.Config.Require {
 			sh.logger.Info("shared: handle required ", reqSource)
 			fullPath, pathError := sh.CheckOrCreateUseConfig(reqSource)

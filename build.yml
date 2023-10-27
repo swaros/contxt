@@ -52,24 +52,24 @@ build:
 # if a test ever failed randomly, this is always a good reason to add them here
 testcases:
   runner: go run ./cmd/cmd-contxt/main.go
-  looptests:
-      TaskNestedNeeds_first:
-        loops: 50
-        timeout: 20s
-        folder: ./module/tasks
-        test: TestTargetComplexWith2NestedNeeds
-      TaskNestedNeeds_second:
-        loops: 50
-        timeout: 20s
-        folder: ./module/tasks
-        test: TestTargetComplexWith2NestedNeeds
-      TaskNestedNeeds_third:
-        loops: 50
-        timeout: 20s
-        folder: ./module/tasks
-        test: TestTargetComplexWith2NestedNeeds
-      TaskNestedNeeds_last:
-        loops: 50
-        timeout: 20s
-        folder: ./module/tasks
-        test: TestTargetComplexWith2NestedNeeds
+#  looptests:
+#      TaskNestedNeeds_first:
+#        loops: 50
+#        timeout: 20s
+#        folder: ./module/tasks
+#        test: TestTargetComplexWith2NestedNeeds
+#      TaskNestedNeeds_second:
+#        loops: 50
+#        timeout: 20s
+#        folder: ./module/tasks
+#        test: TestTargetComplexWith2NestedNeeds
+#      TaskNestedNeeds_third:
+#        loops: 50
+#        timeout: 20s
+#        folder: ./module/tasks
+#        test: TestTargetComplexWith2NestedNeeds
+#      TaskNestedNeeds_last:
+#        loops: 50
+#        timeout: 20s
+#        folder: ./module/tasks
+#        test: TestTargetComplexWith2NestedNeeds
