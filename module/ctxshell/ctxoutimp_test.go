@@ -7,7 +7,7 @@ import (
 	"github.com/swaros/contxt/module/ctxshell"
 )
 
-func TestOutImpBase(t *testing.T) {
+func TestPromptUpdated(t *testing.T) {
 	shell := ctxshell.NewCshell()
 
 	// we have to use RunOnceWithCmd, because without
@@ -16,6 +16,6 @@ func TestOutImpBase(t *testing.T) {
 	// shells like the one used in the tests.
 	shell.RunOnceWithCmd(func() {
 		ctxout.PrintLn(shell, "hello")
+		ctxout.PrintLn(shell, "world")
 	})
-
 }

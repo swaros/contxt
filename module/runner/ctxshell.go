@@ -23,10 +23,10 @@ package runner
 
 import (
 	"os"
-	"runtime"
 	"sync"
 	"time"
 
+	"github.com/abiosoft/readline"
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/ctxshell"
 	"github.com/swaros/contxt/module/dirhandle"
@@ -41,6 +41,24 @@ const (
 	ModusIdle = 4
 )
 
+var (
+	WhiteBlue    = ""
+	Black        = ""
+	Blue         = ""
+	Prompt       = ""
+	ProgressBar  = ""
+	Lc           = ""
+	OkSign       = ""
+	MesgStartCol = ""
+	MesgErrorCol = ""
+	Yellow       = ""
+
+	CurrentLabelSize = 0
+	NeededLabelSize  = 0
+	BaseLabelSize    = 10
+	MaxeLabelSize    = 40
+)
+
 type CtxShell struct {
 	cmdSession     *CmdExecutorImpl
 	shell          *ctxshell.Cshell
@@ -52,7 +70,23 @@ type CtxShell struct {
 	LabelBackColor string
 }
 
+func initVars() {
+	WhiteBlue = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeWhite+ctxout.BackBlue)
+	Black = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeBlack)
+	Blue = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeBlue)
+	Prompt = ctxout.ToString("<sign prompt>")
+	ProgressBar = ctxout.ToString("<sign pbar>")
+	Lc = ctxout.ToString(ctxout.NewMOWrap(), ctxout.CleanTag)
+	OkSign = ctxout.ToString(ctxout.BaseSignSuccess)
+	MesgStartCol = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeLightBlue, ctxout.BackBlack)
+	MesgErrorCol = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeLightRed, ctxout.BackBlack)
+	Yellow = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeYellow)
+}
+
 func shellRunner(c *CmdExecutorImpl) {
+	// init the vars
+	initVars()
+
 	// run the context shell
 	shell := ctxshell.NewCshell()
 	shellHandler := &CtxShell{
@@ -71,24 +105,22 @@ func shellRunner(c *CmdExecutorImpl) {
 	// afterwards we can add the commands by injecting the root command
 	shell.SetCobraRootCommand(c.session.Cobra.RootCmd)
 
+	// set behavior on exit
+	shell.OnShutDownFunc(func() {
+		ctxout.PrintLn(ctxout.NewMOWrap(), "shutting down...")
+		shellHandler.stopTasks([]string{})
+	})
+
 	// rename the exit command to quit
-	shell.SetExitCmdStr("quit")
+	shell.SetExitCmdStr("exit")
 
 	// some of the commands are not working well async, because they
 	// are switching between workspaces. so we have to disable async
 	// for them
 	shell.SetNeverAsyncCmd("workspace")
 
-	// add native exit command
-	exitCmd := ctxshell.NewNativeCmd("exit", "exit the shell", func(args []string) error {
-		systools.Exit(0)
-		return nil
-	})
-	// completer function for the exit command
-	exitCmd.SetCompleterFunc(func(line string) []string {
-		return []string{"exit"}
-	})
-	shell.AddNativeCmd(exitCmd)
+	// capture ctrl+z and do nothing, so we will not send to the background
+	shell.AddKeyBinding(readline.CharCtrlZ, func() bool { return false })
 
 	// add task clean command
 	cleanTasksCmd := ctxshell.NewNativeCmd("taskreset", "resets all tasks", func(args []string) error {
@@ -100,33 +132,7 @@ func shellRunner(c *CmdExecutorImpl) {
 	shell.AddNativeCmd(cleanTasksCmd)
 
 	// add task stop command
-	stoppAllCmd := ctxshell.NewNativeCmd("stoptasks", "stop all the running processes", func(args []string) error {
-		ctxshell.NewCshell().SetStopOutput(true)
-		tasks.NewGlobalWatchman().StopAllTasks(func(target string, time int, succeed bool) {
-			if succeed {
-				ctxout.PrintLn(ctxout.NewMOWrap(), "stopped process: ", target)
-			} else {
-				ctxout.PrintLn(ctxout.NewMOWrap(), "failed to stop processes: ", target)
-			}
-		})
-		ctxshell.NewCshell().SetStopOutput(false)
-		tasks.HandleAllMyPid(func(pid int) error {
-			ctxout.PrintLn(ctxout.NewMOWrap(), "killing process: ", pid)
-			if proc, err := os.FindProcess(pid); err == nil {
-				if err := proc.Kill(); err != nil {
-					return err
-				} else {
-					ctxout.PrintLn(ctxout.NewMOWrap(), "killed process: ", pid)
-				}
-			} else {
-				ctxout.PrintLn(ctxout.NewMOWrap(), "failed to kill process: ", pid)
-				return err
-			}
-			return nil
-		})
-
-		return nil
-	})
+	stoppAllCmd := ctxshell.NewNativeCmd("stoptasks", "stop all the running processes", shellHandler.stopTasks)
 	stoppAllCmd.SetCompleterFunc(func(line string) []string {
 		return []string{"stoptasks"}
 	})
@@ -144,15 +150,8 @@ func shellRunner(c *CmdExecutorImpl) {
 				label += err.Error()
 			}
 		}
+		return shellHandler.PromtDraw(reason, label)
 
-		label = shellHandler.autoSetLabel(label)
-		// depends runtime.GOOS we have oure own prompt handler
-		// becaue on windows we have not all the features we have on linux
-		if runtime.GOOS == "windows" {
-			return shellHandler.windowsPrompt(reason, label)
-		} else {
-			return shellHandler.linuxPrompt(reason, label)
-		}
 	})
 	// rebind the the session output handler
 	// so any output will be handled by the shell
@@ -165,17 +164,51 @@ func shellRunner(c *CmdExecutorImpl) {
 		Run()
 }
 
+// stop all the running processes
+// and kill all the running processes
+func (cs *CtxShell) stopTasks(args []string) error {
+	ctxshell.NewCshell().SetStopOutput(true)
+	tasks.NewGlobalWatchman().StopAllTasks(func(target string, time int, succeed bool) {
+		if succeed {
+			ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "stopped process: ", ctxout.ForeGreen, target)
+		} else {
+			ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, "failed to stop processes: ", ctxout.ForeWhite, target)
+		}
+	})
+	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.CleanTag)
+	ctxshell.NewCshell().SetStopOutput(false)
+	tasks.HandleAllMyPid(func(pid int) error {
+		ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "killing process: ", ctxout.ForeBlue, pid)
+		if proc, err := os.FindProcess(pid); err == nil {
+			if err := proc.Kill(); err != nil {
+				return err
+			} else {
+				ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeGreen, "killed process: ", pid)
+			}
+		} else {
+			ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, "failed to kill process: ", pid)
+			return err
+		}
+		return nil
+	})
+	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.CleanTag)
+	return nil
+}
+
 // adds an additonial task label to the prompt and increases the prompt update period
 // if there are running tasks.
 // if no tasks are running, the prompt update period will be set to 1 second.
 // also it sets the mode to ModusTask if any tasks are running.
-func (cs *CtxShell) autoSetLabel(label string) string {
+// returns the new label and a bool if there are any tasks running
+func (cs *CtxShell) autoSetLabel(label string) (string, bool) {
 	watchers := tasks.ListWatcherInstances()
 	taskCount := 0
+
 	// this is only saying, we have some watchers found. it is not saying, that there are any tasks running
 	// for this we have to check the watchers one by one
+	cs.shell.SetNoMessageDuplication(true) // we will spam a lot of messages, so we do not want to have duplicates
 	if len(watchers) > 0 {
-		taskBar := ""
+		taskBar := Yellow + "running tasks: "
 		for _, watcher := range watchers {
 			watchMan := tasks.GetWatcherInstance(watcher)
 			if watchMan != nil {
@@ -190,10 +223,11 @@ func (cs *CtxShell) autoSetLabel(label string) string {
 					}
 				}
 				// build the taskbar
-				runningChar := cs.getABraillCharByTime()
-				doneChar := "✓"
-				for _, task := range cs.CollectedTasks {
+
+				doneChar := OkSign
+				for in, task := range cs.CollectedTasks {
 					if watchMan.TaskRunning(task) {
+						runningChar := cs.getABraillCharByTime(in)
 						taskBar += ctxout.ForeWhite + runningChar
 					} else {
 						taskBar += ctxout.ForeBlack + doneChar
@@ -209,7 +243,7 @@ func (cs *CtxShell) autoSetLabel(label string) string {
 			cs.LabelBackColor = ctxout.BackDarkGrey
 			cs.Modus = ModusTask
 			label = ctxout.ToString(ctxout.NewMOWrap(), label)
-			return cs.fitStringLen(label, ctxout.ToString("t", taskCount))
+			return cs.fitStringLen(label, ctxout.ToString("t", taskCount)), true
 		} else {
 			// no tasks running, so reset the all the task related stuff
 			cs.shell.UpdatePromptPeriod(1 * time.Second)
@@ -220,7 +254,7 @@ func (cs *CtxShell) autoSetLabel(label string) string {
 			cs.CollectedTasks = []string{}
 		}
 	}
-	return cs.fitStringLen(label, "")
+	return cs.fitStringLen(label, ""), false
 
 }
 
@@ -230,64 +264,92 @@ func (cs *CtxShell) fitStringLen(label string, fallBack string) string {
 	if err != nil {
 		w = 80
 	}
-	maxLen := w / 2
+	maxLen := int(float64(w)*0.33) - (BaseLabelSize + CurrentLabelSize) // max is one third of the screen minus current label size
 	if systools.StrLen(systools.NoEscapeSequences(label)) > maxLen {
 		// if fallback is set, we return it
 		if fallBack != "" {
 			return fallBack
 		}
 		// if no fallback is set, we reduce the label
-		label = systools.StringSubLeft(label, maxLen)
+		return systools.StringSubRight(label, maxLen)
 
 	}
-	return label
+	return systools.FillString(" ", maxLen-systools.StrLen(systools.NoEscapeSequences(label))) + label
 }
 
 // a braille char
 // depending on the milliseconds of the current time
-func (cs *CtxShell) getABraillCharByTime() string {
-	braillTableString := "⠄⠆⠇⠋⠙⠸⠰⠠⠐⠈"
+func (cs *CtxShell) getABraillCharByTime(offset int) string {
+	braillTableString := ProgressBar
 	braillTable := []rune(braillTableString)
 	millis := time.Now().UnixNano() / int64(time.Millisecond)
+	millis += int64(offset)
 	index := int(millis % int64(len(braillTable)))
 	return string(braillTable[index])
 }
 
-// returns the prompt for windows.
-// here we are limited to the ascii chars we can use.
-func (cs *CtxShell) windowsPrompt(reason int, label string) string {
+func (cs *CtxShell) calcLabelNeeds(forString string) int {
+	len := systools.StrLen(systools.NoEscapeSequences(forString))
+	if len > BaseLabelSize {
+		NeededLabelSize = len - BaseLabelSize
+	} else {
+		NeededLabelSize = 0
+	}
 
-	return ctxout.ToString(
-		ctxout.NewMOWrap(),
-		ctxout.ForeBlue,
-		label,
-		" ",
-		ctxout.ForeCyan,
-		"› ",
-		ctxout.CleanTag,
-	)
+	// some changes to the label size needed?
+	// if so, then mae the updates faster
+	if CurrentLabelSize < NeededLabelSize {
+		CurrentLabelSize++
+		cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
+	} else if CurrentLabelSize > NeededLabelSize {
+		CurrentLabelSize--
+		cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
+	}
+	return BaseLabelSize + CurrentLabelSize
 }
 
 // returns the prompt for linux.
-func (cs *CtxShell) linuxPrompt(reason int, label string) string {
-
+func (cs *CtxShell) PromtDraw(reason int, label string) string {
+	label, _ = cs.autoSetLabel(label)
 	// display the current time in the prompt
 	// this is just for testing
 
 	timeNowAsString := time.Now().Format("15:04:05")
+	MessageColor := WhiteBlue
+	if reason == ctxshell.UpdateByNotify {
+		if found, msg := cs.shell.GetCurrentMessage(); found {
+			msgString := systools.PadStringToR(msg.GetMsg(), cs.calcLabelNeeds(msg.GetMsg()))
+			if msg.GetTopic() != ctxshell.TopicError {
+				// not an error
+				timeNowAsString = MesgStartCol + msgString + " "
+			} else {
+				timeNowAsString = MesgErrorCol + msgString + " "
+			}
+			// any time we have a message, we force to a faster update period
+			cs.shell.UpdatePromptPeriod(100 * time.Millisecond)
+		}
+	} else {
+		timeNowAsString = systools.PadStringToR(timeNowAsString, cs.calcLabelNeeds(timeNowAsString))
+	}
 
 	return ctxout.ToString(
 		ctxout.NewMOWrap(),
-		ctxout.BackBlue,
-		ctxout.ForeWhite,
-		"",
+		MessageColor,
+		Prompt,
 		timeNowAsString,
 		" ",
 		cs.LabelForeColor,
 		cs.LabelBackColor,
 		label,
-		ctxout.BackBlue,
-		ctxout.ForeWhite,
-		"ctx<f:black>:</><f:blue></> ",
+		WhiteBlue,
+		Prompt,
+		"ctx",
+		Black,
+		":",
+		Lc,
+		Blue,
+		Prompt,
+		Lc,
+		" ",
 	)
 }

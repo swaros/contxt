@@ -40,7 +40,7 @@ func setShutDownBehavior() {
 			if succeed {
 				ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "  task stopped: ", ctxout.ForeBlue, target, ctxout.CleanTag)
 			} else {
-				ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "  stop faulire: ", ctxout.ForeRed, target, ctxout.CleanTag)
+				ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, "  stop failure: ", ctxout.ForeRed, target, ctxout.CleanTag)
 			}
 		})
 		return systools.Continue
@@ -94,7 +94,12 @@ func setShutDownBehavior() {
 	// capture the sigterm signal so we are able to cleanup all processes
 	// nil means that we use the default behavior for the exit control flow
 	// so any systool.Exit() call will trigger the exit listeners
-	systools.WatchSigTerm(nil)
+	// this is experimental and is only enabled if the env CTX_SUTDOWN_BEHAVIOR is set to "true"
+	// this is a workaround for the problem that the exit listeners are not called if the application
+	// is killed by the system.
+	if os.Getenv("CTX_SUTDOWN_BEHAVIOR") == "true" {
+		systools.WatchSigTerm(nil)
+	}
 }
 
 // Init initializes the application
@@ -116,6 +121,10 @@ func Init() error {
 
 	// add support for utf-8 signs
 	glyps := ctxout.NewSignFilter(nil)
+	glyps.AddSign(ctxout.Sign{Glyph: "🭬", Name: "runident", Fallback: "»"})
+	glyps.AddSign(ctxout.Sign{Glyph: "🭮", Name: "stopident", Fallback: "«"})
+	glyps.AddSign(ctxout.Sign{Glyph: "", Name: "prompt", Fallback: "»"})
+	glyps.AddSign(ctxout.Sign{Glyph: "⠄⠆⠇⠋⠙⠸⠰⠠⠐⠈", Name: "pbar", Fallback: "-_\\|/"})
 	ctxout.AddPostFilter(glyps)
 
 	// enable the sign filter if possible
@@ -138,12 +147,10 @@ func Init() error {
 		}, func(p *os.Process) {
 
 		})
+
 		// just to be sure, if anything gos wrong by checking the terminal, we disable the sign filter
 		if errorEx != nil && code1 == 0 && code2 == 0 {
 			glyps.Disable()
-		} else {
-			glyps.AddSign(ctxout.Sign{Glyph: "🭬", Name: "runident", Fallback: "»"})
-			glyps.AddSign(ctxout.Sign{Glyph: "🭮", Name: "stopident", Fallback: "«"})
 		}
 	}
 
