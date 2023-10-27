@@ -51,6 +51,7 @@ var (
 	OkSign       = ""
 	MesgStartCol = ""
 	MesgErrorCol = ""
+	Yellow       = ""
 
 	CurrentLabelSize = 0
 	NeededLabelSize  = 0
@@ -79,6 +80,7 @@ func initVars() {
 	OkSign = ctxout.ToString(ctxout.BaseSignSuccess)
 	MesgStartCol = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeLightBlue, ctxout.BackBlack)
 	MesgErrorCol = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeLightRed, ctxout.BackBlack)
+	Yellow = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeYellow)
 }
 
 func shellRunner(c *CmdExecutorImpl) {
@@ -206,7 +208,7 @@ func (cs *CtxShell) autoSetLabel(label string) (string, bool) {
 	// for this we have to check the watchers one by one
 	cs.shell.SetNoMessageDuplication(true) // we will spam a lot of messages, so we do not want to have duplicates
 	if len(watchers) > 0 {
-		taskBar := ""
+		taskBar := Yellow + "running tasks: "
 		for _, watcher := range watchers {
 			watchMan := tasks.GetWatcherInstance(watcher)
 			if watchMan != nil {
@@ -221,10 +223,11 @@ func (cs *CtxShell) autoSetLabel(label string) (string, bool) {
 					}
 				}
 				// build the taskbar
-				runningChar := cs.getABraillCharByTime()
+
 				doneChar := OkSign
-				for _, task := range cs.CollectedTasks {
+				for in, task := range cs.CollectedTasks {
 					if watchMan.TaskRunning(task) {
+						runningChar := cs.getABraillCharByTime(in)
 						taskBar += ctxout.ForeWhite + runningChar
 					} else {
 						taskBar += ctxout.ForeBlack + doneChar
@@ -271,15 +274,16 @@ func (cs *CtxShell) fitStringLen(label string, fallBack string) string {
 		return systools.StringSubRight(label, maxLen)
 
 	}
-	return label + systools.FillString(" ", maxLen-systools.StrLen(systools.NoEscapeSequences(label)))
+	return systools.FillString(" ", maxLen-systools.StrLen(systools.NoEscapeSequences(label))) + label
 }
 
 // a braille char
 // depending on the milliseconds of the current time
-func (cs *CtxShell) getABraillCharByTime() string {
+func (cs *CtxShell) getABraillCharByTime(offset int) string {
 	braillTableString := ProgressBar
 	braillTable := []rune(braillTableString)
 	millis := time.Now().UnixNano() / int64(time.Millisecond)
+	millis += int64(offset)
 	index := int(millis % int64(len(braillTable)))
 	return string(braillTable[index])
 }
