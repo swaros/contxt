@@ -90,6 +90,7 @@ func (d *DefaultRequires) CheckRequirements(require configure.Require) (bool, st
 	// check file exists
 	for _, fileExists := range require.Exists {
 		fileExists = d.variables.HandlePlaceHolder(fileExists)
+		d.logger.Debug("check file exists", mimiclog.Fields{"file": fileExists})
 		fexists, err := dirhandle.Exists(fileExists)
 		if err != nil || !fexists {
 
