@@ -15,6 +15,7 @@ import (
 	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/runner"
 	"github.com/swaros/contxt/module/systools"
+	"github.com/swaros/contxt/module/tasks"
 	"github.com/swaros/contxt/module/yacl"
 	"github.com/swaros/contxt/module/yamc"
 )
@@ -37,6 +38,7 @@ type testRunExpectation struct {
 
 func IssueTester(t *testing.T, testDef testRunExpectation) {
 	t.Helper()
+	tasks.NewGlobalWatchman().ResetAllTaskInfos()
 	ChangeToRuntimeDir(t)
 	app, output, appErr := SetupTestApp("issues", "ctx_test_config.yml")
 	if appErr != nil {
