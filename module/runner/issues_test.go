@@ -46,6 +46,21 @@ func TestIssue185_1(t *testing.T) {
 
 }
 
+// the same as above but now by using the helper function
+// this is jst for check if the helper function is working as expected
+// so this test is a test about a test helper function
+func TestIssue185_1_ByHelper(t *testing.T) {
+	testDef := testRunExpectation{
+		testName: "issue185",
+		runCmd:   "run build-base-image",
+		folder:   "issues/issue_185",
+		expectations: runExpectationTestDefinition{
+			expectedInOutput: []string{"--build-arg CMP_KEYID=0815 --build-arg CMP_ACID=thisisAnExample --build-arg LICENCE_KEY=andthisisalsonotanrealkey"},
+		},
+	}
+	IssueTester(t, testDef)
+}
+
 // TestIssue185_2 is testing the default values from the config file if no user local values are set (not found deping user name)
 func TestIssue185_2(t *testing.T) {
 	ChangeToRuntimeDir(t)
