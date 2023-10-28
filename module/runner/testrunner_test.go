@@ -8,9 +8,11 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/ctxout"
+	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/runner"
 	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/yacl"
@@ -20,6 +22,65 @@ import (
 var useLastDir = "./"
 var lastExistCode = 0
 var testDirectory = ""
+
+type runExpectationTestDefinition struct {
+	expectedInOutput []string
+	expectedInError  []string
+}
+
+type testRunExpectation struct {
+	testName     string
+	runCmd       string
+	folder       string
+	expectations runExpectationTestDefinition
+}
+
+func IssueTester(t *testing.T, testDef testRunExpectation) {
+	t.Helper()
+	ChangeToRuntimeDir(t)
+	app, output, appErr := SetupTestApp("issues", "ctx_test_config.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	cleanAllFiles()
+	defer cleanAllFiles()
+
+	// set the log file with an timestamp
+	logFileName := testDef.testName + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+	output.ClearAndLog()
+	currentDir := dirhandle.Pushd()
+	defer currentDir.Popd()
+
+	// change into the test directory
+	if err := os.Chdir(getAbsolutePath(testDef.folder)); err != nil {
+		t.Errorf("error by changing the directory. check test: '%v'", err)
+	}
+
+	assertSomething := 0
+
+	if err := runCobraCmd(app, testDef.runCmd); err != nil {
+		if len(testDef.expectations.expectedInError) > 0 {
+			for _, expected := range testDef.expectations.expectedInError {
+				assertInMessage(t, output, expected)
+				assertSomething++
+			}
+		} else {
+			t.Errorf("Expected no error, got '%v'", err)
+		}
+	}
+	if len(testDef.expectations.expectedInOutput) > 0 {
+		for _, expected := range testDef.expectations.expectedInOutput {
+			assertInMessage(t, output, expected)
+			assertSomething++
+		}
+	}
+	output.ClearAndLog()
+	if assertSomething == 0 {
+		t.Error("no expectations was set and tested. please check the test definition")
+	}
+
+}
 
 func RuntimeFileInfo(t *testing.T) string {
 	_, filename, _, _ := runtime.Caller(0)
