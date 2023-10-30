@@ -14,9 +14,9 @@ expect:
       - "hello-subtask1"
       - "hello-subtask2"
       - "hello-main"
-      - "issue_188/subtask1@sub1"
-      - "issue_188/subtask1@sub2"
-      - "issues/issue_188@main"
+      - "issue_188_interactive/subtask1 <-@-> sub1"
+      - "issue_188_interactive/subtask2 <-@-> sub2"
+      - "issue_188_interactive <-@-> main"
     not:
       -  no such file or directory
 

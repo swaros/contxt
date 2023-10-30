@@ -153,16 +153,11 @@ func IssueTester(t *testing.T, testDef TestRunExpectation) error {
 		}
 	}
 
-	// run a command in the interactive mode by using the ctxshell
-	if testDef.RunInteractive != "" {
-		runSomething = true
-	}
-
 	if !runSomething {
 		t.Error("no run command was set. please check the test definition for test " + testDef.TestName)
 		return fmt.Errorf("no run command was set. please check the test definition for test " + testDef.TestName)
 	}
-
+	t.Log("test " + testDef.TestName + " was executed in: " + testDef.Folder)
 	if len(testDef.Expectations.ExpectedInOutput) > 0 {
 		for _, expected := range testDef.Expectations.ExpectedInOutput {
 			assertInMessage(t, output, expected)
