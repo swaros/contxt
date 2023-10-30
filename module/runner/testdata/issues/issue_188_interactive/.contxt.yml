@@ -1,0 +1,26 @@
+task:
+  - id: main
+    needs: [subtask1, subtask2]
+    script:
+      - echo "-hello-main"
+      - |
+        CUR=$(pwd)
+        echo "$CUR@main"
+  
+  - id: subtask1
+    options:
+      workingdir: ${CTX_PWD}/subtask1
+    script:
+      - echo "-hello-subtask1"
+      - |
+        CUR=$(pwd)
+        echo "$CUR@sub1"
+
+  - id: subtask2
+    options:
+      workingdir: ${CTX_PWD}/subtask2
+    script:
+      - echo "-hello-subtask2"
+      - |
+        CUR=$(pwd)
+        echo "$CUR@sub2"

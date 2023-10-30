@@ -132,6 +132,14 @@ func GetNameOfWatchman(wm *Watchman) (string, bool) {
 	return "", false
 }
 
+func (w *Watchman) ResetAllTasksIfPossible() error {
+	if len(w.GetAllRunningTasks()) == 0 {
+		w.ResetAllTaskInfos()
+		return nil
+	}
+	return fmt.Errorf("can not reset watchman, because there are still %v running tasks", len(w.GetAllRunningTasks()))
+}
+
 // GetTask returns the task info for a given target or false if the task does not exists
 func (w *Watchman) GetTask(target string) (TaskDef, bool) {
 	taskInfo, found := w.watchTaskList.Load(target)
@@ -178,6 +186,41 @@ func (w *Watchman) WaitForProcessStart(target string, tickDuration time.Duration
 		currentTick++
 		if currentTick >= maxTicks {
 			return false, currentTick * int(tickDuration)
+		}
+	}
+}
+
+// ExpectTaskToStart waits until some of the tasks are started
+// or the timeout is reached
+// the timeout is defined by the tickTimer multiplied by the timeoutTickCount
+// if we hit the timeout, we return false
+// if we found a running task, we return true
+func (w *Watchman) ExpectTaskToStart(tickTimer time.Duration, timeoutTickCount int) bool {
+	// repeat until the process is started
+	// or the timeout is reached
+	// or the process is not running anymore
+	currentTick := 0
+	for {
+		if len(w.GetAllRunningTasks()) > 0 {
+			return true
+		}
+		time.Sleep(tickTimer)
+		currentTick++
+		if currentTick >= timeoutTickCount {
+			return false
+		}
+	}
+}
+
+func (w *Watchman) UntilDone(tickTimer time.Duration, timeOut time.Duration) bool {
+	for {
+		if len(w.GetAllRunningTasks()) == 0 {
+			return true
+		}
+		time.Sleep(tickTimer)
+		timeOut -= tickTimer
+		if timeOut <= 0 {
+			return false
 		}
 	}
 }
@@ -343,14 +386,6 @@ func (w *Watchman) GetAllRunningTasks() []string {
 		return true
 	})
 	return tasks
-}
-
-func (w *Watchman) ResetAllTasksIfPossible() error {
-	if len(w.GetAllRunningTasks()) == 0 {
-		w.ResetAllTaskInfos()
-		return nil
-	}
-	return fmt.Errorf("can not reset watchman, because there are still %v running tasks", len(w.GetAllRunningTasks()))
 }
 
 // create a new task if it does not exists.

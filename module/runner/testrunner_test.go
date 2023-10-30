@@ -2,6 +2,7 @@ package runner_test
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -31,11 +32,12 @@ type ExpectDef struct {
 }
 
 type TestRunExpectation struct {
-	TestName     string    "yaml:\"testName\"" // the nameof the test
-	RunCmd       string    "yaml:\"runCmd\""   // the run command to execute
-	Folder       string    "yaml:\"folder\""   // the folder where the test is located. empty to use the current directory
-	Systems      []string  "yaml:\"systems\""  // what system is ment like linux, windows, darwin etc.
-	Expectations ExpectDef "yaml:\"expect\""
+	TestName       string    "yaml:\"testName\""       // the nameof the test
+	RunCmd         string    "yaml:\"runCmd\""         // the run command to execute
+	RunInteractive string    "yaml:\"runInteractive\"" // the run command to execute in the interactive mode
+	Folder         string    "yaml:\"folder\""         // the folder where the test is located. empty to use the current directory
+	Systems        []string  "yaml:\"systems\""        // what system is ment like linux, windows, darwin etc.
+	Expectations   ExpectDef "yaml:\"expect\""
 }
 
 func TestAllIssues(t *testing.T) {
@@ -88,19 +90,22 @@ func TestAllIssues(t *testing.T) {
 	}
 }
 
-func IssueTester(t *testing.T, testDef TestRunExpectation) {
+// IssueTester is the main test function for the issues based of the test definition
+// the test definition is loaded from a yaml file.
+func IssueTester(t *testing.T, testDef TestRunExpectation) error {
 	t.Helper()
 	tasks.NewGlobalWatchman().ResetAllTaskInfos()
 	ChangeToRuntimeDir(t)
 	app, output, appErr := SetupTestApp("issues", "ctx_test_config.yml")
 	if appErr != nil {
 		t.Errorf("Expected no error, got '%v'", appErr)
+		return appErr
 	}
 	cleanAllFiles()
 	defer cleanAllFiles()
 
 	// set the log file with an timestamp
-	logFileName := testDef.TestName + time.Now().Format(time.RFC3339) + ".log"
+	logFileName := testDef.TestName + "_" + time.Now().Format(time.RFC3339) + ".log"
 	output.SetLogFile(getAbsolutePath(logFileName))
 	output.ClearAndLog()
 	currentDir := dirhandle.Pushd()
@@ -109,22 +114,55 @@ func IssueTester(t *testing.T, testDef TestRunExpectation) {
 	// change into the test directory
 	if testDef.Folder != "" {
 		if err := os.Chdir(testDef.Folder); err != nil {
-			t.Errorf("error by changing the directory. check test: '%v'", err)
+			t.Errorf("error by changing the directory. check test %s: '%v'", testDef.TestName, err)
+			return err
 		}
 	}
 
 	assertSomething := 0
+	runSomething := false
 
-	if err := runCobraCmd(app, testDef.RunCmd); err != nil {
-		if len(testDef.Expectations.ExpectedInError) > 0 {
-			for _, expected := range testDef.Expectations.ExpectedInError {
-				assertInMessage(t, output, expected)
-				assertSomething++
+	// command to run a cobracmd.
+	if testDef.RunCmd != "" {
+		runSomething = true
+		if err := runCobraCmd(app, testDef.RunCmd); err != nil {
+			if len(testDef.Expectations.ExpectedInError) > 0 {
+				for _, expected := range testDef.Expectations.ExpectedInError {
+					assertInMessage(t, output, expected)
+					assertSomething++
+				}
+			} else {
+				t.Errorf("Expected no error, got '%v'", err)
+				return err
 			}
-		} else {
-			t.Errorf("Expected no error, got '%v'", err)
 		}
 	}
+
+	if testDef.RunInteractive != "" {
+		runSomething = true
+		if err := runCobraCmdNonSplits(app, testDef.RunInteractive); err != nil {
+			if len(testDef.Expectations.ExpectedInError) > 0 {
+				for _, expected := range testDef.Expectations.ExpectedInError {
+					assertInMessage(t, output, expected)
+					assertSomething++
+				}
+			} else {
+				t.Errorf("Expected no error, got '%v'", err)
+				return err
+			}
+		}
+	}
+
+	// run a command in the interactive mode by using the ctxshell
+	if testDef.RunInteractive != "" {
+		runSomething = true
+	}
+
+	if !runSomething {
+		t.Error("no run command was set. please check the test definition for test " + testDef.TestName)
+		return fmt.Errorf("no run command was set. please check the test definition for test " + testDef.TestName)
+	}
+
 	if len(testDef.Expectations.ExpectedInOutput) > 0 {
 		for _, expected := range testDef.Expectations.ExpectedInOutput {
 			assertInMessage(t, output, expected)
@@ -142,8 +180,9 @@ func IssueTester(t *testing.T, testDef TestRunExpectation) {
 	output.ClearAndLog()
 	if assertSomething == 0 {
 		t.Error("no expectations was set and tested. please check the test definition")
+		return fmt.Errorf("no expectations was set and tested. please check the test definition")
 	}
-
+	return nil
 }
 
 func RuntimeFileInfo(t *testing.T) string {
@@ -154,7 +193,6 @@ func RuntimeFileInfo(t *testing.T) string {
 func ChangeToRuntimeDir(t *testing.T) string {
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
-	t.Log("change to dir: " + dir)
 	if err := os.Chdir(dir); err != nil {
 		t.Error(err)
 	}
@@ -375,6 +413,12 @@ func cleanAllFiles() {
 // helper function to run a cobra command by argument line
 func runCobraCmd(app *runner.CmdSession, cmd string) error {
 	app.Cobra.RootCmd.SetArgs(strings.Split(cmd, " "))
+	return app.Cobra.RootCmd.Execute()
+}
+
+// helper function to run a cobra command by argument line
+func runCobraCmdNonSplits(app *runner.CmdSession, cmd string) error {
+	app.Cobra.RootCmd.SetArgs([]string{cmd})
 	return app.Cobra.RootCmd.Execute()
 }
 
