@@ -24,13 +24,11 @@ package tasks
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/swaros/contxt/module/awaitgroup"
 	"github.com/swaros/contxt/module/configure"
-	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/systools"
 )
@@ -252,20 +250,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 					scopeVars[keyName] = variable
 				}
 			}
-			backToDir := ""
-			// if working dir is set change to them
-			if script.Options.WorkingDir != "" {
-				backToDir, _ = dirhandle.Current()
-				wDir := script.Options.WorkingDir
-				if t.phHandler != nil {
-					wDir = t.phHandler.HandlePlaceHolderWithScope(script.Options.WorkingDir, scopeVars)
-				}
-				chDirError := os.Chdir(wDir)
-				if chDirError != nil {
-					t.out(MsgTarget{Target: target, Context: "workspace-setting-invalid", Info: chDirError.Error()})
-					systools.Exit(systools.ErrorBySystem)
-				}
-			}
+
 			// just the abort flag.
 			abort := false
 
@@ -387,13 +372,6 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			awaitgroup.WaitAtGroup(nextfutures)
 
 			t.out(MsgTarget{Target: target, Context: "wait_next_done", Info: fmt.Sprintf("(%v/%v)", curTIndex+1, taskCount)})
-
-			//return returnCode
-			// back to old dir if workpace usage was set
-			if backToDir != "" {
-				os.Chdir(backToDir)
-			}
-
 		}
 		// we have at least none of the possible task executed.
 		if !targetFound {
