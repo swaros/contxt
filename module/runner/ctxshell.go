@@ -83,7 +83,7 @@ func initVars() {
 	Yellow = ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeYellow)
 }
 
-func shellRunner(c *CmdExecutorImpl) {
+func shellRunner(c *CmdExecutorImpl) *CtxShell {
 	// init the vars
 	initVars()
 
@@ -157,11 +157,37 @@ func shellRunner(c *CmdExecutorImpl) {
 	// so any output will be handled by the shell
 	c.session.OutPutHdnl = shell
 	// start the shell
-	shell.SetAsyncCobraExec(true).
+	return shellHandler
+}
+
+func (cs *CtxShell) runAsShell() error {
+	return cs.shell.SetAsyncCobraExec(true).
 		SetAsyncNativeCmd(true).
 		UpdatePromptEnabled(true).
 		UpdatePromptPeriod(1 * time.Second).
 		Run()
+}
+
+func (cs *CtxShell) runWithCmds(cmd []string, timeOutMilliSecs int) error {
+	err := cs.shell.SetAsyncCobraExec(true).
+		SetAsyncNativeCmd(true).
+		UpdatePromptEnabled(false).
+		RunOnce(cmd)
+	if err != nil {
+		return err
+	}
+	// first wait if there any task about to start
+	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, " ---- waiting for tasks to start...")
+	if tasks.NewGlobalWatchman().ExpectTaskToStart(100*time.Millisecond, 100) {
+		ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, " ---- waiting for tasks to finish...", timeOutMilliSecs)
+		if !tasks.NewGlobalWatchman().UntilDone(500*time.Millisecond, time.Duration(timeOutMilliSecs)*time.Millisecond) {
+			ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, " ---- timeout reached, stopping tasks...")
+			return cs.stopTasks([]string{})
+		}
+
+	}
+
+	return tasks.NewGlobalWatchman().ResetAllTasksIfPossible()
 }
 
 // stop all the running processes

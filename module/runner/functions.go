@@ -667,7 +667,12 @@ func (c *CmdExecutorImpl) InteractiveScreen() {
 		systools.Exit(systools.ErrorInitApp)
 		return
 	}
-	shellRunner(c)
+	shellRunner(c).runAsShell()
+}
+func (c *CmdExecutorImpl) ShellWithComands(cmds []string, timeout int) {
+	if err := shellRunner(c).runWithCmds(cmds, timeout); err != nil {
+		c.Println(ctxout.ForeRed, "error while running shell", ctxout.CleanTag, err.Error())
+	}
 }
 
 // PrintShared print all shared paths in a simple list

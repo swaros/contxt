@@ -46,6 +46,7 @@ type CmdExecutor interface {
 	GetWorkspaces() []string                           // print out all workspaces as a list
 	DirFindApplyAndSave(args []string) (string, error) // find pathbay arguments,save the current path print the path
 	InteractiveScreen()                                // interactive screen
+	ShellWithComands(cmds []string, timeout int)       // interactive screen
 	GetCurrentWorkSpace() string                       // get current workspace
 	Lint(bool) error                                   // lint the current workspace
 	PrintShared()                                      // print out all shared libs

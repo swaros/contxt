@@ -42,17 +42,18 @@ type SessionCobra struct {
 }
 
 type CobraOptions struct {
-	ShowColors      bool // flag for show colors in output
-	DisableTable    bool // flag for disable table output
-	ShowHints       bool
-	LogLevel        string
-	DirAll          bool // dir flag for show all dirs in any workspace
-	ShowFullTargets bool
-	ShowBuild       bool
-	LastDirIndex    bool
-	UseContext      string            // flag to switch to a workspace in the context of another workspace
-	InContext       bool              // flag to use the current workspace as context
-	PreVars         map[string]string // preset variables they will set variables from commandline. they will be overwritten by the template
+	ShowColors           bool // flag for show colors in output
+	DisableTable         bool // flag for disable table output
+	RunOnceTimeOutMillis int  // timeout for run once mode
+	ShowHints            bool
+	LogLevel             string
+	DirAll               bool // dir flag for show all dirs in any workspace
+	ShowFullTargets      bool
+	ShowBuild            bool
+	LastDirIndex         bool
+	UseContext           string            // flag to switch to a workspace in the context of another workspace
+	InContext            bool              // flag to use the current workspace as context
+	PreVars              map[string]string // preset variables they will set variables from commandline. they will be overwritten by the template
 }
 
 // this is the main entry point for the cobra command
@@ -957,6 +958,26 @@ func (c *SessionCobra) GetInteractiveCmd() *cobra.Command {
 			c.ExternalCmdHndl.InteractiveScreen()
 		},
 	}
+	iCmd.AddCommand(c.GetInteractiveOnceCmd())
+	return iCmd
+}
 
+func (c *SessionCobra) GetInteractiveOnceCmd() *cobra.Command {
+	iCmd := &cobra.Command{
+		Use:   "once",
+		Short: "run a command in the context ot the contxt shell",
+		Long: `run a command in the contxt shell. so you have access to all variables and functions 
+		they are only available in the contxt shell`,
+		Run: func(cmd *cobra.Command, args []string) {
+			c.checkDefaultFlags(cmd, args)
+			c.println("...using shell to execute commands:")
+			for _, arg := range args {
+				c.println("... ", ctxout.ForeLightBlue, arg, ctxout.CleanTag)
+			}
+			c.println("... timeout is ", ctxout.ForeLightBlue, c.Options.RunOnceTimeOutMillis, ctxout.CleanTag, " milliseconds")
+			c.ExternalCmdHndl.ShellWithComands(args, c.Options.RunOnceTimeOutMillis)
+		},
+	}
+	iCmd.PersistentFlags().IntVarP(&c.Options.RunOnceTimeOutMillis, "timeout", "t", 10000, "timeout for the interactive once commands in milliseconds")
 	return iCmd
 }
