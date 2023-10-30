@@ -71,6 +71,7 @@ type Cshell struct {
 	onShutDown           func()             // function that is called on shutdown
 	onErrorFn            func(error)        // function that is called on error
 	noMessageDuplication bool               // if true, messages are not duplicated
+	hooks                []Hook             // hooks
 
 }
 
@@ -528,7 +529,7 @@ func (t *Cshell) runShell(once bool) error {
 		lineCmd := strings.Split(line, " ")[0]
 		fullArgs := strings.Split(line, " ")
 		t.lastInput = line
-
+		t.executeHooksBefore(t.GetHooksByPattern(lineCmd))
 		// reset the flag that indicates if we did something
 		weDidSomething := false
 		// native commands just a wrapper for the completion
@@ -578,6 +579,8 @@ func (t *Cshell) runShell(once bool) error {
 				}
 			}
 		}
+		t.executeHooksAfter(t.GetHooksByPattern(lineCmd))
+
 		// if we are here, we have no idea what to do
 		if !weDidSomething {
 			t.Error("unknown command:", lineCmd)
