@@ -31,6 +31,7 @@ import (
 	"syscall"
 
 	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/dirhandle"
 	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/systools"
 )
@@ -51,6 +52,20 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 
 	runCmd, runArgs := t.commandFallback.GetMainCmd(currentTask.Options) // get the main command and arguments
 	t.SetMainCmd(runCmd, runArgs...)                                     // set the main command and arguments
+
+	// keep the current directory
+	curDir := dirhandle.Pushd()
+	if currentTask.Options.WorkingDir != "" {
+		cdErr := os.Chdir(t.phHandler.HandlePlaceHolder(currentTask.Options.WorkingDir)) // change the directory
+		if cdErr != nil {
+			t.getLogger().Error("can not change directory", cdErr)
+			t.out(MsgError(MsgError{Err: cdErr, Reference: codeLine, Target: currentTask.ID}))
+			return systools.ExitCmdError, true
+		}
+	} else {
+		// if no workingdir is defined we use the context directory
+		os.Chdir(t.phHandler.HandlePlaceHolder("${CTX_PWD}")) // change the directory
+	}
 
 	// here we execute the current script line
 	execCode, realExitCode, execErr := t.ExecuteScriptLine(
@@ -110,6 +125,7 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 			}
 		})
 
+	curDir.Popd() // restore the current directory
 	if currentTask.Options.Displaycmd {
 		t.out(MsgProcess{
 			Target:       currentTask.ID,
