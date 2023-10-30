@@ -5,7 +5,7 @@ task:
       - echo "-hello-main"
       - |
         CUR=$(pwd)
-        echo "$CUR@main"
+        echo "$CUR <-@-> main"
   
   - id: subtask1
     options:
@@ -14,7 +14,7 @@ task:
       - echo "-hello-subtask1"
       - |
         CUR=$(pwd)
-        echo "$CUR@sub1"
+        echo "$CUR <-@-> sub1"
 
   - id: subtask2
     options:
@@ -23,4 +23,4 @@ task:
       - echo "-hello-subtask2"
       - |
         CUR=$(pwd)
-        echo "$CUR@sub2"
+        echo "$CUR <-@-> sub2"
