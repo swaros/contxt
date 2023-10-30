@@ -24,19 +24,71 @@ var useLastDir = "./"
 var lastExistCode = 0
 var testDirectory = ""
 
-type runExpectationTestDefinition struct {
-	expectedInOutput []string
-	expectedInError  []string
+type ExpectDef struct {
+	ExpectedInOutput []string "yaml:\"output\"" // what should be in the output (contains! not full match)
+	ExpectedInError  []string "yaml:\"error\""  // what should be in the error (contains! not full match)
+	NotExpected      []string "yaml:\"not\""    // what should not be in the output (contains! not full match)
 }
 
-type testRunExpectation struct {
-	testName     string
-	runCmd       string
-	folder       string
-	expectations runExpectationTestDefinition
+type TestRunExpectation struct {
+	TestName     string    "yaml:\"testName\"" // the nameof the test
+	RunCmd       string    "yaml:\"runCmd\""   // the run command to execute
+	Folder       string    "yaml:\"folder\""   // the folder where the test is located. empty to use the current directory
+	Systems      []string  "yaml:\"systems\""  // what system is ment like linux, windows, darwin etc.
+	Expectations ExpectDef "yaml:\"expect\""
 }
 
-func IssueTester(t *testing.T, testDef testRunExpectation) {
+func TestAllIssues(t *testing.T) {
+	// walk on every file in the directory starting from ./testdata/issues
+	// and run the test if the file is prefixed with 'issue_'
+
+	// change to the testdata directory
+	path := ChangeToRuntimeDir(t)
+
+	// walk on every file in the directory
+	// look for files prefixed with 'issue_'
+	// and run the test
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		// check if we have an file and if the file is prefixed with 'issue_' and has the suffix '.yml'
+		// but use the filename for test prefix
+
+		baseName := filepath.Base(path)
+		if !info.IsDir() && strings.HasPrefix(baseName, "issue_") && strings.HasSuffix(path, ".yml") {
+
+			// load the test definition
+			testDef := TestRunExpectation{}
+			loader := yacl.New(&testDef, yamc.NewYamlReader()).SetFileAndPathsByFullFilePath(path)
+			if err := loader.Load(); err != nil {
+				t.Error(err)
+			}
+			if loader.GetLoadedFile() == "" {
+				t.Error("could not load the test definition file: " + path)
+			} else {
+
+				if testDef.Systems != nil && len(testDef.Systems) > 0 {
+					// check if the current system is in the list of systems
+					// if not, we skip the test
+					if !systools.StringInSlice(runtime.GOOS, testDef.Systems) {
+						return nil
+					}
+				}
+
+				testDef.Folder, _ = filepath.Abs(filepath.Dir(path))
+				IssueTester(t, testDef)
+			}
+		}
+		return nil
+
+	})
+	if err != nil {
+		panic(err)
+	}
+}
+
+func IssueTester(t *testing.T, testDef TestRunExpectation) {
 	t.Helper()
 	tasks.NewGlobalWatchman().ResetAllTaskInfos()
 	ChangeToRuntimeDir(t)
@@ -48,22 +100,24 @@ func IssueTester(t *testing.T, testDef testRunExpectation) {
 	defer cleanAllFiles()
 
 	// set the log file with an timestamp
-	logFileName := testDef.testName + time.Now().Format(time.RFC3339) + ".log"
+	logFileName := testDef.TestName + time.Now().Format(time.RFC3339) + ".log"
 	output.SetLogFile(getAbsolutePath(logFileName))
 	output.ClearAndLog()
 	currentDir := dirhandle.Pushd()
 	defer currentDir.Popd()
 
 	// change into the test directory
-	if err := os.Chdir(getAbsolutePath(testDef.folder)); err != nil {
-		t.Errorf("error by changing the directory. check test: '%v'", err)
+	if testDef.Folder != "" {
+		if err := os.Chdir(testDef.Folder); err != nil {
+			t.Errorf("error by changing the directory. check test: '%v'", err)
+		}
 	}
 
 	assertSomething := 0
 
-	if err := runCobraCmd(app, testDef.runCmd); err != nil {
-		if len(testDef.expectations.expectedInError) > 0 {
-			for _, expected := range testDef.expectations.expectedInError {
+	if err := runCobraCmd(app, testDef.RunCmd); err != nil {
+		if len(testDef.Expectations.ExpectedInError) > 0 {
+			for _, expected := range testDef.Expectations.ExpectedInError {
 				assertInMessage(t, output, expected)
 				assertSomething++
 			}
@@ -71,9 +125,17 @@ func IssueTester(t *testing.T, testDef testRunExpectation) {
 			t.Errorf("Expected no error, got '%v'", err)
 		}
 	}
-	if len(testDef.expectations.expectedInOutput) > 0 {
-		for _, expected := range testDef.expectations.expectedInOutput {
+	if len(testDef.Expectations.ExpectedInOutput) > 0 {
+		for _, expected := range testDef.Expectations.ExpectedInOutput {
 			assertInMessage(t, output, expected)
+			assertSomething++
+		}
+	}
+
+	// looking for the not expected
+	if len(testDef.Expectations.NotExpected) > 0 {
+		for _, expected := range testDef.Expectations.NotExpected {
+			assertNotInMessage(t, output, expected)
 			assertSomething++
 		}
 	}
@@ -89,13 +151,14 @@ func RuntimeFileInfo(t *testing.T) string {
 	return filename
 }
 
-func ChangeToRuntimeDir(t *testing.T) {
+func ChangeToRuntimeDir(t *testing.T) string {
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
 	t.Log("change to dir: " + dir)
 	if err := os.Chdir(dir); err != nil {
 		t.Error(err)
 	}
+	return dir
 }
 
 // shortcut for running a cobra command
@@ -122,6 +185,7 @@ func runCobraCommand(runnCallback func(cobra *runner.SessionCobra, writer io.Wri
 //   - backToWorkDir to go back to the testdata directory
 //   - cleanAllFiles to remove the config file
 func SetupTestApp(dir, file string) (*runner.CmdSession, *TestOutHandler, error) {
+	tasks.NewGlobalWatchman().ResetAllTaskInfos()
 	file = strings.ReplaceAll(file, ":", "_")
 	file = strings.ReplaceAll(file, "-", "_")
 	file = strings.ReplaceAll(file, "+", "_")
@@ -347,7 +411,7 @@ func assertSplitTestInMessage(t *testing.T, output *TestOutHandler, msg string) 
 func assertInMessage(t *testing.T, output *TestOutHandler, msg string) {
 	t.Helper()
 	if !output.Contains(msg) {
-		t.Errorf("Expected \n[%s]\nbut instead we did not found it in\n[%v]", msg, output.String())
+		t.Errorf("Expected \n%s\n-- but instead we did not found it in --\n%v\n", msg, output.String())
 	}
 }
 

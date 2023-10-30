@@ -1,0 +1,22 @@
+# test: issue_188
+# this is a test for issue 188 where subtasks is is running in a different directory
+# than the main task
+# the main issue is that while running in interactive shell, and an subtask runs infinitely in a different directory
+# the whole application is also sticking to this path, and fails to run any other task, because the current taksfile 
+# is not found in the subtask directory
+# this test is to check if this behavior is also present in the regular run without interactive shell
+testName: issue_188
+runCmd: run main
+systems:
+  - linux
+expect:
+    output:
+      - "hello-subtask1"
+      - "hello-subtask2"
+      - "hello-main"
+      - "issue_188/subtask1@sub1"
+      - "issue_188/subtask1@sub2"
+      - "issues/issue_188@main"
+    not:
+      -  no such file or directory
+
