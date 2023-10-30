@@ -264,3 +264,67 @@ func TestPromtMessageLoop(t *testing.T) {
 		}
 	}
 }
+
+func TestHooksExecuted(t *testing.T) {
+	messageBuffer := []string{}
+	testFunction := func(shell *ctxshell.Cshell) {
+		// add the promt handler so we can get notified
+		shell.SetPromptFunc(func(reason int) string {
+			if reason == ctxshell.UpdateByNotify {
+				if found, msg := shell.GetCurrentMessage(); found {
+					messageBuffer = append(messageBuffer, msg.GetMsg())
+					return "got a message:>"
+				}
+			}
+			return "promtp:>"
+		})
+		// any message is displayed for 10 milliseconds
+		shell.SetMessageDisplayTime(time.Millisecond * 10)
+
+		// enable the prompt update by notify and set the update period
+		shell.UpdatePromptEnabled(true).
+			UpdatePromptPeriod(time.Millisecond * 10)
+
+			// define a command that will just wait longer then the update period
+		shell.AddNativeCmd(ctxshell.NewNativeCmd("wait", "wait a couple of milliseconds", func(args []string) error {
+			time.Sleep(time.Millisecond * 60)
+			return nil
+		}))
+
+		shell.AddHook(ctxshell.NewHook("tes*", func() error {
+			messageBuffer = append(messageBuffer, "before test")
+			return nil
+		}, func() error {
+			messageBuffer = append(messageBuffer, "after test")
+			return nil
+		}))
+
+		// add a shutdown function
+		shell.OnShutDownFunc(func() {
+			expected := "wait"
+			if shell.GetLastInput() != expected {
+				t.Error("expected '", expected, "', got[", shell.GetLastInput(), "]")
+			}
+		})
+	}
+
+	helpCreateShellAndExecute(testFunction, "test", "lala", "lulu", "gaga", "wait")
+	if !systools.SliceContains(messageBuffer, "unknown command: test") {
+		t.Error("message buffer do not contains test:", messageBuffer)
+	}
+
+	expectedBeFound := []string{"before test", "after test"}
+	for _, expected := range expectedBeFound {
+		if !systools.SliceContains(messageBuffer, expected) {
+			t.Error("message buffer do not contains", expected, ":", messageBuffer)
+		}
+	}
+
+	expectedNotFound := []string{"lala", "lulu", "gaga"}
+	for _, expected := range expectedNotFound {
+		if !systools.SliceContains(messageBuffer, "unknown command: "+expected) {
+			t.Error("message buffer do not contains", expected, ":", messageBuffer)
+		}
+	}
+
+}
