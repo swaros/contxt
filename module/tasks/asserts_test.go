@@ -93,13 +93,6 @@ func assertIntEqual(t *testing.T, expected int, actual int) {
 	}
 }
 
-func assertIntGreater(t *testing.T, expected int, actual int) {
-	t.Helper()
-	if expected >= actual {
-		t.Errorf("expected [%d] to be greater than [%d]", expected, actual)
-	}
-}
-
 func assertNoError(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {

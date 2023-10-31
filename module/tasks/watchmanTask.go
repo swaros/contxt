@@ -86,10 +86,42 @@ func (ts *TaskDef) LogCmd(cmd string, args []string, command string) {
 	})
 }
 
+func PidExists(pid int32) (bool, error) {
+	if pid <= 0 {
+		return false, fmt.Errorf("invalid pid %v", pid)
+	}
+	proc, err := os.FindProcess(int(pid))
+	if err != nil {
+		return false, err
+	}
+	err = proc.Signal(syscall.Signal(0))
+	if err == nil {
+		return true, nil
+	}
+	if err.Error() == "os: process already finished" {
+		return false, nil
+	}
+	errno, ok := err.(syscall.Errno)
+	if !ok {
+		return false, err
+	}
+	switch errno {
+	case syscall.ESRCH:
+		return false, nil
+	case syscall.EPERM:
+		return true, nil
+	}
+	return false, err
+}
+
 func (ts *TaskDef) IsProcessRunning() bool {
 	if ts.process != nil && ts.process.processInfo != nil {
 		if ts.process.processInfo.Pid > 0 {
 			proc, err := os.FindProcess(ts.process.processInfo.Pid)
+			if runtime.GOOS == "windows" {
+				_, pErr := WinProcInfo(ts.process.processInfo.Pid)
+				return pErr == nil
+			}
 			if err == nil {
 				if err := proc.Signal(syscall.Signal(0)); err != nil {
 					return false
@@ -108,9 +140,6 @@ func (ts *TaskDef) GetProcessLog() []ProcessLog {
 func (ts *TaskDef) KillProcess() error {
 	if ts.process != nil && ts.process.processInfo != nil {
 		if ts.IsProcessRunning() {
-			if runtime.GOOS == "linux" {
-				return syscall.Kill(-ts.process.processInfo.Pid, syscall.SIGKILL)
-			}
 			return ts.process.processInfo.Kill()
 		} else {
 			return fmt.Errorf("process %d is not running", ts.process.processInfo.Pid)

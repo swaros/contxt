@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"syscall"
 
 	"github.com/swaros/contxt/module/configure"
@@ -180,12 +179,7 @@ func (t *targetExecuter) ExecuteScriptLine(dCmd string, dCmdArgs []string, comma
 func Execute(dCmd string, dCmdArgs []string, command string, callback func(string, error) bool, startInfo func(*os.Process)) (int, int, error) {
 	cmdArg := append(dCmdArgs, command)
 	cmd := exec.Command(dCmd, cmdArg...)
-	// on linux we need to set the process group id to kill the whole process tree
-	// now any kill command have to add -pgid to kill the whole process tree
-	// like: syscall.Kill(-ts.process.processInfo.Pid, syscall.SIGKILL)
-	if runtime.GOOS == "linux" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	}
+
 	stdoutPipe, _ := cmd.StdoutPipe()
 	cmd.Stderr = cmd.Stdout
 
@@ -202,11 +196,7 @@ func Execute(dCmd string, dCmdArgs []string, command string, callback func(strin
 		m := scanner.Text()
 		keepRunning := callback(m, nil)
 		if !keepRunning {
-			if runtime.GOOS == "linux" {
-				syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-			} else {
-				cmd.Process.Kill()
-			}
+			cmd.Process.Kill()
 			return systools.ExitByStopReason, 0, err
 		}
 

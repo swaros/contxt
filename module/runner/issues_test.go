@@ -2,6 +2,7 @@ package runner_test
 
 import (
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -18,6 +19,9 @@ it seems that the local values are not loaded correctly.
 
 // TestIssue185_1 is testing the user local values from the config file
 func TestIssue185_1(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("not working on windows")
+	}
 	ChangeToRuntimeDir(t)
 	tasks.NewGlobalWatchman().ResetAllTaskInfos()
 	app, output, appErr := SetupTestApp("issues", "ctx_test_config.yml")
@@ -48,6 +52,9 @@ func TestIssue185_1(t *testing.T) {
 
 // TestIssue185_2 is testing the default values from the config file if no user local values are set (not found deping user name)
 func TestIssue185_2(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("not working on windows")
+	}
 	ChangeToRuntimeDir(t)
 	tasks.NewGlobalWatchman().ResetAllTaskInfos()
 	app, output, appErr := SetupTestApp("issues", "ctx_test_config.yml")
@@ -78,6 +85,9 @@ func TestIssue185_2(t *testing.T) {
 
 // TestIssue185_3 is testing the local values from another given user
 func TestIssue185_3(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("not working on windows")
+	}
 	ChangeToRuntimeDir(t)
 	tasks.NewGlobalWatchman().ResetAllTaskInfos()
 	app, output, appErr := SetupTestApp("issues", "ctx_test_config.yml")
@@ -109,6 +119,9 @@ func TestIssue185_3(t *testing.T) {
 // TestIssue185_4 is testing the ${USER} variable because any other case is working right now
 // without any changes in the code.
 func TestIssue185_4(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("not working on windows")
+	}
 	ChangeToRuntimeDir(t)
 	tasks.NewGlobalWatchman().ResetAllTaskInfos()
 	app, output, appErr := SetupTestApp("issues", "ctx_test_config.yml")

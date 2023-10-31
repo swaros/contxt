@@ -27,6 +27,7 @@ package runner
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/swaros/contxt/module/systools"
@@ -123,7 +124,7 @@ func (z *ZshHelper) GetFirstExistingPath() (string, error) {
 // get the first usable fpath or an error
 func (z *ZshHelper) GetFirstFPath() (string, error) {
 	if z.found {
-		return z.firstUsable, nil
+		return filepath.Clean(z.firstUsable), nil
 	}
 	err := z.collect()
 	if err != nil {
@@ -135,7 +136,7 @@ func (z *ZshHelper) GetFirstFPath() (string, error) {
 		}
 		return "", fmt.Errorf("no usable fpath found in %d possible paths. you may retry with sudo", len(z.paths))
 	}
-	return z.firstUsable, nil
+	return filepath.Clean(z.firstUsable), nil
 }
 
 // check if zsh is installed
