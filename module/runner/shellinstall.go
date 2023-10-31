@@ -69,7 +69,7 @@ func NewShellInstall(logger mimiclog.Logger) *shellInstall {
 }
 
 func (si *shellInstall) SetUserHomePath(userHomePath string) {
-	si.userHomePath = userHomePath
+	si.userHomePath = filepath.Clean(userHomePath)
 }
 
 func updateExistingFile(filename, content, doNotContain string) (bool, string) {

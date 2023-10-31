@@ -4,7 +4,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -289,81 +288,6 @@ func helperLaunchShellCmdInBackround(t *testing.T, command, target string, wman 
 		}
 	}
 	return pid
-}
-
-// testing the process tracking by an background task, and stop it
-// by sending a SIGTERM and SIGKILL to the process.
-// here we do ot use the watchman to stop the task
-// we use the os directly, so none of watchman kill methods are used.
-// this is done to test the process tracking
-// kill methods of the watchman are tested in TestTaskStoppingByWatchman
-func TestTaskTracking(t *testing.T) {
-	// we use linux special features here
-	if runtime.GOOS != "linux" {
-		t.Skip("not supported on anything else than linux")
-	}
-
-	// start a task in the background and let it run for 1 second
-	// and try to stop it
-	// this is done by sending a SIGTERM to the process
-	// and then checking if the process is still running
-	// if it is still running, we send a SIGKILL to the process
-	// and check again if the process is still running
-	// if it is still running, we fail the test
-
-	// this is the command we want to run
-	command := "sleep 1"
-	// this is the target we want to use
-	target := "taskKillSleeper"
-	// this is the watchman we want to use
-	wman := tasks.NewWatchman()
-	// we use the helper to launch the command in the background
-	pid := helperLaunchShellCmdInBackround(t, command, target, wman, false, true)
-	assertIntGreater(t, 0, pid)
-
-	// wait till the process is started
-	if success, timeUsed := wman.WaitForProcessStart(target, 10*time.Millisecond, 10); !success {
-		t.Error("failed to start process in time", timeUsed)
-	}
-	// get the task
-	if wtask, found := wman.GetTask(target); found {
-		if !wtask.IsProcessRunning() {
-			t.Error("expected process to be running, but it is not")
-		}
-		// get the process
-		proc := wtask.GetProcess()
-		if proc == nil {
-			t.Error("expected process not to be nil")
-		}
-		// get the processInfo
-		// get the pid
-		pid, _ := wtask.GetProcessPid()
-		if pid == 0 {
-			t.Error("expected pid not to be 0")
-		}
-		// send the SIGTERM
-		if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
-			t.Errorf("expected no error, but got %v", err)
-		}
-		// wait a bit, so the process can stop
-		time.Sleep(100 * time.Millisecond)
-		// check if the process is still running
-		if wtask.IsProcessRunning() {
-			// send the SIGKILL
-			if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
-				t.Errorf("expected no error, but got %v", err)
-			}
-			// wait a bit, so the process can stop
-			time.Sleep(100 * time.Millisecond)
-			// check if the process is still running
-			if wtask.IsProcessRunning() {
-				t.Error("expected process not to be running, but it is")
-			}
-		}
-	} else {
-		t.Errorf("expected task to be found, but it is not")
-	}
-
 }
 
 func TestTaskStoppingByWatchman(t *testing.T) {

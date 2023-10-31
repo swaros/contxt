@@ -275,6 +275,7 @@ func TestZshFuncDir(t *testing.T) {
 	if err != nil {
 		t.Error("should not return an error, bot got:", err)
 	}
+	path, _ = filepath.Abs(path)
 	expectedpath, err := filepath.Abs("./test/fakehome/zFuncExists")
 	if err != nil {
 		t.Error("should not return an error, bot got:", err)

@@ -27,17 +27,23 @@ package tasks
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
+	"strings"
 )
 
+// windows Get-CimInstance Win32_Process | Where-Object { $_.ParentProcessId -eq $ppid } | Select-Object ProcessId
 func FindChildPid(pid int) ([]int, error) {
 	var procList []int
 	// only linux is supported
 	// but others should not fail
-	if runtime.GOOS != "linux" {
-		return procList, nil
+
+	shellCmd := "ps -o pid --no-headers --ppid %d"
+
+	if runtime.GOOS == "windows" {
+		shellCmd = "Get-CimInstance Win32_Process | Where-Object { $_.ParentProcessId -eq %d } | Select-Object ProcessId"
 	}
-	command := fmt.Sprintf("ps -o pid --no-headers --ppid %d", pid)
+	command := fmt.Sprintf(shellCmd, pid)
 	runner := GetShellRunner()
 	// internalExitCode, processExitCode, err
 	intCode, realCode, err := runner.Exec(
@@ -45,8 +51,9 @@ func FindChildPid(pid int) ([]int, error) {
 		func(msg string, err error) bool {
 			if err == nil {
 				var code int
-				fmt.Sscanf(msg, "%d", &code)
-				procList = append(procList, code)
+				if _, nerr := fmt.Sscanf(msg, "%d", &code); nerr == nil {
+					procList = append(procList, code)
+				}
 			}
 			return true
 		},
@@ -80,4 +87,69 @@ func HandleAllMyPid(handlePid func(pid int) error) error {
 	}
 	return nil
 
+}
+
+// WinProcData is a struct to hold the data of a process on windows
+type WinProcData struct {
+	Pid         int
+	ProcName    string
+	SessionName string
+	SessionId   int
+	MemUsage    string
+	Status      string
+	UserName    string
+	CpuTime     string
+	WindowTitle string
+}
+
+// parsing the csv output of tasklist comming from windows tasklist command
+func WinCsvToProcData(csv string) ([]WinProcData, error) {
+	var procList []WinProcData
+
+	parts := strings.Split(csv, "\n")
+	for _, line := range parts {
+		if strings.HasPrefix(line, "\"") {
+			line = strings.Trim(line, "\"")
+			parts := strings.Split(line, "\",\"")
+			if len(parts) == 9 {
+				var proc WinProcData
+				if _, err := fmt.Sscanf(parts[1], "%d", &proc.Pid); err != nil {
+					return procList, err
+				}
+				proc.ProcName = parts[0]
+				proc.SessionName = parts[2]
+				if _, err := fmt.Sscanf(parts[3], "%d", &proc.SessionId); err != nil {
+					return procList, err
+				}
+				proc.MemUsage = parts[4]
+				proc.Status = parts[5]
+				proc.UserName = parts[6]
+				proc.CpuTime = parts[7]
+				proc.WindowTitle = parts[8]
+				procList = append(procList, proc)
+			}
+		}
+	}
+	return procList, nil
+}
+
+// Getting process info on windows is a bit tricky
+// we use the tasklist command to get the info
+// and parse the csv output
+func WinProcInfo(pid int) (WinProcData, error) {
+	// TASKLIST /V /FO "CSV" /NH /FI "PID eq 2656"
+	cmd := exec.Command("TASKLIST", "/V", "/FO", "CSV", "/NH", "/FI", fmt.Sprintf("PID eq %d", pid))
+	result, err := cmd.Output()
+	if err != nil {
+		return WinProcData{}, err
+	}
+	procInfo := string(result)
+	procList, err := WinCsvToProcData(procInfo)
+	if err != nil {
+		return WinProcData{}, err
+	}
+	if len(procList) == 0 {
+		return WinProcData{}, fmt.Errorf("no process found")
+	}
+	return procList[0], nil
 }
