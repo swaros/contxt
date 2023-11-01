@@ -269,6 +269,23 @@ func (t *Cshell) GetReadline() *readline.Instance {
 	return t.rlInstance
 }
 
+// add message to the message buffer
+func (t *Cshell) Stdout(messg string) {
+	t.messages.Push("stdout", messg)
+}
+
+func (t *Cshell) Stdoutln(messg string) {
+	t.messages.Push("stdout", messg+"\n")
+}
+
+func (t *Cshell) Stderr(messg string) {
+	t.messages.Push("stderr", messg)
+}
+
+func (t *Cshell) Stderrln(messg string) {
+	t.messages.Push("stderr", messg+"\n")
+}
+
 // we initialize the completer with the native commands and the cobra command tree
 // the native commands are just a wrapper for the completion
 // together with the exec function

@@ -131,6 +131,20 @@ func shellRunner(c *CmdExecutorImpl) *CtxShell {
 	})
 	shell.AddNativeCmd(cleanTasksCmd)
 
+	// add the showpath cmd
+	showPathCmd := ctxshell.NewNativeCmd("showpath", "shows the current path", func(args []string) error {
+		if dir, err := dirhandle.Current(); err == nil {
+			shell.Stdoutln(dir)
+		} else {
+			shell.Stderrln(err.Error())
+		}
+		return nil
+	})
+	showPathCmd.SetCompleterFunc(func(line string) []string {
+		return []string{"showpath"}
+	})
+	shell.AddNativeCmd(showPathCmd)
+
 	// add task stop command
 	stoppAllCmd := ctxshell.NewNativeCmd("stoptasks", "stop all the running processes", shellHandler.stopTasks)
 	stoppAllCmd.SetCompleterFunc(func(line string) []string {
@@ -153,6 +167,17 @@ func shellRunner(c *CmdExecutorImpl) *CtxShell {
 		return shellHandler.PromtDraw(reason, label)
 
 	})
+
+	// set the hooks.for any command we want to change the directory to the basepath
+	pathHook := ctxshell.NewHook(".*", func() error {
+		basePath := shellHandler.cmdSession.GetVariable("BASEPATH")
+		if basePath != "" {
+			return os.Chdir(shellHandler.cmdSession.GetVariable("BASEPATH"))
+		}
+		return nil
+	}, nil)
+	shell.AddHook(pathHook)
+
 	// rebind the the session output handler
 	// so any output will be handled by the shell
 	c.session.OutPutHdnl = shell
