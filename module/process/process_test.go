@@ -3,6 +3,7 @@ package process_test
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/swaros/contxt/module/process"
 )
@@ -56,16 +57,16 @@ func TestExecWithBash(t *testing.T) {
 }
 
 func TestExecWithBashAndStayOpen(t *testing.T) {
-	process := process.NewProcess("bash")
+	proc := process.NewProcess("bash")
 
-	//process.SetStayOpen(true)
+	proc.SetStayOpen(true)
 
-	process.SetOnOutput(func(msg string, err error) bool {
+	proc.SetOnOutput(func(msg string, err error) bool {
 		t.Log("output[", msg, "]")
 		return true
 	})
 
-	process.SetOnInit(func(proc *os.Process) {
+	proc.SetOnInit(func(proc *os.Process) {
 		if proc == nil {
 			t.Error("Process is nil")
 		} else {
@@ -73,17 +74,20 @@ func TestExecWithBashAndStayOpen(t *testing.T) {
 		}
 	})
 
-	process.Command("echo 'Hello World'")
-
-	realCode, internCode, err := process.Exec()
+	realCode, internCode, err := proc.Exec()
 	if err != nil {
 		t.Error(err)
 	}
 	if realCode != 0 {
 		t.Error("realCode is not 0. It is ", realCode)
 	}
-	if internCode != 0 {
+	if internCode != process.ExitInBackGround {
 		t.Error("internCode is not 0, It is ", internCode)
 	}
+	proc.Command("echo 'Hello World'")
+	proc.Command("echo 'test 2'")
+	// give the process some time to execute the command
+	time.Sleep(100 * time.Millisecond)
+	proc.Stop()
 
 }
