@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/swaros/contxt/module/systools"
 )
@@ -27,8 +28,13 @@ type Process struct {
 	stopped  bool
 	started  bool
 	cmdLock  sync.Mutex
+	wait     sync.WaitGroup
 	stayOpen bool
 }
+
+var (
+	ExitInBackGround = 601
+)
 
 func NewProcess(cmd string, args ...string) *Process {
 	return &Process{
@@ -72,6 +78,7 @@ func (p *Process) Command(cmd string) {
 
 func (p *Process) Stop() error {
 	p.stopped = true
+	p.wait.Wait()
 	if p.inPipe != nil {
 		return p.inPipe.Close()
 	}
@@ -124,7 +131,38 @@ func (p *Process) Exec() (int, int, error) {
 			io.WriteString(p.inPipe, arg+"\n")
 		}
 	}()
+	if p.stayOpen {
 
+		p.wait.Add(1)
+		go func() {
+			// set timeout for the process
+			// if the process is not stopped after the timeout
+			nowTime := time.Now()
+			timeout := 10 * time.Second
+
+			for {
+				if nowTime.Add(timeout).Before(time.Now()) {
+					p.stopped = true
+				}
+				if p.stopped {
+					break
+				}
+			}
+			p.wait.Done()
+		}()
+
+		go func() {
+			p.startWait(cmd)
+		}()
+
+		return systools.ExitOk, ExitInBackGround, nil
+	} else {
+		return p.startWait(cmd)
+	}
+}
+
+func (p *Process) startWait(cmd *exec.Cmd) (int, int, error) {
+	var err error
 	err = cmd.Start()
 	p.started = true
 	if err != nil {
