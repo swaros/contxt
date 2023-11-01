@@ -130,3 +130,10 @@ updates:
        interval: daily
     assignees:
        - swaros
+### dependencie for /module/process/
+  - package-ecosystem: gomod
+    directory: /module/process/
+    schedule:
+       interval: daily
+    assignees:
+       - swaros

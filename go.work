@@ -1,4 +1,4 @@
-go 1.18
+go 1.21.2
 
 use (
 	./module/awaitgroup
@@ -10,6 +10,7 @@ use (
 	./module/dirhandle
 	./module/linehack
 	./module/mimiclog
+	./module/process
 	./module/runner
 	./module/shellcmd
 	./module/systools
