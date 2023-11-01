@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sync"
 	"syscall"
 
 	"github.com/swaros/contxt/module/systools"
@@ -18,11 +19,15 @@ type Process struct {
 	cmd      string
 	args     []string
 	runArgs  []string
+	command  string
 	OnOutput ProcCallback
 	OnInit   ProcInfoCallback
 	outPipe  io.ReadCloser
 	inPipe   io.WriteCloser
 	stopped  bool
+	started  bool
+	cmdLock  sync.Mutex
+	stayOpen bool
 }
 
 func NewProcess(cmd string, args ...string) *Process {
@@ -34,6 +39,10 @@ func NewProcess(cmd string, args ...string) *Process {
 
 func (p *Process) SetRunArgs(args ...string) {
 	p.runArgs = args
+}
+
+func (p *Process) SetStayOpen(stayOpen bool) {
+	p.stayOpen = stayOpen
 }
 
 func (p *Process) SetOnOutput(callback ProcCallback) {
@@ -50,6 +59,15 @@ func (p *Process) GetOutPipe() io.ReadCloser {
 
 func (p *Process) GetInPipe() io.WriteCloser {
 	return p.inPipe
+}
+
+func (p *Process) Command(cmd string) {
+	p.cmdLock.Lock()
+	defer p.cmdLock.Unlock()
+	p.command = cmd
+	if p.inPipe != nil {
+		io.WriteString(p.inPipe, cmd+"\n")
+	}
 }
 
 func (p *Process) Stop() error {
@@ -97,14 +115,18 @@ func (p *Process) Exec() (int, int, error) {
 		return systools.ErrorBySystem, 0, err
 	}
 
+	// send the startup commands to the process
 	go func() {
-		defer p.inPipe.Close()
+		if !p.stayOpen {
+			defer p.inPipe.Close()
+		}
 		for _, arg := range p.runArgs {
 			io.WriteString(p.inPipe, arg+"\n")
 		}
 	}()
 
 	err = cmd.Start()
+	p.started = true
 	if err != nil {
 		return systools.ExitCmdError, 0, err
 	}
