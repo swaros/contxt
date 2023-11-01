@@ -46,6 +46,7 @@ type targetExecuter struct {
 	watch           *Watchman
 	commandFallback MainCmdSetter
 	hardExitOnError bool
+	rootPath        string // this is the root path of the executer
 }
 
 type emptyCmd struct{}
@@ -106,6 +107,11 @@ func New(target string, arguments map[string]string, any ...interface{}) *target
 	}
 
 	t.reInitialize()
+	return t
+}
+
+func (t *targetExecuter) SetRootPath(rootPath string) *targetExecuter {
+	t.rootPath = rootPath
 	return t
 }
 
