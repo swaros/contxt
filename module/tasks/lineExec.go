@@ -63,8 +63,27 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 			return systools.ExitCmdError, true
 		}
 	} else {
-		// if no workingdir is defined we use the context directory
-		os.Chdir(t.phHandler.HandlePlaceHolder("${CTX_PWD}")) // change the directory
+		// if the rootpath exists, we change to this path
+		if t.rootPath != "" {
+			if er := os.Chdir(t.rootPath); er != nil {
+				t.getLogger().Error("can not change directory", er)
+				t.out(MsgError(MsgError{Err: er, Reference: codeLine, Target: currentTask.ID}))
+				return systools.ExitCmdError, true
+			}
+		} else {
+			// if the rootpath does not exists, we look for tht BASEPATH placeholder
+			// and change to this path
+			if t.phHandler != nil {
+				if basePath := t.phHandler.GetPH("BASEPATH"); basePath != "" {
+					if er := os.Chdir(basePath); er != nil {
+						t.getLogger().Error("can not change directory", er)
+						t.out(MsgError(MsgError{Err: er, Reference: codeLine, Target: currentTask.ID}))
+						return systools.ExitCmdError, true
+					}
+				}
+			}
+		}
+
 	}
 
 	// here we execute the current script line

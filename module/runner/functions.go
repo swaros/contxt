@@ -154,6 +154,7 @@ func (c *CmdExecutorImpl) SetStartupVariables(dataHndl *tasks.CombinedDh, templa
 	} else {
 		// we will override the current dir from the predefined ones, with the current dir
 		dataHndl.SetPH("CTX_PWD", currentDir)
+		dataHndl.SetPH("BASEPATH", currentDir)
 	}
 
 	// template depending variables
@@ -317,6 +318,7 @@ func (c *CmdExecutorImpl) initDefaultVariables() {
 	} else {
 		c.setVariable("CTX_PWD", currentPath)
 		c.setVariable("CTX_PATH", currentPath)
+		c.setVariable("BASEPATH", currentPath)
 	}
 	c.setVariable("CTX_OS", runtime.GOOS)
 	c.setVariable("CTX_ARCH", runtime.GOARCH)
