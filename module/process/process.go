@@ -17,19 +17,24 @@ type ProcCallback func(string, error) bool
 type ProcInfoCallback func(*os.Process)
 
 type Process struct {
-	cmd      string
-	args     []string
-	runArgs  []string
-	command  string
-	OnOutput ProcCallback
-	OnInit   ProcInfoCallback
-	outPipe  io.ReadCloser
-	inPipe   io.WriteCloser
-	stopped  bool
-	started  bool
-	cmdLock  sync.Mutex
-	wait     sync.WaitGroup
-	stayOpen bool
+	cmd        string
+	args       []string
+	runArgs    []string
+	command    string
+	OnOutput   ProcCallback
+	OnInit     ProcInfoCallback
+	outPipe    io.ReadCloser
+	inPipe     io.WriteCloser
+	stopped    bool
+	started    bool
+	cmdLock    sync.Mutex
+	wait       sync.WaitGroup
+	stayOpen   bool
+	timeOut    time.Duration
+	timoutSet  bool
+	errorCode  int
+	internCode int
+	runError   error
 }
 
 var (
@@ -41,6 +46,11 @@ func NewProcess(cmd string, args ...string) *Process {
 		cmd:  cmd,
 		args: args,
 	}
+}
+
+func (p *Process) SetTimeout(timeout time.Duration) {
+	p.timoutSet = true
+	p.timeOut = timeout
 }
 
 func (p *Process) SetRunArgs(args ...string) {
@@ -76,13 +86,15 @@ func (p *Process) Command(cmd string) {
 	}
 }
 
-func (p *Process) Stop() error {
+func (p *Process) Stop() (int, int, error) {
 	p.stopped = true
 	p.wait.Wait()
 	if p.inPipe != nil {
-		return p.inPipe.Close()
+		if err := p.inPipe.Close(); err != nil {
+			return systools.ErrorBySystem, 0, err
+		}
 	}
-	return nil
+	return p.errorCode, p.internCode, p.runError
 }
 
 func (p *Process) Run() error {
@@ -131,18 +143,19 @@ func (p *Process) Exec() (int, int, error) {
 			io.WriteString(p.inPipe, arg+"\n")
 		}
 	}()
-	if p.stayOpen {
 
+	if p.stayOpen {
 		p.wait.Add(1)
 		go func() {
 			// set timeout for the process
 			// if the process is not stopped after the timeout
 			nowTime := time.Now()
-			timeout := 10 * time.Second
 
 			for {
-				if nowTime.Add(timeout).Before(time.Now()) {
-					p.stopped = true
+				if p.timoutSet && p.timeOut > 0 {
+					if nowTime.Add(p.timeOut).Before(time.Now()) {
+						p.stopped = true
+					}
 				}
 				if p.stopped {
 					break
@@ -152,7 +165,7 @@ func (p *Process) Exec() (int, int, error) {
 		}()
 
 		go func() {
-			p.startWait(cmd)
+			p.errorCode, p.internCode, p.runError = p.startWait(cmd)
 		}()
 
 		return systools.ExitOk, ExitInBackGround, nil
@@ -186,7 +199,6 @@ func (p *Process) startWait(cmd *exec.Cmd) (int, int, error) {
 			cmd.Process.Kill()
 			return systools.ExitByStopReason, 0, err
 		}
-
 	}
 	// wait for the command to finish
 	err = cmd.Wait()
