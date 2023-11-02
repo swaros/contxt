@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"syscall"
 )
 
 // WinProcData is a struct to hold the data of a process on windows
@@ -19,12 +20,22 @@ type WinProcData struct {
 	WindowTitle string
 }
 
-func ReadProc(pid int) (ProcData, error) {
+// for windows we just do nothing with the cmd
+// returnning false to indicate that the process group id is not set
+func PidWorkerForCmd(cmd *exec.Cmd) bool {
+	return false
+}
+
+func KillProcessTree(pid int) error {
+	return syscall.Kill(pid, syscall.SIGKILL)
+}
+
+func ReadProc(pid int) (*ProcData, error) {
 	proc, err := ProcInfo(pid)
 	if err != nil {
-		return ProcData{}, err
+		return &ProcData{}, err
 	}
-	return ProcData{
+	return &ProcData{
 		Pid:         proc.Pid,
 		Cmd:         proc.ProcName,
 		ThreadCount: 0,

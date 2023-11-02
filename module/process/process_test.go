@@ -6,20 +6,36 @@ import (
 	"time"
 
 	"github.com/swaros/contxt/module/process"
+	"github.com/swaros/contxt/module/systools"
 )
 
 func TestBasicRun(t *testing.T) {
 	process := process.NewProcess("bash", "-c", "echo 'Hello World'")
-	if err := process.Run(); err != nil {
+	if _, _, err := process.Exec(); err != nil {
 		t.Error(err)
+	}
+
+}
+
+func TestBasicRunWithError(t *testing.T) {
+	process := process.NewProcess("notExists")
+	if inCode, realCode, err := process.Exec(); err == nil {
+		t.Error("Error is nil")
+	} else {
+		if realCode != -1 {
+			t.Error("realCode is not -1. It is ", realCode)
+		}
+		if inCode != systools.ExitCmdError {
+			t.Error("internal Code is not ", systools.ExitCmdError, ". It is ", inCode)
+		}
 	}
 
 }
 
 func TestRunWithArgs(t *testing.T) {
 	process := process.NewProcess("bash")
-	process.SetRunArgs("echo 'Hello World'", "echo 'Hello World 2'")
-	if err := process.Run(); err != nil {
+	process.AddStartCommands("echo 'Hello World'", "echo 'Hello World 2'")
+	if _, _, err := process.Exec(); err != nil {
 		t.Error(err)
 	}
 
@@ -27,7 +43,7 @@ func TestRunWithArgs(t *testing.T) {
 
 func TestExecWithBash(t *testing.T) {
 	process := process.NewProcess("bash")
-	process.SetRunArgs("echo 'Hello World'", "echo 'Hello World 2'")
+	process.AddStartCommands("echo 'Hello World'", "echo 'Hello World 2'")
 	process.SetOnOutput(func(msg string, err error) bool {
 		t.Log("output[", msg, "]")
 		return true
@@ -54,7 +70,7 @@ func TestExecWithBash(t *testing.T) {
 func TestExecWithBashAndStayOpen(t *testing.T) {
 	outPuts := []string{}
 	proc := process.NewProcess("bash")
-	proc.SetStayOpen(true)
+	proc.SetKeepRunning(true)
 	proc.SetOnOutput(func(msg string, err error) bool {
 		t.Log("output[", msg, "]")
 		outPuts = append(outPuts, msg)
@@ -101,7 +117,7 @@ func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 	outPuts := []string{}
 	errors := []error{}
 	proc := process.NewProcess("bash")
-	proc.SetStayOpen(true)
+	proc.SetKeepRunning(true)
 	proc.SetOnOutput(func(msg string, err error) bool {
 		if err != nil {
 			errors = append(errors, err)
@@ -144,5 +160,12 @@ func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 			t.Error("outPuts[0] is not 'Hello World'. It is ", outPuts[0])
 		}
 	}
+
+}
+
+func TestTimeOut(t *testing.T) {
+	proc := process.NewProcess("bash")
+	proc.SetKeepRunning(true)
+	proc.SetTimeout(100 * time.Millisecond)
 
 }
