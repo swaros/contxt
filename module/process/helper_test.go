@@ -76,10 +76,6 @@ func (m *MimicLogger) GetLogs() []string {
 
 func (m *MimicLogger) LogsToTestLog(t *testing.T) []string {
 	t.Helper()
-	// do we have any errors?
-	if !t.Failed() {
-		return []string{}
-	}
 
 	logs := []string{}
 	for _, entry := range m.logs {

@@ -27,7 +27,9 @@ type Process struct {
 	onInit           ProcInfoCallback // the callback to call when the process is started
 	onWaitDone       ProcHndlCallback // the callback to call when the process is stopped after a regular wait for cmd execution
 	outPipe          io.ReadCloser    // the pipe to read output from
+	errorPipe        io.ReadCloser    // the pipe to read errors from
 	inPipe           io.WriteCloser   // the pipe to write input to
+	combinePipes     bool             // whether or not to combine the output and error pipes
 	stopped          bool             // whether or not the process has been stopped
 	started          bool             // whether or not the process has been started
 	cmdLock          sync.Mutex       // a lock for the command
@@ -80,6 +82,14 @@ func (p *Process) SetLogger(logger mimiclog.Logger) {
 	if p.procWatch != nil {
 		p.procWatch.SetLogger(logger)
 	}
+}
+
+func (p *Process) GetLogger() mimiclog.Logger {
+	return p.logger
+}
+
+func (p *Process) SetCombinePipes(combine bool) {
+	p.combinePipes = combine
 }
 
 // SetTimeout sets the timeout for the process. If the process is not stopped after the timeout, it will be stopped
@@ -305,7 +315,18 @@ func (p *Process) Exec() (int, int, error) {
 	if err != nil {
 		return systools.ErrorBySystem, 0, err
 	}
-	cmd.Stderr = cmd.Stdout
+	// handling error pipe depending on the combinePipes flag
+	if p.combinePipes {
+		// combine the error and output pipes
+		cmd.Stderr = cmd.Stdout
+	} else {
+		// use a seperate error pipe
+		p.errorPipe, err = cmd.StderrPipe()
+		if err != nil {
+			return systools.ErrorBySystem, 0, err
+		}
+	}
+
 	p.inPipe, err = cmd.StdinPipe()
 	if err != nil {
 		return systools.ErrorBySystem, 0, err
@@ -394,12 +415,39 @@ func (p *Process) startWait(cmd *exec.Cmd) (int, int, error) {
 		return systools.ExitCmdError, RealCodeNotPresent, err
 	}
 	p.logger.Debug("startWait: process watcher created")
+	// if we have a callback for the process info, call it
 	if p.onInit != nil {
 		p.logger.Debug("startWait: calling onInit callback")
 		p.onInit(cmd.Process)
 	}
 
-	p.logger.Trace("startWait: assigning outPipe to scanner")
+	if !p.combinePipes {
+		p.logger.Trace("startWait: assigning errorPipe to scanner")
+		go func() {
+			scanner := bufio.NewScanner(p.errorPipe)
+			scanner.Split(bufio.ScanLines)
+			for scanner.Scan() {
+				m := scanner.Text()
+				keepRunning := true
+				if p.onOutput != nil {
+					p.logger.Debug("startWait (errorpipe): calling onOutput callback")
+					if p.logger.IsTraceEnabled() {
+						p.logger.Trace("startWait (errorpipe): calling onOutput callback with message: ", m)
+					}
+					keepRunning = p.onOutput(m, errors.New(m))
+					p.logger.Debug("startWait (errorpipe): onOutput callback returned: ", keepRunning)
+
+					if !keepRunning {
+						p.logger.Debug("startWait: getting out of process loop because onOutput returned false")
+						// try to kill the process by using group id if possible
+						p.procWatch.Kill()
+
+					}
+				}
+			}
+		}()
+	}
+
 	scanner := bufio.NewScanner(p.outPipe)
 
 	scanner.Split(bufio.ScanLines)

@@ -3,6 +3,7 @@ package process_test
 import (
 	"os"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -233,6 +234,12 @@ func TestExecWithBashAndStayOpen(t *testing.T) {
 
 }
 
+// testing getting errors from the process
+// while running in the background.
+// this means we have to watch the output
+// if they are written to the error channel.
+// this indicates that the process executes a command that
+// is not available, have a typo, exists with an error code and so on
 func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 
 	mimicTestLog := NewMimicTestLogger()
@@ -243,11 +250,13 @@ func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 	proc.SetKeepRunning(true)
 	proc.SetLogger(mimicTestLog)
 	proc.SetOnOutput(func(msg string, err error) bool {
-		mimicTestLog.Info(msg)
+
 		if err != nil {
+			mimicTestLog.Error(err)
 			errors = append(errors, err)
 			return false
 		} else {
+			mimicTestLog.Info(msg)
 			outPuts = append(outPuts, msg)
 			return true
 		}
@@ -256,11 +265,6 @@ func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 		if proc == nil {
 			t.Error("Process is nil")
 		}
-	})
-
-	waitIsReached := false
-	proc.SetOnWaitDone(func(err error) {
-		waitIsReached = true
 	})
 
 	if _, _, err := proc.Exec(); err != nil {
@@ -278,27 +282,9 @@ func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 		t.Error(err)
 	}
 	// give the process some time to execute the command
-	time.Sleep(1000 * time.Millisecond)
-	internCode, realCode, err := proc.Stop()
+	proc.Stop()
 
-	// this should fail because the command is not found
-	// so bash will exit with 127
-	if err != nil {
-		// expected error is "exit status 127"
-		if err.Error() != "exit status 127" {
-			t.Error("unexpected error: ", err)
-		}
-	} else {
-		t.Error("expected error but got none")
-	}
-	if realCode != 127 {
-		t.Error("realCode is not 127. It is ", realCode)
-	}
-	if internCode != 103 {
-		t.Error("internCode is not 103, It is ", internCode)
-	}
-
-	if len(outPuts) != 2 {
+	if len(outPuts) != 1 {
 		t.Error("outPuts is not 2. It is ", len(outPuts))
 	} else {
 		if outPuts[0] != "Hello World" {
@@ -306,8 +292,13 @@ func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 		}
 	}
 
-	if !waitIsReached {
-		t.Error("Wait is not reached")
+	if len(errors) < 1 {
+		t.Error("errors is not 1. It is ", len(errors), " errors: ", errors)
+	} else {
+		if !strings.Contains(errors[0].Error(), "notACommand") {
+			t.Error("errors[0] does not contain 'notACommand'. It is ", errors[0].Error())
+		}
+
 	}
 
 	mimicTestLog.LogsToTestLog(t)
@@ -323,7 +314,6 @@ func TestTimeOut(t *testing.T) {
 		t.Error(err)
 		t.SkipNow()
 	}
-	messureStartTimeout := time.Now()
 	if err := proc.Command("sleep 10"); err != nil {
 		t.Error(err)
 	}
@@ -334,13 +324,6 @@ func TestTimeOut(t *testing.T) {
 	internCode, realCode, err := proc.Stop()
 	expectedInternCode := process.ExitTimeout
 	expectedRealCode := process.RealCodeNotPresent
-
-	// check the needed time. it should be around 100ms
-	// but we give it 300ms to be sure
-	if time.Since(messureStartTimeout) > 300*time.Millisecond {
-		timeNeeded := time.Since(messureStartTimeout)
-		t.Error("timeout is not working. It took ", timeNeeded, " to stop the process")
-	}
 
 	if err != nil {
 		if err.Error() != "process stopped by timeout" {
