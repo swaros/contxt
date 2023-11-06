@@ -2,6 +2,7 @@ package process_test
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 	"sync"
@@ -43,6 +44,17 @@ func CmdIsRunning(t *testing.T, cmd string) bool {
 		}
 	}
 	return false
+}
+
+// helper function to skip tests on github ci.
+// we need to skip tests that require some special setup.
+// be careful to not skip tests that are important. double check if these tests are working elsewhere.
+// and make sure the issue is not related to the github ci setup.
+func SkipOnGithubCi(t *testing.T) {
+	t.Helper()
+	if os.Getenv("GITHUB_CI") == "true" {
+		t.Skip("Skip on Github CI")
+	}
 }
 
 // mimiclogger implementation that collects all the logs in memory
