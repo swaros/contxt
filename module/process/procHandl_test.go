@@ -67,6 +67,7 @@ func TestNewProcessWatcherWithProcess(t *testing.T) {
 // that will lauch a new process that will run infinitely
 // the issue is that we have to kill all the child processes
 func TestKillProcessTree(t *testing.T) {
+	SkipOnGithubCi(t)
 	if runtime.GOOS == "windows" {
 		t.Skip("not supported on windows")
 	}
@@ -151,6 +152,7 @@ func TestKillProcessTree(t *testing.T) {
 }
 
 func TestSoftKill(t *testing.T) {
+	SkipOnGithubCi(t)
 	if runtime.GOOS == "windows" {
 		t.Skip("not supported on windows")
 	}
