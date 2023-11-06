@@ -29,6 +29,8 @@ import (
 	"os"
 	"runtime"
 	"syscall"
+
+	"github.com/swaros/contxt/module/process"
 )
 
 // TaskDef holds information about running
@@ -86,34 +88,6 @@ func (ts *TaskDef) LogCmd(cmd string, args []string, command string) {
 	})
 }
 
-func PidExists(pid int32) (bool, error) {
-	if pid <= 0 {
-		return false, fmt.Errorf("invalid pid %v", pid)
-	}
-	proc, err := os.FindProcess(int(pid))
-	if err != nil {
-		return false, err
-	}
-	err = proc.Signal(syscall.Signal(0))
-	if err == nil {
-		return true, nil
-	}
-	if err.Error() == "os: process already finished" {
-		return false, nil
-	}
-	errno, ok := err.(syscall.Errno)
-	if !ok {
-		return false, err
-	}
-	switch errno {
-	case syscall.ESRCH:
-		return false, nil
-	case syscall.EPERM:
-		return true, nil
-	}
-	return false, err
-}
-
 func (ts *TaskDef) IsProcessRunning() bool {
 	if ts.process != nil && ts.process.processInfo != nil {
 		if ts.process.processInfo.Pid > 0 {
@@ -140,7 +114,15 @@ func (ts *TaskDef) GetProcessLog() []ProcessLog {
 func (ts *TaskDef) KillProcess() error {
 	if ts.process != nil && ts.process.processInfo != nil {
 		if ts.IsProcessRunning() {
-			return ts.process.processInfo.Kill()
+			processHndl, perr := process.NewProcessWatcherByProcessInfo(ts.process.processInfo)
+			if perr != nil {
+				return perr
+			}
+			processHndl.StopChilds(process.DefaultInterruptSignal, process.DefaultKillSignal)
+			if running, _ := processHndl.IsRunning(); running {
+				return ts.process.processInfo.Kill()
+			}
+			return nil
 		} else {
 			return fmt.Errorf("process %d is not running", ts.process.processInfo.Pid)
 		}

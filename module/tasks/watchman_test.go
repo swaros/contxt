@@ -383,7 +383,7 @@ func TestMultipleTaskManagementWithChildProcs(t *testing.T) {
 		}
 	}
 	wman.StopAllTasks(func(target string, time int, succeed bool) {
-		t.Log("task", target, "stopped in", time, "ms")
+		//t.Log("task", target, "stopped in", time, "ms")
 		if !succeed {
 			t.Error("task", target, "did not succeed by stopping his process")
 		}
