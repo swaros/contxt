@@ -2,14 +2,19 @@ package process_test
 
 import (
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
 	"github.com/swaros/contxt/module/process"
+	"github.com/swaros/contxt/module/process/terminal"
 	"github.com/swaros/contxt/module/systools"
 )
 
 func TestBasicRun(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.SkipNow()
+	}
 	process := process.NewProcess("bash", "-c", "echo 'Hello World'")
 	if _, _, err := process.Exec(); err != nil {
 		t.Error(err)
@@ -17,7 +22,61 @@ func TestBasicRun(t *testing.T) {
 
 }
 
+func TestBasicRunWithTermFind(t *testing.T) {
+	term, err := terminal.GetTerminal()
+	if err != nil {
+		t.Error(err)
+		t.SkipNow()
+	}
+	process := process.NewProcess(term.GetCmd(), term.CombineArgs(`echo "Hello World"`)...)
+	if _, rcode, err := process.Exec(); err != nil {
+		t.Error(err)
+	} else {
+		if rcode != 0 {
+			t.Error("rcode is not 0. It is ", rcode)
+		}
+	}
+}
+
+func TestNewTerminal(t *testing.T) {
+	process := process.NewTerminal(`echo "Hello World"`)
+	if _, rcode, err := process.Exec(); err != nil {
+		t.Error(err)
+	} else {
+		if rcode != 0 {
+			t.Error("rcode is not 0. It is ", rcode)
+		}
+	}
+}
+
+func TestNewTerminalError(t *testing.T) {
+	process := process.NewTerminal(`notExistsCmd`)
+	if intCode, rcode, err := process.Exec(); err != nil {
+		if intCode != systools.ExitCmdError {
+			t.Error("intCode is not ", systools.ExitCmdError, ". It is ", intCode)
+		}
+
+		// this is linux specific
+		if runtime.GOOS == "linux" {
+			if rcode != 127 {
+				t.Error("rcode is not 127. It is ", rcode)
+			}
+
+			if err.Error() != "exit status 127" {
+				t.Error("err is not 'exit status 127'. It is ", err.Error())
+			}
+		}
+
+	} else {
+		t.Error("Error is nil. error is expected")
+	}
+
+}
+
 func TestBasicRunButCommand(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.SkipNow()
+	}
 	process := process.NewProcess("bash", "-c", "echo 'Hello World'")
 
 	if err := process.Command("echo 'Hello World 2'"); err == nil {
@@ -56,22 +115,58 @@ func TestBasicRunWithError(t *testing.T) {
 }
 
 func TestRunWithArgs(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.SkipNow()
+	}
 	process := process.NewProcess("bash")
 	process.AddStartCommands("echo 'Hello World'", "echo 'Hello World 2'")
 	if _, _, err := process.Exec(); err != nil {
 		t.Error(err)
 	}
+	if _, _, err := process.Stop(); err != nil {
+		t.Error(err)
+	}
 
 }
 
-func TestExecWithBash(t *testing.T) {
-	process := process.NewProcess("bash")
+func TestRunWithArgsAndTerminal(t *testing.T) {
+
+	process := process.NewTerminal()
 	process.AddStartCommands("echo 'Hello World'", "echo 'Hello World 2'")
+
+	// track any output
+	outputs := []string{}
 	process.SetOnOutput(func(msg string, err error) bool {
-		t.Log("output[", msg, "]")
+		outputs = append(outputs, msg)
 		return true
 	})
+
+	if _, _, err := process.Exec(); err != nil {
+		t.Error(err)
+	}
+
+	// did we get the output?
+	if len(outputs) != 2 {
+		t.Error("outputs is not 2. It is ", len(outputs))
+	} else {
+		if outputs[0] != "Hello World" {
+			t.Error("outputs[0] is not 'Hello World'. It is ", outputs[0])
+		}
+		if outputs[1] != "Hello World 2" {
+			t.Error("outputs[1] is not 'Hello World 2'. It is ", outputs[1])
+		}
+	}
+}
+
+func TestExecWithBash(t *testing.T) {
+	process := process.NewTerminal()
+	process.AddStartCommands("echo 'Hello World'", "echo 'Hello World 2'")
+	// check if the OnInit is called
+	// the output is tested a couple of times in other tests
+	// so no need to test it here
+	initIsCalled := false
 	process.SetOnInit(func(proc *os.Process) {
+		initIsCalled = true
 		if proc == nil {
 			t.Error("Process is nil")
 		}
@@ -86,11 +181,15 @@ func TestExecWithBash(t *testing.T) {
 	if internCode != 0 {
 		t.Error("internCode is not 0, It is ", internCode)
 	}
+
+	if !initIsCalled {
+		t.Error("OnInit is not called")
+	}
 }
 
 func TestExecWithBashAndStayOpen(t *testing.T) {
 	outPuts := []string{}
-	proc := process.NewProcess("bash")
+	proc := process.NewTerminal()
 	proc.SetKeepRunning(true)
 	proc.SetOnOutput(func(msg string, err error) bool {
 		t.Log("output[", msg, "]")
@@ -135,12 +234,16 @@ func TestExecWithBashAndStayOpen(t *testing.T) {
 }
 
 func TestExecWithBashAndStayOpenAndError(t *testing.T) {
+
+	mimicTestLog := NewMimicTestLogger()
+
 	outPuts := []string{}
 	errors := []error{}
-	proc := process.NewProcess("bash")
+	proc := process.NewTerminal()
 	proc.SetKeepRunning(true)
+	proc.SetLogger(mimicTestLog)
 	proc.SetOnOutput(func(msg string, err error) bool {
-		t.Log("MESSAGE:[", msg, "]")
+		mimicTestLog.Info(msg)
 		if err != nil {
 			errors = append(errors, err)
 			return false
@@ -155,10 +258,17 @@ func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 		}
 	})
 
+	waitIsReached := false
+	proc.SetOnWaitDone(func(err error) {
+		waitIsReached = true
+	})
+
 	if _, _, err := proc.Exec(); err != nil {
 		t.Error(err)
 		t.SkipNow()
 	}
+
+	proc.WaitUntilRunning(10 * time.Millisecond)
 
 	if err := proc.Command("echo 'Hello World'"); err != nil {
 		t.Error(err)
@@ -168,7 +278,7 @@ func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 		t.Error(err)
 	}
 	// give the process some time to execute the command
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 	internCode, realCode, err := proc.Stop()
 
 	// this should fail because the command is not found
@@ -196,9 +306,15 @@ func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 		}
 	}
 
+	if !waitIsReached {
+		t.Error("Wait is not reached")
+	}
+
+	mimicTestLog.LogsToTestLog(t)
 }
 
 func TestTimeOut(t *testing.T) {
+	// create a simple bash process
 	proc := process.NewProcess("bash")
 	proc.SetKeepRunning(true)
 	proc.SetTimeout(100 * time.Millisecond)
@@ -222,7 +338,8 @@ func TestTimeOut(t *testing.T) {
 	// check the needed time. it should be around 100ms
 	// but we give it 300ms to be sure
 	if time.Since(messureStartTimeout) > 300*time.Millisecond {
-		t.Error("timeout is not working")
+		timeNeeded := time.Since(messureStartTimeout)
+		t.Error("timeout is not working. It took ", timeNeeded, " to stop the process")
 	}
 
 	if err != nil {

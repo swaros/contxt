@@ -22,7 +22,7 @@ type WinProcData struct {
 
 // for windows we just do nothing with the cmd
 // returnning false to indicate that the process group id is not set
-func PidWorkerForCmd(cmd *exec.Cmd) bool {
+func TryPid2Pgid(cmd *exec.Cmd) bool {
 	return false
 }
 
