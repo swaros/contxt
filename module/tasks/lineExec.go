@@ -31,6 +31,7 @@ import (
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/mimiclog"
+	"github.com/swaros/contxt/module/process"
 	"github.com/swaros/contxt/module/systools"
 )
 
@@ -187,6 +188,7 @@ func Execute(dCmd string, dCmdArgs []string, command string, callback func(strin
 	if err != nil {
 		return systools.ExitCmdError, 0, err
 	}
+	process.TryPid2Pgid(cmd)
 
 	startInfo(cmd.Process)
 	scanner := bufio.NewScanner(stdoutPipe)
@@ -197,6 +199,7 @@ func Execute(dCmd string, dCmdArgs []string, command string, callback func(strin
 		keepRunning := callback(m, nil)
 		if !keepRunning {
 			cmd.Process.Kill()
+			process.KillProcessTree(cmd.Process.Pid)
 			return systools.ExitByStopReason, 0, err
 		}
 

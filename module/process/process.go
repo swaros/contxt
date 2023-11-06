@@ -10,18 +10,22 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/swaros/contxt/module/mimiclog"
+	"github.com/swaros/contxt/module/process/terminal"
 	"github.com/swaros/contxt/module/systools"
 )
 
 type ProcCallback func(string, error) bool // the callback to call when output is received
 type ProcInfoCallback func(*os.Process)    // the callback to call when the process is started
+type ProcHndlCallback func(error)          // a callback for the process handler
 
 type Process struct {
 	cmd              string           // the base command to run
 	args             []string         // the arguments to pass to the command
 	startCommands    []string         // the commands to send to the process on startup
-	OnOutput         ProcCallback     // the callback to call when output is received
-	OnInit           ProcInfoCallback // the callback to call when the process is started
+	onOutput         ProcCallback     // the callback to call when output is received
+	onInit           ProcInfoCallback // the callback to call when the process is started
+	onWaitDone       ProcHndlCallback // the callback to call when the process is stopped after a regular wait for cmd execution
 	outPipe          io.ReadCloser    // the pipe to read output from
 	inPipe           io.WriteCloser   // the pipe to write input to
 	stopped          bool             // whether or not the process has been stopped
@@ -35,6 +39,8 @@ type Process struct {
 	internalExitCode int              // the internal exit code of the process
 	runtimeError     error            // the error of the process
 	procWatch        *ProcessWatch    // the process watcher for the process
+	pipesClosed      bool             // whether or not the pipes are closed
+	logger           mimiclog.Logger  // the logger to use
 }
 
 var (
@@ -46,8 +52,33 @@ var (
 // NewProcess creates a new process with the given command and arguments
 func NewProcess(cmd string, args ...string) *Process {
 	return &Process{
-		cmd:  cmd,
-		args: args,
+		cmd:    cmd,
+		args:   args,
+		logger: mimiclog.NewNullLogger(),
+	}
+}
+
+// Create a new process by using the default terminal
+// as defined in the terminal package
+// if no arguments are given, is seems to be intended to be used
+// for interactive processes
+func NewTerminal(args ...string) *Process {
+	term, err := terminal.GetTerminal()
+	if err != nil {
+		panic(err)
+	}
+	// no arguments given. seems to be an interactive process.
+	// so we use the keep open arguments instead
+	if len(args) == 0 {
+		return NewProcess(term.GetCmd(), term.GetArgsToKeepOpen()...)
+	}
+	return NewProcess(term.GetCmd(), term.CombineArgs(args...)...)
+}
+
+func (p *Process) SetLogger(logger mimiclog.Logger) {
+	p.logger = logger
+	if p.procWatch != nil {
+		p.procWatch.SetLogger(logger)
 	}
 }
 
@@ -70,20 +101,23 @@ func (p *Process) SetKeepRunning(stayOpen bool) {
 	p.stayOpen = stayOpen
 }
 
+func (p *Process) GetProcessWatcher() (*ProcessWatch, error) {
+	if p.procWatch == nil {
+		return nil, errors.New("process watcher is nil")
+	}
+	return p.procWatch, nil
+}
+
+func (p *Process) SetOnWaitDone(callback ProcHndlCallback) {
+	p.onWaitDone = callback
+}
+
 func (p *Process) SetOnOutput(callback ProcCallback) {
-	p.OnOutput = callback
+	p.onOutput = callback
 }
 
 func (p *Process) SetOnInit(callback ProcInfoCallback) {
-	p.OnInit = callback
-}
-
-func (p *Process) GetOutPipe() io.ReadCloser {
-	return p.outPipe
-}
-
-func (p *Process) GetInPipe() io.WriteCloser {
-	return p.inPipe
+	p.onInit = callback
 }
 
 func (p *Process) Command(cmd string) error {
@@ -101,10 +135,37 @@ func (p *Process) Command(cmd string) error {
 	}
 	p.cmdLock.Lock()
 	defer p.cmdLock.Unlock()
+	// if we have a pipe to write to, write the command to the pipe so
+	// the process can handle it
 	if p.inPipe != nil {
-		io.WriteString(p.inPipe, cmd+"\n")
+		p.logger.Debug("sending command to process: ", cmd)
+		if pcount, perr := io.WriteString(p.inPipe, cmd+"\n"); perr != nil {
+			p.logger.Error("error while sending command to process: ", perr)
+			return perr
+		} else {
+			p.logger.Debug("wrote ", pcount, " bytes to process")
+		}
 	}
 	return nil
+}
+
+func (p *Process) closeInPipe() {
+	p.logger.Debug("closing inPipe")
+	if p.pipesClosed {
+		p.logger.Warn("pipes are already closed")
+		return
+	}
+	p.cmdLock.Lock()
+	defer p.cmdLock.Unlock()
+	// we do not care about the error here
+	// because there is no easy way to check if the pipe is already closed.
+	// and we just need to make sure the inPipe is closed
+	if p.outPipe != nil {
+		if err := p.outPipe.Close(); err != nil {
+			p.logger.Error("error while closing outPipe: ", err)
+		}
+	}
+	p.pipesClosed = true
 }
 
 // Stop stops the process
@@ -112,22 +173,64 @@ func (p *Process) Command(cmd string) error {
 //   - the real exit code of the process (if we have one. if not then -1 on error or 0 for some expected states like killed)
 //   - an error if one occured
 func (p *Process) Stop() (int, int, error) {
-	p.stopped = true
-	if p.inPipe != nil {
-		// closing the pipe will stop the process usually
-		if err := p.inPipe.Close(); err != nil {
-			return systools.ErrorBySystem, 0, err
-		}
-	}
-	// give the process some time to stop
-	time.Sleep(100 * time.Millisecond)
+	p.logger.Debug("Stop: is called")
 	// then use the process watcher to kill the process if he is still running
 	if p.procWatch != nil {
 		if running, _ := p.procWatch.IsRunning(); running {
-			p.procWatch.Kill()
+			p.logger.Debug("Stop: process is running. stopping it with default signal.")
+			if err := p.procWatch.StopWithDefaultSigOrder(); err != nil {
+				p.logger.Error("Stop: error while stopping process: ", err)
+				return systools.ErrorBySystem, 0, err
+			}
+		} else {
+			p.logger.Debug("Stop: process is not running. not stopping it.")
+		}
+	}
+	p.done()
+	p.logger.Debug("Stop: process is stopped. current exist codes: ", p.internalExitCode, p.commandExitCode, p.runtimeError)
+	return p.internalExitCode, p.commandExitCode, p.runtimeError
+}
+
+// done sets the stopped flag to true and closes the inPipe
+func (p *Process) done() (int, int, error) {
+	// first wait if the process may be existing by itself in 100 milliseconds
+	if p.stayOpen && p.started && !p.stopped {
+		if p.procWatch != nil {
+			p.logger.Debug("Done: process is set to stay open. waiting for process to stop by itself")
+			p.procWatch.WaitForStop(100*time.Millisecond, 10*time.Millisecond)
 		}
 	}
 
+	p.logger.Debug("Done: setting stopped flag to true")
+	p.stopped = true
+	p.logger.Debug("Done: closing inPipe")
+	p.closeInPipe()
+	// give the process a chance to get done
+	p.logger.Debug("Done: process done is also done. current exist codes: ", p.internalExitCode, p.commandExitCode, p.runtimeError)
+	return p.internalExitCode, p.commandExitCode, p.runtimeError
+}
+
+// Kill kills the process and all its childs
+// it uses the DefaultKillSignal to kill the processes. So this is the Hard way to kill a process.
+// if you want to stop a process in a more graceful way use the Stop() method instead.
+// it returns
+//   - the internal exit code of the process
+//   - the real exit code of the process (if we have one. if not then -1 on error or 0 for some expected states like killed)
+//   - an error if one occured
+func (p *Process) Kill() (int, int, error) {
+	p.logger.Debug("kill is called")
+	// then use the process watcher to kill the process if he is still running
+	if p.procWatch != nil {
+		if running, _ := p.procWatch.IsRunning(); running {
+			p.logger.Debug("Kill: process is running. stopping it with kill signal.")
+			if err := p.procWatch.StopChilds(DefaultKillSignal); err != nil {
+				p.logger.Error("Kill: error while killing process: ", err)
+				return systools.ErrorBySystem, 0, err
+			}
+		}
+	}
+	p.done()
+	p.logger.Debug("Kill: process is killed. current exist codes: ", p.internalExitCode, p.commandExitCode, p.runtimeError)
 	return p.internalExitCode, p.commandExitCode, p.runtimeError
 }
 
@@ -140,11 +243,11 @@ func (p *Process) Stop() (int, int, error) {
 // using this method is a sign you do not need a background process.
 func (p *Process) BlockWait(tickTime time.Duration) error {
 	if !p.stayOpen {
-		return errors.New("process is not set to stay open")
+		return errors.New("BlockWait: process is not set to stay open")
 	}
 
 	if !p.started {
-		return errors.New("process is not started")
+		return errors.New("BlockWait: process is not started")
 	}
 
 	for {
@@ -156,15 +259,47 @@ func (p *Process) BlockWait(tickTime time.Duration) error {
 	return nil
 }
 
-// Exec executes the process and returns
+// WaitUntilRunning blocks the current thread until the process is running.
+// it uses a tick time to check if the process is running in intervals.
+// this can be usefull to make sure the process is running before you send commands to it.
+func (p *Process) WaitUntilRunning(tickTime time.Duration) (time.Duration, error) {
+	// messure time we are waiting for the process to start
+	start := time.Now()
+	if !p.stayOpen {
+		return 0, errors.New("WaitUntilRunning is not supported for processes that are not set to stay open")
+	}
+
+	if !p.started {
+		return 0, errors.New("WaitUntilRunning: process is not started. you need to run Exec() first")
+	}
+
+	for {
+		time.Sleep(tickTime)
+		if p.procWatch != nil {
+			if running, _ := p.procWatch.IsRunning(); running {
+				break
+			}
+		} else {
+			p.logger.Warn("WaitUntilRunning: process watcher is nil")
+		}
+	}
+	return time.Since(start), nil
+
+}
+
+// Exec starts the process onece or in background depending on the stayOpen flag.
+// if its started in background, it will return directly after the process is started.
+// so the return codes are not the real exit codes of the process. instead they are
+// an internalcode that indicates the process is running in background.
 //   - the internal exit code of the process
 //   - the real exit code of the process (if we have one. if not then -1 on error or 0 for some expected states like killed)
 //   - an error if one occured
 func (p *Process) Exec() (int, int, error) {
 
 	cmd := exec.Command(p.cmd, p.args...)
+	p.logger.Debug("starting process: ", cmd, cmd.Args)
 	// set the process group id to kill the whole process tree if possible
-	PidWorkerForCmd(cmd)
+	TryPid2Pgid(cmd)
 	var err error
 	p.outPipe, err = cmd.StdoutPipe()
 	if err != nil {
@@ -179,28 +314,39 @@ func (p *Process) Exec() (int, int, error) {
 	// send the startup commands to the process
 	// if there are any
 	if len(p.startCommands) > 0 {
+		p.logger.Debug("sending startup commands to process.", len(p.startCommands))
 		go func() {
 			if !p.stayOpen {
 				defer p.inPipe.Close()
+				defer p.logger.Debug("closing inPipe becaue process is not set to stay open")
 			}
 			for _, arg := range p.startCommands {
-				io.WriteString(p.inPipe, arg+"\n")
+				p.logger.Debug("sending startup command to process: ", arg)
+				pCount, werr := io.WriteString(p.inPipe, arg+"\n")
+				if werr != nil {
+					p.logger.Error("error while sending startup command to process: ", werr)
+				} else {
+					p.logger.Debug("wrote ", pCount, " bytes to process")
+				}
 			}
+			p.logger.Debug("sending startup commands to process done")
 		}()
 	}
 	// now set the started flag to true
 	p.started = true
 	// start the process loop if the process should stay open
 	if p.stayOpen {
+		p.logger.Debug("process is set to stay open. starting process loop")
 		p.wait.Add(1)
 		go func() {
 			// set timeout for the process
 			// if the process is not stopped after the timeout
 			nowTime := time.Now()
-
+			p.logger.Debug("entering process loop")
 			for {
 				if p.timoutSet && p.timeOut > 0 {
 					if nowTime.Add(p.timeOut).Before(time.Now()) {
+						p.logger.Debug("process timed out. setting stopped flag to true")
 						p.runtimeError = errors.New("process stopped by timeout")
 						p.commandExitCode = RealCodeNotPresent
 						p.internalExitCode = ExitTimeout
@@ -211,14 +357,15 @@ func (p *Process) Exec() (int, int, error) {
 					break
 				}
 			}
+			p.logger.Debug("leaving process loop")
 			p.wait.Done()
 		}()
 
 		go func() {
 			// wait for the process to finish
 			p.internalExitCode, p.commandExitCode, p.runtimeError = p.startWait(cmd)
+			p.logger.Debug("process finished in background by startWait. ", p.internalExitCode, p.commandExitCode, p.runtimeError)
 		}()
-
 		return systools.ExitOk, ExitInBackGround, nil
 	} else {
 		return p.startWait(cmd)
@@ -233,40 +380,65 @@ func (p *Process) Exec() (int, int, error) {
 //
 // the return values are the same as in Exec()
 func (p *Process) startWait(cmd *exec.Cmd) (int, int, error) {
+	p.logger.Debug("startWait: entering")
 	var err error
 	err = cmd.Start()
 	if err != nil {
+		p.logger.Debug("startWait: error while starting command: ", err)
 		return systools.ExitCmdError, RealCodeNotPresent, err
 	}
 
 	p.procWatch, err = NewProcessWatcherByCmd(cmd)
+	p.procWatch.SetLogger(p.logger)
 	if err != nil {
 		return systools.ExitCmdError, RealCodeNotPresent, err
 	}
-	if p.OnInit != nil {
-		p.OnInit(cmd.Process)
+	p.logger.Debug("startWait: process watcher created")
+	if p.onInit != nil {
+		p.logger.Debug("startWait: calling onInit callback")
+		p.onInit(cmd.Process)
 	}
+
+	p.logger.Trace("startWait: assigning outPipe to scanner")
 	scanner := bufio.NewScanner(p.outPipe)
 
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
 		m := scanner.Text()
 		keepRunning := true
-		if p.OnOutput != nil {
-			keepRunning = p.OnOutput(m, nil)
+		if p.onOutput != nil {
+			p.logger.Debug("startWait: calling onOutput callback")
+			if p.logger.IsTraceEnabled() {
+				p.logger.Trace("startWait: calling onOutput callback with message: ", m)
+			}
+			keepRunning = p.onOutput(m, nil)
+			p.logger.Debug("startWait: onOutput callback returned: ", keepRunning)
 		}
 
 		if !keepRunning {
+			p.logger.Debug("startWait: getting out of process loop because onOutput returned false")
 			// try to kill the process by using group id if possible
 			err = p.procWatch.Kill()
 			return systools.ExitByStopReason, 0, err
 		}
 	}
 	// wait for the command to finish
+	p.logger.Debug("startWait: waiting for command to finish")
 	err = cmd.Wait()
+	// if we have a callback for the wait done, call it
+	if p.onWaitDone != nil {
+		p.logger.Debug("startWait: calling onWaitDone callback")
+		p.onWaitDone(err)
+	} else {
+		p.logger.Debug("startWait: no onWaitDone callback set")
+	}
+	// handle the error
 	if err != nil {
-		if p.OnOutput != nil {
-			p.OnOutput(err.Error(), err)
+		p.logger.Debug("startWait: error while waiting for command to finish: ", err)
+		// if we have a callback for the output, call it with the error message as output
+		// and the the original error
+		if p.onOutput != nil {
+			p.onOutput(err.Error(), err)
 		}
 		errRealCode := 0
 		if exiterr, ok := err.(*exec.ExitError); ok {
@@ -275,8 +447,9 @@ func (p *Process) startWait(cmd *exec.Cmd) (int, int, error) {
 			}
 
 		}
+		p.logger.Debug("startWait: returning error: ", err, errRealCode)
 		return systools.ExitCmdError, errRealCode, err
 	}
-
+	p.logger.Debug("startWait: command finished")
 	return systools.ExitOk, 0, err
 }

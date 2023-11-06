@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/swaros/contxt/module/process"
 )
 
-func BashPs(cmd string) ([]string, error) {
+func bashPs(cmd string) ([]string, error) {
 	cmdString := fmt.Sprintf(`ps -eo cmd | grep "%s"`, cmd)
 	process := process.NewProcess("bash", "-c", cmdString)
 	outputs := []string{}
@@ -28,7 +29,7 @@ func CmdIsRunning(t *testing.T, cmd string) bool {
 	if runtime.GOOS == "windows" {
 		return true // TODO: implement this
 	}
-	output, err := BashPs(cmd)
+	output, err := bashPs(cmd)
 	if err != nil {
 		t.Error(err)
 		return false
@@ -42,4 +43,128 @@ func CmdIsRunning(t *testing.T, cmd string) bool {
 		}
 	}
 	return false
+}
+
+// mimiclogger implementation that collects all the logs in memory
+// we need to implement the MimiLogger interface
+
+type MimicLogEntry struct {
+	Level string
+	Msg   string
+}
+
+type MimicLogger struct {
+	logs    []MimicLogEntry
+	syncLoc sync.Mutex
+}
+
+func NewMimicTestLogger() *MimicLogger {
+	return &MimicLogger{
+		logs: []MimicLogEntry{},
+	}
+}
+
+func (m *MimicLogger) GetLogs() []string {
+	logs := []string{}
+	m.syncLoc.Lock()
+	defer m.syncLoc.Unlock()
+	for _, entry := range m.logs {
+		logs = append(logs, entry.Level+"\t"+entry.Msg)
+	}
+	return logs
+}
+
+func (m *MimicLogger) LogsToTestLog(t *testing.T) []string {
+	t.Helper()
+	// do we have any errors?
+	if !t.Failed() {
+		return []string{}
+	}
+
+	logs := []string{}
+	for _, entry := range m.logs {
+		logs = append(logs, t.Name()+":"+entry.Level+"\t"+entry.Msg)
+		t.Log("[" + t.Name() + ":" + entry.Level + "]\t" + entry.Msg)
+	}
+	return logs
+}
+
+func (m *MimicLogger) ResetLogs() {
+	m.logs = []MimicLogEntry{}
+}
+
+func (m *MimicLogger) addToLogs(level string, msg string) {
+	m.syncLoc.Lock()
+	defer m.syncLoc.Unlock()
+	entry := MimicLogEntry{
+		Level: level,
+		Msg:   msg,
+	}
+	m.logs = append(m.logs, entry)
+}
+
+func (m *MimicLogger) Trace(args ...interface{}) {
+	m.addToLogs("TRACE", fmt.Sprint(args...))
+}
+
+func (m *MimicLogger) Debug(args ...interface{}) {
+	m.addToLogs("DEBUG", fmt.Sprint(args...))
+}
+
+func (m *MimicLogger) Info(args ...interface{}) {
+	m.addToLogs("INFO", fmt.Sprint(args...))
+}
+
+func (m *MimicLogger) Error(args ...interface{}) {
+	m.addToLogs("ERROR", fmt.Sprint(args...))
+}
+
+func (m *MimicLogger) Warn(args ...interface{}) {
+	m.addToLogs("WARN", fmt.Sprint(args...))
+}
+
+func (m *MimicLogger) Critical(args ...interface{}) {
+	m.addToLogs("CRITICAL", fmt.Sprint(args...))
+}
+
+func (m *MimicLogger) IsLevelEnabled(level string) bool {
+	return true
+}
+
+func (m *MimicLogger) IsTraceEnabled() bool {
+	return true
+}
+
+func (m *MimicLogger) IsDebugEnabled() bool {
+	return true
+}
+
+func (m *MimicLogger) IsInfoEnabled() bool {
+	return true
+}
+
+func (m *MimicLogger) IsWarnEnabled() bool {
+	return true
+}
+
+func (m *MimicLogger) IsErrorEnabled() bool {
+	return true
+}
+
+func (m *MimicLogger) IsCriticalEnabled() bool {
+	return true
+}
+
+func (m *MimicLogger) SetLevelByString(level string) {
+}
+
+func (m *MimicLogger) SetLevel(level interface{}) {
+}
+
+func (m *MimicLogger) GetLevel() string {
+	return ""
+}
+
+func (m *MimicLogger) GetLogger() interface{} {
+	return nil
 }
