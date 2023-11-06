@@ -52,9 +52,11 @@ func CmdIsRunning(t *testing.T, cmd string) bool {
 // and make sure the issue is not related to the github ci setup.
 func SkipOnGithubCi(t *testing.T) {
 	t.Helper()
-	if os.Getenv("GITHUB_CI") == "true" {
+	// check if one of the github ci env vars is set
+	if os.Getenv("GITHUB_CI") != "" || os.Getenv("GITHUB_ENV") != "" || os.Getenv("GITHUB_WORKSPACE") != "" {
 		t.Skip("Skip on Github CI")
 	}
+	t.Log("Not on Github CI. continue testing...")
 }
 
 // mimiclogger implementation that collects all the logs in memory
