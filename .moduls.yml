@@ -4,12 +4,14 @@ module:
     clean:
       - "tmpfiles/*.yml"
     local: true
+    shortdesc: "Yet Another Config Loader"
     test:
       timeout: 30s
 
   -
     modul: yamc
     local: true
+    shortdesc: "yaml/json data mapper"
     test:
       timeout: 30s
 

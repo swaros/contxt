@@ -46,6 +46,10 @@ build:
         - ${configmodul}.binaryName=ctxv2
         - ${configmodul}.cnShortCut=v2cn
 
+# this section contains settings concerning the documentation
+docu:
+  readme: README.md
+
 # special tests they need some special handling
 # to find raise conditions it is needed to run the same test multiple times
 # to increase the chance to find a raise condition.
