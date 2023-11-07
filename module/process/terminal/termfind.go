@@ -74,18 +74,25 @@ func GetTerminal() (*TermFind, error) {
 	return nil, ErrNoTerminalFound
 }
 
+// GetCmd returns the command to run the terminal
 func (t *TermFind) GetCmd() string {
 	return t.cmd
 }
 
+// GetArgs returns the arguments to pass to the command
+// this is ment to be used to execute the command once
 func (t *TermFind) GetArgs() []string {
 	return t.args
 }
 
+// GetArgsToKeepOpen returns the arguments to pass to the command
+// this is ment to be used to keep the command open so we can execute multiple commands
 func (t *TermFind) GetArgsToKeepOpen() []string {
 	return t.argsToKeepOpen
 }
 
+// CombineArgs combines the arguments to pass to the command with the given arguments
+// this is ment to be used to execute the command once together with the given arguments
 func (t *TermFind) CombineArgs(args ...string) []string {
 	cmds := []string{}
 
