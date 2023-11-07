@@ -18,7 +18,7 @@ var (
 			matchingOs:     []string{"windows"},
 			cmd:            "powershell",
 			args:           []string{"-nologo", "-noprofile"},
-			argsToKeepOpen: []string{"-nologo", "-noprofile"},
+			argsToKeepOpen: []string{"-nologo", "-noprofile", "-noexit", "-NonInteractive"},
 		},
 		"linux": {
 			matchingOs:     []string{"linux", "darwin"},
