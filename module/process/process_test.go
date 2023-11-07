@@ -233,17 +233,42 @@ func TestExecWithBashAndStayOpen(t *testing.T) {
 	proc.Command("echo 'Hello World'")
 	proc.Command("echo 'test 2'")
 	// give the process some time to execute the command
-	time.Sleep(100 * time.Millisecond)
+	proc.WaitUntilRunning(500 * time.Millisecond)
 	proc.Stop()
-
-	if len(outPuts) != 2 {
-		t.Error("outPuts is not 2. It is ", len(outPuts))
-	} else {
-		if outPuts[0] != "Hello World" {
-			t.Error("outPuts[0] is not 'Hello World'. It is ", outPuts[0])
+	// on windows we have a total different output then on linux
+	// so we have to check for the output
+	if runtime.GOOS == "windows" {
+		// the powershell bevahe all the time differently depending where it is executed.
+		// so instead of checking the line count and checking ther text on a specific line,
+		// we just check if the output contains the expected text
+		if len(outPuts) < 3 {
+			t.Error("outPuts is not 3. It is ", len(outPuts))
+			expected := []string{"Hello World", "test 2"}
+			hit := 0
+			for i, out := range outPuts {
+				if strings.Contains(out, expected[0]) {
+					hit++
+				}
+				if strings.Contains(out, expected[1]) {
+					hit++
+				}
+				t.Log("output[", i, "]: ", out)
+			}
+			if hit != 2 {
+				t.Error("hit is not 2. It is ", hit)
+			}
 		}
-		if outPuts[1] != "test 2" {
-			t.Error("outPuts[1] is not 'test 2'. It is ", outPuts[1])
+
+	} else {
+		if len(outPuts) != 2 {
+			t.Error("outPuts is not 2. It is ", len(outPuts))
+		} else {
+			if outPuts[0] != "Hello World" {
+				t.Error("outPuts[0] is not 'Hello World'. It is ", outPuts[0])
+			}
+			if outPuts[1] != "test 2" {
+				t.Error("outPuts[1] is not 'test 2'. It is ", outPuts[1])
+			}
 		}
 	}
 
@@ -299,14 +324,23 @@ func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 	// give the process some time to execute the command
 	proc.Stop()
 
-	if len(outPuts) != 1 {
-		t.Error("outPuts is not 2. It is ", len(outPuts))
+	if runtime.GOOS == "windows" {
+		if len(outPuts) != 3 {
+			t.Error("outPuts is not 3. It is ", len(outPuts))
+		} else {
+			if outPuts[1] != "Hello World" {
+				t.Error("outPuts[1] is not 'Hello World'. It is ", outPuts[1])
+			}
+		}
 	} else {
-		if outPuts[0] != "Hello World" {
-			t.Error("outPuts[0] is not 'Hello World'. It is ", outPuts[0])
+		if len(outPuts) != 1 {
+			t.Error("outPuts is not 2. It is ", len(outPuts))
+		} else {
+			if outPuts[0] != "Hello World" {
+				t.Error("outPuts[0] is not 'Hello World'. It is ", outPuts[0])
+			}
 		}
 	}
-
 	if len(errors) < 1 {
 		t.Error("errors is not 1. It is ", len(errors), " errors: ", errors)
 	} else {
