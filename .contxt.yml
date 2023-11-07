@@ -528,7 +528,7 @@ task:
           if ! grep -q "${licence_keyword}" "$gfile"; then
             echo "MISSING: $gfile is missing licence header"
             FCNT=$(cat $gfile)
-            echo "${codehead} $FCNT" > $gfile
+            echo "${codehead}$FCNT" > $gfile
           else
             echo "OK: $gfile"
           fi
