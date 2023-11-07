@@ -23,6 +23,7 @@ config:
     - ./imports/Dockerfile.ubuntu docker
     - ./imports/build.sh build-sh
     - ./imports/winbuild.bat winbuild-bat
+    - ./imports/README.md readme
   variables:
       include-dev-externals: ""
       configmodul: github.com/swaros/contxt/module/configure
@@ -152,6 +153,12 @@ task:
       - build-script-update
     script:
       - echo "update all" 
+  ## update readme
+  - id: update-readme
+    needs:
+      - set-version
+    script:
+    - "#@var-to-file readme {{ $.docu.readme }}"
 
   ## update makefile
   - id: makefile-update

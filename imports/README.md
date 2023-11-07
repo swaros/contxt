@@ -1,7 +1,7 @@
 
 # cont(e)xt
 ---
-version: `0.5.3`
+version: `{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}`
 
 ---
 
@@ -165,46 +165,19 @@ this is the main repository for the contxt project. It also contains any **packa
 Even more **go** is able to handle packages independent from the repository. so i can use the same package in different projects, without having a need to copy them.
 
 #### modules
- - **yacl** _internal_
-    -  `Yet Another Config Loader`
-    - [more about yacl](docs/modules/yacl/)
- - **yamc** _internal_
-    -  `yaml/json data mapper`
-    - [more about yamc](docs/modules/yamc/)
- - **runner** _internal_
-    - [more about runner](docs/modules/runner/)
- - **ctxtcell** _internal_
-    - [more about ctxtcell](docs/modules/ctxtcell/)
- - **configure** _internal_
-    - [more about configure](docs/modules/configure/)
- - **dirhandle** _internal_
-    - [more about dirhandle](docs/modules/dirhandle/)
- - **systools** _internal_
-    - [more about systools](docs/modules/systools/)
- - **trigger** version: **v0.4.0**
-    - [more about trigger](docs/modules/trigger/)
- - **linehack** _internal_
-    - [more about linehack](docs/modules/linehack/)
- - **ctemplate** _internal_
-    - [more about ctemplate](docs/modules/ctemplate/)
- - **ctxout** _internal_
-    - [more about ctxout](docs/modules/ctxout/)
- - **taskrun** _internal_
-    - [more about taskrun](docs/modules/taskrun/)
- - **awaitgroup** version: **v0.4.0**
-    - [more about awaitgroup](docs/modules/awaitgroup/)
- - **shellcmd** _internal_
-    - [more about shellcmd](docs/modules/shellcmd/)
- - **ctxshell** _internal_
-    - [more about ctxshell](docs/modules/ctxshell/)
- - **tasks** _internal_
-    - [more about tasks](docs/modules/tasks/)
- - **yaclint** _internal_
-    - [more about yaclint](docs/modules/yaclint/)
- - **mimiclog** _internal_
-    - [more about mimiclog](docs/modules/mimiclog/)
- - **process** _internal_
-    - [more about process](docs/modules/process/)
+{{- range $k, $modul := $.module }}  
+  {{- if $modul.local}}
+     {{- if $modul.version}}
+ - **{{ $modul.modul }}** version: **{{ $modul.version }}**
+     {{- else }}
+ - **{{ $modul.modul }}** _internal_
+     {{- end }}
+     {{- if $modul.shortdesc }}
+    -  `{{ $modul.shortdesc }}`
+     {{- end }}
+    - [more about {{ $modul.modul }}](docs/modules/{{ $modul.modul }}/)
+  {{- end }}
+{{- end }}
 
 
 ### used libraries
