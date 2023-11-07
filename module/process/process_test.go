@@ -283,6 +283,7 @@ func TestExecWithBashAndStayOpen(t *testing.T) {
 func TestExecWithBashAndStayOpenAndError(t *testing.T) {
 
 	mimicTestLog := NewMimicTestLogger()
+	mimicTestLog.SetLevel("info")
 
 	outPuts := []string{}
 	errors := []error{}

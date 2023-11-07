@@ -67,9 +67,19 @@ type MimicLogEntry struct {
 	Msg   string
 }
 
+const (
+	TraceLevel = iota
+	DebugLevel
+	InfoLevel
+	WarnLevel
+	ErrorLevel
+	CriticalLevel
+)
+
 type MimicLogger struct {
 	logs    []MimicLogEntry
 	syncLoc sync.Mutex
+	level   int
 }
 
 func NewMimicTestLogger() *MimicLogger {
@@ -103,7 +113,60 @@ func (m *MimicLogger) ResetLogs() {
 	m.logs = []MimicLogEntry{}
 }
 
+func (m *MimicLogger) GetLevelInt() int {
+	return m.level
+}
+
+func (m *MimicLogger) SetLevelInt(level int) {
+	m.level = level
+}
+
+func (m *MimicLogger) GetLevelString() string {
+	switch m.level {
+	case TraceLevel:
+		return "TRACE"
+	case DebugLevel:
+		return "DEBUG"
+	case InfoLevel:
+		return "INFO"
+	case WarnLevel:
+		return "WARN"
+	case ErrorLevel:
+		return "ERROR"
+	case CriticalLevel:
+		return "CRITICAL"
+	default:
+		return ""
+	}
+}
+
+func (m *MimicLogger) GetLevel() string {
+	return m.GetLevelString()
+}
+
+func (m *MimicLogger) SetLevelString(level string) {
+	switch strings.ToUpper(level) {
+	case "TRACE":
+		m.level = TraceLevel
+	case "DEBUG":
+		m.level = DebugLevel
+	case "INFO":
+		m.level = InfoLevel
+	case "WARN":
+		m.level = WarnLevel
+	case "ERROR":
+		m.level = ErrorLevel
+	case "CRITICAL":
+		m.level = CriticalLevel
+	default:
+		m.level = InfoLevel
+	}
+}
+
 func (m *MimicLogger) addToLogs(level string, msg string) {
+	if !m.IsAllowedLevelString(level) {
+		return
+	}
 	m.syncLoc.Lock()
 	defer m.syncLoc.Unlock()
 	entry := MimicLogEntry{
@@ -138,41 +201,78 @@ func (m *MimicLogger) Critical(args ...interface{}) {
 }
 
 func (m *MimicLogger) IsLevelEnabled(level string) bool {
-	return true
+	return m.IsAllowedLevelString(level)
 }
 
 func (m *MimicLogger) IsTraceEnabled() bool {
-	return true
+	return m.IsAllowedLevelInt(TraceLevel)
 }
 
 func (m *MimicLogger) IsDebugEnabled() bool {
-	return true
+	return m.IsAllowedLevelInt(DebugLevel)
 }
 
 func (m *MimicLogger) IsInfoEnabled() bool {
-	return true
+	return m.IsAllowedLevelInt(InfoLevel)
 }
 
 func (m *MimicLogger) IsWarnEnabled() bool {
-	return true
+	return m.IsAllowedLevelInt(WarnLevel)
 }
 
 func (m *MimicLogger) IsErrorEnabled() bool {
-	return true
+	return m.IsAllowedLevelInt(ErrorLevel)
 }
 
 func (m *MimicLogger) IsCriticalEnabled() bool {
-	return true
+	return m.IsAllowedLevelInt(CriticalLevel)
+}
+
+func (m *MimicLogger) IsAllowedLevel(level interface{}) bool {
+	switch level := level.(type) {
+	case int:
+		return m.IsAllowedLevelInt(level)
+	case string:
+		return m.IsAllowedLevelString(level)
+	default:
+		return false
+	}
+
+}
+
+func (m *MimicLogger) IsAllowedLevelInt(level int) bool {
+	return level >= m.level
+}
+
+func (m *MimicLogger) IsAllowedLevelString(level string) bool {
+	switch strings.ToUpper(level) {
+	case "TRACE":
+		return m.IsAllowedLevelInt(TraceLevel)
+	case "DEBUG":
+		return m.IsAllowedLevelInt(DebugLevel)
+	case "INFO":
+		return m.IsAllowedLevelInt(InfoLevel)
+	case "WARN":
+		return m.IsAllowedLevelInt(WarnLevel)
+	case "ERROR":
+		return m.IsAllowedLevelInt(ErrorLevel)
+	case "CRITICAL":
+		return m.IsAllowedLevelInt(CriticalLevel)
+	default:
+		return false
+	}
 }
 
 func (m *MimicLogger) SetLevelByString(level string) {
 }
 
 func (m *MimicLogger) SetLevel(level interface{}) {
-}
-
-func (m *MimicLogger) GetLevel() string {
-	return ""
+	switch level := level.(type) {
+	case int:
+		m.SetLevelInt(level)
+	case string:
+		m.SetLevelString(level)
+	}
 }
 
 func (m *MimicLogger) GetLogger() interface{} {
