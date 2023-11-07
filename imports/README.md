@@ -1,9 +1,7 @@
 
 # cont(e)xt
----
-version: `{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}`
 
----
+version: `{{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}}`
 
 **contxt** is a development Tool that aims to help you to keep track of your projects and their related content. do not waist youre time by looking for the right directory, or the right command to execute, just because you have to many projects and they are all different.
 
@@ -175,7 +173,7 @@ Even more **go** is able to handle packages independent from the repository. so 
      {{- if $modul.shortdesc }}
     -  `{{ $modul.shortdesc }}`
      {{- end }}
-    - [more about {{ $modul.modul }}](docs/modules/{{ $modul.modul }}/)
+    - [more about {{ $modul.modul }}](modules/{{ $modul.modul }}/)
   {{- end }}
 {{- end }}
 
