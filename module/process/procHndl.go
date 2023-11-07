@@ -45,10 +45,10 @@ type ProcData struct {
 }
 
 type ProcessWatch struct {
-	pData       *ProcData
-	processInfo *os.Process
-	stopLock    sync.Mutex
-	logger      mimiclog.Logger
+	pData       *ProcData       // process data
+	processInfo *os.Process     // process info
+	stopLock    sync.Mutex      // mutex to lock the stop process
+	logger      mimiclog.Logger // logger
 }
 
 // ReadProc reads the process data of a process with the given pid
@@ -72,6 +72,9 @@ func NewProcessWatcherByCmd(cmd *exec.Cmd) (*ProcessWatch, error) {
 	}
 }
 
+// NewProcessWatcherByProcessInfo creates a new ProcessDef struct
+// and returns a pointer to it
+// same as NewProcessWatcherByCmd but with a os.Process struct as parameter
 func NewProcessWatcherByProcessInfo(proc *os.Process) (*ProcessWatch, error) {
 	if proc == nil {
 		return nil, errors.New("NewProcessWatcherByProcessInfo: process is nil")
@@ -90,6 +93,9 @@ func NewProcessWatcherByProcessInfo(proc *os.Process) (*ProcessWatch, error) {
 	}
 }
 
+// NewProcessWatcherByPid creates a new ProcessDef struct
+// and returns a pointer to it
+// same as NewProcessWatcherByCmd but with a pid as parameter
 func NewProcessWatcherByPid(pid int) (*ProcessWatch, error) {
 	if pid == 0 {
 		return nil, errors.New("NewProcessWatcherByPid: can not handle pid = 0")
@@ -101,32 +107,45 @@ func NewProcessWatcherByPid(pid int) (*ProcessWatch, error) {
 	}
 }
 
+// SetLogger sets the logger for the process
+// if no logger is set, a null logger will be used
 func (proc *ProcessWatch) SetLogger(logger mimiclog.Logger) {
 	proc.logger = logger
 }
 
+// GetPid returns the pid of the process
 func (proc *ProcessWatch) GetPid() int {
 	return proc.pData.Pid
 }
 
+// GetCmd returns the command line of the process
 func (proc *ProcessWatch) GetCmd() string {
 	return proc.pData.Cmd
 }
 
+// GetThreadCount returns the number of threads of the process
+// these are NOT the child processes. these are the threads of the process itself
 func (proc *ProcessWatch) GetThreadCount() int {
 	return proc.pData.ThreadCount
 }
 
+// GetThreads returns the list of PID's of threads of the process
 func (proc *ProcessWatch) GetThreads() []int {
 	return proc.pData.Threads
 }
 
+// GetChilds returns the list of PID's of child processes of the process
 func (proc *ProcessWatch) GetChilds() []int {
 	return proc.pData.Childs
 }
 
-func (proc *ProcessWatch) WalkChildProcs(startLevel int, f func(p *ProcData, parentPid int, level int) bool) {
-	level := startLevel + 1
+// WalkChildProcs walks through the child processes of the process
+// and calls the given function for each child process
+// the function gets the child process data, the parent pid and the level as parameter
+// the level is the level of the child process in the process tree
+// the function returns a bool. if the bool is true, the child processes of the child process will be walked too
+func (proc *ProcessWatch) WalkChildProcs(f func(p *ProcData, parentPid int, level int) bool) {
+	level := 1
 	for _, child := range proc.pData.ChildProcs {
 		if proc.logger.IsTraceEnabled() {
 			proc.logger.Trace("WalkChildProcs: ", child.Pid, " ", child.Cmd, " ", child.ThreadCount, " ", child.Threads, " ", child.Childs)
@@ -138,6 +157,12 @@ func (proc *ProcessWatch) WalkChildProcs(startLevel int, f func(p *ProcData, par
 
 }
 
+// WalkChildProcs walks through the child processes of the process. this is a recursive function
+// and calls the given function for each child process.
+// the function gets the child process data, the parent pid and the level as parameter
+// the level is the level of the child process in the process tree.
+// this is mostly used internally by calling WalkChildProcs from ProcessWatch. but can also be used to get
+// any childs starting from a different level, if needed.
 func (pd *ProcData) WalkChildProcs(startLevel int, f func(p *ProcData, parentPid int, level int) bool) {
 	level := startLevel + 1
 	for _, child := range pd.ChildProcs {
@@ -147,16 +172,30 @@ func (pd *ProcData) WalkChildProcs(startLevel int, f func(p *ProcData, parentPid
 	}
 }
 
+// GetProcessInfo returns the os.Process struct of the process
 func (proc *ProcessWatch) GetProcessInfo() *os.Process {
 	return proc.processInfo
 }
 
+// StopWithDefaultSigOrder sends the default signals to the child processes
+// DefaultInterruptSignal and DefaultKillSignal
+// this is the same as calling StopChilds(DefaultInterruptSignal, DefaultKillSignal)
+// instead of just stopping the current process, we also taking care about the child processes.
+// this way we can make sure that the process tree is stopped, and we do not have any zombie processes.
 func (proc *ProcessWatch) StopWithDefaultSigOrder() error {
 	proc.logger.Debug("StopWithDefaultSigOrder: ", DefaultInterruptSignal, " ", DefaultKillSignal)
 	return proc.StopChilds(DefaultInterruptSignal, DefaultKillSignal)
 }
 
 // ProcessWatch.StopChilds sends the given signals to the child processes
+// any of these child processes can have child processes.
+// they will be stopped too.
+// the signal order is important. you can use one of the default Signnals, the containing the regular signal
+// and the ThenWait time, that is used to give the process time to stop.
+// or you can send your own signals.
+// like so:
+//
+//	proc.StopChilds(process.Signal{Signal: syscall.SIGINT, ThenWait: 1 * time.Second}, process.Signal{Signal: syscall.SIGKILL, ThenWait: 10 * time.Millisecond})
 func (proc *ProcessWatch) StopChilds(signals ...Signal) error {
 	proc.logger.Debug("StopChilds: ", signals)
 	// if there are no child processes then just return
@@ -189,7 +228,18 @@ func (pd *ProcData) StopChilds(signals ...Signal) error {
 }
 
 // Stop sends the given signals to the child processes
-// and then to the process itself
+// and then to the process itself.
+// any of these child processes can have child processes
+// they will be stopped too
+// the signal order is important. you can use one of the default Signnals, the containing the regular signal
+// and the ThenWait time, that is used to give the process time to stop.
+// or you can send your own signals.
+// like so:
+//
+//	proc.Stop(process.Signal{Signal: syscall.SIGINT, ThenWait: 1 * time.Second}, process.Signal{Signal: syscall.SIGKILL, ThenWait: 10 * time.Millisecond})
+//
+// if the process is not running anymore, we will return nil
+// this is also used by the ProcessWatch.Stop() function
 func (pd *ProcData) Stop(signals ...Signal) error {
 	if err := pd.StopChilds(signals...); err != nil {
 		return err
@@ -214,6 +264,12 @@ func (pd *ProcData) Stop(signals ...Signal) error {
 
 // check if still running by requesting the process data again
 // if an error occurs then the process is not running anymore
+// here we ignore the error and just return false, becaue we are only interested
+// if the process is running or not. the error itself is not important.
+// errors depending on the try to get get the process data again.
+// and any of these failures depending on a process that is not running anymore.
+// if you need to know what exactly happened, you can use the Update() function for checking
+// and handle the error yourself.
 func (pd *ProcData) isRunning() bool {
 	tmp, err := NewProc(pd.Pid)
 	if err != nil {
@@ -223,10 +279,17 @@ func (pd *ProcData) isRunning() bool {
 
 }
 
+// Kill sends the kill signal to the process
+// it uses the KillProcessTree function to kill the process tree.
+// this way we can include some os specific code to kill the process tree.
 func (proc *ProcessWatch) Kill() error {
 	return KillProcessTree(proc.pData.Pid)
 }
 
+// Update updates the process data of the process.
+// this is done by requesting the process data again.
+// if an error occurs then the process is not running anymore. at least this is the usual case.
+// because the process data can not be read.
 func (proc *ProcessWatch) Update() error {
 	proc.logger.Debug("Update: ", proc.pData.Pid)
 	if pdef, err := NewProc(proc.pData.Pid); err != nil {
@@ -254,6 +317,12 @@ func (proc *ProcessWatch) IsRunning() (bool, error) {
 	return proc.pData.Pid > 0, nil
 }
 
+// WaitForStop waits until the process is stopped. or until the timeout is reached.
+// this is different to the usual Timeout function, because this will not count for the Timeout.
+// this function is ment for use in cases, we just want to wait until the process is stopped, without forcing them being killed.
+// if the (local) timeout is reached, we will return an error, but the process will still be running.
+// this can be combined with the Timeout function, to force the process to stop after the timeout is reached.
+// but then make sure to set the timeout to a higher value than the WaitForStop timeout.
 func (proc *ProcessWatch) WaitForStop(timeout, waitTick time.Duration) (time.Duration, error) {
 	proc.logger.Debug("WaitForStop: ", timeout)
 	if timeout == 0 {
@@ -272,6 +341,12 @@ func (proc *ProcessWatch) WaitForStop(timeout, waitTick time.Duration) (time.Dur
 	}
 }
 
+// WaitForStart waits until the process is started. or until the timeout is reached.
+// this is ment for use in cases, we just want to wait until the process is started, before we start working with them.
+// here we do not check any internal flags or something like that. we just check if the process is running in the system.
+// so this would also return true if the process is running, but not able to handle some inputs.
+// this is depending on the process itself.
+// for checking if the process handle inputs, you need to check the output of the process. (if the application outputs some text on start)
 func (proc *ProcessWatch) WaitForStart(timeout, waitTick time.Duration) error {
 	proc.logger.Debug("WaitForStart: ", timeout)
 	if timeout == 0 {

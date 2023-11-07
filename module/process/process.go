@@ -101,6 +101,8 @@ func NewTerminal(args ...string) *Process {
 	return NewProcess(term.GetCmd(), term.CombineArgs(args...)...)
 }
 
+// SetLogger sets the logger for the process
+// Fullfilling the mimiclog.Logger interface
 func (p *Process) SetLogger(logger mimiclog.Logger) {
 	p.logger = logger
 	if p.procWatch != nil {
@@ -108,10 +110,16 @@ func (p *Process) SetLogger(logger mimiclog.Logger) {
 	}
 }
 
+// GetLogger returns the logger for the process
 func (p *Process) GetLogger() mimiclog.Logger {
 	return p.logger
 }
 
+// SetCombinePipes sets whether or not to combine the output and error pipes
+// this will change the behavior of the process because error messages will be handled as output.
+// only errors that are returned by the process itself will be handled as errors and pushed to the onOutput callback.
+// this can be usefull for command they runs once so you do not have to handle the error pipe, because you should get the error then
+// anyway. for processes that stay open, you should not use this because you will not get the errors while runtime.
 func (p *Process) SetCombinePipes(combine bool) {
 	p.combinePipes = combine
 }
@@ -122,7 +130,8 @@ func (p *Process) SetTimeout(timeout time.Duration) {
 	p.timeOut = timeout
 }
 
-// AddStartCommands sets the arguments to pass to the command
+// AddStartCommands sets the arguments to pass to the command without waiting for any other setup.
+// other than Command(string) you do not need to setup the whole environment and control structures.
 func (p *Process) AddStartCommands(args ...string) {
 	p.startCommands = args
 }
@@ -135,6 +144,7 @@ func (p *Process) SetKeepRunning(stayOpen bool) {
 	p.stayOpen = stayOpen
 }
 
+// GetProcessWatcher returns the process watcher for the process.
 func (p *Process) GetProcessWatcher() (*ProcessWatch, error) {
 	if p.procWatch == nil {
 		return nil, errors.New("process watcher is nil")
@@ -142,18 +152,53 @@ func (p *Process) GetProcessWatcher() (*ProcessWatch, error) {
 	return p.procWatch, nil
 }
 
+// SetOnWaitDone sets the callback to call when the process is stopped after a regular wait for cmd execution.
+// this is not called if the process is stopped by any other reason like timeout or killing the process.
 func (p *Process) SetOnWaitDone(callback ProcHndlCallback) {
 	p.onWaitDone = callback
 }
 
+// SetOnOutput sets the callback to call when output is received.
+// Depending on the combinePipes flag, the error messages will be handled as output.
+// the callback: func(string, error) bool
+//   - the string is the output of the process
+//   - the error is the error of the process
+//   - the bool is the return value of the callback. if false is returned, the process will be stopped.
+//     if true is returned, the process will continue to run.
+//
+// while runtime and an not combined pipe, anything that will be written to the error pipe will be handled as error.
+// but also as message. so there is no need to handle booth messages in case of error.
+//
+//	process.SetOunOutput(func(msg string, err error) bool {
+//	  if err != nil {
+//	    // error.Error() is the same as msg. so no need to handle it twice
+//	    return false // stop the process in this example. you can also return true to keep the process running
+//	  }
+//	  // do something with the message
+//	  return true
+//	})
 func (p *Process) SetOnOutput(callback ProcCallback) {
 	p.onOutput = callback
 }
 
+// SetOnInit sets the callback to call when the process is started.
+// you will get the process object as argument.
+// you can use this to get the process id and do something with it.
+// but be carefull to not kill the process by accident.
+// this package should handle the process for you. so you should not need to handle it by yourself.
 func (p *Process) SetOnInit(callback ProcInfoCallback) {
 	p.onInit = callback
 }
 
+// Command sends a command to the process. this command is send to the process by using the inPipe.
+// the command will be send to the process as a string with a newline at the end.
+// to get the response of the process, you need to set the onOutput callback.
+// this is only possible if the process is set to stay open.
+// if the process is not set to stay open, this will return an error.
+// if the process is not started, this will return an error.
+// if the process is stopped, this will return an error.
+// if the inPipe is nil, this will return an error.
+// if the command could not be send to the process, this will return an error.
 func (p *Process) Command(cmd string) error {
 	if p.inPipe == nil || !p.stayOpen || !p.started || p.stopped {
 		if !p.started {
@@ -202,7 +247,13 @@ func (p *Process) closeInPipe() {
 	p.pipesClosed = true
 }
 
-// Stop stops the process
+// Stop stops the process.
+// for this the default stop procedure is used.
+// that means first the process willget an interrupt signal. then we wait for a short time.
+// if the process is still running, we will kill it.
+// this is the soft way to stop a process.
+// if you want to kill a process in a more hard way, use the Kill() method instead.
+// it returns
 //   - the internal exit code of the process
 //   - the real exit code of the process (if we have one. if not then -1 on error or 0 for some expected states like killed)
 //   - an error if one occured
