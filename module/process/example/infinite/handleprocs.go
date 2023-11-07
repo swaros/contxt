@@ -166,7 +166,7 @@ func printMyProcInfo() {
 		fmt.Println("sub-child: [", child, "] ", i)
 	}
 
-	procWatch.WalkChildProcs(0, func(p *process.ProcData, parentPid int, level int) bool {
+	procWatch.WalkChildProcs(func(p *process.ProcData, parentPid int, level int) bool {
 		fmt.Println("-->: [", p.Pid, "] ", parentPid, " ", level, " cmd:", p.Cmd)
 		return true
 	})
