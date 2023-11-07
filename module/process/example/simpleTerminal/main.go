@@ -43,6 +43,10 @@ func main() {
 			continue
 		}
 		text = text[:len(text)-1] // remove the newline
+		// on windows we need to remove the \r
+		if len(text) > 0 && text[len(text)-1] == '\r' {
+			text = text[:len(text)-1]
+		}
 
 		if text == "exit" {
 			break
