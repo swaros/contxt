@@ -173,7 +173,7 @@ Even more **go** is able to handle packages independent from the repository. so 
      {{- if $modul.shortdesc }}
     -  `{{ $modul.shortdesc }}`
      {{- end }}
-    - [more about {{ $modul.modul }}](modules/{{ $modul.modul }}/)
+    - [more about {{ $modul.modul }}](module/{{ $modul.modul }}/)
   {{- end }}
 {{- end }}
 
