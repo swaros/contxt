@@ -165,44 +165,44 @@ Even more **go** is able to handle packages independent from the repository. so 
 #### modules
  - **yacl** _internal_
     -  `Yet Another Config Loader`
-    - [more about yacl](modules/yacl/)
+    - [more about yacl](module/yacl/)
  - **yamc** _internal_
     -  `yaml/json data mapper`
-    - [more about yamc](modules/yamc/)
+    - [more about yamc](module/yamc/)
  - **runner** _internal_
-    - [more about runner](modules/runner/)
+    - [more about runner](module/runner/)
  - **ctxtcell** _internal_
-    - [more about ctxtcell](modules/ctxtcell/)
+    - [more about ctxtcell](module/ctxtcell/)
  - **configure** _internal_
-    - [more about configure](modules/configure/)
+    - [more about configure](module/configure/)
  - **dirhandle** _internal_
-    - [more about dirhandle](modules/dirhandle/)
+    - [more about dirhandle](module/dirhandle/)
  - **systools** _internal_
-    - [more about systools](modules/systools/)
+    - [more about systools](module/systools/)
  - **trigger** version: **v0.4.0**
-    - [more about trigger](modules/trigger/)
+    - [more about trigger](module/trigger/)
  - **linehack** _internal_
-    - [more about linehack](modules/linehack/)
+    - [more about linehack](module/linehack/)
  - **ctemplate** _internal_
-    - [more about ctemplate](modules/ctemplate/)
+    - [more about ctemplate](module/ctemplate/)
  - **ctxout** _internal_
-    - [more about ctxout](modules/ctxout/)
+    - [more about ctxout](module/ctxout/)
  - **taskrun** _internal_
-    - [more about taskrun](modules/taskrun/)
+    - [more about taskrun](module/taskrun/)
  - **awaitgroup** version: **v0.4.0**
-    - [more about awaitgroup](modules/awaitgroup/)
+    - [more about awaitgroup](module/awaitgroup/)
  - **shellcmd** _internal_
-    - [more about shellcmd](modules/shellcmd/)
+    - [more about shellcmd](module/shellcmd/)
  - **ctxshell** _internal_
-    - [more about ctxshell](modules/ctxshell/)
+    - [more about ctxshell](module/ctxshell/)
  - **tasks** _internal_
-    - [more about tasks](modules/tasks/)
+    - [more about tasks](module/tasks/)
  - **yaclint** _internal_
-    - [more about yaclint](modules/yaclint/)
+    - [more about yaclint](module/yaclint/)
  - **mimiclog** _internal_
-    - [more about mimiclog](modules/mimiclog/)
+    - [more about mimiclog](module/mimiclog/)
  - **process** _internal_
-    - [more about process](modules/process/)
+    - [more about process](module/process/)
 
 
 ### used libraries
