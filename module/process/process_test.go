@@ -149,6 +149,7 @@ func TestRunWithArgsAndTerminal(t *testing.T) {
 	// did we get the output?
 	if len(outputs) != 2 {
 		t.Error("outputs is not 2. It is ", len(outputs))
+		t.Log("outputs: ", strings.Join(outputs, "\n"))
 	} else {
 		if outputs[0] != "Hello World" {
 			t.Error("outputs[0] is not 'Hello World'. It is ", outputs[0])

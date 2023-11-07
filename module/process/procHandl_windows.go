@@ -2,9 +2,9 @@ package process
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 )
 
 // WinProcData is a struct to hold the data of a process on windows
@@ -27,7 +27,11 @@ func TryPid2Pgid(cmd *exec.Cmd) bool {
 }
 
 func KillProcessTree(pid int) error {
-	return syscall.Kill(pid, syscall.SIGKILL)
+	if pr, err := os.FindProcess(pid); err == nil {
+		return pr.Kill()
+	} else {
+		return err
+	}
 }
 
 func ReadProc(pid int) (*ProcData, error) {
