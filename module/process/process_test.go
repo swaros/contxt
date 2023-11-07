@@ -146,16 +146,30 @@ func TestRunWithArgsAndTerminal(t *testing.T) {
 		t.Error(err)
 	}
 
+	expectedCount := 2
+	if runtime.GOOS == "windows" {
+		expectedCount = 5 // windows has some additional output
+	}
+
 	// did we get the output?
-	if len(outputs) != 2 {
-		t.Error("outputs is not 2. It is ", len(outputs))
+	if len(outputs) != expectedCount {
+		t.Errorf("outputs is not %d. It is %d", expectedCount, len(outputs))
 		t.Log("outputs: ", strings.Join(outputs, "\n"))
 	} else {
-		if outputs[0] != "Hello World" {
-			t.Error("outputs[0] is not 'Hello World'. It is ", outputs[0])
-		}
-		if outputs[1] != "Hello World 2" {
-			t.Error("outputs[1] is not 'Hello World 2'. It is ", outputs[1])
+		if runtime.GOOS == "windows" {
+			if outputs[1] != "Hello World" {
+				t.Error("outputs[1] is not 'Hello World'. It is ", outputs[1])
+			}
+			if outputs[3] != "Hello World 2" {
+				t.Error("outputs[2] is not 'Hello World 2'. It is ", outputs[3])
+			}
+		} else {
+			if outputs[0] != "Hello World" {
+				t.Error("outputs[0] is not 'Hello World'. It is ", outputs[0])
+			}
+			if outputs[1] != "Hello World 2" {
+				t.Error("outputs[1] is not 'Hello World 2'. It is ", outputs[1])
+			}
 		}
 	}
 }
