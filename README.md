@@ -163,46 +163,29 @@ this is the main repository for the contxt project. It also contains any **packa
 Even more **go** is able to handle packages independent from the repository. so i can use the same package in different projects, without having a need to copy them.
 
 #### modules
- - **yacl** _internal_
-    -  `Yet Another Config Loader`
-    - [more about yacl](module/yacl/)
- - **yamc** _internal_
-    -  `yaml/json data mapper`
-    - [more about yamc](module/yamc/)
- - **runner** _internal_
-    - [more about runner](module/runner/)
- - **ctxtcell** _internal_
-    - [more about ctxtcell](module/ctxtcell/)
- - **configure** _internal_
-    - [more about configure](module/configure/)
- - **dirhandle** _internal_
-    - [more about dirhandle](module/dirhandle/)
- - **systools** _internal_
-    - [more about systools](module/systools/)
- - **trigger** version: **v0.4.0**
-    - [more about trigger](module/trigger/)
- - **linehack** _internal_
-    - [more about linehack](module/linehack/)
- - **ctemplate** _internal_
-    - [more about ctemplate](module/ctemplate/)
- - **ctxout** _internal_
-    - [more about ctxout](module/ctxout/)
- - **taskrun** _internal_
-    - [more about taskrun](module/taskrun/)
- - **awaitgroup** version: **v0.4.0**
-    - [more about awaitgroup](module/awaitgroup/)
- - **shellcmd** _internal_
-    - [more about shellcmd](module/shellcmd/)
- - **ctxshell** _internal_
-    - [more about ctxshell](module/ctxshell/)
- - **tasks** _internal_
-    - [more about tasks](module/tasks/)
- - **yaclint** _internal_
-    - [more about yaclint](module/yaclint/)
- - **mimiclog** _internal_
-    - [more about mimiclog](module/mimiclog/)
- - **process** _internal_
-    - [more about process](module/process/)
+|code ref|module|version|description|
+|---|---|---|---|
+|_internal_|yacl||Yet Another Config Loader|
+|_internal_|yamc||yaml/json data mapper|
+|_internal_|runner||contxt task runner V2|
+|_internal_|ctxtcell||experimental controll elements|
+|_internal_|configure||configure contxt|
+|_internal_|dirhandle||collection of directory handling functions|
+|_internal_|systools||collection of system tools|
+| [![Go Reference](https://pkg.go.dev/badge/github.com/swaros/contxt/module/trigger.svg)](https://pkg.go.dev/github.com/swaros/contxt/module/trigger)|trigger|v0.4.0|callback handler|
+|_internal_|linehack||line based text processing. experimental|
+|_internal_|ctemplate||template engine based on go/template|
+|_internal_|ctxout||configurable output handler|
+|_internal_|taskrun||contxt task runner V1|
+| [![Go Reference](https://pkg.go.dev/badge/github.com/swaros/contxt/module/awaitgroup.svg)](https://pkg.go.dev/github.com/swaros/contxt/module/awaitgroup)|awaitgroup|v0.4.0|awaitgroup replaces sync.WaitGroup|
+|_internal_|shellcmd||shell command execution for V1|
+|_internal_|ctxshell||readline based shell with cobra support for V2|
+|_internal_|tasks||contxt V1 task management|
+|_internal_|yaclint||yacl config auto linter|
+|_internal_|mimiclog||logger interface|
+|_internal_|process||process management|
+
+
 
 
 ### used libraries

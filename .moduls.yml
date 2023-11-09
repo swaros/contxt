@@ -18,6 +18,7 @@ module:
   -
     modul: runner
     local: true
+    shortdesc: "contxt task runner V2"
     clean:
       - "testdata/*.log"
       - "testdata/projects01/*ctx_projects.yml"
@@ -26,6 +27,7 @@ module:
 
   -
     modul: ctxtcell
+    shortdesc: "experimental controll elements"
     local: true
     test:
       timeout: 20s
@@ -33,6 +35,7 @@ module:
   -
     modul: configure
     local: true
+    shortdesc: "configure contxt"
     clean:
       - "test/temp/*.yml"
       - "test/temp/*.yaml"
@@ -42,12 +45,14 @@ module:
 
   -
     modul: dirhandle
+    shortdesc: "collection of directory handling functions"
     local: true
     test:
       timeout: 30s
 
   -
     modul: systools
+    shortdesc: "collection of system tools"
     local: true
     test:
       timeout: 30s
@@ -55,36 +60,42 @@ module:
   -
     modul: trigger
     version: "v0.4.0"
+    shortdesc: "callback handler"
     local: true
     test:
       timeout: 30s
 
   -
     modul: linehack
+    shortdesc: "line based text processing. experimental"
     local: true
     test:
       timeout: 30s
 
   -
     modul: ctemplate
+    shortdesc: "template engine based on go/template"
     local: true
     test:
       timeout: 30s
 
   -
     modul: ctxout
+    shortdesc: "configurable output handler"
     local: true
     test:
       timeout: 60s
 
   -
     modul: taskrun
+    shortdesc: "contxt task runner V1"
     local: true
     test:
       timeout: 60s
 
   -
     modul: awaitgroup
+    shortdesc: "awaitgroup replaces sync.WaitGroup"
     local: true
     version: "v0.4.0"
     test:
@@ -92,18 +103,21 @@ module:
 
   -
     modul: shellcmd
+    shortdesc: "shell command execution for V1"
     local: true
     test:
       timeout: 30s
 
   -
     modul: ctxshell
+    shortdesc: "readline based shell with cobra support for V2"
     local: true
     test:
       timeout: 30s
 
   -
     modul: tasks
+    shortdesc: "contxt V1 task management"
     local: true
     test:
       timeout: 60s
@@ -112,18 +126,21 @@ module:
   
   - 
     modul: yaclint
+    shortdesc: "yacl config auto linter"
     local: true
     test:
       timeout: 30s
 
   -
     modul: mimiclog
+    shortdesc: "logger interface"
     local: true
     test:
       timeout: 30s
 
   -
     modul: process
+    shortdesc: "process management"
     local: true
     test:
       timeout: 30s
