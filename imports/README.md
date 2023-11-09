@@ -163,18 +163,10 @@ this is the main repository for the contxt project. It also contains any **packa
 Even more **go** is able to handle packages independent from the repository. so i can use the same package in different projects, without having a need to copy them.
 
 #### modules
-{{- range $k, $modul := $.module }}  
-  {{- if $modul.local}}
-     {{- if $modul.version}}
- - **{{ $modul.modul }}** version: **{{ $modul.version }}**
-     {{- else }}
- - **{{ $modul.modul }}** _internal_
-     {{- end }}
-     {{- if $modul.shortdesc }}
-    -  `{{ $modul.shortdesc }}`
-     {{- end }}
-    - [more about {{ $modul.modul }}](module/{{ $modul.modul }}/)
-  {{- end }}
+|code ref|module|version|description|
+|---|---|---|---|
+{{- range $k, $modul := $.module }}
+{{ if $modul.local }}|{{if $modul.version}} [![Go Reference](https://pkg.go.dev/badge/github.com/swaros/contxt/module/{{ $modul.modul }}.svg)](https://pkg.go.dev/github.com/swaros/contxt/module/{{ $modul.modul }}){{else}}_internal_{{end}}|{{ $modul.modul }}|{{if $modul.version}}{{ $modul.version }}{{end}}|{{ if $modul.shortdesc }}{{ $modul.shortdesc }}|{{ end }}{{ end }}
 {{- end }}
 
 
