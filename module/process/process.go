@@ -115,6 +115,11 @@ func (p *Process) GetLogger() mimiclog.Logger {
 	return p.logger
 }
 
+// returns if the process is started
+func (p *Process) IsStarted() bool {
+	return p.started
+}
+
 // SetCombinePipes sets whether or not to combine the output and error pipes
 // this will change the behavior of the process because error messages will be handled as output.
 // only errors that are returned by the process itself will be handled as errors and pushed to the onOutput callback.
@@ -349,6 +354,7 @@ func (p *Process) BlockWait(tickTime time.Duration) error {
 // this can be usefull to make sure the process is running before you send commands to it.
 func (p *Process) WaitUntilRunning(tickTime time.Duration) (time.Duration, error) {
 	// messure time we are waiting for the process to start
+	waitFailHitCount := 0
 	start := time.Now()
 	if !p.stayOpen {
 		return 0, errors.New("WaitUntilRunning is not supported for processes that are not set to stay open")
@@ -365,9 +371,10 @@ func (p *Process) WaitUntilRunning(tickTime time.Duration) (time.Duration, error
 				break
 			}
 		} else {
-			p.logger.Warn("WaitUntilRunning: process watcher is nil")
+			waitFailHitCount++
 		}
 	}
+	p.logger.Debug("WaitUntilRunning: process is running. ", time.Since(start), waitFailHitCount)
 	return time.Since(start), nil
 
 }
