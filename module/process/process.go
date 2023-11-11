@@ -42,31 +42,34 @@ import (
 type ProcCallback func(string, error) bool // the callback to call when output is received
 type ProcInfoCallback func(*os.Process)    // the callback to call when the process is started
 type ProcHndlCallback func(error)          // a callback for the process handler
+type ProcChildCntChangeCallback func(int)  // a callback for the process handler
 
 type Process struct {
-	cmd              string           // the base command to run
-	args             []string         // the arguments to pass to the command
-	startCommands    []string         // the commands to send to the process on startup
-	onOutput         ProcCallback     // the callback to call when output is received
-	onInit           ProcInfoCallback // the callback to call when the process is started
-	onWaitDone       ProcHndlCallback // the callback to call when the process is stopped after a regular wait for cmd execution
-	outPipe          io.ReadCloser    // the pipe to read output from
-	errorPipe        io.ReadCloser    // the pipe to read errors from
-	inPipe           io.WriteCloser   // the pipe to write input to
-	combinePipes     bool             // whether or not to combine the output and error pipes
-	stopped          bool             // whether or not the process has been stopped
-	started          bool             // whether or not the process has been started
-	cmdLock          sync.Mutex       // a lock for the command
-	wait             sync.WaitGroup   // a wait group for the process
-	stayOpen         bool             // whether or not the process should stay open. If it does, it will not be stopped after the process handles the startup commands
-	timeOut          time.Duration    // the timeout for the process. If the process is not stopped after the timeout, it will be stopped
-	timoutSet        bool             // whether or not the timeout is set
-	commandExitCode  int              // the exit code of the process
-	internalExitCode int              // the internal exit code of the process
-	runtimeError     error            // the error of the process
-	procWatch        *ProcessWatch    // the process watcher for the process
-	pipesClosed      bool             // whether or not the pipes are closed
-	logger           mimiclog.Logger  // the logger to use
+	cmd              string                     // the base command to run
+	args             []string                   // the arguments to pass to the command
+	startCommands    []string                   // the commands to send to the process on startup
+	onOutput         ProcCallback               // the callback to call when output is received
+	onInit           ProcInfoCallback           // the callback to call when the process is started
+	onWaitDone       ProcHndlCallback           // the callback to call when the process is stopped after a regular wait for cmd execution
+	outPipe          io.ReadCloser              // the pipe to read output from
+	errorPipe        io.ReadCloser              // the pipe to read errors from
+	inPipe           io.WriteCloser             // the pipe to write input to
+	combinePipes     bool                       // whether or not to combine the output and error pipes
+	stopped          bool                       // whether or not the process has been stopped
+	started          bool                       // whether or not the process has been started
+	cmdLock          sync.Mutex                 // a lock for the command
+	wait             sync.WaitGroup             // a wait group for the process
+	stayOpen         bool                       // whether or not the process should stay open. If it does, it will not be stopped after the process handles the startup commands
+	timeOut          time.Duration              // the timeout for the process. If the process is not stopped after the timeout, it will be stopped
+	timoutSet        bool                       // whether or not the timeout is set
+	commandExitCode  int                        // the exit code of the process
+	internalExitCode int                        // the internal exit code of the process
+	runtimeError     error                      // the error of the process
+	procWatch        *ProcessWatch              // the process watcher for the process
+	pipesClosed      bool                       // whether or not the pipes are closed
+	logger           mimiclog.Logger            // the logger to use
+	reportChildCount bool                       // whether or not to report the child count
+	onChildCntChange ProcChildCntChangeCallback // a callback for the process handler if the amount of processes changed
 }
 
 var (
@@ -113,6 +116,15 @@ func (p *Process) SetLogger(logger mimiclog.Logger) {
 // GetLogger returns the logger for the process
 func (p *Process) GetLogger() mimiclog.Logger {
 	return p.logger
+}
+
+func (p *Process) SetReportChildCount(report bool) {
+	p.reportChildCount = report
+}
+
+func (p *Process) SetOnChildCountChange(callback ProcChildCntChangeCallback) {
+	p.onChildCntChange = callback
+	p.reportChildCount = callback != nil
 }
 
 // returns if the process is started
@@ -476,6 +488,7 @@ func (p *Process) Exec() (int, int, error) {
 }
 
 // startWait starts the command and waits for it to finish
+// it is also the mainloop for the process if the process is set to stay open
 // it returns
 //   - the internal exit code of the process
 //   - the real exit code of the process (if we have one. if not then -1 on error or 0 for some expected states like killed)
@@ -492,10 +505,30 @@ func (p *Process) startWait(cmd *exec.Cmd) (int, int, error) {
 	}
 
 	p.procWatch, err = NewProcessWatcherByCmd(cmd)
-	p.procWatch.SetLogger(p.logger)
 	if err != nil {
 		return systools.ExitCmdError, RealCodeNotPresent, err
 	}
+	p.procWatch.SetLogger(p.logger)
+
+	childCounts := 0
+	if p.reportChildCount {
+		go func(p *Process) {
+			for {
+				if p.started && !p.stopped {
+					chldCnt := p.procWatch.CountChildsAll()
+					time.Sleep(100 * time.Millisecond)
+					if chldCnt != childCounts {
+						p.logger.Debug("startWait: childs changed. ", mimiclog.Fields{"no of childs": chldCnt})
+						if p.onChildCntChange != nil {
+							p.onChildCntChange(chldCnt)
+						}
+						childCounts = chldCnt
+					}
+				}
+			}
+		}(p)
+	}
+
 	p.logger.Debug("startWait: process watcher created")
 	// if we have a callback for the process info, call it
 	if p.onInit != nil {
