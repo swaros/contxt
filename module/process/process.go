@@ -118,10 +118,15 @@ func (p *Process) GetLogger() mimiclog.Logger {
 	return p.logger
 }
 
+// enable reporting the child count if changed. this is mostly usefull for processes that stay open.
+// and is ment togehther with the SetOnChildCountChange callback.
+// but you can also use it without the callback just to get the child count by the logger output (debug level needed)
 func (p *Process) SetReportChildCount(report bool) {
 	p.reportChildCount = report
 }
 
+// SetOnChildCountChange sets the callback to call when the child count of the process changes.
+// this is only usefull for processes that stay open.
 func (p *Process) SetOnChildCountChange(callback ProcChildCntChangeCallback) {
 	p.onChildCntChange = callback
 	p.reportChildCount = callback != nil
