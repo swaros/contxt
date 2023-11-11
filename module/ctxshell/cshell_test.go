@@ -433,9 +433,12 @@ func TestCobraCommands(t *testing.T) {
 		},
 	}
 
+	messages := []string{}
+
 	cobraRootCmd.AddCommand(&cobra.Command{
 		Use: "child",
 		Run: func(cmd *cobra.Command, args []string) {
+			messages = append(messages, "child")
 			fmt.Println("child")
 		},
 		ValidArgs: []string{"child"},
@@ -445,5 +448,9 @@ func TestCobraCommands(t *testing.T) {
 	}
 
 	helpCreateShellAndExecute(testFunction, "child")
+
+	if !systools.SliceContains(messages, "child") {
+		t.Error("message buffer do not contains child:", messages)
+	}
 
 }
