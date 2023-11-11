@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
 	"github.com/swaros/contxt/module/ctxshell"
 	"github.com/swaros/contxt/module/systools"
 )
@@ -140,6 +141,41 @@ func TestPromtMessage(t *testing.T) {
 	}
 }
 
+func TestErrorCallBack(t *testing.T) {
+
+	messageBuffer := []string{}
+	errorSlice := []error{}
+	testFunction := func(shell *ctxshell.Cshell) {
+		shell.OnUnknownCmdFunc(func(msg string) error {
+			messageBuffer = append(messageBuffer, "handled-"+msg)
+			if msg == "kutulu" {
+				return fmt.Errorf("kutulu error")
+			}
+			return nil
+		})
+		shell.OnErrorFunc(func(err error) {
+			errorSlice = append(errorSlice, err)
+		})
+	}
+
+	testSend := []string{"lalaland", "kutulu", "muffin"}
+
+	helpCreateShellAndExecute(testFunction, testSend...)
+	for _, msg := range testSend {
+		if !systools.SliceContains(messageBuffer, "handled-"+msg) {
+			t.Error("message buffer do not contains", msg, ":", messageBuffer)
+		}
+	}
+
+	if len(errorSlice) != 1 {
+		t.Error("did not get notified from error")
+	} else {
+		if errorSlice[0].Error() != "kutulu error" {
+			t.Error("did not get notified from error")
+		}
+	}
+}
+
 func TestNativeCmdWithError(t *testing.T) {
 	errorTriggered := false
 	testFunction := func(shell *ctxshell.Cshell) {
@@ -265,6 +301,66 @@ func TestPromtMessageLoop(t *testing.T) {
 	}
 }
 
+func TestPromtMessageLoopNoDuplications(t *testing.T) {
+
+	messageBuffer := []string{}
+	testFunction := func(shell *ctxshell.Cshell) {
+		// add the promt handler so we can get notified
+		shell.SetPromptFunc(func(reason int) string {
+			if reason == ctxshell.UpdateByNotify {
+				if found, msg := shell.GetCurrentMessage(); found {
+					messageBuffer = append(messageBuffer, msg.GetMsg())
+					return "got a message:>"
+				}
+			}
+			return "promtp:>"
+		})
+		// any message is displayed for 10 milliseconds
+		shell.SetMessageDisplayTime(time.Millisecond * 10)
+		shell.SetNoMessageDuplication(true)
+
+		// enable the prompt update by notify and set the update period
+		shell.UpdatePromptEnabled(true).
+			UpdatePromptPeriod(time.Millisecond * 10)
+
+			// define a command that will just wait longer then the update period
+		shell.AddNativeCmd(ctxshell.NewNativeCmd("wait", "wait a couple of milliseconds", func(args []string) error {
+			time.Sleep(time.Millisecond * 60)
+			return nil
+		}))
+
+		shell.AddNativeCmd(ctxshell.NewNativeCmd("spam", "just to spam notifications", func(args []string) error {
+			for i := 0; i < 10; i++ {
+				shell.Message("spam-the-same-stuff")
+			}
+			return nil
+		}))
+
+		// add a shutdown function
+		shell.OnShutDownFunc(func() {
+			expected := "wait"
+			if shell.GetLastInput() != expected {
+				t.Error("expected '", expected, "', got[", shell.GetLastInput(), "]")
+			}
+		})
+	}
+
+	helpCreateShellAndExecute(testFunction, "spam", "wait")
+
+	// count the number of spam messages
+	numbers := map[string]int{}
+	for _, msg := range messageBuffer {
+		numbers[msg]++
+	}
+	// at least the spam message should be reduced. we can not check the exact number
+	// because the message buffer is depending on the timing.
+	// but at least 50% should be reduced
+	if numbers["spam-the-same-stuff"] > 5 {
+		t.Error("message buffer contains more then 5 0percent spam message:", messageBuffer)
+	}
+
+}
+
 func TestHooksExecuted(t *testing.T) {
 	messageBuffer := []string{}
 	testFunction := func(shell *ctxshell.Cshell) {
@@ -326,5 +422,28 @@ func TestHooksExecuted(t *testing.T) {
 			t.Error("message buffer do not contains", expected, ":", messageBuffer)
 		}
 	}
+
+}
+
+func TestCobraCommands(t *testing.T) {
+	cobraRootCmd := cobra.Command{
+		Use: "root",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("root")
+		},
+	}
+
+	cobraRootCmd.AddCommand(&cobra.Command{
+		Use: "child",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("child")
+		},
+		ValidArgs: []string{"child"},
+	})
+	testFunction := func(shell *ctxshell.Cshell) {
+		shell.SetCobraRootCommand(&cobraRootCmd)
+	}
+
+	helpCreateShellAndExecute(testFunction, "child")
 
 }
