@@ -46,7 +46,7 @@ const (
 )
 
 type Cshell struct {
-	CobraRootCmd         *cobra.Command     // the root command of the cobra command tree
+	cobraRootCmd         *cobra.Command     // the root command of the cobra command tree
 	navtiveCmds          []*NativeCmd       // commands that are not part of the cobra command tree
 	getPrompt            func(int) string   // function that returns the prompt string. the update type is passed as argument. if return is empty, the prompt is not updated
 	exitCmdStr           string             // the command string that exits the shell
@@ -70,7 +70,8 @@ type Cshell struct {
 	runOnceCmds          []string           // commands that are executed only once
 	onShutDown           func()             // function that is called on shutdown
 	onErrorFn            func(error)        // function that is called on error
-	noMessageDuplication bool               // if true, messages are not duplicated
+	onUnknownCmd         func(string) error // function that is called on unknown command
+	noMessageDuplication bool               // if true, messages are not duplicated for notifications
 	hooks                []Hook             // hooks
 
 }
@@ -81,6 +82,8 @@ type KeyFunc struct {
 	Fn  func() bool // what function to call. returning false means do populate the key
 }
 
+// NewCshell creates a new cshell instance with default values.
+// use the setter functions to change the default values before calling Run()
 func NewCshell() *Cshell {
 	return &Cshell{
 		exitCmdStr:           "exit",
@@ -105,27 +108,70 @@ func (t *Cshell) AddKeyBinding(key rune, fn func() bool) *Cshell {
 	return t
 }
 
+// SetNoMessageDuplication enables or disables the duplication of messages.
+// here it is all about internal messages that are displayed in the prompt.
+// this notification messages.
+// that means, if a message is already in the message buffer, it is not added again.
+// this is useful if you want to avoid that the same message is displayed multiple times what is
+// not really useful at some point.
+// but on default we do not set this behavior, so any message is populated to the message buffer.
+// also keep in mind, that this will only affect the message buffer. so it is still possible to
+// display the same message multiple times. it just reduces spamming the message buffer.
 func (t *Cshell) SetNoMessageDuplication(b bool) *Cshell {
 	t.noMessageDuplication = b
 	return t
 }
 
+// set a function that is called if the shell is shutdown. so here some cleanup can be done.
 func (t *Cshell) OnShutDownFunc(fn func()) *Cshell {
 	t.onShutDown = fn
 	return t
 }
 
+// set a function that is called if the user enters an unknown command.
+// this is useful if you want to implement a fallback for unknown commands.
+func (t *Cshell) OnUnknownCmdFunc(fn func(string) error) *Cshell {
+	t.onUnknownCmd = fn
+	return t
+}
+
+// set a function that is called if an error occurs.
+// this means any error that is not handled by the shell itself.
 func (t *Cshell) OnErrorFunc(fn func(error)) *Cshell {
 	t.onErrorFn = fn
 	return t
 }
 
+// set the duration for displaying a message. this is ment for messages that are displayed
+// inside the prompt. as long a message is displayed, the prompt will get updated with status UpdateByNotify.
+// in this case the message could received by using GetCurrentMessage() where you get a bool if a message is
+// currently displayed and the message itself.
+// example:
+//
+//	shell := ctxshell.NewCshell()
+//	shell.SetMessageDisplayTime(5 * time.Second)
+//	shell.SetPromptFunc(func(reason int) string {
+//		if reason == ctxshell.UpdateByNotify {
+//			if haveAnMessage, msg := shell.GetCurrentMessage(); haveAnMessage {
+//				return "info:[" + msg.GetMsg() + "] > "
+//			}
+//		}
+//		return " prompt > "
+//	})
+//	shell.Run()
+//
+// this duration is setting the time a message is displayed. after this time the message is gone and the next message from the buffer is displayed.
+// until any messages are handled.
+// this is ment for having the messages displayed in a environment, that is constantly printing something to stdout,
+// so it would be hard to see the messages in the stdout.
 func (t *Cshell) SetMessageDisplayTime(d time.Duration) *Cshell {
 	t.messageDisplayTime = d
 	return t
 }
 
-// notify the prompt to display a message
+// notify the prompt to display a message.
+// the message is displayed for the time defined by SetMessageDisplayTime()
+// this is also used internally to display messages nd errors
 func (t *Cshell) NotifyToPrompt(message Msg) *Cshell {
 	if t.noMessageDuplication {
 		for _, m := range t.promptMessages {
@@ -229,7 +275,7 @@ func (t *Cshell) ResizeMessageProvider(size int) *Cshell {
 // it is used to parse the command line and execute the commands, and
 // to get the flags and arguments for the completer
 func (t *Cshell) SetCobraRootCommand(cmd *cobra.Command) *Cshell {
-	t.CobraRootCmd = cmd
+	t.cobraRootCmd = cmd
 	return t
 }
 
@@ -274,14 +320,19 @@ func (t *Cshell) Stdout(messg string) {
 	t.messages.Push("stdout", messg)
 }
 
+// add a stdout message to the message buffer
+// the message is terminated with a newline
 func (t *Cshell) Stdoutln(messg string) {
 	t.messages.Push("stdout", messg+"\n")
 }
 
+// add a stderr message to the message buffer
 func (t *Cshell) Stderr(messg string) {
 	t.messages.Push("stderr", messg)
 }
 
+// add a stderr message to the message buffer
+// the message is terminated with a newline
 func (t *Cshell) Stderrln(messg string) {
 	t.messages.Push("stderr", messg+"\n")
 }
@@ -306,9 +357,9 @@ func (t *Cshell) createCompleter() *readline.PrefixCompleter {
 
 	// parsing the cobra command tree
 	// start with the root command
-	if t.CobraRootCmd != nil {
+	if t.cobraRootCmd != nil {
 		// get all commands from the root command and iterate over them
-		for _, c := range t.CobraRootCmd.Commands() {
+		for _, c := range t.cobraRootCmd.Commands() {
 			// ignore commands that are in the ignore list
 			if t.isIgnoreCobraCmd(c.Name()) {
 				continue
@@ -369,9 +420,18 @@ func (t *Cshell) ApplyCobraCompletionOnce(newCmd *readline.PrefixCompleter, c *c
 		// if yes, we have to add the completer function to the completer item.
 		// we execute the completer function with an empty slice of strings
 		// and get a slice of strings back. we add them to the completer item
-		sliceRes, _ := c.ValidArgsFunction(t.CobraRootCmd, []string{}, "")
+		sliceRes, _ := c.ValidArgsFunction(t.cobraRootCmd, []string{}, "")
 
 		for _, s := range sliceRes {
+			// replace tab with space
+			s = strings.ReplaceAll(s, "\t", " ")
+			// we want only the first word of the result
+			s = strings.Split(s, " ")[0]
+			newCmd.Children = append(newCmd.Children, readline.PcItem(s))
+		}
+	}
+	if c.ValidArgs != nil {
+		for _, s := range c.ValidArgs {
 			// replace tab with space
 			s = strings.ReplaceAll(s, "\t", " ")
 			// we want only the first word of the result
@@ -432,6 +492,8 @@ func (t *Cshell) RunOnceWithCmd(cmd func()) error {
 
 }
 
+// RunOnce executes the given commands and exits the shell afterwards.
+// this is useful if you want to execute a command from a script.
 func (t *Cshell) RunOnce(cmds []string) error {
 	// skip if no cmd is given
 	if len(cmds) == 0 {
@@ -571,23 +633,23 @@ func (t *Cshell) runShell(once bool) error {
 		// check if we deal with an cobra command
 		// so we do not execute the root command, because we would not
 		// know if this is an valid command or not
-		if t.CobraRootCmd != nil {
-			for _, c := range t.CobraRootCmd.Commands() {
+		if t.cobraRootCmd != nil {
+			for _, c := range t.cobraRootCmd.Commands() {
 				// the name is in the list of cobra commands
 				// rest is the args
 
 				if c.Name() == lineCmd {
 					weDidSomething = true
-					t.CobraRootCmd.SetArgs(strings.Split(line, " "))
+					t.cobraRootCmd.SetArgs(strings.Split(line, " "))
 					if t.asyncCobraExec && !t.isNeverAsyncCmd(c.Name()) {
 						go func() {
-							if err := t.CobraRootCmd.Execute(); err != nil {
+							if err := t.cobraRootCmd.Execute(); err != nil {
 								t.Error("error executing cobra command:", err.Error())
 							}
 							t.Message(lineCmd, "done")
 						}()
 					} else {
-						if err := t.CobraRootCmd.Execute(); err != nil {
+						if err := t.cobraRootCmd.Execute(); err != nil {
 							t.Error("error executing cobra command:", err.Error())
 						}
 						t.Message(lineCmd, "done")
@@ -600,7 +662,15 @@ func (t *Cshell) runShell(once bool) error {
 
 		// if we are here, we have no idea what to do
 		if !weDidSomething {
-			t.Error("unknown command:", lineCmd)
+			// if we have a function that is called on unknown command, we call it
+			// and uses the return value as error if returned
+			if t.onUnknownCmd != nil {
+				if err := t.onUnknownCmd(line); err != nil {
+					t.Error(err.Error())
+				}
+			} else {
+				t.Error("unknown command:", lineCmd)
+			}
 		}
 		// move to the next line
 		t.rlInstance.Write([]byte("\n"))
@@ -630,6 +700,7 @@ func (t *Cshell) tryGetPromptMessage() (Msg, bool) {
 	return Msg{}, false
 }
 
+// Gettig the Message from the message buffer that is currently displayed
 func (t *Cshell) GetCurrentMessage() (bool, Msg) {
 	if time.Now().Before(t.currentMsgExpire) {
 		return true, t.currentMessage
