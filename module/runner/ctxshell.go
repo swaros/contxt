@@ -30,6 +30,7 @@ import (
 	"github.com/swaros/contxt/module/ctxout"
 	"github.com/swaros/contxt/module/ctxshell"
 	"github.com/swaros/contxt/module/dirhandle"
+	"github.com/swaros/contxt/module/process"
 	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
 )
@@ -68,6 +69,7 @@ type CtxShell struct {
 	SynMutex       sync.Mutex
 	LabelForeColor string
 	LabelBackColor string
+	BashRunner     *process.Process
 }
 
 func initVars() {
@@ -96,6 +98,7 @@ func shellRunner(c *CmdExecutorImpl) *CtxShell {
 		MaxTasks:       0,
 		LabelForeColor: ctxout.ForeBlue,
 		LabelBackColor: ctxout.BackWhite,
+		BashRunner:     process.NewTerminal(),
 	}
 
 	// add cobra commands to the shell, so they can be used there too.
@@ -108,7 +111,14 @@ func shellRunner(c *CmdExecutorImpl) *CtxShell {
 	// set behavior on exit
 	shell.OnShutDownFunc(func() {
 		ctxout.PrintLn(ctxout.NewMOWrap(), "shutting down...")
+		shellHandler.BashRunner.Stop()
 		shellHandler.stopTasks([]string{})
+	})
+
+	shell.OnUnknownCmdFunc(func(cmd string) error {
+		msg := ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeBlue, "unknown command: ", ctxout.ForeCyan, cmd, ctxout.ForeBlue, " - try to execute it in bash", ctxout.CleanTag)
+		shellHandler.shell.Stdoutln(msg)
+		return shellHandler.BashRunner.Command(cmd)
 	})
 
 	// rename the exit command to quit
@@ -122,7 +132,9 @@ func shellRunner(c *CmdExecutorImpl) *CtxShell {
 	// capture ctrl+z and do nothing, so we will not send to the background
 	shell.AddKeyBinding(readline.CharCtrlZ, func() bool { return false })
 
-	// add task clean command
+	// add task clean command.
+	// this will reset all the watchman stored tasks, depending running or not.
+	// this makes it possible to re run a task togehther with the the needs
 	cleanTasksCmd := ctxshell.NewNativeCmd("taskreset", "resets all tasks", func(args []string) error {
 		return tasks.NewGlobalWatchman().ResetAllTasksIfPossible()
 	})
@@ -182,6 +194,25 @@ func shellRunner(c *CmdExecutorImpl) *CtxShell {
 	// so any output will be handled by the shell
 	c.session.OutPutHdnl = shell
 	// start the shell
+
+	// start the background shell
+	shellHandler.BashRunner.SetOnOutput(func(output string, err error) bool {
+		if err != nil {
+			msg := ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeRed, "error: ", ctxout.ForeYellow, output, ctxout.ForeBlue, ctxout.CleanTag)
+			shellHandler.shell.Stdoutln(msg)
+			return true
+		}
+		shellHandler.shell.Stdoutln(output)
+		return true
+	})
+	shellHandler.BashRunner.SetLogger(c.GetLogger())
+	shellHandler.BashRunner.SetReportChildCount(true)
+	shellHandler.BashRunner.SetKeepRunning(true)
+	if _, _, err := shellHandler.BashRunner.Exec(); err != nil {
+		ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, "failed to start background shell: ", err.Error())
+
+	}
+
 	return shellHandler
 }
 
