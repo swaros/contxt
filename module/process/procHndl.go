@@ -139,6 +139,33 @@ func (proc *ProcessWatch) GetChilds() []int {
 	return proc.pData.Childs
 }
 
+func (proc *ProcessWatch) CountChildsAll() int {
+	proc.Update()
+	ids := proc.GetChilds()
+	count := 0
+	for _, id := range ids {
+		if id == 0 {
+			continue
+		}
+		count++
+		if pdef, err := NewProc(id); err == nil {
+			count = pdef.CountChilds(count)
+		}
+	}
+	return count
+}
+
+func (pd *ProcData) CountChilds(offset int) int {
+	if pd.Pid == 0 {
+		return offset
+	}
+	for _, childProcs := range pd.ChildProcs {
+		offset++
+		offset = childProcs.CountChilds(offset)
+	}
+	return offset
+}
+
 // WalkChildProcs walks through the child processes of the process
 // and calls the given function for each child process
 // the function gets the child process data, the parent pid and the level as parameter
@@ -291,7 +318,7 @@ func (proc *ProcessWatch) Kill() error {
 // if an error occurs then the process is not running anymore. at least this is the usual case.
 // because the process data can not be read.
 func (proc *ProcessWatch) Update() error {
-	proc.logger.Debug("Update: ", proc.pData.Pid)
+	proc.logger.Trace("Update: ", proc.pData.Pid)
 	if pdef, err := NewProc(proc.pData.Pid); err != nil {
 		proc.logger.Debug("Update Error (maybe expected): ", err)
 		return err
