@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
 )
@@ -364,12 +365,13 @@ func TestMultipleTaskManagement(t *testing.T) {
 
 func TestMultipleTaskManagementWithChildProcs(t *testing.T) {
 	command := "sleep 5"
-
+	outBin := uuid.NewString() + "dateout.bin.tmp"
 	wman := tasks.NewWatchman()
+	defer os.Remove(outBin)
 
 	targets := map[string]string{
 		"multiTask1": command,
-		"multiTask2": "watch date > dateout.bin.tmp",
+		"multiTask2": "watch date > " + outBin,
 		"multiTask3": command,
 	}
 
@@ -395,7 +397,7 @@ func TestMultipleTaskManagementWithChildProcs(t *testing.T) {
 		}
 
 	}
-	tasks := helperForFindTask(t, "watch date")
+	tasks := helperForFindTask(t, "watch date > "+outBin)
 	for _, task := range tasks {
 
 		t.Error("expected 'watch date' to be stopped, but it is not:\n", task)
