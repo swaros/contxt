@@ -104,8 +104,22 @@ func TestRunnerCmd(t *testing.T) {
 					}
 				}
 			}
-			task.StopAllTaskRunner() // at least stop the task runner
-
+			// now we run a different command
+			messages = []string{}
+			if err := runner.Cmd("ls .."); err != nil {
+				t.Error(err)
+			} else {
+				if len(messages) == 0 {
+					t.Error("no messages received")
+				} else {
+					expected := []string{"configure", "ctemplate", "mimiclog", "yamc"}
+					for _, e := range expected {
+						if !systools.SliceContainsSub(messages, e) {
+							t.Error("should have", e, "in messages:", strings.Join(messages, "\n"))
+						}
+					}
+				}
+			}
 		}
 	}
 

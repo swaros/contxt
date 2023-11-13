@@ -192,7 +192,7 @@ func (r *RunnerCtrl) Cmd(cmd string) error {
 	}
 	// give the task a chance to start and excute the command
 	r.parentTask.WaitTilTaskRunnerIsRunning(r.currentTask, 1*time.Millisecond, 50)
-	// wait til the task is done
+	// wait til the task is done. this is done by watching the childs of the process
 	r.parentTask.WaitTilTaskRunnerIsDone(r.currentTask, 10*time.Millisecond)
 	return nil
 }
