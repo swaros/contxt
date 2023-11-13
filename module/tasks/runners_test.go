@@ -13,11 +13,7 @@ import (
 func TestRunnerBasic(t *testing.T) {
 
 	var testTask configure.Task = configure.Task{
-		ID:     "testsleep",                        // we need an ID
-		Script: []string{"echo test", "sleep 0.3"}, // we need a script
-		Options: configure.Options{
-			Displaycmd: true, // we want to see the command. we capture the output so we can check it
-		},
+		ID: "testsleep", // we need an ID for the task
 	}
 	task := tasks.New(testTask.ID, nil)
 
@@ -52,16 +48,18 @@ func TestRunnerBasic(t *testing.T) {
 			}
 			// messages should contains the names of the files in the current directory
 			// so we check if the first message contains the string "runner_test.go"
+
 			if len(messages) == 0 {
 				t.Error("no messages received")
 			} else {
-				expected := []string{"runners_test.go", "..", ".", "watchman.go"}
+				expected := []string{"runners_test.go", "..", ".", "watchman.go", "watchmanTask.go"}
 				for _, e := range expected {
 					if !systools.SliceContainsSub(messages, e) {
 						t.Error("missing", e, "in messages:", strings.Join(messages, "\n"))
 					}
 				}
 			}
+			task.StopAllTaskRunner() // at least stop the task runner
 
 		}
 	}
