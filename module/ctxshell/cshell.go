@@ -681,6 +681,7 @@ func (t *Cshell) runShell(once bool) error {
 		}
 
 	}
+	// leave the shell after the loop
 	if t.onShutDown != nil {
 		t.onShutDown()
 	}
