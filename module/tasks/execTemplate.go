@@ -104,26 +104,30 @@ func (e *TaskListExec) GetWatch() *Watchman {
 	return e.watch
 }
 
+// findOrCreateTask returns the taskExecuter for the given target.
+// if the task is not found, it will be created.
 func (e *TaskListExec) findOrCreateTask(target string, scopeVars map[string]string) *targetExecuter {
+	// first create the tasklist if not exists
 	if e.subTasks == nil {
 		e.subTasks = make(map[string]*targetExecuter)
 	}
+	// check if the task is already created
 	tExec, found := e.subTasks[target]
-	if !found {
-		for _, task := range e.config.Task {
-			if task.ID == target {
+	if !found { // task not found, so we need to create it
+		for _, task := range e.config.Task { // check if the task is defined in the config
+			if task.ID == target { // task found
 				e.args = append(e.args, e.config) // add the config to the args
 				tExec = New(target, scopeVars, e.args...)
 				// take the preset also for any new task
 				tExec.SetHardExitOnError(e.presetHardExistOnError)
-				e.subTasks[target] = tExec
-				if e.logger != nil {
+				e.subTasks[target] = tExec // add the task to the tasklist
+				if e.logger != nil {       // if we have a logger, we will set it to the task
 					tExec.SetLogger(e.logger)
 				}
 			}
 		}
 	}
-	return e.applyLogger(tExec)
+	return e.applyLogger(tExec) // return the task with the logger. we are doing this here again because the logger can be set after the task was created
 }
 
 func (e *TaskListExec) SetHardExistToAllTasks(exitOnErr bool) {

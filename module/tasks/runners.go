@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/mimiclog"
 	"github.com/swaros/contxt/module/process"
 )
 
@@ -26,6 +27,7 @@ func (t *targetExecuter) getIdForTask(currentTask configure.Task) string {
 	if currentTask.Options.WorkingDir != "" {
 		idStr += "_" + currentTask.Options.WorkingDir
 	}
+	t.getLogger().Trace("tasks.Runner: id for task:", mimiclog.Fields{"id": idStr, "task": currentTask.ID})
 	return idStr
 }
 
@@ -33,6 +35,7 @@ func (t *targetExecuter) GetRunnerForTask(currentTask configure.Task, callback p
 	idStr := t.getIdForTask(currentTask)
 	val, ok := runners.Load(idStr)
 	if ok {
+		t.getLogger().Debug("tasks.Runner: found runner for task:", mimiclog.Fields{"id": idStr, "task": currentTask.ID})
 		runner = val.(*process.Process)
 		return
 	}
@@ -58,6 +61,7 @@ func (t *targetExecuter) createRunnerForTask(currentTask configure.Task, callbac
 	}
 
 	runners.Store(idStr, runner)
+	t.getLogger().Debug("tasks.Runner: created runner for task:", mimiclog.Fields{"id": idStr, "task": currentTask.ID})
 	return
 }
 
@@ -73,6 +77,7 @@ func (t *targetExecuter) WaitTilAllRunnersAreDone(tick time.Duration) {
 func (t *targetExecuter) StopAllTaskRunner() {
 	runners.Range(func(key, value interface{}) bool {
 		process := value.(*process.Process)
+		t.getLogger().Debug("tasks.Runner: stopping runner:", mimiclog.Fields{"id": key})
 		process.Stop()
 		return true
 	})
@@ -113,6 +118,7 @@ func (t *targetExecuter) StopAndRemoveTaskRunner(currentTask configure.Task) {
 		runner := val.(*process.Process)
 		runner.Stop()
 		runners.Delete(idStr)
+		t.getLogger().Debug("tasks.Runner: stopped and removed runner for task:", mimiclog.Fields{"id": idStr, "task": currentTask.ID})
 	}
 }
 
