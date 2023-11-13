@@ -69,7 +69,8 @@ type CtxShell struct {
 	SynMutex       sync.Mutex
 	LabelForeColor string
 	LabelBackColor string
-	BashRunner     *process.Process
+	bashRunner     *process.Process
+	once           bool
 }
 
 func initVars() {
@@ -98,7 +99,7 @@ func shellRunner(c *CmdExecutorImpl) *CtxShell {
 		MaxTasks:       0,
 		LabelForeColor: ctxout.ForeBlue,
 		LabelBackColor: ctxout.BackWhite,
-		BashRunner:     process.NewTerminal(),
+		bashRunner:     process.NewTerminal(),
 	}
 
 	// add cobra commands to the shell, so they can be used there too.
@@ -110,15 +111,20 @@ func shellRunner(c *CmdExecutorImpl) *CtxShell {
 
 	// set behavior on exit
 	shell.OnShutDownFunc(func() {
-		ctxout.PrintLn(ctxout.NewMOWrap(), "shutting down...")
-		shellHandler.BashRunner.Stop()
+		shellHandler.bashRunner.Stop() // this we will stop anyway
+		// but if we runce once anyway, we will ignore the rest
+		// because we are shutting down anyway
+		if shellHandler.once {
+			return
+		}
+		ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeBlue, "shutting down triggered by shell ...", ctxout.CleanTag)
 		shellHandler.stopTasks([]string{})
 	})
 
 	shell.OnUnknownCmdFunc(func(cmd string) error {
 		msg := ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeBlue, "unknown command: ", ctxout.ForeCyan, cmd, ctxout.ForeBlue, " - try to execute it in bash", ctxout.CleanTag)
 		shellHandler.shell.Stdoutln(msg)
-		return shellHandler.BashRunner.Command(cmd)
+		return shellHandler.bashRunner.Command(cmd)
 	})
 
 	// rename the exit command to quit
@@ -196,7 +202,7 @@ func shellRunner(c *CmdExecutorImpl) *CtxShell {
 	// start the shell
 
 	// start the background shell
-	shellHandler.BashRunner.SetOnOutput(func(output string, err error) bool {
+	shellHandler.bashRunner.SetOnOutput(func(output string, err error) bool {
 		if err != nil {
 			msg := ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeRed, "error: ", ctxout.ForeYellow, output, ctxout.ForeBlue, ctxout.CleanTag)
 			shellHandler.shell.Stdoutln(msg)
@@ -205,10 +211,10 @@ func shellRunner(c *CmdExecutorImpl) *CtxShell {
 		shellHandler.shell.Stdoutln(output)
 		return true
 	})
-	shellHandler.BashRunner.SetLogger(c.GetLogger())
-	shellHandler.BashRunner.SetReportChildCount(true)
-	shellHandler.BashRunner.SetKeepRunning(true)
-	if _, _, err := shellHandler.BashRunner.Exec(); err != nil {
+	shellHandler.bashRunner.SetLogger(c.GetLogger())
+	shellHandler.bashRunner.SetReportChildCount(true)
+	shellHandler.bashRunner.SetKeepRunning(true)
+	if _, _, err := shellHandler.bashRunner.Exec(); err != nil {
 		ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, "failed to start background shell: ", err.Error())
 
 	}
@@ -225,6 +231,7 @@ func (cs *CtxShell) runAsShell() error {
 }
 
 func (cs *CtxShell) runWithCmds(cmd []string, timeOutMilliSecs int) error {
+	cs.once = true
 	err := cs.shell.SetAsyncCobraExec(true).
 		SetAsyncNativeCmd(true).
 		UpdatePromptEnabled(false).
@@ -233,11 +240,11 @@ func (cs *CtxShell) runWithCmds(cmd []string, timeOutMilliSecs int) error {
 		return err
 	}
 	// first wait if there any task about to start
-	ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, " ---- waiting for tasks to start...")
+	cs.shell.Stdoutln(ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, " ---- waiting for tasks to start..."))
 	if tasks.NewGlobalWatchman().ExpectTaskToStart(100*time.Millisecond, 100) {
-		ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, " ---- waiting for tasks to finish...", timeOutMilliSecs)
+		cs.shell.Stdoutln(ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeDarkGrey, " ---- waiting for tasks to finish...", timeOutMilliSecs))
 		if !tasks.NewGlobalWatchman().UntilDone(500*time.Millisecond, time.Duration(timeOutMilliSecs)*time.Millisecond) {
-			ctxout.PrintLn(ctxout.NewMOWrap(), ctxout.ForeRed, " ---- timeout reached, stopping tasks...")
+			cs.shell.Stdoutln(ctxout.ToString(ctxout.NewMOWrap(), ctxout.ForeRed, " ---- timeout reached, stopping tasks..."))
 			return cs.stopTasks([]string{})
 		}
 

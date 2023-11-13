@@ -87,7 +87,8 @@ func ListWatcherInstances() []string {
 func ShutDownProcesses(reportFn func(target string, time int, succeed bool)) {
 	instanceMutex.Lock()
 	defer instanceMutex.Unlock()
-	for _, wm := range instances {
+	for name, wm := range instances {
+		wm.logger.Debug("Watchman: shutdown processes triggered by global shutdown. handling ", name)
 		wm.StopAllTasks(reportFn)
 	}
 }
@@ -158,6 +159,7 @@ func (w *Watchman) SetLogger(logger mimiclog.Logger) {
 // StopAllTasks stops all tasks they are registered in the watchman
 // and reports the result to the reportFn if it is not nil
 func (w *Watchman) StopAllTasks(reportFn func(target string, time int, succeed bool)) {
+	w.logger.Debug("Watchman: stop all tasks")
 	w.watchTaskList.Range(func(key, _ interface{}) bool {
 		target := key.(string)
 		done, timeNeeded := w.WaitForStopProcess(target, 100*time.Millisecond, 10)
@@ -166,6 +168,7 @@ func (w *Watchman) StopAllTasks(reportFn func(target string, time int, succeed b
 		}
 		return true
 	})
+	w.logger.Debug("Watchman: stop all tasks ...done")
 }
 
 // WaitForProcessStart waits until the process is started
@@ -176,15 +179,21 @@ func (w *Watchman) WaitForProcessStart(target string, tickDuration time.Duration
 	// or the timeout is reached
 	// or the process is not running anymore
 	currentTick := 0
+	w.logger.Debug("Watchman: wait for process start", target)
 	for {
 		if wtask, found := w.GetTask(target); found {
 			if wtask.IsProcessRunning() {
+				w.logger.Debug("Watchman: process is running", target)
 				return true, currentTick * int(tickDuration)
 			}
 		}
 		time.Sleep(tickDuration)
 		currentTick++
+		if w.logger.IsTraceEnabled() {
+			w.logger.Trace("Watchman: wait for process start", target, currentTick, maxTicks)
+		}
 		if currentTick >= maxTicks {
+			w.logger.Debug("Watchman: wait for process start timeout", target)
 			return false, currentTick * int(tickDuration)
 		}
 	}
@@ -200,19 +209,23 @@ func (w *Watchman) ExpectTaskToStart(tickTimer time.Duration, timeoutTickCount i
 	// or the timeout is reached
 	// or the process is not running anymore
 	currentTick := 0
+	w.logger.Debug("Watchman: expect task to start")
 	for {
 		if len(w.GetAllRunningTasks()) > 0 {
+			w.logger.Debug("Watchman:ExpectTaskToStart task is running")
 			return true
 		}
 		time.Sleep(tickTimer)
 		currentTick++
 		if currentTick >= timeoutTickCount {
+			w.logger.Debug("Watchman:ExpectTaskToStart timeout")
 			return false
 		}
 	}
 }
 
 func (w *Watchman) UntilDone(tickTimer time.Duration, timeOut time.Duration) bool {
+	w.logger.Debug("Watchman: wait until done")
 	for {
 		if len(w.GetAllRunningTasks()) == 0 {
 			return true
@@ -220,6 +233,7 @@ func (w *Watchman) UntilDone(tickTimer time.Duration, timeOut time.Duration) boo
 		time.Sleep(tickTimer)
 		timeOut -= tickTimer
 		if timeOut <= 0 {
+			w.logger.Debug("Watchman: wait until done timeout")
 			return false
 		}
 	}
