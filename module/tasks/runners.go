@@ -97,7 +97,6 @@ func (t *targetExecuter) WaitTilTaskRunnerIsRunning(currentTask configure.Task, 
 	countTicks := 0
 	ok := false
 	for {
-		time.Sleep(tick)
 		if t.TaskRunnerIsActive(currentTask) {
 			ok = true
 			break
@@ -107,6 +106,7 @@ func (t *targetExecuter) WaitTilTaskRunnerIsRunning(currentTask configure.Task, 
 			ok = false
 			break
 		}
+		time.Sleep(tick)
 	}
 	return ok
 }

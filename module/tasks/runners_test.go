@@ -41,9 +41,11 @@ func TestRunnerBasic(t *testing.T) {
 			// so this test can fail if the system is faster then the system was using while writing the test
 			// and 10 nanoseconds is then to long to wait.
 			// so we will ignore the false result for testing
-			task.WaitTilTaskRunnerIsRunning(testTask, 10*time.Nanosecond, 1000) // so first make sure the task is running
-			task.WaitTilTaskRunnerIsDone(testTask, 10*time.Millisecond)         // and then wait til it is done
-			if task.RunnersActive() {                                           // this shuld be obvious but we check it anyway
+			task.WaitTilTaskRunnerIsRunning(testTask, 10*time.Nanosecond, 100) // so first make sure the task is running
+
+			time.Sleep(50 * time.Millisecond)
+			task.WaitTilTaskRunnerIsDone(testTask, 10*time.Millisecond) // and then wait til it is done
+			if task.RunnersActive() {                                   // this shuld be obvious but we check it anyway
 				t.Error("runner should not be active anymore")
 			}
 			// messages should contains the names of the files in the current directory
@@ -64,4 +66,11 @@ func TestRunnerBasic(t *testing.T) {
 		}
 	}
 
+}
+
+func TestRepeatedBasic(t *testing.T) {
+	countOfTest := 15
+	for i := 0; i < countOfTest; i++ {
+		TestRunnerBasic(t)
+	}
 }

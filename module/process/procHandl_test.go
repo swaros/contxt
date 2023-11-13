@@ -71,7 +71,8 @@ func TestKillProcessTree(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("not supported on windows")
 	}
-	command := process.NewProcess("bash", "-c", "watch date > just4checkHeDidSomething.tmp")
+	cmdLine := "watch date > just4checkHeDidSomething.tmp"
+	command := process.NewProcess("bash", "-c", cmdLine)
 	defer os.Remove("just4checkHeDidSomething.tmp")
 	waitForIt := make(chan bool)
 
@@ -136,7 +137,7 @@ func TestKillProcessTree(t *testing.T) {
 			t.Error("realCode is not 137. It is ", realCode)
 		}
 
-		if CmdIsRunning(t, "watch date") {
+		if CmdIsRunning(t, cmdLine) {
 			t.Error("Process is still running")
 		}
 		wg.Done()
