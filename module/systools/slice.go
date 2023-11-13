@@ -24,7 +24,10 @@
 
 package systools
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
 
 func SliceContains(slice []string, search string) bool {
 	for _, str := range slice {
@@ -38,6 +41,16 @@ func SliceContains(slice []string, search string) bool {
 // Alias for SliceContains
 func StringInSlice(search string, slice []string) bool {
 	return SliceContains(slice, search)
+}
+
+// like SliceContains but with strings.Contains so we can search for substrings
+func SliceContainsSub(slice []string, search string) bool {
+	for _, str := range slice {
+		if strings.Contains(str, search) {
+			return true
+		}
+	}
+	return false
 }
 
 // an callback handler to sort the entries in a map by key first
