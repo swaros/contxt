@@ -31,19 +31,25 @@ func (t *targetExecuter) getIdForTask(currentTask configure.Task) string {
 	return idStr
 }
 
-func (t *targetExecuter) GetRunnerForTask(currentTask configure.Task, callback process.ProcCallback) (runner *process.Process, err error) {
+func (t *targetExecuter) GetRunnerForTask(currentTask configure.Task, callback process.ProcCallback) (*RunnerCtrl, error) {
 	idStr := t.getIdForTask(currentTask)
+	var runCtl RunnerCtrl
+	runCtl.currentTask = currentTask
+	runCtl.parentTask = t
+
 	val, ok := runners.Load(idStr)
 	if ok {
 		t.getLogger().Debug("tasks.Runner: found runner for task:", mimiclog.Fields{"id": idStr, "task": currentTask.ID})
-		runner = val.(*process.Process)
-		return
+		runner := val.(*process.Process)
+		runCtl.runner = runner
+		return &runCtl, nil
 	}
-	runner, err = t.createRunnerForTask(currentTask, callback)
+	runner, err := t.createRunnerForTask(currentTask, callback)
 	if err != nil {
-		return
+		return &runCtl, err
 	}
-	return
+	runCtl.runner = runner
+	return &runCtl, nil
 }
 
 func (t *targetExecuter) createRunnerForTask(currentTask configure.Task, callback process.ProcCallback) (runner *process.Process, err error) {
@@ -99,10 +105,12 @@ func (t *targetExecuter) WaitTilTaskRunnerIsRunning(currentTask configure.Task, 
 	for {
 		if t.TaskRunnerIsActive(currentTask) {
 			ok = true
+			t.getLogger().Debug("tasks.Runner: task is active. get out because of finding:", mimiclog.Fields{"task": currentTask.ID})
 			break
 		}
 		countTicks++
 		if countTicks > maxTicks {
+			t.getLogger().Debug("tasks.Runner: task is not active (yet). get out because of timeout:", mimiclog.Fields{"task": currentTask.ID})
 			ok = false
 			break
 		}
@@ -157,4 +165,34 @@ func (t *targetExecuter) RunnersActive() bool {
 		return true
 	})
 	return foundAtLeastOnRunning
+}
+
+type RunnerCtrl struct {
+	runner      *process.Process
+	currentTask configure.Task
+	parentTask  *targetExecuter
+	cmdLock     sync.Mutex
+}
+
+func (r *RunnerCtrl) GetTask() configure.Task {
+	return r.currentTask
+}
+
+func (r *RunnerCtrl) GetRunner() *process.Process {
+	return r.runner
+}
+
+func (r *RunnerCtrl) Cmd(cmd string) error {
+	// no race condition please
+	r.cmdLock.Lock()
+	defer r.cmdLock.Unlock()
+
+	if err := r.runner.Command(cmd); err != nil {
+		return err
+	}
+	// give the task a chance to start and excute the command
+	r.parentTask.WaitTilTaskRunnerIsRunning(r.currentTask, 1*time.Millisecond, 50)
+	// wait til the task is done
+	r.parentTask.WaitTilTaskRunnerIsDone(r.currentTask, 10*time.Millisecond)
+	return nil
 }
