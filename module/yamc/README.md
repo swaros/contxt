@@ -179,3 +179,28 @@ for _, gsonPath := range paths {
 ```
 
 see in `example/gson/main.go`.
+
+#### conversion
+YAMC depending of the reader interface. there a 2 implementations for json and yaml. so you can read data from one source and convert it to another format.
+
+```go
+data := []byte(`{"age": 45, "hobbies": ["golf", "reading", "swimming"]}`)
+conv := yamc.New()
+if err := conv.Parse(yamc.NewJsonReader(), data); err != nil {
+	panic(err)
+} else {
+	if str, err2 := conv.ToString(yamc.NewYamlReader()); err2 != nil {
+		panic(err2)
+	} else {
+		fmt.Println(str)
+	}
+}
+```
+will result in:
+```yaml
+age: 45
+hobbies:
+    - golf
+    - reading
+    - swimming
+```
