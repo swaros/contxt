@@ -166,7 +166,7 @@ Even more **go** is able to handle packages independent from the repository. so 
 |code ref|module|version|description|
 |---|---|---|---|
 |_internal_|yacl||Yet Another Config Loader|
-|_internal_|yamc||yaml/json data mapper|
+| [![Go Reference](https://pkg.go.dev/badge/github.com/swaros/contxt/module/yamc.svg)](https://pkg.go.dev/github.com/swaros/contxt/module/yamc)|yamc|v0.0.1|yaml/json data mapper|
 |_internal_|runner||contxt task runner V2|
 |_internal_|ctxtcell||experimental controll elements|
 |_internal_|configure||configure contxt|
