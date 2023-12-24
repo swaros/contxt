@@ -42,7 +42,7 @@ require (
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/rivo/tview v0.0.0-20221117065207-09f052e6ca98 // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
-	github.com/sahilm/fuzzy v0.1.0 // indirect
+	github.com/sahilm/fuzzy v0.1.1-0.20230530133925-c48e322e2a8f // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/cobra v1.7.0 // indirect
@@ -63,7 +63,7 @@ require (
 
 require (
 	github.com/abiosoft/readline v0.0.0-20180607040430-155bce2042db // indirect
-	github.com/charmbracelet/bubbles v0.15.0
+	github.com/charmbracelet/bubbles v0.17.1
 	github.com/chzyer/logex v1.1.10 // indirect
 	github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1 // indirect
 	github.com/fatih/color v1.12.0 // indirect
