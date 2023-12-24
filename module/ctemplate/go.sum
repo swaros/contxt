@@ -56,14 +56,14 @@ github.com/swaros/contxt/module/yacl v0.0.0-20230106225453-d04145a0b401 h1:DYvq8
 github.com/swaros/contxt/module/yacl v0.0.0-20230106225453-d04145a0b401/go.mod h1:4tOCj/YZ6niqw97sTAYwB0TPA+Lc7lhNpnSr4hphdRY=
 github.com/swaros/contxt/module/yaclint v0.0.0-20231201093939-9aec73f7b1f8 h1:5Vcal33EXvQONoU88KLCBjaHfWOVsBEn6v3fVDLUzt0=
 github.com/swaros/contxt/module/yaclint v0.0.0-20231201093939-9aec73f7b1f8/go.mod h1:YKGltXFSp0q+td5FDrXcs5iuAaRUDu7j5VHHsnnzCLY=
-github.com/swaros/contxt/module/yamc v0.0.0-20230106225453-d04145a0b401 h1:3SVMCjBFbJm4qoftovRwcZ7DH5qSowHQQ2jzkn4JXos=
-github.com/swaros/contxt/module/yamc v0.0.0-20230106225453-d04145a0b401/go.mod h1:cIg7oGvql9qRzTSUTiL/5SORSmWoWLmN9Bdkxc5r4yc=
+github.com/swaros/contxt/module/yamc v0.0.1 h1:pwEyHk7Ethyc0P06KWPgucmxMNJXUxzS6gNQhS1KsIU=
+github.com/swaros/contxt/module/yamc v0.0.1/go.mod h1:2tX58TfxwCaW6r2wDGTcCZCummNc96S6R+bLYLhx76M=
 github.com/swaros/manout v0.2.1 h1:vahzXmDrqgtm30CE36vvPnMQWfh+p5PwwIBbfz8IrPY=
 github.com/swaros/manout v0.2.1/go.mod h1:jShapWGngejTppzXUDyISFXH7ZaRLQaGiKlagQhZuic=
 github.com/swaros/outinject v0.0.4 h1:i9/qMaUTGaAE3vNU6rStX78eMXnVEtEKfxqR7sgaVLg=
 github.com/swaros/outinject v0.0.4/go.mod h1:wcIOa87m1ijBNaDFVvLBgo7wLOfE6s1fdDIHCy4RYb4=
-github.com/tidwall/gjson v1.14.4 h1:uo0p8EbA09J7RQaflQ1aBRffTR7xedD2bcIVSYxLnkM=
-github.com/tidwall/gjson v1.14.4/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
+github.com/tidwall/gjson v1.17.0 h1:/Jocvlh98kcTfpN2+JzGQWQcqrPQwDrVEMApx/M5ZwM=
+github.com/tidwall/gjson v1.17.0/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=
 github.com/tidwall/match v1.1.1/go.mod h1:eRSPERbgtNPcGhD8UCthc6PmLEQXEWd3PRB5JTxsfmM=
 github.com/tidwall/pretty v1.2.0 h1:RWIZEg2iJ8/g6fDDYzMpobmaoGh5OLl4AXtGUGPcqCs=
@@ -106,7 +106,5 @@ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.3.0/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
-gopkg.in/yaml.v2 v2.4.0 h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=
-gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
