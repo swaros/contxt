@@ -1,5 +1,5 @@
-github.com/google/uuid v1.5.0 h1:1p67kYwdtXjb0gL0BPiP1Av9wiZPo5A8z2cWkTZ+eyU=
-github.com/google/uuid v1.5.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/swaros/contxt/module/configure v0.0.0-20230531064521-09943a54576e h1:TZnDdY+9F6sOij5QfOL508UHUj3mWAOzq/cOKmfSWSY=
 github.com/swaros/contxt/module/configure v0.0.0-20230531064521-09943a54576e/go.mod h1:ELBh1Lf8n9iVF4foYiK73gJPAHZtDcTc92ZfVLZBXGU=
 github.com/swaros/contxt/module/dirhandle v0.0.0-20230531064521-09943a54576e h1:BXctly7klpnJPOGsXAqXw0Nbc5O32oL9io1FiNVRl4M=
