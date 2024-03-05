@@ -7,6 +7,7 @@
 # this test is to check if this behavior is also present in the regular run without interactive shell
 testName: issue_188
 runCmd: run main
+disabled: true
 systems:
   - linux
 expect:

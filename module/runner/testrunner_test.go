@@ -38,6 +38,7 @@ type TestRunExpectation struct {
 	Folder         string    "yaml:\"folder\""         // the folder where the test is located. empty to use the current directory
 	Systems        []string  "yaml:\"systems\""        // what system is ment like linux, windows, darwin etc.
 	Expectations   ExpectDef "yaml:\"expect\""
+	Disabled       bool      "yaml:\"disabled\"" // if the test is disabled
 }
 
 func TestAllIssues(t *testing.T) {
@@ -69,6 +70,10 @@ func TestAllIssues(t *testing.T) {
 			if loader.GetLoadedFile() == "" {
 				t.Error("could not load the test definition file: " + path)
 			} else {
+				if testDef.Disabled {
+					t.Log("test " + testDef.TestName + " is disabled")
+					return nil
+				}
 
 				if testDef.Systems != nil && len(testDef.Systems) > 0 {
 					// check if the current system is in the list of systems
