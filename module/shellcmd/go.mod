@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/abiosoft/ishell v2.0.0+incompatible
-	github.com/charmbracelet/bubbletea v0.26.4
+	github.com/charmbracelet/bubbletea v0.26.6
 	github.com/charmbracelet/lipgloss v0.11.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/swaros/contxt/module/configure v0.0.0-20230531064521-09943a54576e
@@ -75,6 +75,6 @@ require (
 	github.com/flynn-archive/go-shlex v0.0.0-20150515145356-3f9db97f8568 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
 
 )
