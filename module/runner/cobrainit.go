@@ -54,6 +54,8 @@ type CobraOptions struct {
 	UseContext           string            // flag to switch to a workspace in the context of another workspace
 	InContext            bool              // flag to use the current workspace as context
 	PreVars              map[string]string // preset variables they will set variables from commandline. they will be overwritten by the template
+	ShowVars             bool              // show the variables
+	ShowVarsPattern      string            // show the variables with a pattern
 }
 
 // this is the main entry point for the cobra command
@@ -68,7 +70,7 @@ without the need to search for the right directory.
 also it includes a task runner to execute commands in the right context.
 `,
 			Run: func(cmd *cobra.Command, args []string) {
-				cmd.Help()
+
 			},
 		},
 	}
@@ -87,6 +89,7 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 	c.RootCmd.PersistentFlags().StringVar(&c.Options.UseContext, "usecontext", "", "use a different workspace as context")
 	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.InContext, "incontext", "I", false, "use the current workspace as context")
 	c.RootCmd.PersistentFlags().StringToStringVarP(&c.Options.PreVars, "var", "v", nil, "set variables by keyname and value.")
+	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.ShowVars, "showvars", "s", false, "show all variables")
 
 	c.RootCmd.AddCommand(
 		c.GetWorkspaceCmd(),
@@ -99,8 +102,8 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 		c.GetInstallCmd(),
 		c.GetVersionCmd(),
 		c.getSharedCmd(),
+		c.GetVariablesCmd(),
 	)
-
 	return nil
 }
 
@@ -828,6 +831,21 @@ func (c *SessionCobra) GetInstallPowershellCmd() *cobra.Command {
 		},
 	}
 	return iCmd
+}
+
+func (c *SessionCobra) GetVariablesCmd() *cobra.Command {
+	vCmd := &cobra.Command{
+		Use:   "vars",
+		Short: "shows variables",
+		Long:  `list all defined variables that are used in the current workspace.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.checkDefaultFlags(cmd, args)
+			c.ExternalCmdHndl.PrintVariables(c.Options.ShowVarsPattern)
+			return nil
+		},
+	}
+	vCmd.Flags().StringVarP(&c.Options.ShowVarsPattern, "format", "f", "", "format string for the output. use [nl] for new line and 2x %s for the key and the value like  --format=\"%s=%s[nl]\"")
+	return vCmd
 }
 
 func (c *SessionCobra) GetVersionCmd() *cobra.Command {
