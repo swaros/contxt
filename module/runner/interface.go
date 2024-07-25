@@ -52,4 +52,5 @@ type CmdExecutor interface {
 	PrintShared()                                      // print out all shared libs
 	PrintTemplate()                                    // print out the current template as yaml
 	SetPreValue(name string, value string)             // set a pre value
+	PrintVariables(format string)                      // print out all variables
 }

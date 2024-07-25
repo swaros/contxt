@@ -52,6 +52,46 @@ func NewCmd(session *CmdSession) *CmdExecutorImpl {
 	}
 }
 
+func (c *CmdExecutorImpl) PrintVariables(format string) {
+	format = strings.TrimSpace(format)
+	format = strings.ReplaceAll(format, "[nl]", "\n")
+	checkOdd := 0
+	for k, v := range c.session.DefaultVariables {
+		checkOdd++
+		if strings.Contains(format, "%") {
+			c.Print(fmt.Sprintf(format, k, v))
+		} else {
+			fColorLeft := ctxout.ForeLightBlue
+			fColorRight := ctxout.ForeBlue
+			if checkOdd%2 == 0 {
+				fColorLeft = ctxout.ForeWhite
+				fColorRight = ctxout.ForeLightGrey
+			}
+
+			ctxout.PrintLn(
+				c.session.OutPutHdnl,
+				c.session.Printer,
+				ctxout.Row(
+					ctxout.TD(
+						k,
+						ctxout.Prop(ctxout.AttrSize, 20),
+						ctxout.Prop(ctxout.AttrOrigin, ctxout.OriginLeft),
+						ctxout.Prop(ctxout.AttrPrefix, fColorLeft),
+						ctxout.Prop(ctxout.AttrSuffix, ctxout.ResetCode),
+					),
+					ctxout.TD(
+						v,
+						ctxout.Prop(ctxout.AttrSize, 70),
+						ctxout.Prop(ctxout.AttrOrigin, ctxout.OriginLeft),
+						ctxout.Prop(ctxout.AttrPrefix, fColorRight),
+						ctxout.Prop(ctxout.AttrSuffix, ctxout.ResetCode),
+					),
+				),
+			)
+		}
+	}
+}
+
 func (c *CmdExecutorImpl) Combine4Print(msg ...interface{}) []interface{} {
 	var outInterfaces []interface{}
 	outInterfaces = append(outInterfaces, c.session.OutPutHdnl)
@@ -332,6 +372,8 @@ func (c *CmdExecutorImpl) initDefaultVariables() {
 	c.setVariable("CTX_VERSION", configure.GetVersion())
 	c.setVariable("CTX_BUILD_NO", configure.GetBuild())
 
+	c.SetProjectVariables()
+
 	c.handleWindowsInit() // it self is testing if we are on windows
 }
 
@@ -368,8 +410,14 @@ func (c *CmdExecutorImpl) handleWindowsInit() {
 // this is just ment, to define already variables while setting up
 // the session and keep them in the session, until they get used by the template later.
 // see RunTargets for the usage of the variables.
-func (c *CmdExecutorImpl) setVariable(name string, value string) {
-	c.session.DefaultVariables[name] = value
+func (c *CmdExecutorImpl) setVariable(name string, value string) error {
+	if name, err := systools.CheckForCleanString(name); err == nil {
+		c.session.DefaultVariables[name] = value
+		return nil
+	} else {
+		c.session.Log.Logger.Error("error while setting variable", err)
+		return err
+	}
 }
 
 func (c *CmdExecutorImpl) GetVariable(name string) string {
@@ -391,6 +439,37 @@ func (c *CmdExecutorImpl) SetColor(onoff bool) {
 
 func (c *CmdExecutorImpl) GetOuputHandler() (ctxout.StreamInterface, ctxout.PrintInterface) {
 	return c.session.OutPutHdnl, c.session.Printer
+}
+
+// SetProjectVariables set the project variables for the current session.
+// what includes any workspaces and there paths.
+// we ignore any errors, since we are not able to do anything with them.
+// this would just be a log entry and ignored as variable.
+func (c *CmdExecutorImpl) SetProjectVariables() {
+	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
+		c.session.Log.Logger.Error("error while loading template", err)
+	} else if !exists {
+		c.session.Log.Logger.Error("template not exists", err)
+	} else {
+		c.setVariable("WS_PROJECT", template.Workspace.Project)
+		c.setVariable("WS_ROLE", template.Workspace.Role)
+		c.setVariable("WS_VERSION", template.Workspace.Version)
+	}
+
+	configure.GetGlobalConfig().ExecOnWorkSpaces(func(index string, cfg configure.ConfigurationV2) {
+		for key, ws := range cfg.Paths {
+			upperIndex := strings.ToUpper(index)
+			if ws.Role != "" {
+				c.setVariable("WS_PATH_"+upperIndex+"_"+strings.ToUpper(ws.Role), ws.Path)
+			} else {
+				c.setVariable("WS_PATH_"+upperIndex+"_"+key, ws.Path)
+			}
+			if ws.Version != "" {
+				c.setVariable("WS_VERSION_"+upperIndex, ws.Version)
+			}
+
+		}
+	})
 }
 
 func (c *CmdExecutorImpl) GetWorkspaces() []string {
@@ -712,5 +791,5 @@ func (c *CmdExecutorImpl) PrintTemplate() {
 // they changed by a task, they are changed for the whole runtime.
 // this is not happen anymore, and the variables are just set for the current run.
 func (c *CmdExecutorImpl) SetPreValue(name string, value string) {
-	c.session.DefaultVariables[name] = value
+	c.setVariable(name, value)
 }

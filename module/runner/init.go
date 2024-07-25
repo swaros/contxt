@@ -170,5 +170,9 @@ func Init() error {
 	if err := app.Cobra.RootCmd.Execute(); err != nil {
 		return err
 	}
+	// show variables if the verbose flag is set
+	if app.Cobra.Options.ShowVars {
+		functions.PrintVariables("%s=%s[nl]")
+	}
 	return nil
 }

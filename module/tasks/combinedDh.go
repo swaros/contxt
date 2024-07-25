@@ -402,7 +402,7 @@ func (d *CombinedDh) ExportVarToFile(variable string, filename string) error {
 	}
 	defer f.Close()
 
-	if _, err2 := f.WriteString(d.HandlePlaceHolder(strData)); err != nil {
+	if _, err2 := f.WriteString(d.HandlePlaceHolder(strData)); err2 != nil {
 		return err2
 	}
 
