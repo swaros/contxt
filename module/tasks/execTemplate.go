@@ -330,7 +330,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			// these targets running at the same time
 			// so different to scope, we dont need to wait
 			// right now until they ends
-			runTargetfutures := t.generateFuturesByTargetListAndExec(script.RunTargets, t.runCfg)
+			runTargetfutures := t.generateFuturesByTargetListAndExec(script.RunTargets)
 
 			// check if we have script lines.
 			// if not, we need at least to check
@@ -372,7 +372,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			}
 			t.getLogger().Debug("executeTemplate next definition", logFields2)
 
-			nextfutures := t.generateFuturesByTargetListAndExec(script.Next, t.runCfg)
+			nextfutures := t.generateFuturesByTargetListAndExec(script.Next)
 			awaitgroup.WaitAtGroup(nextfutures)
 
 			t.out(MsgTarget{Target: target, Context: "wait_next_done", Info: fmt.Sprintf("(%v/%v)", curTIndex+1, taskCount)})
@@ -393,7 +393,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 	return systools.ExitNoCode
 }
 
-func (t *targetExecuter) generateFuturesByTargetListAndExec(RunTargets []string, runCfg configure.RunConfig) []awaitgroup.Future {
+func (t *targetExecuter) generateFuturesByTargetListAndExec(RunTargets []string) []awaitgroup.Future {
 	if len(RunTargets) < 1 {
 		return []awaitgroup.Future{}
 	}
