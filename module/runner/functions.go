@@ -56,40 +56,50 @@ func (c *CmdExecutorImpl) PrintVariables(format string) {
 	format = strings.TrimSpace(format)
 	format = strings.ReplaceAll(format, "[nl]", "\n")
 	checkOdd := 0
-	for k, v := range c.session.DefaultVariables {
+	iterMap := systools.StrStr2StrAny(c.session.DefaultVariables)
+	systools.MapRangeSortedFn(iterMap, func(key string, value any) {
 		checkOdd++
 		if strings.Contains(format, "%") {
-			c.Print(fmt.Sprintf(format, k, v))
+			c.Print(fmt.Sprintf(format, key, value))
 		} else {
-			fColorLeft := ctxout.ForeLightBlue
-			fColorRight := ctxout.ForeBlue
+			fColorLeft := ctxout.ForeWhite
+			fColorRight := ctxout.ForeWhite
+			backCol := ctxout.BackBlue
 			if checkOdd%2 == 0 {
-				fColorLeft = ctxout.ForeWhite
-				fColorRight = ctxout.ForeLightGrey
+				fColorLeft = ctxout.ForeBlack
+				fColorRight = ctxout.ForeBlue
+				backCol = ctxout.BackLightBlue
 			}
-
 			ctxout.PrintLn(
 				c.session.OutPutHdnl,
 				c.session.Printer,
 				ctxout.Row(
 					ctxout.TD(
-						k,
+						key,
 						ctxout.Prop(ctxout.AttrSize, 20),
-						ctxout.Prop(ctxout.AttrOrigin, ctxout.OriginLeft),
-						ctxout.Prop(ctxout.AttrPrefix, fColorLeft),
+						ctxout.Prop(ctxout.AttrOrigin, ctxout.OriginRight),
+						ctxout.Prop(ctxout.AttrPrefix, fColorLeft+backCol),
 						ctxout.Prop(ctxout.AttrSuffix, ctxout.ResetCode),
 					),
 					ctxout.TD(
-						v,
+						" -> ",
+						ctxout.Prop(ctxout.AttrSize, 2),
+						ctxout.Prop(ctxout.AttrOrigin, ctxout.OriginRight),
+						ctxout.Prop(ctxout.AttrPrefix, ctxout.ForeLightCyan+backCol),
+						ctxout.Prop(ctxout.AttrSuffix, ctxout.ResetCode),
+					),
+					ctxout.TD(
+						value,
 						ctxout.Prop(ctxout.AttrSize, 70),
 						ctxout.Prop(ctxout.AttrOrigin, ctxout.OriginLeft),
-						ctxout.Prop(ctxout.AttrPrefix, fColorRight),
+						ctxout.Prop(ctxout.AttrPrefix, fColorRight+backCol),
 						ctxout.Prop(ctxout.AttrSuffix, ctxout.ResetCode),
 					),
 				),
 			)
 		}
-	}
+	})
+
 }
 
 func (c *CmdExecutorImpl) Combine4Print(msg ...interface{}) []interface{} {

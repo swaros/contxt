@@ -75,3 +75,22 @@ func RemoveFromSliceOnce(slice []string, search string) []string {
 	}
 	return slice
 }
+
+func StrStr2StrAny(m map[string]string) map[string]any {
+	out := make(map[string]any)
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
+}
+
+func SortByKeyString(m map[string]any, rowExec func(k string, v any)) {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		rowExec(k, m[k])
+	}
+}

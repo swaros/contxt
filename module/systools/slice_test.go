@@ -75,3 +75,53 @@ func TestRemoveFromSlice(t *testing.T) {
 		t.Error("swag should be found")
 	}
 }
+
+func TestSortByKeyString(t *testing.T) {
+	testDataMap := map[string]any{
+		"hello": "world",
+		"yolo":  "swag",
+		"foo":   "bar",
+	}
+
+	outTest := []string{}
+	systools.SortByKeyString(testDataMap, func(k string, v any) {
+		outTest = append(outTest, k+":"+v.(string))
+	})
+
+	expectedSlice := []string{"foo:bar", "hello:world", "yolo:swag"}
+
+	if len(outTest) != len(expectedSlice) {
+		t.Errorf("expected %d elements, got %d", len(expectedSlice), len(outTest))
+	}
+
+	for i, v := range outTest {
+		if v != expectedSlice[i] {
+			t.Errorf("expected %s, got %s", expectedSlice[i], v)
+		}
+	}
+}
+
+func TestSortByKeyStringWithStrStr2StrAny(t *testing.T) {
+	testDataMap := map[string]string{
+		"hello": "world",
+		"yolo":  "swag",
+		"foo":   "bar",
+	}
+
+	outTest := []string{}
+	systools.SortByKeyString(systools.StrStr2StrAny(testDataMap), func(k string, v any) {
+		outTest = append(outTest, k+":"+v.(string))
+	})
+
+	expectedSlice := []string{"foo:bar", "hello:world", "yolo:swag"}
+
+	if len(outTest) != len(expectedSlice) {
+		t.Errorf("expected %d elements, got %d", len(expectedSlice), len(outTest))
+	}
+
+	for i, v := range outTest {
+		if v != expectedSlice[i] {
+			t.Errorf("expected %s, got %s", expectedSlice[i], v)
+		}
+	}
+}
