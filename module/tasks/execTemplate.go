@@ -344,6 +344,14 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 				time.Sleep(duration)
 			}
 
+			// execute the ank commands if exists
+			if len(script.Cmd) > 0 {
+				if returnCode, _, err := t.runAnkCmd(&script); err != nil {
+					t.getLogger().Error("error while executing ank commands", err)
+					return returnCode
+				}
+			}
+
 			// preparing codelines by execute second level commands
 			// that can affect the whole script
 			abort, returnCode, _ = t.TryParse(script.Script, func(codeLine string) (bool, int) {

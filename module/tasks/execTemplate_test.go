@@ -140,3 +140,101 @@ func TestTemplateExecUnknowTask(t *testing.T) {
 	}
 
 }
+
+func TestTemplateAnko(t *testing.T) {
+	localMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					"print('Hello World')",
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != 0 {
+		t.Error("expected code 0 but got", code)
+	}
+
+	if len(localMsg) != 1 {
+		t.Error("expected 1 message but got", len(localMsg))
+	} else {
+		if strings.TrimRight(localMsg[0], "\n") != "Hello World" {
+			t.Error("expected message 'Hello World' but got", localMsg[0])
+		}
+	}
+
+}
+
+func TestTemplateAnkoReqiurements(t *testing.T) {
+	localMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Requires: configure.Require{
+					System: "not_exists",
+				},
+				Cmd: []string{
+					"print('Hello World')",
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != 107 {
+		t.Error("expected code 107 but got", code)
+	}
+
+	if len(localMsg) != 0 {
+		t.Error("expected 0 message but got", len(localMsg))
+	}
+}

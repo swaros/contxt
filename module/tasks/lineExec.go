@@ -36,6 +36,32 @@ import (
 	"github.com/swaros/contxt/module/systools"
 )
 
+func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, int, error) {
+	if len(task.Cmd) < 1 {
+		return 0, 0, nil
+	}
+	curDir, dirError := t.directoryCheckPrep(task)
+	if dirError != nil {
+		return systools.ExitCmdError, 0, dirError
+	}
+	ankRunner := NewAnkoRunner()
+	defer ankRunner.ClearBuffer()
+	for lineNr, cmd := range task.Cmd {
+		ankRunner.ClearBuffer()
+		_, err := ankRunner.RunAnko(cmd)
+		buffer := ankRunner.GetBuffer()
+		for _, line := range buffer {
+			t.outPut(task, err, line)
+		}
+		if err != nil {
+			return 1, lineNr, err
+		}
+	}
+	curDir.Popd()
+	return 0, len(task.Cmd), nil
+
+}
+
 // targetTaskExecuter is the main function to execute a script line
 // it returns the exit code of the executed command
 // and a boolean value if the execution was successful
@@ -54,36 +80,9 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 	t.SetMainCmd(runCmd, runArgs...)                                     // set the main command and arguments
 
 	// keep the current directory
-	curDir := dirhandle.Pushd()
-	if currentTask.Options.WorkingDir != "" {
-		cdErr := os.Chdir(t.phHandler.HandlePlaceHolder(currentTask.Options.WorkingDir)) // change the directory
-		if cdErr != nil {
-			t.getLogger().Error("can not change directory", cdErr)
-			t.out(MsgError(MsgError{Err: cdErr, Reference: codeLine, Target: currentTask.ID}))
-			return systools.ExitCmdError, true
-		}
-	} else {
-		// if the rootpath exists, we change to this path
-		if t.rootPath != "" {
-			if er := os.Chdir(t.rootPath); er != nil {
-				t.getLogger().Error("can not change directory", er)
-				t.out(MsgError(MsgError{Err: er, Reference: codeLine, Target: currentTask.ID}))
-				return systools.ExitCmdError, true
-			}
-		} else {
-			// if the rootpath does not exists, we look for tht BASEPATH placeholder
-			// and change to this path
-			if t.phHandler != nil {
-				if basePath := t.phHandler.GetPH("BASEPATH"); basePath != "" {
-					if er := os.Chdir(basePath); er != nil {
-						t.getLogger().Error("can not change directory", er)
-						t.out(MsgError(MsgError{Err: er, Reference: codeLine, Target: currentTask.ID}))
-						return systools.ExitCmdError, true
-					}
-				}
-			}
-		}
-
+	curDir, dirError := t.directoryCheckPrep(&currentTask)
+	if dirError != nil {
+		return systools.ExitCmdError, true
 	}
 
 	// here we execute the current script line
@@ -99,22 +98,7 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 
 			// The whole output can be ignored by configuration
 			// if this is not enabled then we handle all these here
-			if !currentTask.Options.Hideout {
-
-				outStr := logLine                    // hardcoded format for the logoutput iteself
-				if currentTask.Options.Stickcursor { // optional set back the cursor to the beginning
-					t.out(MsgStickCursor(true)) // trigger the stick cursor
-				}
-
-				if err != nil { // if we have an error we print it
-					t.out(MsgError(MsgError{Err: err, Reference: codeLine, Target: currentTask.ID}))
-				}
-
-				t.out(MsgExecOutput(MsgExecOutput{Target: currentTask.ID, Output: outStr})) // prints the output from the running process
-				if currentTask.Options.Stickcursor {                                        // cursor stick handling
-					t.out(MsgStickCursor(false)) // trigger the stick cursor after output
-				}
-			}
+			t.outPut(&currentTask, err, logLine)
 
 			stopReasonFound, message := t.checkReason(currentTask.Stopreasons, logLine, err) // do we found a defined reason to stop execution
 			if stopReasonFound {
@@ -200,6 +184,60 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 		return systools.ExitOk, false
 	}
 	return systools.ExitNoCode, true
+}
+
+func (t *targetExecuter) outPut(task *configure.Task, err error, output string) {
+	if !task.Options.Hideout {
+		outStr := output              // hardcoded format for the logoutput iteself
+		if task.Options.Stickcursor { // optional set back the cursor to the beginning
+			t.out(MsgStickCursor(true)) // trigger the stick cursor
+		}
+
+		if err != nil { // if we have an error we print it
+			t.out(MsgError(MsgError{Err: err, Reference: outStr, Target: task.ID}))
+		}
+
+		t.out(MsgExecOutput(MsgExecOutput{Target: task.ID, Output: outStr})) // prints the output from the running process
+		if task.Options.Stickcursor {                                        // cursor stick handling
+			t.out(MsgStickCursor(false)) // trigger the stick cursor after output
+		}
+	}
+
+}
+
+func (t *targetExecuter) directoryCheckPrep(currentTask *configure.Task) (*dirhandle.Popd, error) {
+	curDir := dirhandle.Pushd()
+	if currentTask.Options.WorkingDir != "" {
+		cdErr := os.Chdir(t.phHandler.HandlePlaceHolder(currentTask.Options.WorkingDir)) // change the directory
+		if cdErr != nil {
+			t.getLogger().Error("can not change directory", cdErr)
+			t.out(MsgError(MsgError{Err: cdErr, Reference: currentTask.Options.WorkingDir, Target: currentTask.ID}))
+			return nil, cdErr
+		}
+	} else {
+		// if the rootpath exists, we change to this path
+		if t.rootPath != "" {
+			if er := os.Chdir(t.rootPath); er != nil {
+				t.getLogger().Error("can not change directory", er)
+				t.out(MsgError(MsgError{Err: er, Reference: t.rootPath, Target: currentTask.ID}))
+				return nil, er
+			}
+		} else {
+			// if the rootpath does not exists, we look for tht BASEPATH placeholder
+			// and change to this path
+			if t.phHandler != nil {
+				if basePath := t.phHandler.GetPH("BASEPATH"); basePath != "" {
+					if er := os.Chdir(basePath); er != nil {
+						t.getLogger().Error("can not change directory", er)
+						t.out(MsgError(MsgError{Err: er, Reference: basePath, Target: currentTask.ID}))
+						return nil, er
+					}
+				}
+			}
+		}
+
+	}
+	return curDir, nil
 }
 
 // ExecuteScriptLine executes a script line and returns the exit code

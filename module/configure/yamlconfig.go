@@ -135,6 +135,7 @@ type Task struct {
 	Requires    Require           `yaml:"require"`
 	Stopreasons Trigger           `yaml:"stopreasons"`
 	Options     Options           `yaml:"options"`
+	Cmd         []string          `yaml:"cmd"`
 	Script      []string          `yaml:"script"`
 	Listener    []Listener        `yaml:"listener"`
 	Next        []string          `yaml:"next"`
