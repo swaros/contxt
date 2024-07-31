@@ -364,7 +364,10 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 				t.listenerWatch("", nil, &script)
 				// workaround til the async runnig is refactored
 				// now we need to give the subtask time to run and update the waitgroup
-				duration := time.Second
+				// UPDATE: set from 1 second to 15 milliseconds
+				// this is a workaround for the async running, but right now it is no
+				// longer clear if we need this workaround. need to investigate
+				duration := time.Millisecond * time.Duration(15)
 				time.Sleep(duration)
 			}
 

@@ -27,6 +27,8 @@ type AnkoRunner struct {
 	outBuffer     []string
 	bufferPrepStr string
 	hook          BufferHook
+	lastScript    string
+	lastError     error
 }
 
 func NewAnkoRunner() *AnkoRunner {
@@ -154,14 +156,32 @@ func (ar *AnkoRunner) Defines(defs []AnkoDefiner) error {
 	return nil
 }
 
-func (ar *AnkoRunner) RunAnko(script string) (interface{}, error) {
+func (ar *AnkoRunner) InitEnv() (*env.Env, error) {
 	if !ar.lazyInit {
 		if err := ar.DefaultDefine(); err != nil {
-			return nil, err
+			return ar.env, err
 		}
 		ar.lazyInit = true
 	}
-	return vm.ExecuteContext(ar.conTxt, ar.env, &ar.options, script)
+	return ar.env, nil
+}
+
+func (ar *AnkoRunner) RunAnko(script string) (interface{}, error) {
+	if _, err := ar.InitEnv(); err != nil {
+		return nil, err
+	}
+	var res interface{}
+	res, ar.lastError = vm.ExecuteContext(ar.conTxt, ar.env, &ar.options, script)
+	ar.lastScript = script
+	return res, ar.lastError
+}
+
+func (ar *AnkoRunner) LastError() error {
+	return ar.lastError
+}
+
+func (ar *AnkoRunner) LastScript() string {
+	return ar.lastScript
 }
 
 func (ar *AnkoRunner) Define(symbol string, value interface{}) error {

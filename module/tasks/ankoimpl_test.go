@@ -156,3 +156,37 @@ func TestBuffers_03(t *testing.T) {
 		t.Errorf("expected [%s] but got [%s]", expectedHookMessage, hookMessage)
 	}
 }
+
+func TestErrors(t *testing.T) {
+	ar := tasks.NewAnkoRunner()
+	hookMessage := ""
+	ar.SetBufferHook(func(msg string) {
+		hookMessage += msg
+	})
+	_, err := ar.RunAnko(`print("Hello ")
+	puffpaff("wtf")`)
+
+	if err == nil {
+		t.Error("expected error but got nil")
+	} else {
+		expectedError := "undefined symbol 'puffpaff'"
+		if err.Error() != expectedError {
+			t.Errorf("expected [%s] but got [%s]", expectedError, err.Error())
+		}
+
+	}
+
+	buff := ar.GetBuffer()
+	if len(buff) != 1 {
+		t.Error("expected 1 but got", len(buff))
+	} else {
+		expected := "Hello "
+		if buff[0] != expected {
+			t.Errorf("expected %s but got %s", expected, buff[0])
+		}
+	}
+	expectedHookMessage := "Hello "
+	if hookMessage != expectedHookMessage {
+		t.Errorf("expected [%s] but got [%s]", expectedHookMessage, hookMessage)
+	}
+}
