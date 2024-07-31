@@ -50,6 +50,9 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 	ankRunner := NewAnkoRunner()
 	defer ankRunner.ClearBuffer()
 
+	// we do not want to print directly to the console
+	ankRunner.SetOutputSupression(true)
+
 	cmdFull := t.fullFillVars(strings.Join(task.Cmd, "\n"))
 	// set the buffer hook for the anko runner
 	// so we get any output from the anko script

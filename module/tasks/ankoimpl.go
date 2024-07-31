@@ -29,6 +29,7 @@ type AnkoRunner struct {
 	hook          BufferHook
 	lastScript    string
 	lastError     error
+	supressOutput bool
 }
 
 func NewAnkoRunner() *AnkoRunner {
@@ -48,6 +49,10 @@ func (ar *AnkoRunner) AddDefaultDefine(symbol string, value interface{}) error {
 	}
 	ar.defaults = append(ar.defaults, AnkoDefiner{symbol, value})
 	return nil
+}
+
+func (ar *AnkoRunner) SetOutputSupression(sup bool) {
+	ar.supressOutput = sup
 }
 
 func (ar *AnkoRunner) SetBufferHook(hook BufferHook) {
@@ -135,12 +140,16 @@ func (ar *AnkoRunner) DefaultDefine() error {
 	// set output handler to capture output
 	ar.env.Define("print", func(msg ...interface{}) {
 		ar.handleBufferAdd(fmt.Sprint(msg...))
-		fmt.Print(msg...)
+		if !ar.supressOutput {
+			fmt.Print(msg...)
+		}
 
 	})
 	ar.env.Define("println", func(msg ...interface{}) {
 		ar.handleBufferAdd(fmt.Sprintln(msg...))
-		fmt.Println(msg...)
+		if !ar.supressOutput {
+			fmt.Println(msg...)
+		}
 	})
 	ar.lazyInit = true
 	return nil
