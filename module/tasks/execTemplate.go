@@ -137,7 +137,31 @@ func (e *TaskListExec) SetHardExistToAllTasks(exitOnErr bool) {
 	}
 }
 
+func (t *targetExecuter) verifiedKeyname(keyName string) (string, bool) {
+	// just trim spaces
+	keyName = strings.TrimSpace(keyName)
+	// some weird target name? we will not allow this
+	if clTarget, err := systools.CheckForCleanString(keyName); err != nil {
+		t.getLogger().Error("invalid key-name", err)
+		return "", false
+	} else {
+		keyName = clTarget
+	}
+	return keyName, true
+}
+
 func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars map[string]string) int {
+	// some weird target name? we will not allow this
+	if clTarget, err := systools.CheckForCleanString(target); err != nil {
+		t.getLogger().Error("invalid target name", err)
+		return systools.ErrorTemplateReading
+	} else {
+		target = clTarget
+	}
+
+	// just trim spaces
+	target = strings.TrimSpace(target)
+
 	if t == nil {
 		panic("targetExecuter is nil. This should not happen. init it with New()")
 	}

@@ -40,7 +40,7 @@ import (
 func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 	// nothing to do, get out
 	if len(task.Cmd) < 1 {
-		return 0, nil
+		return systools.ExitNoCode, nil
 	}
 	// handle directory change
 	curDir, dirError := t.directoryCheckPrep(task)
@@ -50,17 +50,29 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 	ankRunner := NewAnkoRunner()
 	defer ankRunner.ClearBuffer()
 
-	cmdFull := strings.Join(task.Cmd, "\n")
+	cmdFull := t.fullFillVars(strings.Join(task.Cmd, "\n"))
+	// set the buffer hook for the anko runner
+	// so we get any output from the anko script
 	ankRunner.SetBufferHook(func(msg string) {
 		t.outPut(task, nil, msg)
+		t.setPh("CMD."+task.ID+".LOG.LAST", msg)
+		if task.Listener != nil { // do we have listener?
+			t.listenerWatch(msg, nil, task) // listener handler
+		}
 	})
+
+	t.setPh("CMD."+task.ID+".SOURCE", cmdFull) // set or overwrite the last script output for the target
+	if task.Listener != nil {                  // do we have listener?
+		t.listenerWatch(cmdFull, nil, task) // listener handler
+	}
+
 	_, err := ankRunner.RunAnko(cmdFull)
 	if err != nil {
-		return 1, err
+		return systools.ExitCmdError, err
 	}
 
 	curDir.Popd()
-	return 0, nil
+	return systools.ExitOk, nil
 
 }
 
@@ -68,10 +80,7 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 // it returns the exit code of the executed command
 // and a boolean value if the execution was successful
 func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configure.Task, watchman *Watchman) (int, bool) {
-	replacedLine := codeLine
-	if t.phHandler != nil {
-		replacedLine = t.phHandler.HandlePlaceHolderWithScope(codeLine, t.arguments) // placeholders
-	}
+	replacedLine := t.fullFillVars(codeLine) // replace placeholders in the script line
 	if currentTask.Options.Displaycmd {
 		t.out(MsgTarget{Target: currentTask.ID, Context: "command", Info: replacedLine}) // output the command
 	}
@@ -186,6 +195,14 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 		return systools.ExitOk, false
 	}
 	return systools.ExitNoCode, true
+}
+
+func (t *targetExecuter) fullFillVars(codeLine string) string {
+	replacedLine := codeLine
+	if t.phHandler != nil {
+		replacedLine = t.phHandler.HandlePlaceHolderWithScope(codeLine, t.arguments) // placeholders
+	}
+	return replacedLine
 }
 
 func (t *targetExecuter) outPut(task *configure.Task, err error, output string) {
@@ -309,6 +326,13 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 
 				someReactionTriggered := false                 // did this trigger something? used as flag
 				actionDef := configure.Action(listener.Action) // extract action
+
+				if keyname, ok := t.verifiedKeyname(actionDef.Target); !ok { // check if the target is a valid keyname
+					t.out(MsgError(MsgError{Err: errors.New("invalid keyname for target reference: " + actionDef.Target), Reference: triggerMessage, Target: t.target}))
+					return
+				} else {
+					actionDef.Target = keyname
+				}
 
 				if len(actionDef.Script) > 0 { // script are directs executes without any async or other executes out of scope
 					someReactionTriggered = true

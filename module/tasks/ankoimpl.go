@@ -161,7 +161,6 @@ func (ar *AnkoRunner) RunAnko(script string) (interface{}, error) {
 		}
 		ar.lazyInit = true
 	}
-	defer ar.ClearBuffer()
 	return vm.ExecuteContext(ar.conTxt, ar.env, &ar.options, script)
 }
 
