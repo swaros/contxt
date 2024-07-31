@@ -88,3 +88,69 @@ func TestRunAnkoWithDefineAndDefault(t *testing.T) {
 		t.Log(res)
 	}
 }
+
+func TestBuffers_01(t *testing.T) {
+	ar := tasks.NewAnkoRunner()
+	hookMessage := ""
+	ar.SetBufferHook(func(msg string) {
+		hookMessage += msg
+	})
+	ar.RunAnko(`println("Hello World :)")`)
+	buff := ar.GetBuffer()
+	if len(buff) != 1 {
+		t.Error("expected 1 but got", len(buff))
+	}
+	expected := "Hello World :)"
+	if buff[0] != expected {
+		t.Errorf("expected %s but got %s", expected, buff[0])
+	}
+	expectedHookMessage := "Hello World :)"
+	if hookMessage != expectedHookMessage {
+		t.Errorf("expected [%s] but got [%s]", expectedHookMessage, hookMessage)
+	}
+}
+
+func TestBuffers_02(t *testing.T) {
+	ar := tasks.NewAnkoRunner()
+	hookMessage := ""
+	ar.SetBufferHook(func(msg string) {
+		hookMessage += msg
+	})
+	ar.RunAnko(`print("Hello World :)")`)
+	buff := ar.GetBuffer()
+	if len(buff) != 1 {
+		t.Error("expected 1 but got", len(buff))
+	} else {
+		expected := "Hello World :)"
+		if buff[0] != expected {
+			t.Errorf("expected %s but got %s", expected, buff[0])
+		}
+	}
+	expectedHookMessage := "Hello World :)"
+	if hookMessage != expectedHookMessage {
+		t.Errorf("expected [%s] but got [%s]", expectedHookMessage, hookMessage)
+	}
+}
+
+func TestBuffers_03(t *testing.T) {
+	ar := tasks.NewAnkoRunner()
+	hookMessage := ""
+	ar.SetBufferHook(func(msg string) {
+		hookMessage += msg
+	})
+	ar.RunAnko(`print("Hello ")
+	print("World :)")`)
+	buff := ar.GetBuffer()
+	if len(buff) != 1 {
+		t.Error("expected 1 but got", len(buff))
+	} else {
+		expected := "Hello World :)"
+		if buff[0] != expected {
+			t.Errorf("expected %s but got %s", expected, buff[0])
+		}
+	}
+	expectedHookMessage := "Hello World :)"
+	if hookMessage != expectedHookMessage {
+		t.Errorf("expected [%s] but got [%s]", expectedHookMessage, hookMessage)
+	}
+}

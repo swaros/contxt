@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 
 	"github.com/swaros/contxt/module/configure"
@@ -36,29 +37,30 @@ import (
 	"github.com/swaros/contxt/module/systools"
 )
 
-func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, int, error) {
+func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
+	// nothing to do, get out
 	if len(task.Cmd) < 1 {
-		return 0, 0, nil
+		return 0, nil
 	}
+	// handle directory change
 	curDir, dirError := t.directoryCheckPrep(task)
 	if dirError != nil {
-		return systools.ExitCmdError, 0, dirError
+		return systools.ExitCmdError, dirError
 	}
 	ankRunner := NewAnkoRunner()
 	defer ankRunner.ClearBuffer()
-	for lineNr, cmd := range task.Cmd {
-		ankRunner.ClearBuffer()
-		_, err := ankRunner.RunAnko(cmd)
-		buffer := ankRunner.GetBuffer()
-		for _, line := range buffer {
-			t.outPut(task, err, line)
-		}
-		if err != nil {
-			return 1, lineNr, err
-		}
+
+	cmdFull := strings.Join(task.Cmd, "\n")
+	ankRunner.SetBufferHook(func(msg string) {
+		t.outPut(task, nil, msg)
+	})
+	_, err := ankRunner.RunAnko(cmdFull)
+	if err != nil {
+		return 1, err
 	}
+
 	curDir.Popd()
-	return 0, len(task.Cmd), nil
+	return 0, nil
 
 }
 
