@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/swaros/contxt/module/systools v0.0.0-20240211085138-c4de9bbc4e28
-	github.com/tidwall/gjson v1.17.2
+	github.com/tidwall/gjson v1.17.3
 	gopkg.in/yaml.v3 v3.0.1
 )
 
