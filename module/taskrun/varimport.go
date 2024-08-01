@@ -422,7 +422,7 @@ func ExportVarToFile(variable string, filename string) error {
 	}
 	defer f.Close()
 	var scopeVars map[string]string // empty but required
-	if _, err2 := f.WriteString(handlePlaceHolder(strData, scopeVars)); err != nil {
+	if _, err2 := f.WriteString(handlePlaceHolder(strData, scopeVars)); err2 != nil {
 		return err2
 	}
 
@@ -712,9 +712,9 @@ func HandleJSONMap(tmpl string, m map[string]interface{}) (string, error) {
 		return "", err
 	}
 	out := new(bytes.Buffer)
-	tt.Execute(out, &m)
-	if err != nil {
-		return "", err
+	eErr := tt.Execute(out, &m)
+	if eErr != nil {
+		return "", eErr
 	}
 	return out.String(), nil
 

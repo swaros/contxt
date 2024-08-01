@@ -137,7 +137,31 @@ func (e *TaskListExec) SetHardExistToAllTasks(exitOnErr bool) {
 	}
 }
 
+func (t *targetExecuter) verifiedKeyname(keyName string) (string, bool) {
+	// just trim spaces
+	keyName = strings.TrimSpace(keyName)
+	// some weird target name? we will not allow this
+	if clTarget, err := systools.CheckForCleanString(keyName); err != nil {
+		t.getLogger().Error("invalid key-name", err)
+		return "", false
+	} else {
+		keyName = clTarget
+	}
+	return keyName, true
+}
+
 func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars map[string]string) int {
+	// some weird target name? we will not allow this
+	if clTarget, err := systools.CheckForCleanString(target); err != nil {
+		t.getLogger().Error("invalid target name", err)
+		return systools.ErrorTemplateReading
+	} else {
+		target = clTarget
+	}
+
+	// just trim spaces
+	target = strings.TrimSpace(target)
+
 	if t == nil {
 		panic("targetExecuter is nil. This should not happen. init it with New()")
 	}
@@ -340,8 +364,19 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 				t.listenerWatch("", nil, &script)
 				// workaround til the async runnig is refactored
 				// now we need to give the subtask time to run and update the waitgroup
-				duration := time.Second
+				// UPDATE: set from 1 second to 15 milliseconds
+				// this is a workaround for the async running, but right now it is no
+				// longer clear if we need this workaround. need to investigate
+				duration := time.Millisecond * time.Duration(15)
 				time.Sleep(duration)
+			}
+
+			// execute the ank commands if exists
+			if len(script.Cmd) > 0 {
+				if returnCode, err := t.runAnkCmd(&script); err != nil {
+					t.getLogger().Error("error while executing ank commands", err)
+					return returnCode
+				}
 			}
 
 			// preparing codelines by execute second level commands

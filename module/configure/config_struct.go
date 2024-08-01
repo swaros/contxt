@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package configure
+package configure
 
 // Configuration includes all paths for the current workspace
 // this is the main Configuration that is needed to eep track which path

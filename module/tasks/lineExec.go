@@ -27,7 +27,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/dirhandle"
@@ -36,14 +38,93 @@ import (
 	"github.com/swaros/contxt/module/systools"
 )
 
+func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
+	currentOnErrorExitCode := systools.ExitCmdError
+	// nothing to do, get out
+	if len(task.Cmd) < 1 {
+		return systools.ExitNoCode, nil
+	}
+	// handle directory change
+	curDir, dirError := t.directoryCheckPrep(task)
+	if dirError != nil {
+		return systools.ExitCmdError, dirError
+	}
+	ankRunner := NewAnkoRunner()
+	cancelFn := ankRunner.EnableCancelation()
+	defer ankRunner.ClearBuffer()
+
+	// we do not want to print directly to the console
+	ankRunner.SetOutputSupression(true)
+	// here we add all the functions to the anko runner we need
+	t.SetFunctions(ankRunner)
+	// if an timeout is set, we set it here
+	if task.Options.CmdTimeout > 0 {
+		ankRunner.SetTimeOut(time.Duration(task.Options.CmdTimeout) * time.Millisecond)
+	}
+
+	cmdFull := t.fullFillVars(strings.Join(task.Cmd, "\n"))
+
+	if task.Options.Displaycmd {
+		t.out(MsgTarget{Target: task.ID, Context: "ankocommand", Info: cmdFull}) // output the command
+	}
+
+	// set the buffer hook for the anko runner
+	// so we get any output from the anko script
+	ankRunner.SetBufferHook(func(msg string) {
+		t.outPut(task, nil, msg)
+		t.setPh("CMD."+task.ID+".LOG.LAST", msg)
+
+		// listener handling
+		if task.Listener != nil { // do we have listener?
+			t.listenerWatch(msg, nil, task) // listener handler
+		}
+
+		// stop reason handling
+		stopReasonFound, message := t.checkReason(task.Stopreasons, msg, nil) // do we found a defined reason to stop execution
+		if stopReasonFound {
+			if task.Options.Displaycmd {
+				t.out(MsgProcess{Target: task.ID, StatusChange: "aborted", Comment: message})
+			}
+			currentOnErrorExitCode = systools.ExitByStopReason // reset the error code so it matches the stop reason
+			cancelFn()                                         // cancel the anko command execution
+		}
+
+	})
+
+	t.setPh("CMD."+task.ID+".SOURCE", cmdFull) // set or overwrite the last script output for the target
+	if task.Listener != nil {                  // do we have listener?
+		t.listenerWatch(cmdFull, nil, task) // listener handler
+	}
+	startTime := time.Now()
+	_, err := ankRunner.RunAnko(cmdFull)
+	if err != nil {
+		// for timeout errors, we need to check if the error is a timeout error
+		// if this is the case, we set the error code to the timeout error code
+		if task.Options.CmdTimeout > 0 && strings.Contains(err.Error(), "execution interrupted") {
+			// we still should check if the timeout is reached.
+			// so nothing else is aborting the task, like a code issue.
+			// we can not garantee that it is because of the timeout if some code issue
+			// happens close to the same time, but we can assume that the timeout is the
+			// reason for the abort.
+			nowTime := time.Now()
+			elapsedTime := nowTime.Sub(startTime)
+			if elapsedTime.Milliseconds() > int64(task.Options.CmdTimeout) {
+				currentOnErrorExitCode = systools.ExitByTimeout
+			}
+		}
+		return currentOnErrorExitCode, err
+	}
+
+	curDir.Popd()
+	return systools.ExitOk, nil
+
+}
+
 // targetTaskExecuter is the main function to execute a script line
 // it returns the exit code of the executed command
 // and a boolean value if the execution was successful
 func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configure.Task, watchman *Watchman) (int, bool) {
-	replacedLine := codeLine
-	if t.phHandler != nil {
-		replacedLine = t.phHandler.HandlePlaceHolderWithScope(codeLine, t.arguments) // placeholders
-	}
+	replacedLine := t.fullFillVars(codeLine) // replace placeholders in the script line
 	if currentTask.Options.Displaycmd {
 		t.out(MsgTarget{Target: currentTask.ID, Context: "command", Info: replacedLine}) // output the command
 	}
@@ -54,36 +135,9 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 	t.SetMainCmd(runCmd, runArgs...)                                     // set the main command and arguments
 
 	// keep the current directory
-	curDir := dirhandle.Pushd()
-	if currentTask.Options.WorkingDir != "" {
-		cdErr := os.Chdir(t.phHandler.HandlePlaceHolder(currentTask.Options.WorkingDir)) // change the directory
-		if cdErr != nil {
-			t.getLogger().Error("can not change directory", cdErr)
-			t.out(MsgError(MsgError{Err: cdErr, Reference: codeLine, Target: currentTask.ID}))
-			return systools.ExitCmdError, true
-		}
-	} else {
-		// if the rootpath exists, we change to this path
-		if t.rootPath != "" {
-			if er := os.Chdir(t.rootPath); er != nil {
-				t.getLogger().Error("can not change directory", er)
-				t.out(MsgError(MsgError{Err: er, Reference: codeLine, Target: currentTask.ID}))
-				return systools.ExitCmdError, true
-			}
-		} else {
-			// if the rootpath does not exists, we look for tht BASEPATH placeholder
-			// and change to this path
-			if t.phHandler != nil {
-				if basePath := t.phHandler.GetPH("BASEPATH"); basePath != "" {
-					if er := os.Chdir(basePath); er != nil {
-						t.getLogger().Error("can not change directory", er)
-						t.out(MsgError(MsgError{Err: er, Reference: codeLine, Target: currentTask.ID}))
-						return systools.ExitCmdError, true
-					}
-				}
-			}
-		}
-
+	curDir, dirError := t.directoryCheckPrep(&currentTask)
+	if dirError != nil {
+		return systools.ExitCmdError, true
 	}
 
 	// here we execute the current script line
@@ -99,22 +153,7 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 
 			// The whole output can be ignored by configuration
 			// if this is not enabled then we handle all these here
-			if !currentTask.Options.Hideout {
-
-				outStr := logLine                    // hardcoded format for the logoutput iteself
-				if currentTask.Options.Stickcursor { // optional set back the cursor to the beginning
-					t.out(MsgStickCursor(true)) // trigger the stick cursor
-				}
-
-				if err != nil { // if we have an error we print it
-					t.out(MsgError(MsgError{Err: err, Reference: codeLine, Target: currentTask.ID}))
-				}
-
-				t.out(MsgExecOutput(MsgExecOutput{Target: currentTask.ID, Output: outStr})) // prints the output from the running process
-				if currentTask.Options.Stickcursor {                                        // cursor stick handling
-					t.out(MsgStickCursor(false)) // trigger the stick cursor after output
-				}
-			}
+			t.outPut(&currentTask, err, logLine)
 
 			stopReasonFound, message := t.checkReason(currentTask.Stopreasons, logLine, err) // do we found a defined reason to stop execution
 			if stopReasonFound {
@@ -202,6 +241,68 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 	return systools.ExitNoCode, true
 }
 
+func (t *targetExecuter) fullFillVars(codeLine string) string {
+	replacedLine := codeLine
+	if t.phHandler != nil {
+		replacedLine = t.phHandler.HandlePlaceHolderWithScope(codeLine, t.arguments) // placeholders
+	}
+	return replacedLine
+}
+
+func (t *targetExecuter) outPut(task *configure.Task, err error, output string) {
+	if !task.Options.Hideout {
+		outStr := output              // hardcoded format for the logoutput iteself
+		if task.Options.Stickcursor { // optional set back the cursor to the beginning
+			t.out(MsgStickCursor(true)) // trigger the stick cursor
+		}
+
+		if err != nil { // if we have an error we print it
+			t.out(MsgError(MsgError{Err: err, Reference: outStr, Target: task.ID}))
+		}
+
+		t.out(MsgExecOutput(MsgExecOutput{Target: task.ID, Output: outStr})) // prints the output from the running process
+		if task.Options.Stickcursor {                                        // cursor stick handling
+			t.out(MsgStickCursor(false)) // trigger the stick cursor after output
+		}
+	}
+
+}
+
+func (t *targetExecuter) directoryCheckPrep(currentTask *configure.Task) (*dirhandle.Popd, error) {
+	curDir := dirhandle.Pushd()
+	if currentTask.Options.WorkingDir != "" {
+		cdErr := os.Chdir(t.phHandler.HandlePlaceHolder(currentTask.Options.WorkingDir)) // change the directory
+		if cdErr != nil {
+			t.getLogger().Error("can not change directory", cdErr)
+			t.out(MsgError(MsgError{Err: cdErr, Reference: currentTask.Options.WorkingDir, Target: currentTask.ID}))
+			return nil, cdErr
+		}
+	} else {
+		// if the rootpath exists, we change to this path
+		if t.rootPath != "" {
+			if er := os.Chdir(t.rootPath); er != nil {
+				t.getLogger().Error("can not change directory", er)
+				t.out(MsgError(MsgError{Err: er, Reference: t.rootPath, Target: currentTask.ID}))
+				return nil, er
+			}
+		} else {
+			// if the rootpath does not exists, we look for tht BASEPATH placeholder
+			// and change to this path
+			if t.phHandler != nil {
+				if basePath := t.phHandler.GetPH("BASEPATH"); basePath != "" {
+					if er := os.Chdir(basePath); er != nil {
+						t.getLogger().Error("can not change directory", er)
+						t.out(MsgError(MsgError{Err: er, Reference: basePath, Target: currentTask.ID}))
+						return nil, er
+					}
+				}
+			}
+		}
+
+	}
+	return curDir, nil
+}
+
 // ExecuteScriptLine executes a script line and returns the exit code
 // the callback function is called for each line of the output
 // the startInfo function is called if the process started
@@ -269,6 +370,13 @@ func (t *targetExecuter) listenerWatch(logLine string, e error, currentTask *con
 
 				someReactionTriggered := false                 // did this trigger something? used as flag
 				actionDef := configure.Action(listener.Action) // extract action
+
+				if keyname, ok := t.verifiedKeyname(actionDef.Target); !ok { // check if the target is a valid keyname
+					t.out(MsgError(MsgError{Err: errors.New("invalid keyname for target reference: " + actionDef.Target), Reference: triggerMessage, Target: t.target}))
+					return
+				} else {
+					actionDef.Target = keyname
+				}
 
 				if len(actionDef.Script) > 0 { // script are directs executes without any async or other executes out of scope
 					someReactionTriggered = true

@@ -22,7 +22,7 @@
 
 // AINC-NOTE-0815
 
- package dirhandle
+package dirhandle
 
 import "os"
 
@@ -42,20 +42,20 @@ import "os"
 //	// when the function returns
 //
 
-type popd struct {
+type Popd struct {
 	dir string
 }
 
 // Pushd returns a new popd struct with the current directory
-func Pushd() *popd {
+func Pushd() *Popd {
 	if dir, err := Current(); err != nil {
 		panic(err)
 	} else {
-		return &popd{dir}
+		return &Popd{dir}
 	}
 }
 
 // Popd changes the directory back to the directory that was saved in the struct
-func (p *popd) Popd() error {
+func (p *Popd) Popd() error {
 	return os.Chdir(p.dir)
 }

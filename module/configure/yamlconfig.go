@@ -99,6 +99,7 @@ type Options struct {
 	Mainparams     []string `yaml:"mainparams"`
 	NoAutoRunNeeds bool     `yaml:"noAutoRunNeeds"`
 	TimeoutNeeds   int      `yaml:"timeoutNeeds"`
+	CmdTimeout     int      `yaml:"cmdTimeout"` // timeout for the anko commands in milliseconds
 	TickTimeNeeds  int      `yaml:"tickTimeNeeds"`
 	WorkingDir     string   `yaml:"workingdir"`
 }
@@ -135,6 +136,7 @@ type Task struct {
 	Requires    Require           `yaml:"require"`
 	Stopreasons Trigger           `yaml:"stopreasons"`
 	Options     Options           `yaml:"options"`
+	Cmd         []string          `yaml:"cmd"`
 	Script      []string          `yaml:"script"`
 	Listener    []Listener        `yaml:"listener"`
 	Next        []string          `yaml:"next"`
