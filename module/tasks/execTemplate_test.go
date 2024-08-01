@@ -424,3 +424,164 @@ func TestAnkoWithCancelation(t *testing.T) {
 		t.Log(localMsg)
 	}
 }
+
+func TestAnkoWithTimeoutCancelation(t *testing.T) {
+	expectedExitCode := systools.ExitByTimeout
+	expectedMessageCount := 1
+	localMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Options: configure.Options{
+
+					CmdTimeout: 100,
+				},
+				Cmd: []string{
+					"println('before sleep')",
+					"sleep(200)",
+					"println('after sleep')",
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+	if len(localMsg) != expectedMessageCount {
+		t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
+		t.Log(localMsg)
+	}
+}
+
+// testing we report not an timeout error, if the commands stops because of an error
+func TestAnkoWithTimeoutAsErrDetect(t *testing.T) {
+	expectedExitCode := systools.ExitCmdError
+	expectedMessageCount := 0
+	localMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Options: configure.Options{
+
+					CmdTimeout: 100,
+				},
+				Cmd: []string{
+					"println('before sleep')",
+					"some weird command",
+					"sleep(200)",
+					"println('after sleep')",
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+	if len(localMsg) != expectedMessageCount {
+		t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
+		t.Log(localMsg)
+	}
+}
+
+// testing we report not an timeout error, if the commands stops because of an error
+func TestAnkoExitCmd(t *testing.T) {
+	expectedExitCode := systools.ExitCmdError
+	expectedMessageCount := 1
+	localMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					"println('before sleep')",
+					"exit()", // this should stop the execution
+					"println('after sleep')",
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+	if len(localMsg) != expectedMessageCount {
+		t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
+		t.Log(localMsg)
+	}
+}

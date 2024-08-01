@@ -41,4 +41,5 @@ const (
 	ExitAlreadyRunning   = 105 // ExitAlreadyRunning means the task is not started, because it is already created
 	ExitByNoTargetExists = 106 // none of the targets are matching in requirements
 	ExitByNothingToDo    = 107 // none of the targets have any usefull work to do or did not match any requirements
+	ExitByTimeout        = 108 // ExitByTimeout means the task was stopped because of a timeout
 )

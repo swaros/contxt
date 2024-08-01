@@ -29,6 +29,7 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/dirhandle"
@@ -54,6 +55,12 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 
 	// we do not want to print directly to the console
 	ankRunner.SetOutputSupression(true)
+	// here we add all the functions to the anko runner we need
+	t.SetFunctions(ankRunner)
+	// if an timeout is set, we set it here
+	if task.Options.CmdTimeout > 0 {
+		ankRunner.SetTimeOut(time.Duration(task.Options.CmdTimeout) * time.Millisecond)
+	}
 
 	cmdFull := t.fullFillVars(strings.Join(task.Cmd, "\n"))
 
@@ -88,9 +95,23 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 	if task.Listener != nil {                  // do we have listener?
 		t.listenerWatch(cmdFull, nil, task) // listener handler
 	}
-
+	startTime := time.Now()
 	_, err := ankRunner.RunAnko(cmdFull)
 	if err != nil {
+		// for timeout errors, we need to check if the error is a timeout error
+		// if this is the case, we set the error code to the timeout error code
+		if task.Options.CmdTimeout > 0 && strings.Contains(err.Error(), "execution interrupted") {
+			// we still should check if the timeout is reached.
+			// so nothing else is aborting the task, like a code issue.
+			// we can not garantee that it is because of the timeout if some code issue
+			// happens close to the same time, but we can assume that the timeout is the
+			// reason for the abort.
+			nowTime := time.Now()
+			elapsedTime := nowTime.Sub(startTime)
+			if elapsedTime.Milliseconds() > int64(task.Options.CmdTimeout) {
+				currentOnErrorExitCode = systools.ExitByTimeout
+			}
+		}
 		return currentOnErrorExitCode, err
 	}
 

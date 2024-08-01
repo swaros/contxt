@@ -226,3 +226,30 @@ for {
 		t.Error("expected at least 2 lines, but we got only ", len(buff), " lines")
 	}
 }
+
+func TestRunAnkoWithTimout(t *testing.T) {
+
+	script := `println("Hello World :)")
+for {
+	println("I am running forver")
+}`
+	ar := tasks.NewAnkoRunner()
+	ar.SetOutputSupression(true)
+	ar.SetTimeOut(25 * time.Millisecond)
+
+	_, rErr := ar.RunAnko(script)
+	expectedError := "execution interrupted"
+	if rErr == nil {
+		t.Error("expected error but got nil")
+	} else {
+		if rErr.Error() != expectedError {
+			t.Errorf("expected [%s] but got [%s]", expectedError, rErr.Error())
+		}
+	}
+
+	// test if we get at least 2 lines. should be way more, but we are not interested in the exact number
+	buff := ar.GetBuffer()
+	if len(buff) < 2 {
+		t.Error("expected at least 2 lines, but we got only ", len(buff), " lines")
+	}
+}

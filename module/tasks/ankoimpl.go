@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mattn/anko/core"
 	"github.com/mattn/anko/env"
@@ -31,7 +32,9 @@ type AnkoRunner struct {
 	lastError     error
 	supressOutput bool
 	cancelationFn context.CancelFunc
+	timeoutCancel context.CancelFunc
 	cancelation   bool
+	timeOut       time.Duration
 }
 
 func NewAnkoRunner() *AnkoRunner {
@@ -51,6 +54,11 @@ func (ar *AnkoRunner) AddDefaultDefine(symbol string, value interface{}) error {
 	}
 	ar.defaults = append(ar.defaults, AnkoDefiner{symbol, value})
 	return nil
+}
+
+func (ar *AnkoRunner) SetTimeOut(to time.Duration) {
+	ar.timeOut = to
+	ar.conTxt, ar.timeoutCancel = context.WithTimeout(ar.conTxt, ar.timeOut)
 }
 
 func (ar *AnkoRunner) EnableCancelation() context.CancelFunc {
@@ -145,6 +153,12 @@ func (ar *AnkoRunner) DefaultDefine() error {
 			return err
 		}
 	}
+	ar.defaultCmds() // anything we want to have as base functions (or redefined like print/println)
+	ar.lazyInit = true
+	return nil
+}
+
+func (ar *AnkoRunner) defaultCmds() {
 	// set output handler to capture output
 	ar.env.Define("print", func(msg ...interface{}) {
 		ar.handleBufferAdd(fmt.Sprint(msg...))
@@ -159,8 +173,11 @@ func (ar *AnkoRunner) DefaultDefine() error {
 			fmt.Println(msg...)
 		}
 	})
-	ar.lazyInit = true
-	return nil
+
+	// a sleep function. always good to have
+	ar.env.Define("sleep", func(milliSeconds int) {
+		time.Sleep(time.Duration(milliSeconds) * time.Millisecond)
+	})
 }
 
 func (ar *AnkoRunner) Defines(defs []AnkoDefiner) error {
