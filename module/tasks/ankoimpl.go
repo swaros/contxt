@@ -30,6 +30,8 @@ type AnkoRunner struct {
 	lastScript    string
 	lastError     error
 	supressOutput bool
+	cancelationFn context.CancelFunc
+	cancelation   bool
 }
 
 func NewAnkoRunner() *AnkoRunner {
@@ -49,6 +51,12 @@ func (ar *AnkoRunner) AddDefaultDefine(symbol string, value interface{}) error {
 	}
 	ar.defaults = append(ar.defaults, AnkoDefiner{symbol, value})
 	return nil
+}
+
+func (ar *AnkoRunner) EnableCancelation() context.CancelFunc {
+	ar.cancelation = true
+	ar.conTxt, ar.cancelationFn = context.WithCancel(ar.conTxt)
+	return ar.cancelationFn
 }
 
 func (ar *AnkoRunner) SetOutputSupression(sup bool) {

@@ -38,6 +38,7 @@ import (
 )
 
 func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
+	currentOnErrorExitCode := systools.ExitCmdError
 	// nothing to do, get out
 	if len(task.Cmd) < 1 {
 		return systools.ExitNoCode, nil
@@ -48,20 +49,39 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 		return systools.ExitCmdError, dirError
 	}
 	ankRunner := NewAnkoRunner()
+	cancelFn := ankRunner.EnableCancelation()
 	defer ankRunner.ClearBuffer()
 
 	// we do not want to print directly to the console
 	ankRunner.SetOutputSupression(true)
 
 	cmdFull := t.fullFillVars(strings.Join(task.Cmd, "\n"))
+
+	if task.Options.Displaycmd {
+		t.out(MsgTarget{Target: task.ID, Context: "ankocommand", Info: cmdFull}) // output the command
+	}
+
 	// set the buffer hook for the anko runner
 	// so we get any output from the anko script
 	ankRunner.SetBufferHook(func(msg string) {
 		t.outPut(task, nil, msg)
 		t.setPh("CMD."+task.ID+".LOG.LAST", msg)
+
+		// listener handling
 		if task.Listener != nil { // do we have listener?
 			t.listenerWatch(msg, nil, task) // listener handler
 		}
+
+		// stop reason handling
+		stopReasonFound, message := t.checkReason(task.Stopreasons, msg, nil) // do we found a defined reason to stop execution
+		if stopReasonFound {
+			if task.Options.Displaycmd {
+				t.out(MsgProcess{Target: task.ID, StatusChange: "aborted", Comment: message})
+			}
+			currentOnErrorExitCode = systools.ExitByStopReason // reset the error code so it matches the stop reason
+			cancelFn()                                         // cancel the anko command execution
+		}
+
 	})
 
 	t.setPh("CMD."+task.ID+".SOURCE", cmdFull) // set or overwrite the last script output for the target
@@ -71,7 +91,7 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 
 	_, err := ankRunner.RunAnko(cmdFull)
 	if err != nil {
-		return systools.ExitCmdError, err
+		return currentOnErrorExitCode, err
 	}
 
 	curDir.Popd()

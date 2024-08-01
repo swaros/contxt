@@ -6,6 +6,7 @@ import (
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/mimiclog"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/tasks"
 )
 
@@ -346,6 +347,59 @@ func TestListenerTrimSpaces(t *testing.T) {
 				ID: "other-test",
 				Cmd: []string{
 					"println('i am the other test')",
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+	if len(localMsg) != expectedMessageCount {
+		t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
+		t.Log(localMsg)
+	}
+}
+
+func TestAnkoWithCancelation(t *testing.T) {
+	expectedExitCode := systools.ExitByStopReason
+	expectedMessageCount := 2
+	localMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Stopreasons: configure.Trigger{
+					OnoutContains: []string{"trigger-exec-1"},
+				},
+				Cmd: []string{
+					"println('Hello World')",
+					"println('trigger-exec-1')",
+					"println('i am done')",
 				},
 			},
 		},

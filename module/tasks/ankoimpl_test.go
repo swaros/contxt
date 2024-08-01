@@ -2,6 +2,7 @@ package tasks_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/swaros/contxt/module/tasks"
 )
@@ -188,5 +189,40 @@ func TestErrors(t *testing.T) {
 	expectedHookMessage := "Hello "
 	if hookMessage != expectedHookMessage {
 		t.Errorf("expected [%s] but got [%s]", expectedHookMessage, hookMessage)
+	}
+}
+
+func TestRunAnkoWithCancelation(t *testing.T) {
+
+	script := `println("Hello World :)")
+for {
+	println("I am running forver")
+}`
+	ar := tasks.NewAnkoRunner()
+	ar.SetOutputSupression(true)
+	cancelFn := ar.EnableCancelation()
+
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cancelFn()
+	}()
+
+	res, rErr := ar.RunAnko(script)
+	expectedError := "execution interrupted"
+	if rErr == nil {
+		t.Error("expected error but got nil")
+	} else {
+		if rErr.Error() != expectedError {
+			t.Errorf("expected [%s] but got [%s]", expectedError, rErr.Error())
+		}
+	}
+
+	if res != nil {
+		t.Log(res)
+	}
+	// test if we get at least 2 lines. should be way more, but we are not interested in the exact number
+	buff := ar.GetBuffer()
+	if len(buff) < 2 {
+		t.Error("expected at least 2 lines, but we got only ", len(buff), " lines")
 	}
 }
