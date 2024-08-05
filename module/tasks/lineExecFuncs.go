@@ -19,6 +19,10 @@ func (t *targetExecuter) SetFunctions(anko *AnkoRunner) {
 		return configure.GetOs() == s
 	})
 
+	anko.Define("getos", func() string {
+		return configure.GetOs()
+	})
+
 	// importJson(string,string) implementation
 	anko.Define("importJson", func(key, json string) error {
 		err := t.dataHandler.AddJSON(key, json)
