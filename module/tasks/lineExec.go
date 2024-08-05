@@ -46,6 +46,8 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 	}
 	// handle directory change
 	curDir, dirError := t.directoryCheckPrep(task)
+	defer curDir.Popd()
+
 	if dirError != nil {
 		return systools.ExitCmdError, dirError
 	}
@@ -112,10 +114,14 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 				currentOnErrorExitCode = systools.ExitByTimeout
 			}
 		}
+		if debugErr, ok := ankRunner.Error2MsgErrorDebug(task.ID, err); ok {
+			t.out(MsgErrDebug(debugErr))
+		} else {
+			t.out(MsgError(MsgError{Err: err, Reference: "", Target: task.ID}))
+		}
 		return currentOnErrorExitCode, err
 	}
 
-	curDir.Popd()
 	return systools.ExitOk, nil
 
 }

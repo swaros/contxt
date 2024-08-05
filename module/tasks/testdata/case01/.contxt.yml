@@ -1,0 +1,22 @@
+task:
+  - id: test_01
+    requires:
+      system: linux
+    cmd:
+      - |
+       result = exec("pwd")
+       if result[1] != 0 {
+         println("Error:", result[2])
+         exit()
+       } else {
+         println(result[0])
+       }
+       print("Hello, World!")
+       println(`...date ${CTX_DATE}`)
+       importJson("testData",`{"name": "John", "age": 30}`)
+       println ( varAsJson("testData") )
+
+       ls,_,_ = exec("ls -ga")
+       println(ls)
+       
+      

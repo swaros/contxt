@@ -376,6 +376,7 @@ func TestAnkoWithCancelation(t *testing.T) {
 	expectedExitCode := systools.ExitByStopReason
 	expectedMessageCount := 2
 	localMsg := []string{}
+	errorMsg := ""
 	outHandler := func(msg ...interface{}) {
 		for _, m := range msg {
 			switch s := m.(type) {
@@ -385,7 +386,7 @@ func TestAnkoWithCancelation(t *testing.T) {
 			case tasks.MsgExecOutput:
 				localMsg = append(localMsg, string(s.Output))
 			case tasks.MsgError:
-				t.Error(s.Err)
+				errorMsg = s.Err.Error()
 			}
 		}
 	}
@@ -423,11 +424,16 @@ func TestAnkoWithCancelation(t *testing.T) {
 		t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
 		t.Log(localMsg)
 	}
+	expectedError := "execution interrupted"
+	if errorMsg != expectedError {
+		t.Error("expected error", expectedError, "but got", errorMsg)
+	}
 }
 
 func TestAnkoWithTimeoutCancelation(t *testing.T) {
 	expectedExitCode := systools.ExitByTimeout
 	expectedMessageCount := 1
+	errorMsg := ""
 	localMsg := []string{}
 	outHandler := func(msg ...interface{}) {
 		for _, m := range msg {
@@ -438,7 +444,7 @@ func TestAnkoWithTimeoutCancelation(t *testing.T) {
 			case tasks.MsgExecOutput:
 				localMsg = append(localMsg, string(s.Output))
 			case tasks.MsgError:
-				t.Error(s.Err)
+				errorMsg = s.Err.Error()
 			}
 		}
 	}
@@ -476,6 +482,11 @@ func TestAnkoWithTimeoutCancelation(t *testing.T) {
 	if len(localMsg) != expectedMessageCount {
 		t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
 		t.Log(localMsg)
+	}
+
+	expectedError := "execution interrupted"
+	if errorMsg != expectedError {
+		t.Error("expected error", expectedError, "but got", errorMsg)
 	}
 }
 
@@ -539,6 +550,7 @@ func TestAnkoWithTimeoutAsErrDetect(t *testing.T) {
 func TestAnkoExitCmd(t *testing.T) {
 	expectedExitCode := systools.ExitCmdError
 	expectedMessageCount := 1
+	errorMsg := ""
 	localMsg := []string{}
 	outHandler := func(msg ...interface{}) {
 		for _, m := range msg {
@@ -549,7 +561,7 @@ func TestAnkoExitCmd(t *testing.T) {
 			case tasks.MsgExecOutput:
 				localMsg = append(localMsg, string(s.Output))
 			case tasks.MsgError:
-				t.Error(s.Err)
+				errorMsg = s.Err.Error()
 			}
 		}
 	}
@@ -584,4 +596,198 @@ func TestAnkoExitCmd(t *testing.T) {
 		t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
 		t.Log(localMsg)
 	}
+	if errorMsg != "execution interrupted" {
+		t.Error("expected error 'execution interrupted' but got", errorMsg)
+	}
+}
+
+func TestAnkoOsCmd(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 1
+	localMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				t.Error(s.Err)
+			}
+		}
+	}
+	os := configure.GetOs()
+	expectedMessage := "os is " + os
+
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					`if ifos("` + os + `") {
+						println('os is ` + os + `')
+					}
+					`,
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+	if len(localMsg) != expectedMessageCount {
+		t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
+		t.Log(localMsg)
+	} else {
+		if localMsg[0] != expectedMessage {
+			t.Error("expected message ", expectedMessage, " but got", localMsg[0])
+		}
+	}
+}
+
+func TestAnkoJsonImport(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	outHandler := func(msg ...interface{}) {
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					`importJson("test_import_data", '{"master": "data"}')
+					`,
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+
+	testData, ok := dmc.GetData("test_import_data")
+	if !ok {
+		t.Error("expected to have data in test_import_data")
+	} else {
+
+		expected := make(map[string]interface{})
+		expected["master"] = "data"
+		if testData["master"] != expected["master"] {
+			t.Error("expected data in test_import_data to be", expected, " but got", testData)
+		}
+	}
+
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+}
+
+func TestAnkoJsonImportError(t *testing.T) {
+	expectedExitCode := systools.ExitCmdError
+	outHandler := func(msg ...interface{}) {
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					`importJson("test_import_data", '{"master": "data"') 
+					`,
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+}
+
+func TestAnkoExec01(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 1
+	localMsg := []string{}
+	errorMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				errorMsg = append(errorMsg, s.Err.Error())
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					"msg = exec('echo exec was running')",
+					"println(msg)",
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+	if len(errorMsg) > 0 {
+		t.Error("expected no error but got", errorMsg)
+	}
+
+	if len(localMsg) != expectedMessageCount {
+		t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
+		t.Log(localMsg)
+	}
+
 }

@@ -327,7 +327,16 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					//"error",
 					ctxout.ForeYellow+ctxout.BoldTag+ctxout.BackRed,
 				)
-
+			case tasks.MsgErrDebug:
+				c.drawRow(
+					tm.Target,
+					ctxout.ForeLightYellow+ctxout.BoldTag+ctxout.BackRed,
+					c.formatDebugError(tm),
+					ctxout.ForeLightRed,
+					" "+ctxout.BaseSignError+" ",
+					//"error",
+					ctxout.ForeYellow+ctxout.BoldTag+ctxout.BackRed,
+				)
 			case tasks.MsgInfo:
 				c.Println(
 					ctxout.ForeYellow,
@@ -370,4 +379,25 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 
 		m.Unlock()
 	}
+}
+
+func (c *CmdExecutorImpl) formatDebugError(err tasks.MsgErrDebug) string {
+	lines := strings.Split(err.Script, "\n")
+	msg := "can not format error"
+	lineNr := err.Line - 1
+	wordPos := err.Column - 1
+	if len(lines) >= lineNr {
+		lineCode := lines[lineNr]
+		if len(lineCode) > wordPos {
+			left := lineCode[:wordPos]
+			right := lineCode[wordPos:]
+			msg = fmt.Sprintf("Error in script: %s\n%s%s --- %s [%d]", err.Err.Error(), ctxout.ForeDarkGrey+left, ctxout.ForeRed+right+ctxout.CleanTag, err.Err.Error(), err.Column)
+		} else {
+			msg += " (column out of range)"
+		}
+
+	} else {
+		msg += " (line out of range)"
+	}
+	return msg
 }
