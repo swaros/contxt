@@ -77,10 +77,51 @@ func TestRunAnkoWithDefineAndDefault(t *testing.T) {
 	derr := ar.AddDefaultDefine("defaultSum", func(a ...interface{}) (int64, error) {
 		var res int64 = 0
 		return res, nil
-	}, tasks.RISK_LEVEL_LOW)
+	}, tasks.RISK_LEVEL_LOW, "defaultSum(10, 20, 30)")
 
 	if derr == nil {
 		t.Error("expected error but got nil. default define should not be added after initialization (lazyInit on RunAnko)")
+	}
+
+	if verifyValue != expectedValue {
+		t.Errorf("expected %d but got %d", expectedValue, verifyValue)
+	}
+
+	if res != nil {
+		t.Log(res)
+	}
+}
+
+func TestRunAnkoWithDefineAndDefaultRisk(t *testing.T) {
+	var verifyValue int64 = 0
+	var expectedValue int64 = 60
+	ar := tasks.NewAnkoRunner()
+	ar.Define("sum", func(a ...interface{}) (int64, error) {
+		var res int64 = 0
+		for _, v := range a {
+			res += v.(int64)
+		}
+		verifyValue = res
+		return res, nil
+	})
+
+	derr := ar.AddDefaultDefine("defaultSum", func(a ...interface{}) (int64, error) {
+		var res int64 = 0
+		return res, nil
+	}, tasks.RISK_LEVEL_HIGH, "defaultSum(10, 20, 30)")
+
+	if derr == nil {
+		t.Error("expected error but got nil. defaultSum should not be added with high risk level")
+	} else {
+		expectedError := "command defaultSum has a higher risk level than the AnkoRunner:2 > 0"
+		if derr.Error() != expectedError {
+			t.Errorf("expected [%s] but got [%s]", expectedError, derr.Error())
+		}
+	}
+
+	res, rErr := ar.RunAnko(`sum(10, 20, 30)`)
+	if rErr != nil {
+		t.Error(rErr)
 	}
 
 	if verifyValue != expectedValue {

@@ -52,6 +52,8 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 		return systools.ExitCmdError, dirError
 	}
 	ankRunner := NewAnkoRunner()
+	// in this context we set the risk level to high, because the targetcommands should be able to do anything
+	ankRunner.SetRiskLevel(RISK_LEVEL_HIGH)
 	cancelFn := ankRunner.EnableCancelation()
 	defer ankRunner.ClearBuffer()
 
