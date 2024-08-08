@@ -359,7 +359,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 			// check if we have script lines.
 			// if not, we need at least to check
 			// 'now' listener
-			if len(script.Script) < 1 {
+			if len(script.Script) < 1 && len(script.Cmd) < 1 {
 				t.getLogger().Debug("no script lines defined. run listener anyway")
 				t.listenerWatch("", nil, &script)
 				// workaround til the async runnig is refactored

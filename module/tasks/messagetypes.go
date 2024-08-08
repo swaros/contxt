@@ -59,6 +59,15 @@ type MsgError struct {
 	Target    string
 	Reference string
 }
+
+type MsgErrDebug struct {
+	Target string
+	Line   int
+	Column int
+	Script string
+	Err    error
+}
+
 type MsgExecOutput struct {
 	Target string
 	Output string

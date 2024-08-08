@@ -1,6 +1,7 @@
 package tasks_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -76,7 +77,7 @@ func TestRunAnkoWithDefineAndDefault(t *testing.T) {
 	derr := ar.AddDefaultDefine("defaultSum", func(a ...interface{}) (int64, error) {
 		var res int64 = 0
 		return res, nil
-	})
+	}, tasks.RISK_LEVEL_LOW)
 
 	if derr == nil {
 		t.Error("expected error but got nil. default define should not be added after initialization (lazyInit on RunAnko)")
@@ -227,7 +228,7 @@ for {
 	}
 }
 
-func TestRunAnkoWithTimout(t *testing.T) {
+func TestRunAnkoWithTimeout(t *testing.T) {
 
 	script := `println("Hello World :)")
 for {
@@ -252,4 +253,37 @@ for {
 	if len(buff) < 2 {
 		t.Error("expected at least 2 lines, but we got only ", len(buff), " lines")
 	}
+}
+
+func TestRunAnkoWithException(t *testing.T) {
+	var verifyValue int64 = 0
+	var expectedValue int64 = 60
+	ar := tasks.NewAnkoRunner()
+	errMsg := "ERROR just for testing"
+	ar.Define("sum", func(a ...interface{}) (int64, error) {
+		var res int64 = 0
+		for _, v := range a {
+			res += v.(int64)
+		}
+		verifyValue = res
+		// we just throw an exception here
+		// just for testing, even nothing bad happens
+		ar.ThrowException(errors.New(errMsg), "test")
+
+		return res, nil
+	})
+
+	_, rErr := ar.RunAnko(`sum(10, 20, 30)`)
+	if rErr != nil {
+		if rErr.Error() != errMsg {
+			t.Errorf("expected [%s] but got [%s]", errMsg, rErr.Error())
+		}
+	} else {
+		t.Error("expected error but got nil")
+	}
+
+	if verifyValue != expectedValue {
+		t.Errorf("expected %d but got %d", expectedValue, verifyValue)
+	}
+
 }

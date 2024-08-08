@@ -45,18 +45,18 @@ task:
       - echo " --- required build version        [ - {{$.build.version.main}}.{{$.build.version.mid}}.{{$.build.version.minor}} - ]"
       - echo " --- targets build version         [ - {{$.release.version.main}}.{{$.release.version.mid}}.{{$.release.version.minor}} - ]"
       - echo " --- self version                  [ - ${CTX_VERSION} - ]"
-      - echo " --- operating system              [ - ${CTX_OS} - ]"      
-{{- if $.WS0_contxt_root}} # always check if is set. without project info, this is not exists
+      - echo " --- operating system              [ - ${CTX_OS} - ]"
+#{{- if $.WS0_contxt_root}} # always check if is set. without project info, this is not exists
       - echo " --- WS0_contxt_root = go/template [ - {{$.WS0_contxt_root}} - ]"
-{{- end}}
+#{{- end}}
       - echo " --- WS0_contxt_root = ctx/var     [ - ${WS0_contxt_root} - ]"
-{{- range $k, $modul := $.module }}
+#{{- range $k, $modul := $.module }}
 
   ### create tasks for external modules
-  {{- if not $modul.local}}
+#  {{- if not $modul.local}}
       - echo " --- external modul  -->  {{ $modul.modul }} [ - {{ $modul.path }} - ]"
-  {{- end }}
-{{- end }}
+#  {{- end }}
+#{{- end }}
     next:
       - go-check
 
@@ -128,8 +128,8 @@ task:
       system: linux
     script:
       - echo "clean moduls"
-{{- range $k, $modul := $.module }}
-  {{- if $modul.clean}}
+#{{- range $k, $modul := $.module }}
+#  {{- if $modul.clean}}
       - echo "   clean modul {{ $modul.modul }}"
       - |
         cd ./module/{{ $modul.modul }}/
@@ -137,11 +137,11 @@ task:
         echo "      remove {{ $clean }}"
         rm -rfv {{ $clean }}
         {{ end }}
-  {{- end }}
-{{- end }}
+#  {{- end }}
+#{{- end }}
 
   ## update mai task
- 
+
   - id: update-all
     needs:
       - set-version
@@ -152,7 +152,7 @@ task:
       - update-dependencies
       - build-script-update
     script:
-      - echo "update all" 
+      - echo "update all"
   ## update readme
   - id: update-readme
     needs:
@@ -200,13 +200,13 @@ task:
       - depandabot
       - github-actions-update
     needs:
-{{- range $k, $modul := $.module }}
+#{{- range $k, $modul := $.module }}
       - verify-modul-{{ $modul.modul }}
-{{- end }}
-{{- range $k, $modul := $.module }}
+#{{- end }}
+#{{- range $k, $modul := $.module }}
 
   ### create tasks for external modules
-  {{- if not $modul.local}}
+#  {{- if not $modul.local}}
   - id: verify-modul-{{ $modul.modul }}
     options:
       invisible: true
@@ -249,11 +249,11 @@ task:
             - echo "             [go work use {{ $modul.path }}]"
             - go work use {{ $modul.path }}
 
-  {{- end }}
+#  {{- end }}
 
 
   ### create tasks for local modul dependencies
-  {{- if $modul.local}}
+#  {{- if $modul.local}}
   ## create dir if not exists
   - id: verify-modul-{{ $modul.modul }}
     options:
@@ -291,8 +291,8 @@ task:
           script:
             - echo "update go.work for local module {{ $modul.modul }}"
             - go work use module/{{ $modul.modul }}
-  {{- end}}
-{{- end }}
+#  {{- end}}
+#{{- end }}
 
 #### generate visual studio code workspace file
   - id: code-workspace
@@ -308,14 +308,14 @@ task:
 #### update dependencies for all modules
   - id: update-dependencies
     script:
-    {{- range $k, $test := $.module }}
-    {{- if $test.local}}
+#    {{- range $k, $test := $.module }}
+#    {{- if $test.local}}
       - |
        cd ${CTX_PWD}/module/{{ $test.modul }}
        go mod tidy
        cd ${CTX_PWD}
-    {{- end }}
-    {{- end }}
+#    {{- end }}
+#    {{- end }}
       - git status
 
 #### the next is all about tests
@@ -323,12 +323,12 @@ task:
 ##### this is the regular test for all modules
   - id: test
     script:
-    {{- range $k, $test := $.module }}
-    {{- if $test.local}}
+#    {{- range $k, $test := $.module }}
+#    {{- if $test.local}}
       - echo "testing modul {{ $test.modul }}"
       - go test  -failfast ./module/{{ $test.modul }}/./...
-    {{- end }}
-    {{- end }}
+#    {{- end }}
+#    {{- end }}
 
 ##### like the regular test but now we update the coverage report
 ##### maybe i overlooked an option to summerize them, but
@@ -346,8 +346,8 @@ task:
   - id: test-coverage
     script:
       - "#@set coverage-report <b></b>"
-      {{- range $k, $test := $.module }}
-      {{- if $test.local}}
+#      {{- range $k, $test := $.module }}
+#      {{- if $test.local}}
       - go test -cover ./module/{{ $test.modul }}/./... -coverprofile ./docs/test/coverage/test.{{ $test.modul }}.out
       - go tool cover -html ./docs/test/coverage/test.{{ $test.modul }}.out -o ./docs/test/coverage/{{ $test.modul }}.html
       - "#@add coverage-report <h2>{{ $test.modul }}</h2>"
@@ -356,8 +356,8 @@ task:
       - "#@add coverage-report ${report-cover}"
       - "#@add coverage-report </div>"
       - "#@add coverage-report <a target=\"coverage_details\" href=\"test/coverage/{{ $test.modul }}.html\">report for {{ $test.modul }}</a>"
-    {{- end }}
-    {{- end }}
+#    {{- end }}
+#    {{- end }}
       - "#@var-to-file coverage ./docs/coverage.html"
 
   - id: test-coverage
@@ -389,14 +389,14 @@ task:
 #### it is just faster
   - id: test-each
     needs:
-    {{- range $k, $test := $.module }}
-    {{- if $test.local}}
+#    {{- range $k, $test := $.module }}
+#    {{- if $test.local}}
       - atest-{{ $test.modul }}
-    {{- end }}
-    {{- end }}
+#    {{- end }}
+#    {{- end }}
 
-    {{- range $k, $test := $.module }}
-    {{- if $test.local}}
+#    {{- range $k, $test := $.module }}
+#    {{- if $test.local}}
   - id: atest-{{ $test.modul }}
     options:
       displaycmd: false
@@ -404,8 +404,8 @@ task:
     script:
       - echo "start async testing modul {{ $test.modul }}"
       - go test -count=1 -failfast -timeout {{ $test.test.timeout }} ./module/{{ $test.modul }}/./...
-    {{- end }}
-    {{- end }}
+#    {{- end }}
+#    {{- end }}
 
 ### BUILD SECTION ####
 ### this is the build section to build any binarys
@@ -550,15 +550,15 @@ task:
       invisible: false
     needs:
       - test-each
-{{- range $testName, $test := $.testcases.looptests }}
+#{{- range $testName, $test := $.testcases.looptests }}
       - testing-{{ $testName }}
-{{- end }}
+#{{- end }}
     require:
       system: linux
     script:
       - echo "test loops done"
 
-{{ range $k, $testcase := $.testcases.looptests }}
+#{{ range $k, $testcase := $.testcases.looptests }}
   - id: testing-{{ $k }}
     options:
       displaycmd: false
@@ -594,4 +594,4 @@ task:
           # print the output at last
           echo "  <f:cyan>${OUTPUT}</>"
         done
-{{ end }}
+#{{ end }}
