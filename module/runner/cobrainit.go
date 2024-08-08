@@ -457,6 +457,48 @@ func (c *SessionCobra) GetLintTemplateCmd() *cobra.Command {
 
 // -- Run cmd
 
+func (c *SessionCobra) GetRunAtAllCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "all",
+		Short: "run all commands in any assigned path",
+		Long: `run all commands in any assigned path in the workspace.
+
+		so if you have a workspace that have multiple paths, you can execute the targets on them.
+		as example: run all build
+		... will run the build target in all assigned paths in the workspace. if this target is defined.
+		if the target is not defined in this path, it is just ignored.
+		`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.checkDefaultFlags(cmd, args)
+			c.log().Debug("run all commands in context of project")
+			currentDir := dirhandle.Pushd()
+			defer currentDir.Popd()
+			var runErr error
+			configure.GetGlobalConfig().PathWorker(func(index, path string) {
+				targets := c.ExternalCmdHndl.GetTargets(true)
+				if len(args) > 0 {
+
+					c.log().Debug("run command in context of project", args)
+					for _, p := range args {
+						if systools.SliceContains(targets, p) {
+							c.println(ctxout.ForeLightBlue, "running target ", ctxout.ForeLightYellow, p, ctxout.ResetCode, " in context of path ", ctxout.ForeBlue, path, ctxout.ResetCode)
+							if err := c.ExternalCmdHndl.RunTargets(p, true); err != nil {
+								runErr = err
+							}
+						} else {
+							c.println(ctxout.ForeDarkGrey, "no target ", ctxout.ForeBlue, p, ctxout.ForeDarkGrey, " in path ", ctxout.ResetCode, path)
+						}
+					}
+				}
+
+			}, func(origin string) {
+				// we do not need to do anything here
+			})
+			return runErr
+		},
+	}
+}
+
 func (c *SessionCobra) GetRunCmd() *cobra.Command {
 	rCmd := &cobra.Command{
 		Use:   "run",
@@ -488,6 +530,7 @@ func (c *SessionCobra) GetRunCmd() *cobra.Command {
 			return targets, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
+	rCmd.AddCommand(c.GetRunAtAllCmd())
 	return rCmd
 }
 
