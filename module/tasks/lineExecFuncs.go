@@ -30,6 +30,7 @@ func (t *targetExecuter) GetFnAsDefaults(anko *AnkoRunner) []AnkoDefiner {
 		},
 		{"importJson",
 			func(key, json string) error {
+				json = t.phHandler.HandlePlaceHolder(json)
 				err := t.dataHandler.AddJSON(key, json)
 				if err != nil {
 					anko.ThrowException(err, fmt.Sprintf("importJson('%s','%s')", key, json))
@@ -96,9 +97,14 @@ func (t *targetExecuter) GetFnAsDefaults(anko *AnkoRunner) []AnkoDefiner {
 			RISK_LEVEL_LOW,
 		},
 		{"varMapSet",
-			func(key, path, value string) {
+			func(key, path, value string) error {
 				value = t.phHandler.HandlePlaceHolder(value)
-				t.dataHandler.SetJSONValueByPath(key, path, value)
+				err := t.dataHandler.SetJSONValueByPath(key, path, value)
+				if err != nil {
+					anko.ThrowException(err, fmt.Sprintf("varMapSet('%s','%s','%s')", key, path, value))
+					t.out(MsgError(MsgError{Err: err, Reference: "varMapSet(key,path,value)", Target: t.target}))
+				}
+				return err
 			},
 			RISK_LEVEL_LOW,
 		},

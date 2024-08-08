@@ -791,3 +791,168 @@ func TestAnkoExec01(t *testing.T) {
 	}
 
 }
+
+func TestAnkoVars(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	localMsg := []string{}
+	errorMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				errorMsg = append(errorMsg, s.Err.Error())
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					`
+					varSet("var1", "misaka")
+					importJson("test_import_data", '{"master": "hello ${var1}"}')
+					println(varAsJson("test_import_data"))
+
+					`,
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+
+	testData, ok := dmc.GetData("test_import_data")
+	if !ok {
+		t.Error("expected to have data in test_import_data")
+	} else {
+
+		expected := make(map[string]interface{})
+		expected["master"] = "hello misaka"
+		if testData["master"] != expected["master"] {
+			t.Error("expected data in test_import_data to be", expected, " but got", testData)
+		}
+	}
+
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+}
+
+func TestAnkoVars02(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+
+	expectedDataKeyvalues := map[string]string{
+		"test_import_data": `{"master": "hello misaka", "test": "verify hello misaka", "adress": {"street": {"name": "bakerstreet", "number": 33}}}`,
+	}
+	expectedKeyValues := map[string]string{
+		"var1":   "hello misaka",
+		"street": "bakerstreet 33",
+	}
+
+	expectedOutputs := []string{
+		"  adress:bakerstreet 33",
+	}
+
+	localMsg := []string{}
+	errorMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				errorMsg = append(errorMsg, s.Err.Error())
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					`
+					varSet("var1", "hello")
+					varAppend("var1", " misaka")
+					importJson("test_import_data", '{"test": "verify ${var1}"}')
+					varMapSet("test_import_data", "master", "${var1}")
+					varMapSet("test_import_data", "adress.street.name", "bakerstreet")
+					varMapSet("test_import_data", "adress.street.number", "33")
+					
+					varSet("street", "${test_import_data:adress.street.name} ${test_import_data:adress.street.number}")
+					
+					street = varGet("street")
+					println("  adress:" + street)
+
+					`,
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+	// simple key values
+	for key, value := range expectedKeyValues {
+		check := dmc.GetPH(key)
+		if check != value {
+			t.Error("expected", key, "to be:", value, "but got:", check)
+		}
+	}
+	// data containers
+	for key, value := range expectedDataKeyvalues {
+		data, ok := dmc.GetData(key)
+		if !ok {
+			t.Error("expected to have data in", key)
+		} else {
+			for k, v := range data {
+				if data, ok := expectedDataKeyvalues[key]; ok {
+					if data != value {
+						t.Error("expected data in", key, "to be", value, " but got", data)
+					}
+				} else {
+					t.Error("expected key", k, "to be", v, " but got", value)
+				}
+			}
+		}
+	}
+
+	// outputs
+	for i, expected := range expectedOutputs {
+		if localMsg[i] != expected {
+			t.Error("expected message", expected, "but got", localMsg[i])
+		}
+	}
+
+}
