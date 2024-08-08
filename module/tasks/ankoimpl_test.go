@@ -77,7 +77,7 @@ func TestRunAnkoWithDefineAndDefault(t *testing.T) {
 	derr := ar.AddDefaultDefine("defaultSum", func(a ...interface{}) (int64, error) {
 		var res int64 = 0
 		return res, nil
-	})
+	}, tasks.RISK_LEVEL_LOW)
 
 	if derr == nil {
 		t.Error("expected error but got nil. default define should not be added after initialization (lazyInit on RunAnko)")

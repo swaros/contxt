@@ -13,9 +13,18 @@ import (
 	"github.com/mattn/anko/vm"
 )
 
+type RiskLevel int
+
+const (
+	RISK_LEVEL_LOW RiskLevel = iota
+	RISK_LEVEL_MEDIUM
+	RISK_LEVEL_HIGH
+)
+
 type AnkoDefiner struct {
-	symbol string
-	value  interface{}
+	symbol string      // the name of the symbol
+	value  interface{} // the value of the symbol. this is a function or a variable
+	risk   RiskLevel   // the risk level of the symbol
 }
 
 type BufferHook func(msg string)
@@ -63,11 +72,11 @@ func NewAnkoRunner() *AnkoRunner {
 	}
 }
 
-func (ar *AnkoRunner) AddDefaultDefine(symbol string, value interface{}) error {
+func (ar *AnkoRunner) AddDefaultDefine(symbol string, value interface{}, risk RiskLevel) error {
 	if ar.lazyInit {
 		return errors.New("cannot add default define after initialization")
 	}
-	ar.defaults = append(ar.defaults, AnkoDefiner{symbol, value})
+	ar.defaults = append(ar.defaults, AnkoDefiner{symbol, value, risk})
 	return nil
 }
 
@@ -140,7 +149,7 @@ func (ar *AnkoRunner) ClearBuffer() {
 
 func (ar *AnkoRunner) AddDefaultDefines(defs []AnkoDefiner) error {
 	for _, def := range defs {
-		err := ar.AddDefaultDefine(def.symbol, def.value)
+		err := ar.AddDefaultDefine(def.symbol, def.value, def.risk)
 		if err != nil {
 			return err
 		}
