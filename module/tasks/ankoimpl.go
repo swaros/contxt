@@ -1,3 +1,27 @@
+// MIT License
+//
+// Copyright (c) 2020 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the Software), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+// AINC-NOTE-0815
+
 package tasks
 
 import (
@@ -25,6 +49,7 @@ type AnkoDefiner struct {
 	symbol string      // the name of the symbol
 	value  interface{} // the value of the symbol. this is a function or a variable
 	risk   RiskLevel   // the risk level of the symbol
+	help   string      // a help text for the symbol
 }
 
 type BufferHook func(msg string)
@@ -51,6 +76,7 @@ type AnkoRunner struct {
 	cancelation   bool
 	timeOut       time.Duration
 	exceptions    []AnkoException
+	riskLevel     RiskLevel
 }
 
 func NewAnkoRunner() *AnkoRunner {
@@ -69,15 +95,25 @@ func NewAnkoRunner() *AnkoRunner {
 		cancelation:   false,
 		timeOut:       0,
 		exceptions:    []AnkoException{},
+		riskLevel:     RISK_LEVEL_LOW,
 	}
 }
 
-func (ar *AnkoRunner) AddDefaultDefine(symbol string, value interface{}, risk RiskLevel) error {
+func (ar *AnkoRunner) AddDefaultDefine(symbol string, value interface{}, risk RiskLevel, help string) error {
 	if ar.lazyInit {
 		return errors.New("cannot add default define after initialization")
 	}
-	ar.defaults = append(ar.defaults, AnkoDefiner{symbol, value, risk})
+	if risk > ar.riskLevel {
+		return errors.New("command " + symbol + " has a higher risk level than the AnkoRunner:" + fmt.Sprintf("%d > %d", risk, ar.riskLevel))
+	}
+	ar.defaults = append(ar.defaults, AnkoDefiner{symbol, value, risk, help})
 	return nil
+}
+
+// SetRiskLevel sets the risk level for the AnkoRunner.
+// so any DefaultDefine that is added must be at the same or lower risk level
+func (ar *AnkoRunner) SetRiskLevel(risk RiskLevel) {
+	ar.riskLevel = risk
 }
 
 func (ar *AnkoRunner) SetTimeOut(to time.Duration) {
@@ -149,7 +185,7 @@ func (ar *AnkoRunner) ClearBuffer() {
 
 func (ar *AnkoRunner) AddDefaultDefines(defs []AnkoDefiner) error {
 	for _, def := range defs {
-		err := ar.AddDefaultDefine(def.symbol, def.value, def.risk)
+		err := ar.AddDefaultDefine(def.symbol, def.value, def.risk, def.help)
 		if err != nil {
 			return err
 		}

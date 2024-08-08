@@ -358,19 +358,6 @@ func (c *contxtConfigure) PathWorker(callbackInDirectory func(string, string), c
 			return errorWhileLoop
 		}
 
-		/*
-			for index, path := range cfg.Paths {
-				if err := os.Chdir(path.Path); err == nil {
-					callbackInDirectory(index, path.Path)
-				} else {
-					return err
-				}
-
-				if err := os.Chdir(current); err != nil {
-					return err
-				}
-			}*/
-		// now it is time for going back to the dir we was before
 		if err := os.Chdir(current); err == nil {
 			callbackBackToOrigin(current)
 		} else {
