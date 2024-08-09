@@ -70,7 +70,9 @@ without the need to search for the right directory.
 also it includes a task runner to execute commands in the right context.
 `,
 			Run: func(cmd *cobra.Command, args []string) {
-
+				if len(args) == 0 {
+					cmd.Help()
+				}
 			},
 		},
 	}
@@ -104,6 +106,7 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 		c.getSharedCmd(),
 		c.GetVariablesCmd(),
 	)
+	c.RootCmd.SilenceUsage = true
 	return nil
 }
 
