@@ -67,8 +67,13 @@ func GetVersion() string {
 			outVersion = minversion
 		}
 	}
-
 	return outVersion
+}
+
+func SetVersion(main, mid, min string) {
+	mainversion = main
+	midversion = mid
+	minversion = min
 }
 
 // GetShortcutsAndBinaryName delivers the current shortcuts and binary name

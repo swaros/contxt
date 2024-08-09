@@ -59,6 +59,55 @@ func TestTemplateExec(t *testing.T) {
 	}
 }
 
+func TestVersionCheck(t *testing.T) {
+	expectedErrorcode := systools.ExitByUnsupportedVersion
+	expectedMessageCount := 0
+	configure.SetVersion("0", "1", "0")
+	localMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Version: "99.99.99", // don't think this will be sometime a valid version
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Script: []string{
+					"echo Hello",
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+
+	code := tsk.RunTarget("test", false)
+	if code != expectedErrorcode {
+		t.Error("expected code ", expectedErrorcode, " but got", code)
+	}
+	if len(localMsg) != expectedMessageCount {
+		t.Error("expected ", expectedMessageCount, " messages, but got", len(localMsg))
+	}
+}
+
 func TestTemplateExecMoreLines(t *testing.T) {
 	localMsg := []string{}
 	outHandler := func(msg ...interface{}) {

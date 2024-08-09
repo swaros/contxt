@@ -917,7 +917,7 @@ task:
 func TestTriggerExecution(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 task:
   - id: base
     script:
@@ -949,7 +949,7 @@ task:
 func TestTriggerExecutionWithTarget(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 task:
   - id: subTarget
     script:
@@ -999,7 +999,7 @@ func assertErrormsgContains(t *testing.T, expected string, actual []error) bool 
 func TestTriggerError(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 task:
   - id: subTarget
     script:
@@ -1040,7 +1040,7 @@ func TestTriggerErrorIgnored(t *testing.T) {
 		t.Skip("Skipping test on windows")
 	}
 	source := `
-version: "1"
+version: "0.0.1"
 task:
   - id: subTarget
     options:
@@ -1077,7 +1077,7 @@ task:
 func TestRunError2(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 task:
   - id: base
     script:
@@ -1105,7 +1105,7 @@ task:
 func TestTriggerExecutionStopReason(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 task:
   - id: base
     script:
@@ -1136,7 +1136,7 @@ task:
 func TestTriggerInSomeCombinations(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 task:
     - id: subTarget
       options:
@@ -1286,7 +1286,7 @@ task:
 func TestRequire(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 config:
     variables:
        check: "hello"
@@ -1320,7 +1320,7 @@ task:
 func TestRequire2(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 config:
     variables:
        check: "hello"
@@ -1395,7 +1395,7 @@ task:
 func TestRequire4(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 config:
     variables:
        check: "hello"
@@ -1429,7 +1429,7 @@ task:
 func TestRequire5(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 config:
     variables:
        check: "hello"
@@ -1463,7 +1463,7 @@ task:
 func TestRequire6(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 config:
     variables:
        check: "hello"
@@ -1497,7 +1497,7 @@ task:
 func TestRequire7(t *testing.T) {
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 config:
     variables:
        check: "hello"
@@ -1533,7 +1533,7 @@ func TestRequire8(t *testing.T) {
 		t.Skip("OLDPWD is empty")
 	}
 	source := `
-version: "1"
+version: "0.0.1"
 task:
   - id: subTarget
     require:
@@ -1570,7 +1570,7 @@ func TestRequire9(t *testing.T) {
 	}
 	ResetWatchmanTaskList(t)
 	source := `
-version: "1"
+version: "0.0.1"
 task:
   - id: subTarget
     require:
