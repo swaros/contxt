@@ -20,8 +20,8 @@ github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJ
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
 github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
-github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
-github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
+github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
+github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/swaros/contxt/module/awaitgroup v0.4.0 h1:id/5Zc4GTGjnfU5rW4134PxpW563HHc8ASSWLiKeJB8=
 github.com/swaros/contxt/module/awaitgroup v0.4.0/go.mod h1:JbVRzT4ND6Jjd6HXrTmcH2jS7RBv03XIrVzPYk/4+Zw=
 github.com/swaros/contxt/module/configure v0.0.0-20240808085138-b2135233cb1c h1:CDaqG5mXysHqVJnRKCpfT4H1aWnLQHaIqWKGqvkSZN4=
