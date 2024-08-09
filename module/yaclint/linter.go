@@ -109,7 +109,7 @@ func (l *Linter) getUnstructMap(loader yamc.DataReader) (map[string]interface{},
 }
 
 // getStructSource creates the yaml/json representation of the config file
-func (l *Linter) getStructSource(loader yamc.DataReader) (map[string]interface{}, error) {
+func (l *Linter) getStructSource() (map[string]interface{}, error) {
 	cYamc, cerr := l.config.GetAsYmac() // get the configuration as yamc object
 	if cerr != nil {
 		return nil, cerr
@@ -135,7 +135,7 @@ func (l *Linter) init4read() (string, string, error) {
 		return "", "", err1
 	}
 
-	structData, err2 := l.getStructSource(yamcLoader)
+	structData, err2 := l.getStructSource()
 	if err2 != nil {
 		return "", "", err2
 	}
@@ -315,7 +315,7 @@ func (l *Linter) chunkWorker(chunks []diff.Chunk) {
 		}
 
 		if needToBeAdded {
-			temporaryChunk.ChunkNr = chunkIndex
+			//temporaryChunk.ChunkNr = chunkIndex
 			lintResult.Chunks = append(lintResult.Chunks, &LintChunk{
 				ChunkNr: chunkIndex,
 				Added:   temporaryChunk.Added,
