@@ -150,7 +150,20 @@ func (t *targetExecuter) verifiedKeyname(keyName string) (string, bool) {
 	return keyName, true
 }
 
+func (t *targetExecuter) verifyVersion() bool {
+	if t.runCfg.Version == "" || configure.GetVersion() == "" {
+		return true
+	}
+	return configure.CheckVersion(t.runCfg.Version, configure.GetVersion())
+}
+
 func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars map[string]string) int {
+
+	// check the version of the task
+	if !t.verifyVersion() {
+		t.getLogger().Error("unsupported version", t.runCfg.Version, " current version is ", configure.GetVersion())
+		return systools.ExitByUnsupportedVersion
+	}
 	// some weird target name? we will not allow this
 	if clTarget, err := systools.CheckForCleanString(target); err != nil {
 		t.getLogger().Error("invalid target name", err)

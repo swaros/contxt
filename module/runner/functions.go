@@ -331,6 +331,9 @@ func (c *CmdExecutorImpl) RunTargets(target string, force bool) error {
 		case systools.ExitOk:
 			c.session.Log.Logger.Info("target executed successfully")
 			return nil
+		case systools.ExitByUnsupportedVersion:
+			c.session.Log.Logger.Error("unsupported version")
+			return errors.New("unsupported version")
 		default:
 			c.session.Log.Logger.Error("unexpected exit code:", code)
 			return errors.New("unexpected exit code:" + fmt.Sprintf("%d", code))
