@@ -4,8 +4,8 @@ go 1.18
 
 require (
 	github.com/abiosoft/ishell v2.0.0+incompatible
-	github.com/charmbracelet/bubbletea v0.26.6
-	github.com/charmbracelet/lipgloss v0.12.1
+	github.com/charmbracelet/bubbletea v0.27.1
+	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/swaros/contxt/module/configure v0.0.0-20230531064521-09943a54576e
 	github.com/swaros/contxt/module/dirhandle v0.0.0-20230531064521-09943a54576e
@@ -59,7 +59,7 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
@@ -75,6 +75,6 @@ require (
 	github.com/flynn-archive/go-shlex v0.0.0-20150515145356-3f9db97f8568 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.24.0 // indirect
 
 )
