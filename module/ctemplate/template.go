@@ -313,6 +313,10 @@ func (t *Template) LoadInclude(path string) (configure.IncludePaths, bool, error
 	return include, true, nil
 }
 
+func (t *Template) GetIncludeConfig() *configure.IncludePaths {
+	return &t.includeConfig
+}
+
 func (t *Template) parseIncludes() error {
 	if len(t.includeConfig.Include.Folders) > 0 {
 		for _, include := range t.includeConfig.Include.Folders {

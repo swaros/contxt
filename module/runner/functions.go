@@ -288,6 +288,25 @@ func setConfigVaribales(dataHndl *tasks.CombinedDh, wsInfo configure.WorkspaceIn
 	return pathStrInfo
 }
 
+func (c *CmdExecutorImpl) AddIncludePath(path string) error {
+	if path == "" {
+		return errors.New("empty path is not allowed")
+	}
+	fileContent, err := AddPathToIncludeImports(c.session.TemplateHndl.GetIncludeConfig(), path)
+	if err != nil {
+		return err
+	}
+	if fileContent == "" {
+		return errors.New("internal error. failed by creating the include file content")
+	}
+	return systools.WriteFile(c.session.TemplateHndl.GetIncludeFile(), fileContent)
+}
+
+func (c *CmdExecutorImpl) CreateContxtFile() error {
+	// Define the content of the file
+	return CreateContxtFile()
+}
+
 // RunTargets run the given targets
 // force is used as flag for the first level targets, and is used
 // to runs shared targets once in front of the regular assigned targets

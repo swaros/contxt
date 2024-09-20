@@ -75,7 +75,7 @@ func TestAllIssues(t *testing.T) {
 					return nil
 				}
 
-				if testDef.Systems != nil && len(testDef.Systems) > 0 {
+				if len(testDef.Systems) > 0 {
 					// check if the current system is in the list of systems
 					// if not, we skip the test
 					if !systools.StringInSlice(runtime.GOOS, testDef.Systems) {
@@ -383,6 +383,18 @@ func getAbsolutePath(dir string) string {
 		panic(err)
 	}
 	return abs
+}
+
+// remove files save
+func removeFile(saveFile string) error {
+	if ok, rmerr := systools.Exists(saveFile); ok {
+		if err := os.Remove(saveFile); err != nil {
+			return err
+		}
+	} else {
+		return rmerr
+	}
+	return nil
 }
 
 // helper function to remove the config files

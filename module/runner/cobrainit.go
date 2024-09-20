@@ -105,9 +105,49 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 		c.GetVersionCmd(),
 		c.getSharedCmd(),
 		c.GetVariablesCmd(),
+		c.GetCreateCmd(),
 	)
 	c.RootCmd.SilenceUsage = true
 	return nil
+}
+
+func (c *SessionCobra) GetCreateCmd() *cobra.Command {
+	createCmd := &cobra.Command{
+		Use:   "create",
+		Short: "helper for create some config entries or files for contxt",
+		Long:  `help command to create template files, imports and other.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.checkDefaultFlags(cmd, args)
+
+			if len(args) == 0 {
+				return c.ExternalCmdHndl.CreateContxtFile()
+			}
+			return nil
+		},
+	}
+	createCmd.AddCommand(c.GetCreateImportCmd())
+	return createCmd
+}
+
+func (c *SessionCobra) GetCreateImportCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "import",
+		Short: "create a new import",
+		Long: `create a new import of a file or directory that will be parsed as a value file.
+		this will be used to set variables in the template`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.checkDefaultFlags(cmd, args)
+			if len(args) == 0 {
+				return errors.New("no path given")
+			}
+			for _, arg := range args {
+				if err := c.ExternalCmdHndl.AddIncludePath(arg); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	}
 }
 
 func (c *SessionCobra) getSharedCmd() *cobra.Command {

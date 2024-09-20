@@ -53,4 +53,6 @@ type CmdExecutor interface {
 	PrintTemplate()                                    // print out the current template as yaml
 	SetPreValue(name string, value string)             // set a pre value
 	PrintVariables(format string)                      // print out all variables
+	AddIncludePath(path string) error                  // add a path to the include section
+	CreateContxtFile() error                           // create a new contxt file
 }
