@@ -1,3 +1,5 @@
+config:
+  loglevel: debug
 task:
   - id: test_01
     requires:
@@ -19,4 +21,9 @@ task:
        ls,_,_ = exec("ls -ga")
        println(ls)
        
-      
+  - id: test_02
+    requires:
+      system: linux
+    cmd:
+      - id,returnCode,error = exec("docker ps --format '{{.ID}}' -f name=postgres")
+      - println(id)

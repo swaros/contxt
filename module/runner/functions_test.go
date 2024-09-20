@@ -1110,3 +1110,62 @@ func TestSetPrevalues(t *testing.T) {
 	*/
 
 }
+
+func TestCreate(t *testing.T) {
+	ChangeToRuntimeDir(t)
+	app, output, appErr := SetupTestApp("workspace0", time.Now().Format(time.RFC3339)+"ctx_projects.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	// removing the test file, if it exists, at start and end
+	removeFilePath := getAbsolutePath("workspace0/testcreate/.contxt.yml")
+	removeFilePath2 := getAbsolutePath("workspace0/testcreate/.inc.contxt.yml")
+	removeFile(removeFilePath)
+	removeFile(removeFilePath2)
+	defer removeFile(removeFilePath)
+	defer removeFile(removeFilePath2)
+
+	output.SetKeepNewLines(true)
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "testCreate_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+
+	// change into the test directory
+	// especially here to the first projectwe have there.
+	if err := os.Chdir(getAbsolutePath("workspace0/testcreate")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	// first create new context file
+	if err := runCobraCmd(app, "create"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+	// print the targets
+	if err := runCobraCmd(app, "run"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	// we should have the default task "my_task" in the output
+	assertInMessage(t, output, "my_task")
+
+	output.ClearAndLog()
+
+	// testing create import without any path, what should fail
+	if err := runCobraCmd(app, "create import"); err == nil {
+		t.Error("Expected an error, got none")
+	} else {
+		expectedError := "no path given"
+		if !strings.Contains(err.Error(), expectedError) {
+			t.Errorf("Expected error '%v', got '%v'", expectedError, err)
+		}
+	}
+
+	// testing create import with a path, what should work
+	if err := runCobraCmd(app, "create import imports"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+
+}

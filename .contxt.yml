@@ -321,6 +321,17 @@ task:
 #### the next is all about tests
 
 ##### this is the regular test for all modules
+  - id: vet
+    script:
+#    {{- range $k, $test := $.module }}
+#    {{- if $test.local}}
+      - echo "verify code in modul {{ $test.modul }}"
+      - go vet ./module/{{ $test.modul }}/./...
+#    {{- end }}
+#    {{- end }}
+
+
+##### this is the regular test for all modules
   - id: test
     script:
 #    {{- range $k, $test := $.module }}

@@ -75,6 +75,10 @@ func WriteFileIfNotExists(filename, content string) (int, error) {
 
 }
 
+func WriteFile(filename, content string) error {
+	return os.WriteFile(filename, []byte(content), 0644)
+}
+
 // Exists reports whether the named file or directory exists.
 func Exists(path string) (bool, error) {
 	_, err := os.Stat(path)
