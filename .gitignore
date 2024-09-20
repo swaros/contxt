@@ -31,3 +31,4 @@ contxt.code-workspace
 *.tmp
 *.temp
 *.ignore/
+*_local.only_*
