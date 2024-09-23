@@ -394,6 +394,7 @@ func (c *CmdExecutorImpl) formatDebugError(err tasks.MsgErrDebug) string {
 			msg = fmt.Sprintf("Error in script: %s\n%s%s --- %s [%d]", err.Err.Error(), ctxout.ForeDarkGrey+left, ctxout.ForeRed+right+ctxout.CleanTag, err.Err.Error(), err.Column)
 		} else {
 			msg += " (column out of range)"
+			msg += fmt.Sprintf(" ... Error in script: %s [%d:%d]", err.Err.Error(), err.Column, err.Line)
 		}
 
 	} else {

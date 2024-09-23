@@ -312,6 +312,7 @@ func (d *CombinedDh) handleMapPlaceHolder(line string) string {
 	for {
 		maxTry--
 		if maxTry < 0 {
+			d.getLogger().Warn("handleMapPlaceHolder: maxTry reached")
 			return line
 		}
 		leftFromSep, rightFromSep, rstart, found := d.findSeparatorBetweenBrackets(line, start)
@@ -322,9 +323,13 @@ func (d *CombinedDh) handleMapPlaceHolder(line string) string {
 				if newVal, err := ymc.GetGjsonString(rightFromSep); err == nil && newVal != "" {
 					line = d.replaceByMapVar(line, leftFromSep, rightFromSep, newVal)
 					start = 0 // reset start offset after we found something that changes the line
+					d.getLogger().Trace("handleMapPlaceHolder: found [" + leftFromSep + "] [" + rightFromSep + "] continue with [" + line + "]")
 				}
+			} else {
+				d.getLogger().Debug("handleMapPlaceHolder: chained key [" + leftFromSep + "] not found")
 			}
 		} else {
+			d.getLogger().Debug("handleMapPlaceHolder: result [" + line + "]")
 			return line
 		}
 	}

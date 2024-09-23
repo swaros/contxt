@@ -33,6 +33,7 @@ import (
 
 	"github.com/mattn/anko/core"
 	"github.com/mattn/anko/env"
+	_ "github.com/mattn/anko/packages"
 	"github.com/mattn/anko/parser"
 	"github.com/mattn/anko/vm"
 )
