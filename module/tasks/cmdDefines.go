@@ -42,9 +42,9 @@ type shellCmd struct{}
 
 // GetMainCmd returns the main command and the arguments to use
 func (s shellCmd) GetMainCmd(cfg configure.Options) (string, []string) {
-
+	strings.TrimSpace(cfg.Maincmd)
 	// the case we have no main command and no main params
-	if cfg.Maincmd == "" && (cfg.Mainparams == nil || len(cfg.Mainparams) == 0) {
+	if cfg.Maincmd == "" && len(cfg.Mainparams) == 0 {
 		lwr := strings.ToLower(runtime.GOOS)
 		switch lwr {
 		case "darwin": // macos

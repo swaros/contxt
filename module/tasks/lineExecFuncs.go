@@ -141,6 +141,21 @@ err = result[2]`,
 			RISK_LEVEL_LOW,
 			`get a variable. e.g. value = varGet('key')`,
 		},
+		{"varParse",
+			func(line string) string {
+				return t.phHandler.HandlePlaceHolder(line)
+			},
+			RISK_LEVEL_LOW,
+			`parses the given line with existing values = varParse('hello ${key}')`,
+		},
+		{"varExists",
+			func(key string) bool {
+				_, ok := t.phHandler.GetPHExists(key)
+				return ok
+			},
+			RISK_LEVEL_LOW,
+			`check if a variable exists. e.g. if varExists('key') { ... }`,
+		},
 		{"varMapSet",
 			func(key, path, value string) error {
 				value = t.phHandler.HandlePlaceHolder(value)
@@ -197,6 +212,29 @@ err = result[2]`,
 			},
 			RISK_LEVEL_HIGH,
 			`write a content to a file. e.g. writeFile('output.txt','hello world')`,
+		},
+		{"ReadFile",
+			func(fileName string) (string, error) {
+				f, err := os.Open(fileName)
+				if err != nil {
+					anko.ThrowException(err, fmt.Sprintf("ReadFile('%s')", fileName))
+					return "", err
+				}
+				defer f.Close()
+				fi, err := f.Stat()
+				if err != nil {
+					anko.ThrowException(err, fmt.Sprintf("ReadFile('%s')", fileName))
+					return "", err
+				}
+				data := make([]byte, fi.Size())
+				if _, err := f.Read(data); err != nil {
+					anko.ThrowException(err, fmt.Sprintf("ReadFile('%s')", fileName))
+					return "", err
+				}
+				return string(data), nil
+			},
+			RISK_LEVEL_HIGH,
+			`read a file. e.g. content,err = ReadFile('input.txt')`,
 		},
 	}
 	return cmdList
