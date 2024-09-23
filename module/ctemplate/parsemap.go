@@ -163,3 +163,10 @@ func MergeVariableMap(mapin map[string]interface{}, maporigin map[string]interfa
 	}
 	return maporigin, nil
 }
+
+func MergeVariableMapRef(mapin map[string]interface{}, maporigin *map[string]interface{}) error {
+	if err := mergo.Merge(maporigin, mapin, mergo.WithOverride); err != nil {
+		return err
+	}
+	return nil
+}

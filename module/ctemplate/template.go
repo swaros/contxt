@@ -318,6 +318,31 @@ func (t *Template) GetIncludeConfig() *configure.IncludePaths {
 }
 
 func (t *Template) parseIncludes() error {
+	if len(t.includeConfig.Include.KeyedFolders) > 0 {
+		for _, keymaps := range t.includeConfig.Include.KeyedFolders {
+			var keyedmap map[string]interface{}
+			keyedKeymap := map[string]any{}
+
+			if len(keymaps.Paths) > 0 {
+				for _, path := range keymaps.Paths {
+					t.logger.Debug("parse keyed Source include:", path)
+					mapOrigin := t.GetOriginMap()
+					if err := t.ReadValueFiles(path, &keyedmap); err != nil {
+						return err
+					} else {
+						keyedKeymap[keymaps.Keyname] = keyedmap
+						var perr error
+						if mapOrigin, perr = MergeVariableMap(keyedKeymap, mapOrigin); perr != nil {
+							return perr
+						}
+						t.UpdateOriginMap(mapOrigin)
+					}
+
+				}
+			}
+
+		}
+	}
 	if len(t.includeConfig.Include.Folders) > 0 {
 		for _, include := range t.includeConfig.Include.Folders {
 			t.logger.Debug("parseIncludes:", include)
@@ -328,7 +353,61 @@ func (t *Template) parseIncludes() error {
 			}
 		}
 	}
+
 	return nil
+}
+
+func (t *Template) ReadValueFiles(startPath string, resultMap *map[string]interface{}) error {
+	err := filepath.Walk(startPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		var jsonMap map[string]interface{}
+		hit := false
+		if !info.IsDir() {
+			var extension = filepath.Ext(path)
+			var basename = filepath.Base(path)
+			if basename == DefaultTemplateFile || basename == DefaultIncludeFile {
+				return nil
+			}
+			switch extension {
+			case ".json":
+
+				parsedCnt, loaderr := t.TryHandleTemplate(path)
+				if loaderr != nil {
+					return loaderr
+				}
+				rdr := yamc.NewJsonReader()
+				loaderr = rdr.Unmarshal([]byte(parsedCnt), &jsonMap)
+				if loaderr != nil {
+					return loaderr
+				}
+
+				hit = true
+			case ".yaml", ".yml":
+				var parsedCnt string
+				parsedCnt, loaderr := t.TryHandleTemplate(path)
+				if loaderr != nil {
+					return loaderr
+				}
+				rdr := yamc.NewYamlReader()
+				loaderr = rdr.Unmarshal([]byte(parsedCnt), &jsonMap)
+				if loaderr != nil {
+					return loaderr
+				}
+				hit = true
+			}
+			if hit {
+				loaderr := MergeVariableMapRef(jsonMap, resultMap)
+				if loaderr != nil {
+					return loaderr
+				}
+			}
+		}
+
+		return nil
+	})
+	return err
 }
 
 func (t *Template) ImportFolder(startPath string) (map[string]interface{}, error) {

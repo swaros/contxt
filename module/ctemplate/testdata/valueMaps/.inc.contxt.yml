@@ -1,0 +1,9 @@
+include:
+  basedir: false
+  folders:
+  - includes/import.yml
+  keyedFolders:
+    - keyname: 'Value'
+      paths: 
+       - includes/default.yml
+       - includes/01usingVars.yml

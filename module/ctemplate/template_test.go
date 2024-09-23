@@ -109,3 +109,25 @@ func TestTemplateWithLinter(t *testing.T) {
 
 	popDir()
 }
+
+func TestTemplateV2KeydMap(t *testing.T) {
+	pushDir("testdata/valueMaps")
+	tmplte := ctemplate.New()
+	if err := tmplte.Init(); err != nil {
+		t.Error(err)
+		return
+	}
+
+	cfg, err := tmplte.LoadV2()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	assert.Equal(t, "mars", cfg.Task[0].ID)
+	assert.Equal(t, "echo valueA + valueB + valueC", cfg.Task[0].Script[0])
+	assert.Equal(t, "echo postgreSQL", cfg.Task[0].Script[1])
+	assert.Equal(t, "echo valueB", cfg.Task[0].Script[2])
+
+	popDir()
+}
