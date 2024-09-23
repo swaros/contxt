@@ -1,0 +1,10 @@
+config:
+  variables:
+    test: check
+
+task:
+  - id: {{ $.vars.name }}
+    script:
+      - echo {{ $.Value.testout }} + {{ $.Value.testname }} + {{ $.Value.testname2 }}
+      - echo {{ $.Value.services.database }}
+      - echo {{ $.Value.datasheet.username }}

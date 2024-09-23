@@ -1,0 +1,6 @@
+testout: valueA
+testname: valueB
+testname2: valueC
+
+services:
+  database: postgreSQL

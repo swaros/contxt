@@ -1,0 +1,3 @@
+datasheet:
+    username: {{ $.Value.testname }}
+    service: {{ $.Value.services.database }}
