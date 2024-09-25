@@ -15,6 +15,18 @@
       - [Return values](#return-values)
       - [Functions](#functions)
         - [Module](#module)
+      - [Control Structures](#control-structures)
+        - [if](#if)
+        - [else if](#else-if)
+        - [and](#and)
+        - [or](#or)
+        - [for](#for)
+          - [using arrays](#using-arrays)
+          - [using ranges](#using-ranges)
+          - [using maps](#using-maps)
+          - [until condition is true](#until-condition-is-true)
+          - [endless loop](#endless-loop)
+          - [endless loop with break](#endless-loop-with-break)
 
 
 <!-- /TOC -->
@@ -288,3 +300,104 @@ module test {
 }
 test.test() // Hello
 ```
+
+#### Control Structures
+you can use the following control structures in anko.
+
+- if
+- else
+- else if
+- for
+- break
+- continue
+- return
+
+##### if
+```go
+a = 1
+if a == 1 {
+    println("a is 1")
+} else {
+    println("a is not 1")
+}
+```
+
+##### else if
+```go
+a = 1
+if a == 1 {
+    println("a is 1")
+} else if a == 2 {
+    println("a is 2")
+} else {
+    println("a is not 1 or 2")
+}
+```
+
+##### and
+```go
+a = 1
+b = 2
+if a == 1 && b == 2 {
+    println("a is 1 and b is 2")
+}
+```
+
+##### or
+```go
+a = 1
+b = 2
+if a == 1 || b == 3 {
+    println("a is 1 or b is 3")
+}
+```
+
+##### for
+###### using arrays
+```go
+for i in [1, 2, 3, 4, 5] {
+    println(i)
+}
+```
+###### using ranges
+```go
+for i in range(5) {
+    println(i)
+}
+```
+###### using maps
+```go
+for k, v in {"key": "value", "key2": "value2"} {
+    println(k, v)
+}
+```
+
+###### until condition is true
+```go
+i = 0
+for i < 2 {
+	println(i)
+	i++
+}
+```
+
+###### endless loop
+```go
+i = 0
+for {
+    println(i)
+    i++
+}
+```
+###### endless loop with break
+```go
+i = 0
+for {
+	println(i)
+	i++
+	if i > 1 {
+		break
+	}
+}
+```
+
