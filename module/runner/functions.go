@@ -365,7 +365,7 @@ func (c *CmdExecutorImpl) GetTargets(incInvisible bool) []string {
 	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
 		c.session.Log.Logger.Error("error while loading template", err)
 	} else if !exists {
-		c.session.Log.Logger.Error("template not exists", err)
+		c.session.Log.Logger.Debug("template not exists", err)
 	} else {
 		if res, have := TemplateTargetsAsMap(template, incInvisible); have {
 			return res
@@ -481,7 +481,7 @@ func (c *CmdExecutorImpl) SetProjectVariables() {
 	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
 		c.session.Log.Logger.Error("error while loading template", err)
 	} else if !exists {
-		c.session.Log.Logger.Error("template not exists", err)
+		c.session.Log.Logger.Debug("template not exists", err)
 	} else {
 		c.setVariable("WS_PROJECT", template.Workspace.Project)
 		c.setVariable("WS_ROLE", template.Workspace.Role)
