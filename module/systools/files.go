@@ -58,6 +58,16 @@ func CopyFile(source, target string) error {
 	return nil
 }
 
+// ReadFileAsStrings reads a file and returns its content as a slice of strings
+// each line is a string
+func ReadFileAsStrings(filename string) ([]string, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	return strings.Split(string(data), "\n"), nil
+}
+
 // WriteFileIfNotExists writes a file if it does not exist
 // reports 0 if file was written, 1 if file exists, 2 if error
 // on error, error is returned

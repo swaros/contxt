@@ -36,6 +36,7 @@ import (
 	_ "github.com/mattn/anko/packages"
 	"github.com/mattn/anko/parser"
 	"github.com/mattn/anko/vm"
+	"github.com/swaros/contxt/module/mimiclog"
 )
 
 type RiskLevel int
@@ -78,6 +79,7 @@ type AnkoRunner struct {
 	timeOut       time.Duration
 	exceptions    []AnkoException
 	riskLevel     RiskLevel
+	logger        mimiclog.Logger
 }
 
 func NewAnkoRunner() *AnkoRunner {
@@ -97,7 +99,12 @@ func NewAnkoRunner() *AnkoRunner {
 		timeOut:       0,
 		exceptions:    []AnkoException{},
 		riskLevel:     RISK_LEVEL_LOW,
+		logger:        mimiclog.NewNullLogger(),
 	}
+}
+
+func (ar *AnkoRunner) SetLogger(logger mimiclog.Logger) {
+	ar.logger = logger
 }
 
 func (ar *AnkoRunner) AddDefaultDefine(symbol string, value interface{}, risk RiskLevel, help string) error {

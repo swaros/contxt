@@ -825,3 +825,12 @@ func (c *CmdExecutorImpl) PrintTemplate() {
 func (c *CmdExecutorImpl) SetPreValue(name string, value string) {
 	c.setVariable(name, value)
 }
+
+func (c *CmdExecutorImpl) RunAnkoScript(args []string) error {
+	runner := tasks.NewAnkoRunner()
+	runner.SetLogger(c.session.Log.Logger)
+
+	script := strings.Join(args, "\n")
+	_, err := runner.RunAnko(script)
+	return err
+}

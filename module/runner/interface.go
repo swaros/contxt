@@ -55,4 +55,5 @@ type CmdExecutor interface {
 	PrintVariables(format string)                      // print out all variables
 	AddIncludePath(path string) error                  // add a path to the include section
 	CreateContxtFile() error                           // create a new contxt file
+	RunAnkoScript(args []string) error                 // run an anko script
 }
