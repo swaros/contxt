@@ -1,5 +1,5 @@
 # anko
-<!-- TOC -->- [anko](#anko)- [anko](#anko)
+<!-- TOC -->
 - [anko](#anko)
   - [what is anko](#what-is-anko)
   - [runtime specific](#runtime-specific)
@@ -15,6 +15,7 @@
       - [Return values](#return-values)
       - [Functions](#functions)
         - [Module](#module)
+
 
 <!-- /TOC -->
 
