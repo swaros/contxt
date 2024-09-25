@@ -1169,3 +1169,69 @@ func TestCreate(t *testing.T) {
 	}
 
 }
+
+func TestAnkoRunner(t *testing.T) {
+	ChangeToRuntimeDir(t)
+	app, output, appErr := SetupTestApp("workspace0", time.Now().Format(time.RFC3339)+"ctx_projects.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+
+	output.SetKeepNewLines(true)
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "testAnko_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+
+	if err := runCobraCmd(app, "anko println('hello')"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+}
+
+func TestAnkoFileExecute(t *testing.T) {
+	ChangeToRuntimeDir(t)
+	app, output, appErr := SetupTestApp("workspace0", time.Now().Format(time.RFC3339)+"ctx_projects.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+
+	output.SetKeepNewLines(true)
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "testAnkoFile_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+
+	if err := runCobraCmd(app, "anko -f test1.anko"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+}
+
+func TestAnkoFileExecuteWrongFile(t *testing.T) {
+	ChangeToRuntimeDir(t)
+	app, output, appErr := SetupTestApp("workspace0", time.Now().Format(time.RFC3339)+"ctx_projects.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+
+	output.SetKeepNewLines(true)
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "testAnkoFileNotExists_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+
+	if err := runCobraCmd(app, "anko -f wrongname.anko"); err == nil {
+		t.Error("Expected an error, got none")
+	} else {
+		// expected error message is: file wrongname.anko not found
+		expectedError := "file wrongname.anko not found"
+		if !strings.Contains(err.Error(), expectedError) {
+			t.Errorf("Expected error '%v', got '%v'", expectedError, err)
+		}
+	}
+}

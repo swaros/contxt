@@ -4,61 +4,63 @@ tasks are a collection of scripts they are depending to the current directory. t
 <!-- TOC -->
 
 - [contxt.yml task](#contxtyml-task)
-    - [task create and run](#task-create-and-run)
-        - [basic use case](#basic-use-case)
-            - [create  a new task](#create--a-new-task)
-            - [list and run a task](#list-and-run-a-task)
-        - [extended use-case](#extended-use-case)
-            - [how to avoid running asynchronously](#how-to-avoid-running-asynchronously)
-            - [run task from anywhere](#run-task-from-anywhere)
-            - [list all task](#list-all-task)
+  - [task create and run](#task-create-and-run)
+    - [basic use case](#basic-use-case)
+      - [create  a new task](#create--a-new-task)
+      - [list and run a task](#list-and-run-a-task)
+    - [extended use-case](#extended-use-case)
+      - [how to avoid running asynchronously](#how-to-avoid-running-asynchronously)
+      - [run task from anywhere](#run-task-from-anywhere)
+      - [list all task](#list-all-task)
 - [structure](#structure)
-    - [Task](#task)
-        - [task structure](#task-structure)
-            - [ID string](#id-string)
-            - [Variables](#variables)
-            - [Requires](#requires)
-                - [system string](#system-string)
-                - [exists, notExists](#exists-notexists)
-                - [Variables, Environment](#variables-environment)
-            - [Stopreasons](#stopreasons)
-                - [onoutContains](#onoutcontains)
-                - [onoutcountLess, onoutcountMore](#onoutcountless-onoutcountmore)
-            - [listener](#listener)
-                - [trigger](#trigger)
-                    - [trigger onoutContains](#trigger-onoutcontains)
-                    - [trigger onoutcountLess and onoutcountMore](#trigger-onoutcountless-and-onoutcountmore)
-                - [action](#action)
-            - [Options](#options)
-                - [ignorecmderror bool](#ignorecmderror-bool)
-                - [format string](#format-string)
-                - [stickcursor bool](#stickcursor-bool)
-                - [colorcode and bgcolorcode string](#colorcode-and-bgcolorcode-string)
-                - [panelsize int](#panelsize-int)
-                - [displaycmd bool](#displaycmd-bool)
-                - [hideout bool](#hideout-bool)
-                - [invisible bool](#invisible-bool)
-                - [maincmd string, mainparams list](#maincmd-string-mainparams-list)
-                - [workingdir string](#workingdir-string)
-    - [config](#config)
-        - [sequencially bool](#sequencially-bool)
-        - [coloroff bool](#coloroff-bool)
-        - [loglevel](#loglevel)
-        - [variables](#variables)
-            - [working with variables](#working-with-variables)
-            - [asynchronously behaviour](#asynchronously-behaviour)
-            - [set variables from command line](#set-variables-from-command-line)
-            - [import variables](#import-variables)
-                - [import as short cut](#import-as-short-cut)
-        - [autorun](#autorun)
-            - [onenter](#onenter)
-            - [onleave](#onleave)
-            - [example](#example)
-        - [Imports](#imports)
-        - [Use. Shared Tasks 1/2](#use-shared-tasks-12)
-            - [example for linux users](#example-for-linux-users)
-        - [Require. Shared Task 2/2](#require-shared-task-22)
-        - [allowmultiplerun bool](#allowmultiplerun-bool)
+  - [Task](#task)
+    - [task structure](#task-structure)
+      - [ID (string)](#id-string)
+      - [Script (\[\]string)](#script-string)
+      - [cmd (\[\]string)](#cmd-string)
+      - [Variables](#variables)
+      - [Requires](#requires)
+        - [system (string)](#system-string)
+        - [exists, notExists](#exists-notexists)
+        - [Variables, Environment](#variables-environment)
+      - [Stopreasons](#stopreasons)
+        - [onoutContains](#onoutcontains)
+        - [onoutcountLess, onoutcountMore](#onoutcountless-onoutcountmore)
+      - [listener](#listener)
+        - [trigger](#trigger)
+          - [trigger onoutContains](#trigger-onoutcontains)
+          - [trigger onoutcountLess and onoutcountMore](#trigger-onoutcountless-and-onoutcountmore)
+        - [action](#action)
+      - [Options](#options)
+        - [ignorecmderror (bool)](#ignorecmderror-bool)
+        - [format (string)](#format-string)
+        - [stickcursor (bool)](#stickcursor-bool)
+        - [colorcode and bgcolorcode (string)](#colorcode-and-bgcolorcode-string)
+        - [panelsize (int)](#panelsize-int)
+        - [displaycmd (bool)](#displaycmd-bool)
+        - [hideout (bool)](#hideout-bool)
+        - [invisible (bool)](#invisible-bool)
+        - [maincmd (string), mainparams (list)](#maincmd-string-mainparams-list)
+        - [workingdir (string)](#workingdir-string)
+  - [config](#config)
+    - [sequencially (bool)](#sequencially-bool)
+    - [coloroff (bool)](#coloroff-bool)
+    - [loglevel](#loglevel)
+    - [variables](#variables-1)
+      - [working with variables](#working-with-variables)
+      - [asynchronously behaviour](#asynchronously-behaviour)
+      - [set variables from command line](#set-variables-from-command-line)
+      - [import variables](#import-variables)
+        - [import as short cut](#import-as-short-cut)
+    - [autorun](#autorun)
+      - [onenter](#onenter)
+      - [onleave](#onleave)
+      - [example](#example)
+    - [Imports](#imports)
+    - [Use. Shared Tasks (1/2)](#use-shared-tasks-12)
+      - [example for linux users](#example-for-linux-users)
+    - [Require. Shared Task (2/2)](#require-shared-task-22)
+    - [allowmultiplerun (bool)](#allowmultiplerun-bool)
 
 <!-- /TOC -->
 ## task create and run 
@@ -210,6 +212,61 @@ task:
    - id: task-identifier           
 ````
 
+#### Script ([]string)
+the script section contains a list of commands they will be executed.
+````yaml
+task:
+  - id: task-identifier
+    script:
+      - echo "hello world"
+````
+these commands will be executed in the default system shell.
+if you need to run a different shell, you can define this in the options section.
+
+````yaml
+task:
+  - id: task-identifier
+    options:
+      maincmd: "sh"
+    script:
+      - echo "hello world"
+````
+this will run the script in the bash shell.
+
+> **IMPORTANT** the script section is a list of strings. so if you need to run a multiline script, you have to use the yaml multiline string annotation `|-` or `>`. any entry in the list will be executed in his own instance of the shell. so if you changing the directory in one line, this will not affect the next line. for this use multiline strings.
+
+````yaml
+task:
+  - id: task-identifier
+    script:
+      - |
+        echo "hello world"
+        echo "this is a multiline script"
+        cd ~
+        pwd
+````
+
+#### cmd ([]string)
+the cmd section is a list of commands they will be executed as [akno](https://github.com/mattn/anko) commands. [anko](https://github.com/mattn/anko) is a go based interpreter that can be used to run go code in a yaml file. 
+````yaml
+task:
+  - id: task-identifier
+    cmd:
+      - println("hello world")
+````
+different to script section, the cmd section is not executed in a shell. it also do not matter if you use the multiline string annotation or not.
+this will be anytime used as a single command. 
+````yaml
+task:
+  - id: task-identifier
+    cmd:
+      - println("hello world")
+      - println("this is a multiline script")
+      - exec("cd ~")
+      - pwdout,_,_ = exec("pwd")
+      - println(pwdout)
+````
+
 #### Variables 
 the variables' section defines variables, or update existing variables.
 these variables will be existed also if the task is done.
@@ -220,7 +277,7 @@ these variables will be existed also if the task is done.
 task:
   - id: task-identifier
     variables:
-      example-var: something               
+      example-var: something
 ````
 
 these variables can be used by the placeholder key like `${example-var}`

@@ -106,6 +106,7 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 		c.getSharedCmd(),
 		c.GetVariablesCmd(),
 		c.GetCreateCmd(),
+		c.GetAnkoRunCmd(),
 	)
 	c.RootCmd.SilenceUsage = true
 	return nil
@@ -148,6 +149,49 @@ func (c *SessionCobra) GetCreateImportCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func (c *SessionCobra) GetAnkoRunCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "anko",
+		Short: "run anko commands",
+		Long: `executes the given anko commands from input.
+like: ctx anko 'println("hello world")'`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c.checkDefaultFlags(cmd, args)
+			if len(args) == 0 {
+				if incFile, err := cmd.Flags().GetString("file"); err != nil {
+					return err
+				} else {
+					if exists, err := systools.Exists(incFile); err != nil {
+						return err
+					} else {
+						if exists {
+							if content, err := os.ReadFile(incFile); err != nil {
+								return err
+							} else {
+								args = []string{string(content)}
+								if err := c.ExternalCmdHndl.RunAnkoScript(args); err != nil {
+									return err
+								}
+							}
+						} else {
+							return fmt.Errorf("file %s not found", incFile)
+						}
+					}
+				}
+			} else {
+
+				if err := c.ExternalCmdHndl.RunAnkoScript(args); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		},
+	}
+	cmd.Flags().StringP("file", "f", "", "set file path to execute")
+	return cmd
 }
 
 func (c *SessionCobra) getSharedCmd() *cobra.Command {
