@@ -156,7 +156,10 @@ func (c *SessionCobra) GetAnkoRunCmd() *cobra.Command {
 		Use:   "anko",
 		Short: "run anko commands",
 		Long: `executes the given anko commands from input.
-like: ctx anko 'println("hello world")'`,
+like: ctx anko 'println("hello world")'
+
+use -f <filename> to set a file, that contains the anko commands
+like: ctx anko -f my-anko-script.ank`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c.checkDefaultFlags(cmd, args)
 			if len(args) == 0 {
