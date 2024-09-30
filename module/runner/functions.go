@@ -43,7 +43,9 @@ import (
 )
 
 type CmdExecutorImpl struct {
-	session *CmdSession
+	session   *CmdSession
+	executer  *tasks.TaskListExec
+	dataHandl *tasks.CombinedDh
 }
 
 func NewCmd(session *CmdSession) *CmdExecutorImpl {
@@ -56,7 +58,7 @@ func (c *CmdExecutorImpl) PrintVariables(format string) {
 	format = strings.TrimSpace(format)
 	format = strings.ReplaceAll(format, "[nl]", "\n")
 	checkOdd := 0
-	iterMap := systools.StrStr2StrAny(c.session.DefaultVariables)
+	iterMap := systools.StrStr2StrAny(c.GetVariables())
 	systools.MapRangeSortedFn(iterMap, func(key string, value any) {
 		checkOdd++
 		if strings.Contains(format, "%") {
@@ -146,6 +148,7 @@ func (c *CmdExecutorImpl) CallBackOldWs(oldws string) bool {
 				"target": onleaveTarget,
 			}
 			c.session.Log.Logger.Info("execute leave-action", Fields)
+			c.InitExecuter()
 			c.RunTargets(onleaveTarget, true)
 
 		}
@@ -174,6 +177,7 @@ func (c *CmdExecutorImpl) CallBackNewWs(newWs string) {
 			}
 			onEnterTarget := template.Config.Autorun.Onenter
 			c.session.Log.Logger.Info("execute enter-action", Fields)
+			c.InitExecuter()
 			c.RunTargets(onEnterTarget, true)
 		}
 
@@ -307,10 +311,25 @@ func (c *CmdExecutorImpl) CreateContxtFile() error {
 	return CreateContxtFile()
 }
 
-// RunTargets run the given targets
-// force is used as flag for the first level targets, and is used
-// to runs shared targets once in front of the regular assigned targets
-func (c *CmdExecutorImpl) RunTargets(target string, force bool) error {
+func (c *CmdExecutorImpl) runAsyncTargets(targets []string, force bool) error {
+	// using channel to sync the goroutines
+	ch := make(chan bool)
+	// run the targets in goroutines
+	c.InitExecuter()
+	for _, target := range targets {
+		go func(t string) {
+			c.RunTargets(t, force)
+			ch <- true
+		}(target)
+	}
+	// wait for all goroutines to finish
+	for range targets {
+		<-ch
+	}
+	return nil
+}
+
+func (c *CmdExecutorImpl) InitExecuter() error {
 	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
 		c.session.Log.Logger.Error("error while loading template", err)
 		return err
@@ -319,44 +338,71 @@ func (c *CmdExecutorImpl) RunTargets(target string, force bool) error {
 		return errors.New("no contxt template found in current directory")
 	} else {
 
-		datahndl := tasks.NewCombinedDataHandler()
-		c.SetStartupVariables(datahndl, &template)
-		datahndl.SetPH("CTX_TARGET", target)
-		datahndl.SetPH("CTX_FORCE", strconv.FormatBool(force))
+		c.dataHandl = tasks.NewCombinedDataHandler()
+		c.SetStartupVariables(c.dataHandl, &template)
 
-		requireHndl := tasks.NewDefaultRequires(datahndl, c.session.Log.Logger)
-		executer := tasks.NewTaskListExec(
+		requireHndl := tasks.NewDefaultRequires(c.dataHandl, c.session.Log.Logger)
+		c.executer = tasks.NewTaskListExec(
 			template,
-			datahndl,
+			c.dataHandl,
 			requireHndl,
 			c.getOutHandler(),
 			tasks.ShellCmd,
 		)
-		executer.SetLogger(c.session.Log.Logger)
-		code := executer.RunTarget(target, force)
-		switch code {
-		case systools.ExitByNoTargetExists:
-			c.session.Log.Logger.Error("target not exists:", target)
-			return errors.New("target " + target + " not exists")
-		case systools.ExitAlreadyRunning:
-			c.session.Log.Logger.Info("target already running")
-			return nil
-		case systools.ExitCmdError:
-			c.session.Log.Logger.Error("error while running target ", target)
-			return errors.New("error while running target:" + target)
-		case systools.ExitByNothingToDo:
-			c.session.Log.Logger.Info("nothing to do ", target)
-			return nil
-		case systools.ExitOk:
-			c.session.Log.Logger.Info("target executed successfully")
-			return nil
-		case systools.ExitByUnsupportedVersion:
-			c.session.Log.Logger.Error("unsupported version")
-			return errors.New("unsupported version")
-		default:
-			c.session.Log.Logger.Error("unexpected exit code:", code)
-			return errors.New("unexpected exit code:" + fmt.Sprintf("%d", code))
-		}
+		c.executer.SetLogger(c.session.Log.Logger)
+	}
+	return nil
+}
+
+// RunTargets run the given targets
+// force is used as flag for the first level targets, and is used
+// to runs shared targets once in front of the regular assigned targets
+func (c *CmdExecutorImpl) RunTargets(target string, force bool) error {
+
+	// the executer needs to be initialized first
+	if c.executer == nil {
+		return errors.New("executer not initialized")
+	}
+
+	// the datahandler needs to be initialized first
+	if c.dataHandl == nil {
+		return errors.New("datahandler not initialized")
+	}
+
+	// first we need to check if there is a commas separated list of targets
+	// if so, we need to split them and run them one by one
+	if strings.Contains(target, ",") {
+		targets := strings.Split(target, ",")
+		return c.runAsyncTargets(targets, force)
+	}
+
+	c.dataHandl.SetPH("CTX_TARGET", target)
+	c.dataHandl.SetPH("CTX_FORCE", strconv.FormatBool(force))
+
+	c.executer.SetLogger(c.session.Log.Logger)
+	code := c.executer.RunTarget(target, force)
+	switch code {
+	case systools.ExitByNoTargetExists:
+		c.session.Log.Logger.Error("target not exists:", target)
+		return errors.New("target " + target + " not exists")
+	case systools.ExitAlreadyRunning:
+		c.session.Log.Logger.Info("target already running")
+		return nil
+	case systools.ExitCmdError:
+		c.session.Log.Logger.Error("error while running target ", target)
+		return errors.New("error while running target:" + target)
+	case systools.ExitByNothingToDo:
+		c.session.Log.Logger.Info("nothing to do ", target)
+		return nil
+	case systools.ExitOk:
+		c.session.Log.Logger.Info("target executed successfully")
+		return nil
+	case systools.ExitByUnsupportedVersion:
+		c.session.Log.Logger.Error("unsupported version")
+		return errors.New("unsupported version")
+	default:
+		c.session.Log.Logger.Error("unexpected exit code:", code)
+		return errors.New("unexpected exit code:" + fmt.Sprintf("%d", code))
 	}
 
 }
@@ -453,6 +499,13 @@ func (c *CmdExecutorImpl) setVariable(name string, value string) error {
 }
 
 func (c *CmdExecutorImpl) GetVariable(name string) string {
+
+	if c.dataHandl != nil {
+		if val, have := c.dataHandl.GetPHExists(name); have {
+			return val
+		}
+	}
+
 	if val, have := c.session.DefaultVariables[name]; have {
 		return val
 	}
@@ -460,7 +513,14 @@ func (c *CmdExecutorImpl) GetVariable(name string) string {
 }
 
 func (c *CmdExecutorImpl) GetVariables() map[string]string {
-	return c.session.DefaultVariables
+
+	returns := c.session.DefaultVariables
+	if c.dataHandl != nil {
+		c.dataHandl.GetPlaceHoldersFnc(func(key string, value string) {
+			returns[key] = value
+		})
+	}
+	return returns
 }
 
 func (c *CmdExecutorImpl) SetColor(onoff bool) {

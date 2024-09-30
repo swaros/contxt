@@ -1,0 +1,17 @@
+config:
+  variables:
+     DEFAULT: "ORIGINAL"
+     TARGET: "BERLIN"
+
+task:
+  - id: setHamburg
+    variables:
+      TARGET: "HAMBURG"
+
+  - id: setMunich
+    variables:
+      TARGET: "MUNICH"
+  
+  - id: output
+    script:
+      - echo "target[${TARGET}] source[${DEFAULT}]"

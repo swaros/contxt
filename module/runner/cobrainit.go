@@ -575,8 +575,13 @@ func (c *SessionCobra) GetRunAtAllCmd() *cobra.Command {
 
 					if systools.SliceContains(targets, runTargetName) {
 						c.println(ctxout.ForeLightBlue, "running target ", ctxout.ForeLightYellow, runTargetName, ctxout.ResetCode, " in context of path ", ctxout.ForeBlue, path, ctxout.ResetCode)
-						if err := c.ExternalCmdHndl.RunTargets(runTargetName, true); err != nil {
+
+						if err := c.ExternalCmdHndl.InitExecuter(); err != nil {
 							runErr = err
+						} else {
+							if err := c.ExternalCmdHndl.RunTargets(runTargetName, true); err != nil {
+								runErr = err
+							}
 						}
 					} else {
 						c.println(ctxout.ForeDarkGrey, "no target ", ctxout.ForeBlue, runTargetName, ctxout.ForeDarkGrey, " in path ", ctxout.ResetCode, path)
@@ -600,6 +605,9 @@ func (c *SessionCobra) GetRunCmd() *cobra.Command {
 			c.checkDefaultFlags(cmd, args)
 			if len(args) > 0 {
 				c.log().Debug("run command in context of project", args)
+				if err := c.ExternalCmdHndl.InitExecuter(); err != nil {
+					return err
+				}
 				for _, p := range args {
 					if err := c.ExternalCmdHndl.RunTargets(p, true); err != nil {
 						return err
