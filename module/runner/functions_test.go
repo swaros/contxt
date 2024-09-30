@@ -1099,7 +1099,11 @@ func TestSetPrevalues(t *testing.T) {
 
 	// next in different order
 	// TODO: commented, because this is the behavior from V1, but now we have a new behavior. and i am not sure what is more useful
-
+	//       it is bout keeping the submitted values in any case, even we run a task that overrides them.
+	//       right now the values are kept, even the task is overriden. so the values are kept until the end of the run.
+	//       but this makes it difficult to use task they should override values. those would not work, if the values by arguments are kept.
+	//       but also it would be confusiong, if the values are not kept. so we have to find a solution for this.
+	//       it meight be even not the best workflow anyway, to override values they are expected being dynamic.
 	/*
 		if err := runCobraCmd(app, "run rewrite values -v password=ppoker -v username=lucker"); err != nil {
 			t.Errorf("Expected no error, got '%v'", err)
@@ -1108,9 +1112,44 @@ func TestSetPrevalues(t *testing.T) {
 		assertInMessage(t, output, "reused [jon-doe] [mysecret]")
 		output.ClearAndLog()
 	*/
-
 }
 
+func TestValuesInTasks(t *testing.T) {
+	ChangeToRuntimeDir(t)
+	app, output, appErr := SetupTestApp("projects01", time.Now().Format(time.RFC3339)+"ctx_projects.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+	output.SetKeepNewLines(false)
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "testChangeValues_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+
+	// change into the test directory
+	// especially here to the first projectwe have there.
+	if err := os.Chdir(getAbsolutePath("projects01/task_dyn_val")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	// the output is formated like this: target[${TARGET}] source[${DEFAULT}]
+
+	// first without any prevalues
+	if err := runCobraCmd(app, "run output"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "target[BERLIN] source[ORIGINAL]")
+	output.ClearAndLog()
+
+	// now check if the values are set correctly by the task setHamburg
+	if err := runCobraCmd(app, "run setHamburg output"); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	assertInMessage(t, output, "target[HAMBURG] source[ORIGINAL]")
+	output.ClearAndLog()
+
+}
 func TestCreate(t *testing.T) {
 	ChangeToRuntimeDir(t)
 	app, output, appErr := SetupTestApp("workspace0", time.Now().Format(time.RFC3339)+"ctx_projects.yml")

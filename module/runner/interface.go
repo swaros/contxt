@@ -37,6 +37,7 @@ type CmdExecutor interface {
 	ResetVariables()                                                  // reset old variables while change the workspace. (req for shell mode)
 	MainInit()                                                        // initialize the workspace
 	doMagicParamOne(string)
+	InitExecuter() error                   // initialize the executer
 	RunTargets(string, bool) error         // run targets
 	GetTargets(incInvisible bool) []string // return all targets. optional include invisible targets
 	CallBackNewWs(string)                  // callback for new workspace
