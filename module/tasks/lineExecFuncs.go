@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"os"
 
+	cp "github.com/otiai10/copy"
 	"github.com/swaros/contxt/module/configure"
 )
 
@@ -235,6 +236,13 @@ err = result[2]`,
 			},
 			RISK_LEVEL_HIGH,
 			`read a file. e.g. content,err = ReadFile('input.txt')`,
+		},
+		{"copy",
+			func(src, dst string) error {
+				return cp.Copy(src, dst)
+			},
+			RISK_LEVEL_HIGH,
+			`copy a file. e.g. copy('input.txt','output.txt') or copy a directory copy('input','output')`,
 		},
 	}
 	return cmdList
