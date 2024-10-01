@@ -1,6 +1,8 @@
 package tasks_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -139,4 +141,99 @@ func helpsRunAsync(runCount int, runinngs []string, testDoSome func(name string,
 	}
 	wg.Wait()
 	return allFine
+}
+
+func assertDirectoryMatch(t *testing.T, originFolder, targetFolder string) error {
+	t.Helper()
+	// walkinng the origin folder
+	originFiles := make(map[string]bool)
+	completeOrginFilesPath := make(map[string]string)
+
+	err := filepath.Walk(originFolder, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		trimmedPath := strings.TrimPrefix(path, originFolder)
+		if trimmedPath == "" {
+			// we are in the origin folder
+			return nil
+		}
+		originFiles[trimmedPath] = info.IsDir()
+		if !info.IsDir() {
+			completeOrginFilesPath[trimmedPath] = path
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// walking the target folder
+	err = filepath.Walk(targetFolder, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		expectedPath := strings.TrimPrefix(path, targetFolder)
+		if expectedPath == "" {
+			// we are in the target folder
+			return nil
+		}
+		originTrimmed := strings.TrimPrefix(path, targetFolder)
+		if originTrimmed == "" {
+			// we are in the origin folder
+			return nil
+		}
+		_, ok := originFiles[expectedPath]
+		originIsDir := originFiles[originTrimmed]
+		if !ok {
+			t.Errorf("file %q not found in origin", path)
+			return nil
+		}
+		if originIsDir != info.IsDir() {
+			t.Errorf("file %q is a directory in origin but not in target", path)
+		}
+		delete(originFiles, path)
+		// file content comparison by assertFileMatch
+		if !info.IsDir() {
+			err := assertFileMatch(t, completeOrginFilesPath[expectedPath], path)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func assertFileMatch(t *testing.T, originFile, targetFile string) error {
+	t.Helper()
+	originFileStat, err := os.Stat(originFile)
+	if err != nil {
+		return err
+	}
+	targetFileStat, err := os.Stat(targetFile)
+	if err != nil {
+		return err
+	}
+	if originFileStat.IsDir() != targetFileStat.IsDir() {
+		t.Errorf("file %q is a directory in origin but not in target", targetFile)
+	}
+	// file content comparison
+	originFileContent, err := os.ReadFile(originFile)
+	if err != nil {
+		return err
+	}
+	targetFileContent, err := os.ReadFile(targetFile)
+	if err != nil {
+		return err
+	}
+	if string(originFileContent) != string(targetFileContent) {
+		t.Errorf("file %q content does not match", targetFile)
+	}
+	return nil
 }

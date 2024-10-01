@@ -19,12 +19,15 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require golang.org/x/sync v0.3.0 // indirect
+
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
+	github.com/otiai10/copy v1.14.0
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/swaros/contxt/module/yacl v0.0.0-20230531064521-09943a54576e // indirect
