@@ -231,10 +231,18 @@ func (t *TabOut) GetSize(orig int) int {
 	return orig
 }
 
+// dirty fix for empty tags. any markup must followed by a non markup tag,
+// or it will be just ignored. instead of rewriting the whole parser, we just fix it here
+// by adding a space between the tags
+func (t *TabOut) fixEmptyTags(text string) string {
+	return strings.ReplaceAll(text, "></tab>", "> </tab>")
+}
+
 // TableParse parses a table
 // If a Table is created, we also enters table mode.
 // In this mode the created table is not rendered until the table is closed.
 func (t *TabOut) TableParse(text string) string {
+	text = t.fixEmptyTags(text)
 	if t.IsTable(text) {
 		if t.tableMode {
 			if strings.HasPrefix(text, TableStart) {

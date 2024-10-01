@@ -147,6 +147,24 @@ second line...------------------------------------------------we do it different
 	}
 }
 
+func TestEmptyContent(t *testing.T) {
+	to := ctxout.NewTabOut()
+	info := ctxout.PostFilterInfo{
+		Width:      100,
+		IsTerminal: true, // we make sure we have the behavior of a terminal
+	}
+	to.Update(info)
+
+	source := "<table><row><tab size='10'>left</tab><tab size='80'></tab><tab size='10'>END</tab></row></table>"
+
+	output1 := to.Command(source)
+	length := ctxout.UniseqLen(output1)
+	expectedLength := 100
+	if length != expectedLength {
+		t.Errorf("Expected %d but got %d\n%s", expectedLength, length, output1)
+	}
+}
+
 func TestSizedTaboutNotClosedExtra(t *testing.T) {
 	to := ctxout.NewTabOut()
 
