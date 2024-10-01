@@ -124,6 +124,7 @@ module:
       timeout: 60s
     clean:
       - "*.tmp"
+      - "temp/"
   
   - 
     modul: yaclint
