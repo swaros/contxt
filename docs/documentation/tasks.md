@@ -32,7 +32,7 @@ tasks are a collection of scripts they are depending to the current directory. t
           - [trigger onoutcountLess and onoutcountMore](#trigger-onoutcountless-and-onoutcountmore)
         - [action](#action)
       - [Options](#options)
-        - [ignorecmderror (bool)](#ignorecmderror-bool)
+        - [ignoreCmdError (bool)](#ignorecmderror-bool)
         - [format (string)](#format-string)
         - [stickcursor (bool)](#stickcursor-bool)
         - [colorcode and bgcolorcode (string)](#colorcode-and-bgcolorcode-string)
@@ -41,6 +41,7 @@ tasks are a collection of scripts they are depending to the current directory. t
         - [hideout (bool)](#hideout-bool)
         - [invisible (bool)](#invisible-bool)
         - [maincmd (string), mainparams (list)](#maincmd-string-mainparams-list)
+        - [cmdTimeout (int)](#cmdtimeout-int)
         - [workingdir (string)](#workingdir-string)
   - [config](#config)
     - [sequencially (bool)](#sequencially-bool)
@@ -501,7 +502,7 @@ in this example the execution will be stopped, if the output of the script secti
 
 ````yaml
 task:
-  - id: test-company-login    
+  - id: test-company-login
     listener:
       - trigger:
           onoutcountLess: 1
@@ -556,19 +557,25 @@ even if any other task are invisible.
 
 but any runtime specific setting is used for this part of the task only. 
 
-##### ignorecmderror (bool)
+##### ignoreCmdError (bool)
 if any task reports an error, contxt will exit. independent if any other
 parallel running task is doing well, or this error could be 
 ignored (or handled elsewhere)
 
-so if you have a task, they can fail, set `ignorecmderror` to true.
+so if you have a task, they can fail, set `ignoreCmdError` to true.
 
 ````yaml
 task:
   - id: this-can-fail
     options:
-      ignorecmderror:  true
+      ignoreCmdError:  true
+    script:
+      - echo "this is a failing task"
+      - exit(1)
 ````
+
+> this option exists before the cmd section was introduced. so it is still named `ignoreCmdError` but it is mainly used for the `script` section. it is all about handling console errors. the only way this affects the cmd section is by using the `exec(<console command>)`.
+> but there the error handling is up to the cmd/anko script.
 
 ##### format (string)
 formats the left label for the output. you can use %s as placeholder 
@@ -632,7 +639,7 @@ defines the width of the left panel (count of chars) for the output screen.
 task:
   - id: example-task
     options:
-      panelsize: 15      
+      panelsize: 15
 ````
 
 ##### displaycmd (bool)
@@ -689,6 +696,25 @@ task:
     script:
       - phpinfo();
       - var_dump($_SERVER);
+````
+
+##### cmdTimeout (int)
+defines the timeout for the cmd section. if the cmd section is not done in this time, the task will be stopped.
+
+the argument is in Milliseconds. so 1000 is 1 second.
+
+the following example will run forever, because the script is an endless loop. but it will be stopped after 5 milliseconds.
+
+````yaml
+task:
+  - id: cmd-example
+    options:
+      cmdTimeout: 5
+    cmd:
+      - |
+       for {
+          println("hello")
+        }
 ````
 
 ##### workingdir (string)
