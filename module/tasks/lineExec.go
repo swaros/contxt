@@ -221,6 +221,7 @@ func (t *targetExecuter) targetTaskExecuter(codeLine string, currentTask configu
 				)
 				return systools.ExitByStopReason, true
 			}
+			t.getLogger().Debug("task exection error ignored (by config ignoreCmdError: true)", execErr)
 
 		} else {
 			logFields := mimiclog.Fields{
