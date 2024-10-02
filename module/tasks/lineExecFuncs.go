@@ -28,6 +28,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	cp "github.com/otiai10/copy"
 	"github.com/swaros/contxt/module/configure"
@@ -238,11 +240,65 @@ err = result[2]`,
 			`read a file. e.g. content,err = ReadFile('input.txt')`,
 		},
 		{"copy",
-			func(src, dst string) error {
-				return cp.Copy(src, dst)
+			func(src, dst string, include ...string) error {
+				opt := cp.Options{
+					Skip: func(info os.FileInfo, src, dest string) (bool, error) {
+						if len(include) == 0 {
+							return false, nil
+						}
+						for _, s := range include {
+							if strings.HasSuffix(src, s) {
+								return true, nil
+							}
+						}
+						return false, nil
+					},
+				}
+				return cp.Copy(src, dst, opt)
 			},
 			RISK_LEVEL_HIGH,
-			`copy a file. e.g. copy('input.txt','output.txt') or copy a directory copy('input','output')`,
+			`copy a file. e.g. copy('input.txt','output.txt') or copy a directory copy('input','output')
+you can also limit the copy by suffix. e.g. copy('input','output','.yml','.json')
+this will only copy files with the given suffixes`,
+		},
+		{"copyButSkip",
+			func(src, dst string, skip ...string) error {
+				opt := cp.Options{
+					Skip: func(info os.FileInfo, src, dest string) (bool, error) {
+						if len(skip) == 0 {
+							return false, nil
+						}
+						for _, s := range skip {
+							if strings.HasSuffix(src, s) {
+								return true, nil
+							}
+						}
+						return false, nil
+					},
+				}
+				return cp.Copy(src, dst, opt)
+			},
+			RISK_LEVEL_HIGH,
+			`copy a file but skip some files depending suffix. e.g. copyButSkip('input','output','.git','.tmp')
+this will copy any files except the ones with the given suffixes`,
+		},
+		{"remove",
+			func(path string) error {
+				path = t.phHandler.HandlePlaceHolder(path)
+				path = filepath.FromSlash(path)
+				return os.RemoveAll(path)
+			},
+			RISK_LEVEL_HIGH,
+			`remove a file or directory. e.g. remove('output.txt') or remove('output')`,
+		},
+		{"mkdir",
+			func(path string) error {
+				path = t.phHandler.HandlePlaceHolder(path)
+				path = filepath.FromSlash(path)
+				return os.MkdirAll(path, os.ModePerm)
+			},
+			RISK_LEVEL_HIGH,
+			`create a directory. e.g. mkdir('output'). it creates all directories in the path`,
 		},
 	}
 	return cmdList
