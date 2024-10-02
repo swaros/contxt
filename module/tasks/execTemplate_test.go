@@ -1058,3 +1058,138 @@ func TestAnckoCopy(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestAnckoCopySkip(t *testing.T) {
+
+	localMsg := []string{}
+	errorMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				errorMsg = append(errorMsg, s.Err.Error())
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					`
+					copyButSkip("testdata/", "temp/skipcheck", ".sh")
+					`,
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+
+	expectedExitCode := systools.ExitOk
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+	if exists, err := systools.Exists("temp/skipcheck/case01/.contxt.yml"); err != nil {
+		t.Error(err)
+	} else if !exists {
+		t.Error("expected temp/skipcheck/case01/.contxt.yml to exist")
+	}
+
+	if exists, err := systools.Exists("temp/skipcheck/case01/test.sh"); err != nil {
+		t.Error(err)
+	} else if exists {
+		t.Error("expected temp/skipcheck/case01/test.sh not to exists")
+	}
+
+}
+
+func TestMkdirAndRm(t *testing.T) {
+
+	localMsg := []string{}
+	errorMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				errorMsg = append(errorMsg, s.Err.Error())
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					`
+					mkdir("temp/testout")
+					`,
+				},
+			},
+			{
+				ID: "rm",
+				Cmd: []string{
+					`
+					remove("temp/testout")
+					`,
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+
+	expectedExitCode := systools.ExitOk
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+	if exists, err := systools.Exists("temp/testout"); err != nil {
+		t.Error(err)
+	} else if !exists {
+		t.Error("expected temp/testout to exist")
+	}
+	code = tsk.RunTarget("rm", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+
+	if exists, err := systools.Exists("temp/testout"); err != nil {
+		t.Error(err)
+	} else if exists {
+		t.Error("expected temp/testout not exists")
+	}
+}
