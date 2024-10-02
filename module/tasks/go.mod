@@ -14,7 +14,7 @@ require (
 	github.com/swaros/contxt/module/process v0.0.0-20240808085138-b2135233cb1c
 	github.com/swaros/contxt/module/systools v0.0.0-20240808085138-b2135233cb1c
 	github.com/swaros/contxt/module/yamc v0.0.1
-	github.com/tidwall/gjson v1.17.3
+	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	gopkg.in/yaml.v2 v2.4.0
 )
