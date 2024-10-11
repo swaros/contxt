@@ -25,6 +25,7 @@
 package tasks
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -299,6 +300,27 @@ this will copy any files except the ones with the given suffixes`,
 			},
 			RISK_LEVEL_HIGH,
 			`create a directory. e.g. mkdir('output'). it creates all directories in the path`,
+		},
+		{"base64Encode",
+			func(data string) string {
+				str := base64.StdEncoding.EncodeToString([]byte(data))
+				return str
+
+			},
+			RISK_LEVEL_LOW,
+			`encode a string to base64. e.g. base64Encode('hello world')`,
+		},
+		{"base64Decode",
+			func(data string) (string, error) {
+				str, err := base64.StdEncoding.DecodeString(data)
+				if err != nil {
+					anko.ThrowException(err, fmt.Sprintf("base64Decode('%s')", data))
+					return "", err
+				}
+				return string(str), nil
+			},
+			RISK_LEVEL_LOW,
+			`decode a base64 string. e.g. base64Decode('aGVsbG8gd29ybGQ=')`,
 		},
 	}
 	return cmdList

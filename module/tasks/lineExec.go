@@ -42,6 +42,7 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 	currentOnErrorExitCode := systools.ExitCmdError
 	// nothing to do, get out
 	if len(task.Cmd) < 1 {
+		t.getLogger().Debug("no command to execute in command section")
 		return systools.ExitNoCode, nil
 	}
 	// handle directory change
@@ -49,6 +50,7 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 	defer curDir.Popd()
 
 	if dirError != nil {
+		t.getLogger().Error("can not change directory", dirError)
 		return systools.ExitCmdError, dirError
 	}
 	ankRunner := NewAnkoRunner()
@@ -63,6 +65,7 @@ func (t *targetExecuter) runAnkCmd(task *configure.Task) (int, error) {
 	t.SetFunctions(ankRunner)
 	// if an timeout is set, we set it here
 	if task.Options.CmdTimeout > 0 {
+		t.getLogger().Debug("set timeout for command", task.Options.CmdTimeout)
 		ankRunner.SetTimeOut(time.Duration(task.Options.CmdTimeout) * time.Millisecond)
 	}
 

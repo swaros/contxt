@@ -1193,3 +1193,131 @@ func TestMkdirAndRm(t *testing.T) {
 		t.Error("expected temp/testout not exists")
 	}
 }
+
+func TestAnkoBase64Encode(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	localMsg := []string{}
+	errorMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				errorMsg = append(errorMsg, s.Err.Error())
+				t.Error(s.Err)
+
+			case tasks.MsgErrDebug:
+				t.Log(s)
+				errorMsg = append(errorMsg, s.Err.Error())
+				t.Error(s.Err)
+
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					`data = base64Encode("hello world")
+					varSet("base64", data)
+					`,
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+
+	testData, ok := dmc.GetPHExists("base64")
+	if !ok {
+		t.Error("expected to have data in base64")
+	} else {
+
+		expected := "aGVsbG8gd29ybGQ="
+		if testData != expected {
+			t.Error("expected data in test_import_data to be", expected, " but got", testData)
+		}
+	}
+
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+}
+
+func TestAnkoBase64Decode(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	localMsg := []string{}
+	errorMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				errorMsg = append(errorMsg, s.Err.Error())
+				t.Error(s.Err)
+
+			case tasks.MsgErrDebug:
+				t.Log(s)
+				errorMsg = append(errorMsg, s.Err.Error())
+				t.Error(s.Err)
+
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					`data,_ = base64Decode("aGVsbG8gd29ybGQ=")
+					varSet("base64", data)
+					`,
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+
+	testData, ok := dmc.GetPHExists("base64")
+	if !ok {
+		t.Error("expected to have data in base64")
+	} else {
+
+		expected := "hello world"
+		if testData != expected {
+			t.Error("expected data in test_import_data to be", expected, " but got", testData)
+		}
+	}
+
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+}
