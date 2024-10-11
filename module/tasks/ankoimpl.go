@@ -283,7 +283,7 @@ func (ar *AnkoRunner) ErrorExplain(err error) string {
 	case *parser.Error:
 		return fmt.Sprintf("Parsing Error: %s; line %d pos %d fatal %v", tErr.Message, tErr.Pos.Line, tErr.Pos.Column, tErr.Fatal)
 	default:
-		return fmt.Sprintf("Error in script: %s", err.Error())
+		return fmt.Sprintf("Error in script: %s errType: %T ", err.Error(), err)
 	}
 }
 

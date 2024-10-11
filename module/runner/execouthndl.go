@@ -359,20 +359,24 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					ctxout.ForeLightBlue,
 				)
 
+			case tasks.MsgArgs:
+			// we just get ignored here
+
+			case tasks.MsgNumber:
+				// we just get ignored here
+
 			default:
 				// uncomment for dispaying the type of the message that is not handled yet
 
-				/*
-					c.Println(
-						fmt.Sprintf("%T", tm),
-						ctxout.ForeLightYellow,
-						fmt.Sprintf("%v", msg),
-						ctxout.ForeWhite,
-						ctxout.BackBlack,
-						"not implemented yet",
-						ctxout.CleanTag,
-					)
-				*/
+				c.Println(
+					fmt.Sprintf("%T", tm),
+					ctxout.ForeLightYellow,
+					fmt.Sprintf("%v", msg),
+					ctxout.ForeWhite,
+					ctxout.BackBlack,
+					"not implemented yet",
+					ctxout.CleanTag,
+				)
 
 			}
 		}
@@ -391,10 +395,10 @@ func (c *CmdExecutorImpl) formatDebugError(err tasks.MsgErrDebug) string {
 		if len(lineCode) > wordPos {
 			left := lineCode[:wordPos]
 			right := lineCode[wordPos:]
-			msg = fmt.Sprintf("Error in script: %s\n%s%s --- %s [%d]", err.Err.Error(), ctxout.ForeDarkGrey+left, ctxout.ForeRed+right+ctxout.CleanTag, err.Err.Error(), err.Column)
+			msg = fmt.Sprintf("Command Error: %s\n%s%s --- %s [%d]", err.Err.Error(), ctxout.ForeDarkGrey+left, ctxout.ForeRed+right+ctxout.CleanTag, err.Err.Error(), err.Column)
 		} else {
 			msg += " (column out of range)"
-			msg += fmt.Sprintf(" ... Error in script: %s [%d:%d]", err.Err.Error(), err.Column, err.Line)
+			msg += fmt.Sprintf(" ... Command Error: %s [%d:%d]", err.Err.Error(), err.Column, err.Line)
 		}
 
 	} else {
