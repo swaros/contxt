@@ -264,6 +264,7 @@ func (c *CmdExecutorImpl) SetStartupVariables(dataHndl *tasks.CombinedDh, templa
 //
 // this can be used in the tasks as ${txt}
 func (c *CmdExecutorImpl) handleImports(dataHndl *tasks.CombinedDh, template *configure.RunConfig) {
+	c.session.Log.Logger.Info("handle imports")
 	importHndlr := NewImportHandler(c.session.Log.Logger, dataHndl, c.session.TemplateHndl)
 	importHndlr.SetImports(template.Config.Imports)
 	if err := importHndlr.HandleImports(); err != nil {
