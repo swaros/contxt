@@ -34,6 +34,7 @@ import (
 
 	cp "github.com/otiai10/copy"
 	"github.com/swaros/contxt/module/configure"
+	"github.com/swaros/contxt/module/systools"
 )
 
 func (t *targetExecuter) GetFnAsDefaults(anko *AnkoRunner) []AnkoDefiner {
@@ -42,6 +43,14 @@ func (t *targetExecuter) GetFnAsDefaults(anko *AnkoRunner) []AnkoDefiner {
 		{"exit",
 			func() {
 				anko.cancelationFn()
+			},
+			RISK_LEVEL_LOW,
+			"exit the script with errror",
+		},
+		{"stop",
+			func() {
+				anko.cancelationFn()
+				systools.Exit(systools.ExitCmdError)
 			},
 			RISK_LEVEL_LOW,
 			"exit the script with errror",
@@ -72,6 +81,44 @@ func (t *targetExecuter) GetFnAsDefaults(anko *AnkoRunner) []AnkoDefiner {
 			},
 			RISK_LEVEL_LOW,
 			"import a json string into the data store. e.g. importJson('key','{\"key\":\"value\"}')",
+		},
+		{"importJsonFile",
+			func(key, path string) error {
+				path = t.phHandler.HandlePlaceHolder(path)
+				json, err := systools.ReadFileAsString(path)
+				if err != nil {
+					anko.ThrowException(err, fmt.Sprintf("importJsonFile('%s','%s')", key, path))
+					t.out(MsgError(MsgError{Err: err, Reference: "importJsonFile(key,path)", Target: t.target}))
+					return err
+				}
+				err = t.dataHandler.AddJSON(key, json)
+				if err != nil {
+					anko.ThrowException(err, fmt.Sprintf("importJsonFile('%s','%s')", key, path))
+					t.out(MsgError(MsgError{Err: errors.New("error while parsing json: " + err.Error()), Reference: "importJsonFile(key,path)", Target: t.target}))
+				}
+				return err
+			},
+			RISK_LEVEL_LOW,
+			"import a json file into the data store. e.g. importJsonFile('key','path/to/file.json')",
+		},
+		{"importYamlFile",
+			func(key, path string) error {
+				path = t.phHandler.HandlePlaceHolder(path)
+				yaml, err := systools.ReadFileAsString(path)
+				if err != nil {
+					anko.ThrowException(err, fmt.Sprintf("importYamlFile('%s','%s')", key, path))
+					t.out(MsgError(MsgError{Err: err, Reference: "importYamlFile(key,path)", Target: t.target}))
+					return err
+				}
+				err = t.dataHandler.AddYaml(key, yaml)
+				if err != nil {
+					anko.ThrowException(err, fmt.Sprintf("importYamlFile('%s','%s')", key, path))
+					t.out(MsgError(MsgError{Err: errors.New("error while parsing yaml: " + err.Error()), Reference: "importYamlFile(key,path)", Target: t.target}))
+				}
+				return err
+			},
+			RISK_LEVEL_LOW,
+			"import a yaml file into the data store. e.g. importYamlFile('key','path/to/file.yaml')",
 		},
 		{"varAsJson",
 			func(key string) string {
@@ -217,31 +264,46 @@ err = result[2]`,
 			RISK_LEVEL_HIGH,
 			`write a content to a file. e.g. writeFile('output.txt','hello world')`,
 		},
-		{"ReadFile",
+		{"readFile",
 			func(fileName string) (string, error) {
 				f, err := os.Open(fileName)
 				if err != nil {
-					anko.ThrowException(err, fmt.Sprintf("ReadFile('%s')", fileName))
+					anko.ThrowException(err, fmt.Sprintf("readFile('%s')", fileName))
 					return "", err
 				}
 				defer f.Close()
 				fi, err := f.Stat()
 				if err != nil {
-					anko.ThrowException(err, fmt.Sprintf("ReadFile('%s')", fileName))
+					anko.ThrowException(err, fmt.Sprintf("readFile('%s')", fileName))
 					return "", err
 				}
 				data := make([]byte, fi.Size())
 				if _, err := f.Read(data); err != nil {
-					anko.ThrowException(err, fmt.Sprintf("ReadFile('%s')", fileName))
+					anko.ThrowException(err, fmt.Sprintf("readFile('%s')", fileName))
 					return "", err
 				}
 				return string(data), nil
 			},
 			RISK_LEVEL_HIGH,
-			`read a file. e.g. content,err = ReadFile('input.txt')`,
+			`read a file. e.g. content,err = readFile('input.txt')`,
+		},
+		{"copyFile",
+			func(src, dst string) error {
+				src = t.phHandler.HandlePlaceHolder(src)
+				dst = t.phHandler.HandlePlaceHolder(dst)
+				src = filepath.FromSlash(src)
+				dst = filepath.FromSlash(dst)
+				return systools.CopyFile(src, dst)
+			},
+			RISK_LEVEL_HIGH,
+			`copy a file. e.g. cpyFile('input.txt','output.txt')`,
 		},
 		{"copy",
 			func(src, dst string, include ...string) error {
+				if systools.FileExists(src) {
+					return errors.New("source is a file. use copyFile instead")
+
+				}
 				opt := cp.Options{
 					Skip: func(info os.FileInfo, src, dest string) (bool, error) {
 						if len(include) == 0 {

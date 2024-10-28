@@ -73,6 +73,16 @@ func (d *DefaultDataHandler) AddJSON(key, jsonString string) error {
 	return nil
 }
 
+func (d *DefaultDataHandler) AddYaml(key, yamlString string) error {
+	rdr := yamc.New()
+	if err := rdr.Parse(yamc.NewYamlReader(), []byte(yamlString)); err != nil {
+		return err
+	}
+	m := rdr.GetData()
+	d.updateData(key, m)
+	return nil
+}
+
 func (d *DefaultDataHandler) updateData(key string, data interface{}) {
 	currentData := d.yamcHndl.GetData()
 	currentData[key] = data

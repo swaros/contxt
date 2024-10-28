@@ -256,7 +256,10 @@ func (t *Template) TryHandleTemplate(path string) (string, error) {
 		return "", ferr
 	}
 	t.logger.Debug("TryHandleTemplate: file succesfully loaded:", path, "size:", len(templateData))
-	return t.ParseGoTemplate(string(templateData))
+	t.logger.Trace("TryHandleTemplate: file content:", string(templateData))
+	source, err := t.ParseGoTemplate(string(templateData))
+	t.logger.Trace("TryHandleTemplate: parsed content:", mimiclog.Fields{"size": len(source), "content": source, "err": err})
+	return source, err
 }
 
 func (t *Template) ParseGoTemplate(data string) (string, error) {
@@ -302,7 +305,7 @@ func (t *Template) LoadInclude(path string) (configure.IncludePaths, bool, error
 	}
 	var include configure.IncludePaths
 	// try to load the included files. can be json or yaml
-	t.logger.Debug("load include file:", path)
+	t.logger.Info("load include file:", path)
 	if err := yacl.New(&include, yamc.NewYamlReader(), yamc.NewJsonReader()).SetSingleFile(DefaultIncludeFile).Load(); err != nil {
 		return include, false, err
 	}

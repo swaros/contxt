@@ -33,6 +33,7 @@ type DataMapHandler interface {
 	GetDataAsJson(key string) (string, bool)                 // returns the data as json string
 	GetDataAsYaml(key string) (string, bool)                 // returns the data as yaml string
 	AddJSON(key, jsonString string) error                    // adds data by parsing a json string
+	AddYaml(key, yamlString string) error                    // adds data by parsing a yaml string
 	SetJSONValueByPath(key, path, value string) error        // sets a value by a json path using
 	GetDataKeys() []string                                   // returns all keys
 }

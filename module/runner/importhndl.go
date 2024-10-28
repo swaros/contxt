@@ -76,7 +76,7 @@ func (ih *ImportHandler) handleFileImportsToVars(imports []string) error {
 			}
 			var lastErr error
 			dirhandle.FileTypeHandler(filename, func(jsonBaseName string) {
-				ih.logger.Debug("loading json File as second level variables:", filename)
+				ih.logger.Info("loading json File as second level variables:", mimiclog.Fields{"filename": filename, "keyname": keyname, "content-len": len(content)})
 				if keyname == "" {
 					keyname = jsonBaseName
 				}
@@ -86,7 +86,7 @@ func (ih *ImportHandler) handleFileImportsToVars(imports []string) error {
 				}
 
 			}, func(yamlBaseName string) {
-				ih.logger.Debug("loading yaml File: as second level variables", filename)
+				ih.logger.Info("loading yaml File: as second level variables", mimiclog.Fields{"filename": filename, "keyname": keyname, "content-len": len(content)})
 				if keyname == "" {
 					keyname = yamlBaseName
 				}
@@ -99,7 +99,7 @@ func (ih *ImportHandler) handleFileImportsToVars(imports []string) error {
 				if keyname == "" {
 					keyname = filename
 				}
-				ih.logger.Debug("using content as plain named variable: "+keyname, ext)
+				ih.logger.Info("using content as plain named variable: ", mimiclog.Fields{"keyname": keyname, "filename": filename, "content-len": len(content)})
 				ih.dataHndl.SetPH(keyname, content)
 
 			}, func(path string, err error) {

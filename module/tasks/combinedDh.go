@@ -195,7 +195,12 @@ func (d *CombinedDh) GetYamc() *yamc.Yamc {
 
 func (d *CombinedDh) SetPH(key, value string) {
 	if d.getLogger().IsTraceEnabled() {
-		d.getLogger().Trace("SetPH: key [" + key + "] value [" + systools.StringSubLeft(value, 40) + " ...]")
+
+		add := mimiclog.Fields{
+			"key":   key,
+			"value": value,
+		}
+		d.getLogger().Trace("SetPH: ", add)
 	}
 	d.yamcRoot.Store(key, value)
 }
@@ -247,9 +252,10 @@ func (d *CombinedDh) GetPlaceHoldersFnc(inspectFunc func(phKey string, phValue s
 	d.yamcRoot.Range(func(key interface{}, value interface{}) bool {
 		if strValue, ok := value.(string); ok {
 			if keyValue, ok := key.(string); ok {
-				if d.logger.IsTraceEnabled() {
-					d.getLogger().Trace("PARSE PLACEHOLDERs: key [" + keyValue + "] = [" + systools.StringSubLeft(strValue, 40) + " ...]")
-				}
+				/*
+					if d.logger.IsTraceEnabled() {
+						d.getLogger().Trace("PARSE PLACEHOLDERs: key [" + keyValue + "] = [" + systools.StringSubLeft(strValue, 40) + " ...]")
+					}*/
 				inspectFunc(keyValue, strValue)
 			}
 		}
@@ -261,9 +267,11 @@ func (d *CombinedDh) GetPlaceHoldersFnc(inspectFunc func(phKey string, phValue s
 		if len(envParts) == 2 {
 			envKey := envParts[0]
 			envValue := envParts[1]
-			if d.logger.IsTraceEnabled() {
-				d.getLogger().Trace("PARSE ENVIRONMENT VARIABLEs: key [" + envKey + "] = [" + systools.StringSubLeft(envValue, 40) + " ...]")
-			}
+			/*
+				if d.logger.IsTraceEnabled() {
+					d.getLogger().Trace("PARSE ENVIRONMENT VARIABLEs: key [" + envKey + "] = [" + systools.StringSubLeft(envValue, 40) + " ...]")
+				}
+			*/
 			inspectFunc(envKey, envValue)
 		}
 	}

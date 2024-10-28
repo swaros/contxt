@@ -68,6 +68,14 @@ func ReadFileAsStrings(filename string) ([]string, error) {
 	return strings.Split(string(data), "\n"), nil
 }
 
+func ReadFileAsString(filename string) (string, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
 // WriteFileIfNotExists writes a file if it does not exist
 // reports 0 if file was written, 1 if file exists, 2 if error
 // on error, error is returned
@@ -99,6 +107,16 @@ func Exists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+// fileExists reports whether the named file exists.
+// it checks for file and not for directory
+func FileExists(path string) bool {
+	stat, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !stat.IsDir()
 }
 
 // UpdateExistingFileIfNotContains updates a file if it does not contain a string
