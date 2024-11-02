@@ -69,6 +69,20 @@ func (t *targetExecuter) GetFnAsDefaults(anko *AnkoRunner) []AnkoDefiner {
 			RISK_LEVEL_LOW,
 			"get the current os. e.g. println('you are working on: ',getos())",
 		},
+		{"stringReplace",
+			func(s, old, new string) string {
+				return strings.ReplaceAll(s, old, new)
+			},
+			RISK_LEVEL_LOW,
+			"replace a string. e.g. stringReplace('hello world','world','universe')",
+		},
+		{"stringContains",
+			func(s, substr string) bool {
+				return strings.Contains(s, substr)
+			},
+			RISK_LEVEL_LOW,
+			"check if a string contains a substring. e.g. stringContains('hello world','world')",
+		},
 		{"importJson",
 			func(key, json string) error {
 				json = t.phHandler.HandlePlaceHolder(json)
@@ -300,10 +314,6 @@ err = result[2]`,
 		},
 		{"copy",
 			func(src, dst string, include ...string) error {
-				if systools.FileExists(src) {
-					return errors.New("source is a file. use copyFile instead")
-
-				}
 				opt := cp.Options{
 					Skip: func(info os.FileInfo, src, dest string) (bool, error) {
 						if len(include) == 0 {
@@ -311,10 +321,10 @@ err = result[2]`,
 						}
 						for _, s := range include {
 							if strings.HasSuffix(src, s) {
-								return true, nil
+								return false, nil
 							}
 						}
-						return false, nil
+						return true, nil
 					},
 				}
 				return cp.Copy(src, dst, opt)

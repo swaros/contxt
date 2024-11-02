@@ -90,12 +90,16 @@ func (d *CombinedDh) ifKeyExists(key string) bool {
 // the returned value is a gjson.Result
 func (d *CombinedDh) GetJSONPathResult(key, path string) (gjson.Result, bool) {
 	if !d.ifKeyExists(key) {
+		d.getLogger().Debug("GetJSONPathResult: key [" + key + "] not found")
 		return gjson.Result{}, false
 	}
 	ymc := d.getYamcByKey(key)
 	if data, err := ymc.Gjson(path); err == nil && data.Exists() {
 		return data, true
+	} else if err != nil {
+		d.getLogger().Error("GetJSONPathResult: error by getting data from key [" + key + "] path [" + path + "]")
 	}
+
 	return gjson.Result{}, false
 }
 
@@ -133,7 +137,7 @@ func (d *CombinedDh) AddJSON(key, jsonString string) error {
 
 }
 
-// AddJSON adds data by parsing a json string
+// AddYaml adds data by parsing a json string
 // and store them with the given key
 func (d *CombinedDh) AddYaml(key, yamlString string) error {
 	if d.getLogger().IsTraceEnabled() {

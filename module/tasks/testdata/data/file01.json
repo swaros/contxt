@@ -1,0 +1,18 @@
+{
+    "testString": "testString",
+    "testInt": 1,
+    "testBool": true,
+    "testArray": [
+        "testArray1",
+        "testArray2"
+    ],
+    "testObject": {
+        "testObjectString": "testObjectString",
+        "testObjectInt": 2,
+        "testObjectBool": false,
+        "testObjectArray": [
+            "testObjectArray1",
+            "testObjectArray2"
+        ]
+    }
+}

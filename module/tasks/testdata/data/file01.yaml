@@ -1,0 +1,18 @@
+testData:
+  - name: "test01"
+    value: "value01"
+  - name: "test02"
+    value: "value02"
+
+stringMap:
+  test01: "value01"
+  test02: "value02"
+
+intMap:
+  1: "value01"
+  2: "value02"
+
+nestedPath:
+  subPath:
+    deeperPath:
+      value: "deepValue"

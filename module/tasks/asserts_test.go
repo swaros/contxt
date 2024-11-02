@@ -237,3 +237,17 @@ func assertFileMatch(t *testing.T, originFile, targetFile string) error {
 	}
 	return nil
 }
+
+func assertFileNotExists(t *testing.T, file string) {
+	t.Helper()
+	if _, err := os.Stat(file); err == nil {
+		t.Errorf("file %q exists, but it should not", file)
+	}
+}
+
+func assertFileExists(t *testing.T, file string) {
+	t.Helper()
+	if _, err := os.Stat(file); err != nil {
+		t.Errorf("file %q does not exist, but it should", file)
+	}
+}
