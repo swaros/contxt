@@ -1121,6 +1121,60 @@ func TestAnckoCopySkip(t *testing.T) {
 
 }
 
+func TestAnckoCopySingleFile(t *testing.T) {
+
+	localMsg := []string{}
+	errorMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				errorMsg = append(errorMsg, s.Err.Error())
+				t.Error(s.Err)
+			}
+		}
+	}
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					`
+					err = copy("testdata/case01/test.sh", "temp/singlefilecopy/test.sh")
+					`,
+				},
+			},
+		},
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+
+	tsk := tasks.NewTaskListExec(
+		runCfg,
+		dmc,
+		outHandler,
+		tasks.ShellCmd,
+		req,
+	)
+	tsk.SetHardExistToAllTasks(false)
+
+	expectedExitCode := systools.ExitOk
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected code ", expectedExitCode, " but got", code)
+	}
+	if exists, err := systools.Exists("temp/singlefilecopy/test.sh"); err != nil {
+		t.Error(err)
+	} else if !exists {
+		t.Error("expected temp/singlefilecopy/test.sh to exists")
+	}
+}
+
 func TestMkdirAndRm(t *testing.T) {
 
 	localMsg := []string{}
@@ -1320,4 +1374,321 @@ func TestAnkoBase64Decode(t *testing.T) {
 	if code != expectedExitCode {
 		t.Error("expected code ", expectedExitCode, " but got", code)
 	}
+}
+
+func AnkoTestRunHelper(
+	t *testing.T,
+	cmd string,
+	expectedExitCode int,
+	expectedMessageCount int, expectedMessage []string) (*tasks.CombinedDh, *tasks.DefaultRequires) {
+	t.Helper()
+	return AnkoTestRunHelperWithErrors(t, cmd, false, expectedExitCode, expectedMessageCount, expectedMessage)
+}
+
+func AnkoTestRunHelperWithErrors(
+	t *testing.T,
+	cmd string,
+	errorsExpected bool,
+	expectedExitCode int,
+	expectedMessageCount int, expectedMessage []string) (*tasks.CombinedDh, *tasks.DefaultRequires) {
+	t.Helper()
+
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					cmd,
+				},
+			},
+		},
+	}
+
+	localMsg := []string{}
+	errorMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				errorMsg = append(errorMsg, s.Err.Error())
+				if !errorsExpected {
+					t.Error(s.Err)
+				}
+			case tasks.MsgErrDebug:
+				t.Log(s)
+				if !errorsExpected {
+					errorMsg = append(errorMsg, s.Err.Error())
+					t.Error(s.Err)
+				}
+			}
+		}
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(runCfg, dmc, outHandler, tasks.ShellCmd, req)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected exit code ", expectedExitCode, " but got", code)
+	}
+	if expectedMessageCount > 0 {
+		if len(localMsg) != expectedMessageCount {
+			t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
+			t.Log(localMsg)
+		} else {
+			for i, expected := range expectedMessage {
+				if i >= len(localMsg) {
+					continue
+				}
+				cleanExpect := strings.TrimSpace(expected)
+				cleanLocal := strings.TrimSpace(localMsg[i])
+				cleanExpect = strings.ReplaceAll(cleanExpect, "\n", "")
+				cleanLocal = strings.ReplaceAll(cleanLocal, "\n", "")
+				cleanExpect = strings.ReplaceAll(cleanExpect, "\r", "")
+				cleanLocal = strings.ReplaceAll(cleanLocal, "\r", "")
+				cleanExpect = strings.ReplaceAll(cleanExpect, "\t", "")
+				cleanLocal = strings.ReplaceAll(cleanLocal, "\t", "")
+				if cleanLocal == "" && strings.ReplaceAll(cleanExpect, " ", "") == "" {
+					continue
+				}
+				if cleanExpect == "" && strings.ReplaceAll(cleanLocal, " ", "") == "" {
+					continue
+				}
+				if strings.Contains(cleanExpect, "!IGNORE") {
+					continue
+				}
+				if cleanLocal != cleanExpect {
+					t.Error("expected message[", cleanExpect, "] but got[", cleanLocal, "] line:", i)
+				}
+
+			}
+		}
+	} else {
+		if len(localMsg) > 0 {
+			t.Error("expected no message but got", len(localMsg))
+			t.Log(localMsg)
+		}
+	}
+	return dmc, req
+}
+
+func TestStringReplace(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 1
+	expectedMessage := "hello_world"
+	cmd := `data = stringReplace("hello world", " ", "_")
+	println(data)`
+
+	AnkoTestRunHelper(t, cmd, expectedExitCode, expectedMessageCount, []string{expectedMessage})
+}
+
+func TestStringContains(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 1
+	expectedMessage := "true"
+	cmd := `data = stringContains("hello world", "world")
+	println(data)`
+
+	AnkoTestRunHelper(t, cmd, expectedExitCode, expectedMessageCount, []string{expectedMessage})
+}
+
+func TestCopyFile(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 0
+	cmd := `
+	err = mkdir("temp/copyfile")
+	if err != nil {
+		println(err)
+	}
+	err = copyFile("testdata/case01/test.sh", "temp/copyfile/test.sh")
+	if err != nil {
+		println(err)
+	}`
+
+	AnkoTestRunHelper(t, cmd, expectedExitCode, expectedMessageCount, []string{""})
+	assertFileMatch(t, "testdata/case01/test.sh", "temp/copyfile/test.sh")
+}
+
+func TestCopyFileFail(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 1
+	cmd := `
+	err = copyFile("testdata/case01/testNOT_THERE.sh", "temp/copyfile/test.sh")
+	if err != nil {
+		println(err)
+	}`
+
+	AnkoTestRunHelper(
+		t, cmd, expectedExitCode, expectedMessageCount,
+		[]string{"open testdata/case01/testNOT_THERE.sh: no such file or directory"})
+}
+
+func TestCopyInclude(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 0
+	cmd := `
+	err = copy("testdata/case01", "temp/copyinclude", ".sh")
+	if err != nil {
+		println(err)
+	}`
+
+	AnkoTestRunHelper(t, cmd, expectedExitCode, expectedMessageCount, []string{""})
+	assertFileExists(t, "temp/copyinclude/test.sh")
+	assertFileNotExists(t, "temp/copyinclude/.contxt.yml")
+}
+
+// import a json file into the data store. e.g. importJsonFile('key','path/to/file.json')
+func TestImportJsonFile(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 0
+	cmd := `
+	err =importJsonFile("imported", "testdata/data/file01.json")
+	if err != nil {
+		println(err)
+	}`
+
+	dmc, _ := AnkoTestRunHelper(t, cmd, expectedExitCode, expectedMessageCount, []string{""})
+	if data, ok := dmc.GetData("imported"); ok {
+		if data["testString"] != "testString" {
+			t.Error("expected name to be 'testString' but got", data["testString"])
+		}
+	} else {
+		t.Error("expected to have data in imported")
+	}
+
+}
+
+func TestImportJsonFileFail(t *testing.T) {
+	expectedExitCode := systools.ExitCmdError
+	expectedMessageCount := 2
+	cmd := `
+	err =importJsonFile("imported", "testdata/data/file01_NOT_THERE.json")
+	if err != nil {
+		println(err)
+	}`
+
+	AnkoTestRunHelperWithErrors(
+		t, cmd, true, expectedExitCode, expectedMessageCount,
+		[]string{
+			"open testdata/data/file01_NOT_THERE.json: no such file or directory",
+			"Error in script: open testdata/data/file01_NOT_THERE.json: no such file or directory errType: *fs.PathError ",
+		})
+}
+
+func TestImportJsonFileFail02(t *testing.T) {
+	expectedExitCode := systools.ExitCmdError
+	expectedMessageCount := 2
+	cmd := `
+	err =importJsonFile("imported", "testdata/data/file01.yaml")
+	if err != nil {
+		println(err)
+	}`
+
+	AnkoTestRunHelperWithErrors(
+		t, cmd, true, expectedExitCode, expectedMessageCount,
+		[]string{
+			"invalid character 'e' in literal true (expecting 'r')",
+			"Error in script: invalid character 'e' in literal true (expecting 'r') errType: *json.SyntaxError ",
+		})
+}
+
+func TestImportYamlFile(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 0
+	cmd := `
+	err =importYamlFile("imported", "testdata/data/file01.yaml")
+	if err != nil {
+		println(err)
+	}`
+
+	dmc, _ := AnkoTestRunHelper(t, cmd, expectedExitCode, expectedMessageCount, []string{""})
+	if data, ok := dmc.GetData("imported"); ok {
+		if subdata, ok := data["stringMap"].(map[string]interface{}); ok {
+			if subdata2, ok := subdata["test01"].(string); ok {
+				if subdata2 != "value01" {
+					t.Error("expected name to be 'testString' but got", subdata2)
+				}
+			} else {
+				t.Error("expected to have data in imported as imported named test01")
+			}
+		} else {
+			t.Error("expected to have data in imported as imported named stringMap")
+		}
+
+	} else {
+		t.Error("expected to have data in imported as imported named data")
+	}
+
+}
+
+func TestImportYamlFail01(t *testing.T) {
+	expectedExitCode := systools.ExitCmdError
+	expectedMessageCount := 2
+	cmd := `
+	err =importYamlFile("imported", "testdata/data/file01_NOT_THERE.yaml")
+	if err != nil {
+		println(err)
+	}`
+
+	AnkoTestRunHelperWithErrors(
+		t, cmd, true, expectedExitCode, expectedMessageCount,
+		[]string{
+			"open testdata/data/file01_NOT_THERE.yaml: no such file or directory",
+			"Error in script: open testdata/data/file01_NOT_THERE.yaml: no such file or directory errType: *fs.PathError ",
+		})
+}
+
+func TestImportYamlFail02(t *testing.T) {
+	expectedExitCode := systools.ExitCmdError
+	expectedMessageCount := 3
+	cmd := `
+	err =importYamlFile("imported", "testdata/data/file01.txt")
+	if err != nil {
+		println(err)
+	}`
+
+	AnkoTestRunHelperWithErrors(
+		t, cmd, true, expectedExitCode, expectedMessageCount,
+		[]string{
+			"yaml: unmarshal errors:",
+			"  line 1: cannot unmarshal !!str `this fi...` into []interface {}",
+			"Error in script: yaml: unmarshal errors:  line 1: cannot unmarshal !!str `this fi...` into []interface {} errType: *yaml.TypeError",
+		})
+}
+
+func TestGetOs(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 1
+	expectedMessage := "os is " + configure.GetOs()
+	cmd := `os = getos()
+	println("os is " + os)`
+	AnkoTestRunHelper(t, cmd, expectedExitCode, expectedMessageCount, []string{expectedMessage})
+}
+
+func TestVarAsYaml(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 7
+	expectedMessage := `adress:
+	    street:
+	      name: bakerstreet
+          number: "33"
+		  master: hello misaka
+		  test: verify hello misaka
+		  !IGNORE
+		  `
+	cmd := `
+varSet("var1", "hello")
+varAppend("var1", " misaka")
+importJson("test_import_data", '{"test": "verify ${var1}"}')
+varMapSet("test_import_data", "master", "${var1}")
+varMapSet("test_import_data", "adress.street.name", "bakerstreet")
+varMapSet("test_import_data", "adress.street.number", "33")
+println(varAsYaml("test_import_data"))
+`
+	expectedSlicedMessage := strings.Split(expectedMessage, "\n")
+	AnkoTestRunHelper(t, cmd, expectedExitCode, expectedMessageCount, expectedSlicedMessage)
 }
