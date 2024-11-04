@@ -33,6 +33,7 @@ import (
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/mimiclog"
+	"github.com/swaros/contxt/module/systools"
 	"github.com/swaros/contxt/module/yacl"
 	"github.com/swaros/contxt/module/yaclint"
 	"github.com/swaros/contxt/module/yamc"
@@ -41,6 +42,7 @@ import (
 const (
 	DefaultTemplateFile = ".contxt.yml"
 	DefaultIncludeFile  = ".inc.contxt.yml"
+	DefaultIgnoreFile   = ".tpl.ignore"
 )
 
 type Template struct {
@@ -54,6 +56,8 @@ type Template struct {
 	linting       bool                             // if linting is enabled we need to track the files
 	logger        mimiclog.Logger                  // the logger interface
 	onLoadFn      func(*configure.RunConfig) error // if this callback is set it will be called after the template file is loaded
+	ignoreEnabled bool                             // if ignore is enabled we try to read the ignore file, and ignore the values defined in it
+	ignoreHandler *IgnorreHndl                     // the ignore handler is used to ignore values in the template file
 }
 
 // create a new Template struct
@@ -63,6 +67,10 @@ func New() *Template {
 		logger:      mimiclog.NewNullLogger(),
 		tplParser:   CtxTemplate{},
 	}
+}
+
+func (t *Template) SetIgnoreHndl(onoff bool) {
+	t.ignoreEnabled = onoff
 }
 
 // set the callback function that is called after the template file is loaded
@@ -230,6 +238,7 @@ func (t *Template) HandleContxtTemplate(path string) (string, error) {
 		return "", ferr
 	}
 	t.logger.Debug("HandleContxtTemplate: file succesfully loaded:", path, "size:", len(templateData))
+
 	if _, loaded, err := t.LoadInclude(path); err != nil { // load the include files
 		return "", err // if we have an error here we can not continue
 	} else {
@@ -238,9 +247,13 @@ func (t *Template) HandleContxtTemplate(path string) (string, error) {
 			return string(templateData), nil // no include file is also fine. so no error
 		}
 	}
-
 	// now use the template parser to parse the template file
-	return t.ParseGoTemplate(string(templateData))
+	templateString, ferr := t.handleIgnoreFile(path, string(templateData))
+	if ferr != nil {
+		// we just log the error, because ignore file is optional. but might change the expected outcome, so the user should know
+		t.logger.Error("error while handling template ignore file:", path, ferr)
+	}
+	return t.ParseGoTemplate(templateString)
 }
 
 // Different to HandleContxtTemplate, here we do not expect the include definition file
@@ -255,18 +268,53 @@ func (t *Template) TryHandleTemplate(path string) (string, error) {
 	if ferr != nil {
 		return "", ferr
 	}
+
+	templateString, ferr := t.handleIgnoreFile(path, string(templateData))
+	if ferr != nil {
+		// we just log the error, because ignore file is optional. but might change the expected outcome, so the user should know
+		t.logger.Error("error while handling template ignore file:", path, ferr)
+	}
+
 	t.logger.Debug("TryHandleTemplate: file succesfully loaded:", path, "size:", len(templateData))
-	t.logger.Trace("TryHandleTemplate: file content:", string(templateData))
-	source, err := t.ParseGoTemplate(string(templateData))
+	t.logger.Trace("TryHandleTemplate: file content:", templateString)
+	source, err := t.ParseGoTemplate(templateString)
 	t.logger.Trace("TryHandleTemplate: parsed content:", mimiclog.Fields{"size": len(source), "content": source, "err": err})
 	return source, err
 }
 
+func (t *Template) handleIgnoreFile(path, templateData string) (string, error) {
+
+	// if ignore handling is enabled we try to read the ignore file
+	if t.ignoreEnabled {
+		// lets check if we have a ignore file in the same directory
+		baseDir := filepath.Dir(path)
+		ignoreFile := baseDir + string(os.PathSeparator) + DefaultIgnoreFile
+		if systools.FileExists(ignoreFile) {
+			content, err := systools.ReadFileAsStrings(ignoreFile)
+			if err == nil {
+				t.ignoreHandler = NewIgnorreHndl(string(templateData))
+				t.ignoreHandler.AddIgnores(content...)
+				newString := t.ignoreHandler.CreateMaskedString()
+				return newString, nil
+			} else {
+				return templateData, err
+			}
+		}
+	}
+	return templateData, nil
+}
+
 func (t *Template) ParseGoTemplate(data string) (string, error) {
 	t.tplParser.SetData(t.GetOriginMap())
+
 	if templateParsed, err := t.tplParser.ParseTemplateString(data); err != nil {
 		return "", err
 	} else {
+		// if ignore handling is enabled we try to restore the original string
+		// so any ignored values are restored as it was before
+		if t.ignoreEnabled && t.ignoreHandler != nil {
+			templateParsed = t.ignoreHandler.RestoreOriginalString(templateParsed)
+		}
 		return templateParsed, nil
 	}
 }
