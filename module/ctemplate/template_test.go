@@ -131,3 +131,22 @@ func TestTemplateV2KeydMap(t *testing.T) {
 
 	popDir()
 }
+
+func TestWithIgnoredValues(t *testing.T) {
+	pushDir("testdata/ignore")
+	tmplte := ctemplate.New()
+	if err := tmplte.Init(); err != nil {
+		t.Error(err)
+	}
+	tmplte.SetIgnoreHndl(true)
+	cfg, err := tmplte.LoadV2()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	assert.Equal(t, "testing", cfg.Task[0].ID)
+	assert.Equal(t, `echo "docker inspect \-f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' container_name_or_id"`, cfg.Task[0].Script[0])
+
+	popDir()
+}
