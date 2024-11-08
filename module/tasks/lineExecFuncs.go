@@ -35,6 +35,7 @@ import (
 	cp "github.com/otiai10/copy"
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/systools"
+	"github.com/swaros/contxt/module/yamc"
 )
 
 func (t *targetExecuter) GetFnAsDefaults(anko *AnkoRunner) []AnkoDefiner {
@@ -75,6 +76,13 @@ func (t *targetExecuter) GetFnAsDefaults(anko *AnkoRunner) []AnkoDefiner {
 			},
 			RISK_LEVEL_LOW,
 			"replace a string. e.g. stringReplace('hello world','world','universe')",
+		},
+		{"stringSplit",
+			func(s, sep string) []string {
+				return strings.Split(s, sep)
+			},
+			RISK_LEVEL_LOW,
+			"split a string. e.g. stringSplit('hello world',' ')",
 		},
 		{"stringContains",
 			func(s, substr string) bool {
@@ -149,6 +157,21 @@ func (t *targetExecuter) GetFnAsDefaults(anko *AnkoRunner) []AnkoDefiner {
 			},
 			RISK_LEVEL_LOW,
 			"get the data as yaml string. e.g. data = varAsYaml('key')",
+		},
+		{"fromJson",
+			func(jsonString string) (interface{}, error) {
+				mapData := yamc.New()
+				err := mapData.Parse(yamc.NewJsonReader(), []byte(jsonString))
+				if err != nil {
+					anko.ThrowException(err, fmt.Sprintf("fromJson('%s')", jsonString))
+					t.out(MsgError(MsgError{Err: err, Reference: "fromJson(jsonString)", Target: t.target}))
+					return nil, err
+				}
+				return mapData.GetData(), nil
+
+			},
+			RISK_LEVEL_LOW,
+			"parse a json string. e.g. data,err = fromJson('{\"key\":\"value\"}')",
 		},
 		{"exec",
 			func(cmd string) (string, int, error) {
@@ -235,24 +258,24 @@ err = result[2]`,
 			`set a value in a map. e.g. varMapSet('key','path','value')`,
 		},
 		{"varMapToJson",
-			func(mapKey, varKey string) string {
+			func(mapKey string) (string, error) {
 				if data, ok := t.dataHandler.GetDataAsJson(mapKey); ok {
-					return data
+					return data, nil
 				}
-				return ""
+				return "", errors.New("map named " + mapKey + " not found")
 			},
 			RISK_LEVEL_LOW,
-			`get a map as json string. e.g. data = varMapToJson('key','path')`,
+			`get a map as json string. e.g. data = varMapToJson('key')`,
 		},
 		{"varMapToYaml",
-			func(mapKey, varKey string) string {
+			func(mapKey string) (string, error) {
 				if data, ok := t.dataHandler.GetDataAsYaml(mapKey); ok {
-					return data
+					return data, nil
 				}
-				return ""
+				return "", errors.New("map named " + mapKey + " not found")
 			},
 			RISK_LEVEL_LOW,
-			`get a map as yaml string. e.g. data = varMapToYaml('key','path')`,
+			`get a map as yaml string. e.g. data = varMapToYaml('key')`,
 		},
 		{"varWrite",
 			func(varName, fileName string) error {
@@ -280,23 +303,7 @@ err = result[2]`,
 		},
 		{"readFile",
 			func(fileName string) (string, error) {
-				f, err := os.Open(fileName)
-				if err != nil {
-					anko.ThrowException(err, fmt.Sprintf("readFile('%s')", fileName))
-					return "", err
-				}
-				defer f.Close()
-				fi, err := f.Stat()
-				if err != nil {
-					anko.ThrowException(err, fmt.Sprintf("readFile('%s')", fileName))
-					return "", err
-				}
-				data := make([]byte, fi.Size())
-				if _, err := f.Read(data); err != nil {
-					anko.ThrowException(err, fmt.Sprintf("readFile('%s')", fileName))
-					return "", err
-				}
-				return string(data), nil
+				return systools.ReadFileAsString(fileName)
 			},
 			RISK_LEVEL_HIGH,
 			`read a file. e.g. content,err = readFile('input.txt')`,

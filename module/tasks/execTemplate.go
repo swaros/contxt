@@ -79,7 +79,9 @@ func (e *TaskListExec) RunTargetWithVars(target string, scopeVars map[string]str
 }
 
 func (e *TaskListExec) SetLogger(logger mimiclog.Logger) {
-	e.logger = logger
+	if logger != nil {
+		e.logger = logger
+	}
 }
 
 func (e *TaskListExec) GetTask(target string) *targetExecuter {
@@ -113,6 +115,9 @@ func (e *TaskListExec) findOrCreateTask(target string, scopeVars map[string]stri
 	}
 	// check if the task is already created
 	tExec, found := e.subTasks[target]
+	if e.logger != nil {
+		e.logger.Debug("findOrCreateTask: target already created in subTasks?", target, found)
+	}
 	if !found { // task not found, so we need to create it
 		for _, task := range e.config.Task { // check if the task is defined in the config
 			if task.ID == target { // task found
