@@ -67,6 +67,51 @@ func createRuntimeByYamlStringWithAllMsg(yamlString string, messages *[]string, 
 	}
 }
 
+func assertSliceContains(t *testing.T, slice []string, substr string) bool {
+	t.Helper()
+	for _, s := range slice {
+		if strings.Contains(s, substr) {
+			return true
+		}
+	}
+	t.Errorf("expected slice to contain %q, but it did not", substr)
+	t.Log("\n" + strings.Join(slice, "\n"))
+	return false
+}
+
+func assertSliceNotContains(t *testing.T, slice []string, substr string) bool {
+	t.Helper()
+	for _, s := range slice {
+		if strings.Contains(s, substr) {
+			t.Errorf("expected slice not to contain %q, but it did", substr)
+			t.Log("\n" + strings.Join(slice, "\n"))
+			return false
+		}
+	}
+	return true
+}
+
+func helpLogSlice(t *testing.T, slice []string) {
+	t.Helper()
+	t.Log("\n" + strings.Join(slice, "\n"))
+}
+
+func assertSliceContainsAtLeast(t *testing.T, slice []string, substr string, atLeast int) bool {
+	t.Helper()
+	count := 0
+	for _, s := range slice {
+		if strings.Contains(s, substr) {
+			count++
+		}
+	}
+	if count < atLeast {
+		t.Errorf("expected slice to contain %q at least %d times, but it did only %d times", substr, atLeast, count)
+		t.Log("\n" + strings.Join(slice, "\n"))
+		return false
+	}
+	return true
+}
+
 func assertContainsCount(t *testing.T, slice []string, substr string, count int) {
 	t.Helper()
 	containsCount := 0
@@ -210,11 +255,25 @@ func assertDirectoryMatch(t *testing.T, originFolder, targetFolder string) error
 	return nil
 }
 
+func removeFile(t *testing.T, file string) {
+	t.Helper()
+	if err := os.Remove(file); err != nil {
+		t.Errorf("could not remove file %q: %v", file, err)
+	}
+}
+
 func assertFileMatch(t *testing.T, originFile, targetFile string) error {
+	return assertFileMatchAndRemoveOrig(t, originFile, targetFile, false)
+}
+
+func assertFileMatchAndRemoveOrig(t *testing.T, originFile, targetFile string, remove bool) error {
 	t.Helper()
 	originFileStat, err := os.Stat(originFile)
 	if err != nil {
 		return err
+	}
+	if remove {
+		defer removeFile(t, originFile)
 	}
 	targetFileStat, err := os.Stat(targetFile)
 	if err != nil {
@@ -250,4 +309,222 @@ func assertFileExists(t *testing.T, file string) {
 	if _, err := os.Stat(file); err != nil {
 		t.Errorf("file %q does not exist, but it should", file)
 	}
+}
+
+func AnkoTestRunHelper(
+	t *testing.T,
+	cmd string,
+	expectedExitCode int,
+	expectedMessageCount int, expectedMessage []string) (*tasks.CombinedDh, *tasks.DefaultRequires) {
+	t.Helper()
+	return AnkoTestRunHelperWithErrors(t, cmd, false, expectedExitCode, expectedMessageCount, expectedMessage)
+}
+
+func AnkoTestRunHelperWithErrors(
+	t *testing.T,
+	cmd string,
+	errorsExpected bool,
+	expectedExitCode int,
+	expectedMessageCount int, expectedMessage []string) (*tasks.CombinedDh, *tasks.DefaultRequires) {
+	t.Helper()
+
+	var runCfg configure.RunConfig = configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					cmd,
+				},
+			},
+		},
+	}
+
+	localMsg := []string{}
+	errorMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				errorMsg = append(errorMsg, s.Err.Error())
+				if !errorsExpected {
+					t.Error(s.Err)
+				}
+			case tasks.MsgErrDebug:
+				t.Log(s)
+				if !errorsExpected {
+					errorMsg = append(errorMsg, s.Err.Error())
+					t.Error(s.Err)
+				}
+			}
+		}
+	}
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, mimiclog.NewNullLogger())
+	tsk := tasks.NewTaskListExec(runCfg, dmc, outHandler, tasks.ShellCmd, req)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected exit code ", expectedExitCode, " but got", code)
+	}
+	if expectedMessageCount > 0 {
+		if len(localMsg) != expectedMessageCount {
+			t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
+			for i, m := range localMsg {
+				t.Log(i, m)
+			}
+
+		} else {
+			for i, expected := range expectedMessage {
+				if i >= len(localMsg) {
+					continue
+				}
+				cleanExpect := strings.TrimSpace(expected)
+				cleanLocal := strings.TrimSpace(localMsg[i])
+				cleanExpect = strings.ReplaceAll(cleanExpect, "\n", "")
+				cleanLocal = strings.ReplaceAll(cleanLocal, "\n", "")
+				cleanExpect = strings.ReplaceAll(cleanExpect, "\r", "")
+				cleanLocal = strings.ReplaceAll(cleanLocal, "\r", "")
+				cleanExpect = strings.ReplaceAll(cleanExpect, "\t", "")
+				cleanLocal = strings.ReplaceAll(cleanLocal, "\t", "")
+				if cleanLocal == "" && strings.ReplaceAll(cleanExpect, " ", "") == "" {
+					continue
+				}
+				if cleanExpect == "" && strings.ReplaceAll(cleanLocal, " ", "") == "" {
+					continue
+				}
+				if strings.Contains(cleanExpect, "!IGNORE") {
+					continue
+				}
+				if cleanLocal != cleanExpect {
+					t.Error("expected message[", cleanExpect, "] but got[", cleanLocal, "] line:", i)
+				}
+
+			}
+		}
+	} else {
+		if len(localMsg) > 0 {
+			t.Error("expected no message but got", len(localMsg))
+			t.Log(localMsg)
+		}
+	}
+	return dmc, req
+}
+
+// RunTargetHelper is a helper function to run a task with a given command and
+// check the output and exit code.
+// t: the testing.T object
+// cmd: the command to run. like "run test-target"
+// runCfg: the run configuration. there anything can be set related to the tasks
+// expectedExitCode: the expected exit code. see systools/errorcodes.go
+// expectedMessageCount: the expected message count. < 0 means no check
+// expectedMessage: the expected messages. it depends on the expectedMessageCount. is this is < 1, this will be ignored
+// returns: the combined data handler and the default requires and the test logger
+func RunTargetHelperWithErrors(
+	t *testing.T,
+	cmd string,
+	runCfg configure.RunConfig,
+	errorsExpected bool,
+	expectedExitCode int,
+	expectedMessageCount int, expectedMessage []string) (*tasks.CombinedDh, *tasks.DefaultRequires, *testLogger) {
+	t.Helper()
+
+	localMsg := []string{}
+	errorMsg := []string{}
+	outHandler := func(msg ...interface{}) {
+		for _, m := range msg {
+			switch s := m.(type) {
+			case string:
+				localMsg = append(localMsg, s)
+			case tasks.MsgExecOutput:
+				localMsg = append(localMsg, string(s.Output))
+			case tasks.MsgError:
+				errorMsg = append(errorMsg, s.Err.Error())
+				if !errorsExpected {
+					t.Error(s.Err)
+				}
+			case tasks.MsgErrDebug:
+				t.Log(s)
+				if !errorsExpected {
+					errorMsg = append(errorMsg, s.Err.Error())
+					t.Error(s.Err)
+				}
+			}
+		}
+	}
+	testLogger := NewTestLogger(t)
+	dmc := tasks.NewCombinedDataHandler()
+	req := tasks.NewDefaultRequires(dmc, testLogger)
+	tsk := tasks.NewTaskListExec(runCfg, dmc, outHandler, tasks.ShellCmd, req)
+	tsk.SetLogger(testLogger)
+	tsk.SetHardExistToAllTasks(false)
+	code := tsk.RunTarget("test", false)
+	if code != expectedExitCode {
+		t.Error("expected exit code ", expectedExitCode, " but got", code)
+	}
+	if expectedMessageCount > 0 {
+		if len(localMsg) != expectedMessageCount {
+			t.Error("expected ", expectedMessageCount, " message but got", len(localMsg))
+			for i, m := range localMsg {
+				t.Log(i, m)
+			}
+
+		} else {
+			for i, expected := range expectedMessage {
+				if i >= len(localMsg) {
+					continue
+				}
+				cleanExpect := strings.TrimSpace(expected)
+				cleanLocal := strings.TrimSpace(localMsg[i])
+				cleanExpect = strings.ReplaceAll(cleanExpect, "\n", "")
+				cleanLocal = strings.ReplaceAll(cleanLocal, "\n", "")
+				cleanExpect = strings.ReplaceAll(cleanExpect, "\r", "")
+				cleanLocal = strings.ReplaceAll(cleanLocal, "\r", "")
+				cleanExpect = strings.ReplaceAll(cleanExpect, "\t", "")
+				cleanLocal = strings.ReplaceAll(cleanLocal, "\t", "")
+				if cleanLocal == "" && strings.ReplaceAll(cleanExpect, " ", "") == "" {
+					continue
+				}
+				if cleanExpect == "" && strings.ReplaceAll(cleanLocal, " ", "") == "" {
+					continue
+				}
+				if strings.Contains(cleanExpect, "!IGNORE") {
+					continue
+				}
+				if cleanLocal != cleanExpect {
+					t.Error("expected message[", cleanExpect, "] but got[", cleanLocal, "] line:", i)
+				}
+
+			}
+		}
+	} else {
+		if len(localMsg) > 0 && expectedMessageCount > 0 {
+			t.Error("expected no message but got", len(localMsg))
+			t.Log(localMsg)
+		}
+	}
+	return dmc, req, testLogger
+}
+
+// testing the assert itself
+
+func TestAssertSliceContains(t *testing.T) {
+	t.Parallel()
+	slice := []string{"a", "b", "c"}
+	assertSliceContains(t, slice, "b")
+}
+
+func TestAssertSliceNotContains(t *testing.T) {
+	t.Parallel()
+	slice := []string{"a", "b", "c"}
+	assertSliceNotContains(t, slice, "d")
+}
+
+func TestAssertSliceContainsAtLeast(t *testing.T) {
+	t.Parallel()
+	slice := []string{"a", "b", "c", "b", "b"}
+	assertSliceContainsAtLeast(t, slice, "b", 3)
 }
