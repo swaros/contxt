@@ -1,7 +1,7 @@
 
 # cont(e)xt
 
-version: `0.5.3`
+version: `0.6.0`
 
 **contxt** is a development Tool that aims to help you to keep track of your projects and their related content. do not waist youre time by looking for the right directory, or the right command to execute, just because you have to many projects and they are all different.
 
