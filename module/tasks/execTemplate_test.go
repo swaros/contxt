@@ -70,9 +70,9 @@ func TestTepmlateRunBasic(t *testing.T) {
 			},
 		},
 	}
-	_, _, logger := RunTargetHelperWithErrors(t, "run test", runCfg, false, systools.ExitOk, -1, []string{})
+	_, _, logger := RunTargetHelperWithErrors(t, "test", runCfg, false, systools.ExitOk, -1, []string{}, true)
 	if len(logger.debugs) != 5 {
-		t.Error("expected 1 debug message but got", len(logger.debugs))
+		t.Error("expected 5 debug message but got", len(logger.debugs))
 		helpLogSlice(t, logger.debugs)
 	} else {
 		assertSliceContainsAtLeast(t, logger.debugs, "findOrCreateTask: target already created in subTasks?%!(EXTRA string=test, bool=false)", 1)
@@ -82,6 +82,7 @@ func TestTepmlateRunBasic(t *testing.T) {
 }
 
 func TestTepmlateWithRequire(t *testing.T) {
+	// this requirement will not match
 	requireVars := map[string]string{
 		"test": "Hello",
 	}
@@ -98,13 +99,11 @@ func TestTepmlateWithRequire(t *testing.T) {
 			},
 		},
 	}
-	_, _, logger := RunTargetHelperWithErrors(t, "run test-require", runCfg, false, systools.ExitByNoTargetExists, 0, []string{})
-	if len(logger.debugs) != 1 {
-		t.Error("expected 1 debug message but got", len(logger.debugs))
-	} else {
-		assertSliceContainsAtLeast(t, logger.debugs, "findOrCreateTask", 1)
-		assertSliceContainsAtLeast(t, logger.debugs, "string=test, bool=false", 1)
-	}
+	// because the requirements are not matching, we end up with exit code ExitByNothingToDo (107)
+	_, _, logger := RunTargetHelperWithErrors(t, "test-require", runCfg, false, systools.ExitByNothingToDo, 0, []string{}, true)
+
+	assertSliceContainsAtLeast(t, logger.infos, "executeTemplate IGNORE because requirements not matching", 1)
+
 }
 
 func TestVersionCheck(t *testing.T) {
@@ -1837,4 +1836,110 @@ func TestBase64DecoeError(t *testing.T) {
 	  }`
 	AnkoTestRunHelperWithErrors(t, cmd, true, expectedExitCode, expectedMessageCount,
 		[]string{"illegal base64 data at input byte 12", "Error in script: illegal base64 data at input byte 12 errType: base64.CorruptInputError "})
+}
+
+func TestNeedsExecutedOnce(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := -1
+	expectedMessage := []string{"needcheck_2 true", "needcheck_1 true", "true"}
+	runConfig := configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "neededOne",
+				Cmd: []string{
+					`varSet("var1", "hello")`,
+					`println(varExists("var1"))`,
+				},
+			},
+			{
+				ID:    "taskInBetween",
+				Needs: []string{"neededOne"},
+				Cmd: []string{
+					`println("needcheck_1",varExists("var1"))`,
+				},
+			},
+			{
+				ID: "neededTwo",
+				Options: configure.Options{
+					Displaycmd: true,
+				},
+				Needs: []string{"neededOne", "taskInBetween"},
+				Cmd: []string{
+					`println("needcheck_2", varExists("var1"))`,
+				},
+			},
+		},
+	}
+	dh, _, logger := RunTargetHelperWithErrors(t, "neededTwo", runConfig, false, expectedExitCode, expectedMessageCount, expectedMessage, true)
+	if len(logger.errors) > 0 {
+		t.Error("expected no errors but got", len(logger.errors))
+	}
+	// the need is defined twice, but we have to make sure it is running only once
+	if !assertSliceContainsAtLeast(t, logger.debugs, "need already handled neededOne", 1) {
+		t.Error("expected messages \"need already handled neededOne\" but got", logger.debugs)
+	}
+
+	var1 := dh.GetPH("var1")
+	if var1 != "hello" {
+		t.Error("expected var1 to be hello but got[", var1, "]")
+	}
+}
+
+func TestNeedsExecutedOnceWithoutCode(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := -1
+	expectedMessage := []string{"needcheck_2 true", "needcheck_1 true", "true"}
+	runConfig := configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "neededOne",
+				Variables: map[string]string{
+					"var1":   "hello",
+					"checkA": "needcheck_1",
+					"run_1":  "true",
+				},
+			},
+			{
+				ID:    "taskInBetween",
+				Needs: []string{"neededOne"},
+				Variables: map[string]string{
+					"checkA": "needcheck_1",
+					"run_2":  "true",
+				},
+			},
+			{
+				ID:    "neededTwo",
+				Needs: []string{"neededOne", "taskInBetween"},
+				Variables: map[string]string{
+					"checkA": "needcheck_2",
+					"run_3":  "true",
+				},
+			},
+		},
+	}
+	dh, _, logger := RunTargetHelperWithErrors(t, "neededTwo", runConfig, false, expectedExitCode, expectedMessageCount, expectedMessage, true)
+	if len(logger.errors) > 0 {
+		t.Error("expected no errors but got", len(logger.errors))
+	}
+	// like in the test above, the need is defined twice, but we have to make sure it is running only once
+	// but different, there is no code in the tasks, so we have to check the tasks get executed anyway
+	if !assertSliceContainsAtLeast(t, logger.debugs, "need already handled neededOne", 1) {
+		t.Error("expected messages \"need already handled neededOne\" but got", logger.debugs)
+	}
+
+	var1 := dh.GetPH("var1")
+	if var1 != "hello" {
+		t.Error("expected var1 to be hello but got[", var1, "]")
+		t.Log(logger.debugs)
+	}
+	keys := dh.GetDataKeys()
+	if !assertSliceContainsAtLeast(t, keys, "run_1", 1) {
+		t.Error("expected to have run_1 in the data keys but got", keys)
+	}
+	if !assertSliceContainsAtLeast(t, keys, "run_2", 1) {
+		t.Error("expected to have run_2 in the data keys but got", keys)
+	}
+	if !assertSliceContainsAtLeast(t, keys, "run_3", 1) {
+		t.Error("expected to have run_3 in the data keys but got", keys)
+	}
 }
