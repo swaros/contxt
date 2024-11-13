@@ -422,6 +422,7 @@ func AnkoTestRunHelperWithErrors(
 // expectedExitCode: the expected exit code. see systools/errorcodes.go
 // expectedMessageCount: the expected message count. < 0 means no check
 // expectedMessage: the expected messages. it depends on the expectedMessageCount. is this is < 1, this will be ignored
+// resetTasks: if true, the tasks will be resetted after the run
 // returns: the combined data handler and the default requires and the test logger
 func RunTargetHelperWithErrors(
 	t *testing.T,
@@ -429,7 +430,10 @@ func RunTargetHelperWithErrors(
 	runCfg configure.RunConfig,
 	errorsExpected bool,
 	expectedExitCode int,
-	expectedMessageCount int, expectedMessage []string) (*tasks.CombinedDh, *tasks.DefaultRequires, *testLogger) {
+	expectedMessageCount int,
+	expectedMessage []string,
+	resetTasks bool,
+) (*tasks.CombinedDh, *tasks.DefaultRequires, *testLogger) {
 	t.Helper()
 
 	localMsg := []string{}
@@ -461,7 +465,10 @@ func RunTargetHelperWithErrors(
 	tsk := tasks.NewTaskListExec(runCfg, dmc, outHandler, tasks.ShellCmd, req)
 	tsk.SetLogger(testLogger)
 	tsk.SetHardExistToAllTasks(false)
-	code := tsk.RunTarget("test", false)
+	if resetTasks {
+		tsk.GetWatch().ResetAllTaskInfos()
+	}
+	code := tsk.RunTarget(cmd, false)
 	if code != expectedExitCode {
 		t.Error("expected exit code ", expectedExitCode, " but got", code)
 	}
