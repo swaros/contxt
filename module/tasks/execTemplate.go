@@ -84,17 +84,6 @@ func (e *TaskListExec) SetLogger(logger mimiclog.Logger) {
 	}
 }
 
-func (e *TaskListExec) GetTask(target string) *targetExecuter {
-	if e.subTasks == nil {
-		e.subTasks = make(map[string]*targetExecuter)
-		return nil
-	}
-	if tExec, found := e.subTasks[target]; found {
-		return e.applyLogger(tExec)
-	}
-	return nil
-}
-
 func (e *TaskListExec) applyLogger(tExec *targetExecuter) *targetExecuter {
 	if e.logger != nil && tExec != nil && !tExec.haveLogger() {
 		tExec.SetLogger(e.logger)
@@ -172,7 +161,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 	// some weird target name? we will not allow this
 	if clTarget, err := systools.CheckForCleanString(target); err != nil {
 		t.getLogger().Error("invalid target name", err)
-		return systools.ErrorTemplateReading
+		return systools.ErrorInvalidTargetName
 	} else {
 		target = clTarget
 	}
@@ -443,7 +432,7 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 		}
 		return returnCode
 	}
-	return systools.ExitNoCode
+	return systools.ExitNoTasks
 }
 
 func (t *targetExecuter) generateFuturesByTargetListAndExec(RunTargets []string) []awaitgroup.Future {

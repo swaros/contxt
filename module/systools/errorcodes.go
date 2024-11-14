@@ -43,4 +43,6 @@ const (
 	ExitByNothingToDo        = 107 // none of the targets have any usefull work to do or did not match any requirements
 	ExitByTimeout            = 108 // ExitByTimeout means the task was stopped because of a timeout
 	ExitByUnsupportedVersion = 109 // ExitByWongVersion means the version is not matching. it needs to be equal or higher
+	ExitNoTasks              = 110 // ExitNoTasks means there are no tasks to run
+	ErrorInvalidTargetName   = 111 // ErrorInvalidTargetName means the target name is not valid
 )

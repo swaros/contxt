@@ -323,6 +323,8 @@ func TestAppend(t *testing.T) {
 
 func TestAppendTpPhWithAsync(t *testing.T) {
 	cdh := tasks.NewCombinedDataHandler()
+	logger := NewTestLogger(t)
+	cdh.SetLogger(logger)
 	cdh.SetPH("name", "Martin D'vloper2")
 	cdh.SetPH("dancers", "caruso, baryshnikov, nureyev")
 

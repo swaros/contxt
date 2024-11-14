@@ -31,6 +31,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	cp "github.com/otiai10/copy"
 	"github.com/swaros/contxt/module/configure"
@@ -400,6 +401,13 @@ this will copy any files except the ones with the given suffixes`,
 			},
 			RISK_LEVEL_LOW,
 			`decode a base64 string. e.g. base64Decode('aGVsbG8gd29ybGQ=')`,
+		},
+		{"waitMillis",
+			func(milis int) {
+				time.Sleep(time.Duration(milis) * time.Millisecond)
+			},
+			RISK_LEVEL_LOW,
+			`wait for a given time in miliseconds. e.g. waitMilis(1000)`,
 		},
 	}
 	return cmdList
