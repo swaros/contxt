@@ -151,6 +151,78 @@ func (t *targetExecuter) verifyVersion() bool {
 	return configure.CheckVersion(t.runCfg.Version, configure.GetVersion())
 }
 
+func (t *targetExecuter) splitTargetsNeedsByWorkingDir(taskList []configure.Task) ([]string, map[string][]string) {
+	targetsWithDir := make(map[string][]string)
+	plainTargets := make([]string, 0)
+	allNeeds := make(map[string]configure.Task, 0)
+
+	for _, task := range taskList {
+		for _, need := range task.Needs {
+			tasksForNeed := t.getTargetTasks(need)
+			for _, taskForNeed := range *tasksForNeed {
+				allNeeds[taskForNeed.ID] = taskForNeed
+			}
+		}
+		t.getLogger().Debug("allNeeds collected ", len(allNeeds))
+	}
+	// now checking any need if they have a working directory
+	for _, need := range allNeeds {
+		if need.Options.WorkingDir != "" {
+			if _, ok := targetsWithDir[need.Options.WorkingDir]; !ok {
+				targetsWithDir[need.Options.WorkingDir] = make([]string, 0)
+			}
+			targetsWithDir[need.Options.WorkingDir] = append(targetsWithDir[need.Options.WorkingDir], need.ID)
+		} else {
+			plainTargets = append(plainTargets, need.ID)
+		}
+	}
+	return plainTargets, targetsWithDir
+
+}
+
+func (t *targetExecuter) runAsyncTargets(target string, displayCmd bool, runTese []string) {
+	var needExecs []awaitgroup.FutureStack
+	for _, needTarget := range runTese {
+		// check if the task is already registered
+		if !t.watch.TryCreate(needTarget) {
+			// task is already registered, so we will not do it
+			if displayCmd {
+				t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
+			}
+			t.getLogger().Debug("need already handled " + needTarget)
+		} else {
+			// task is not registered, so it never runs. we need to run it
+			t.getLogger().Debug("need name should be added " + needTarget)
+			if displayCmd {
+				t.out(MsgTarget{Target: target, Context: "needs_execute", Info: needTarget})
+			}
+			needExecs = append(needExecs, awaitgroup.FutureStack{
+				AwaitFunc: func(ctx context.Context) interface{} {
+					argNeed := ctx.Value(awaitgroup.CtxKey{}).(string)
+					_, argmap := systools.StringSplitArgs(argNeed, "arg")
+					t.getLogger().Debug("add need task " + argNeed)
+					return t.executeTemplate(true, argNeed, argmap)
+				},
+				Argument: needTarget})
+		}
+	}
+
+	futures := awaitgroup.ExecFutureGroup(needExecs) // create the futures and start the tasks
+	results := awaitgroup.WaitAtGroup(futures)       // wait until any task is executed
+
+	t.getLogger().Debug("needs result", results)
+}
+
+func (t *targetExecuter) getTargetTasks(name string) *[]configure.Task {
+	tasks := make([]configure.Task, 0)
+	for _, task := range t.runCfg.Task {
+		if task.ID == name {
+			tasks = append(tasks, task)
+		}
+	}
+	return &tasks
+}
+
 func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars map[string]string) int {
 
 	// check the version of the task
@@ -301,37 +373,54 @@ func (t *targetExecuter) executeTemplate(runAsync bool, target string, scopeVars
 				t.getLogger().Debug("Needs for the script", script.Needs)
 				// check if we have to run the needs in threads or not
 				if runAsync {
-					// here we have the "run in threads" part
-					var needExecs []awaitgroup.FutureStack
-					for _, needTarget := range script.Needs {
-						// check if the task is already registered
-						if !t.watch.TryCreate(needTarget) {
-							// task is already registered, so we will not do it
-							if script.Options.Displaycmd {
-								t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
-							}
-							t.getLogger().Debug("need already handled " + needTarget)
-						} else {
-							// task is not registered, so it never runs. we need to run it
-							t.getLogger().Debug("need name should be added " + needTarget)
-							if script.Options.Displaycmd {
-								t.out(MsgTarget{Target: target, Context: "needs_execute", Info: needTarget})
-							}
-							needExecs = append(needExecs, awaitgroup.FutureStack{
-								AwaitFunc: func(ctx context.Context) interface{} {
-									argNeed := ctx.Value(awaitgroup.CtxKey{}).(string)
-									_, argmap := systools.StringSplitArgs(argNeed, "arg")
-									t.getLogger().Debug("add need task " + argNeed)
-									return t.executeTemplate(true, argNeed, argmap)
-								},
-								Argument: needTarget})
-						}
+					// first we need to get any target, that is executed in a different path, so we can run them in threads at first
+					plainTargets, targetsWithDir := t.splitTargetsNeedsByWorkingDir(taskList)
+					t.getLogger().Debug("Start Async Run Targets in different workspaces", targetsWithDir)
+
+					// first we need to run the targets that are in a different path
+					// so we can run them in threads
+					for dir, runTese := range targetsWithDir {
+						t.out(MsgTarget{Target: target, Context: "running_in_workingdir", Info: dir}, MsgArgs(runTese))
+						t.runAsyncTargets(target, script.Options.Displaycmd, runTese)
 					}
 
-					futures := awaitgroup.ExecFutureGroup(needExecs) // create the futures and start the tasks
-					results := awaitgroup.WaitAtGroup(futures)       // wait until any task is executed
+					// now we can run the plain targets
+					t.getLogger().Debug("Start Async Run Targets in same workspace", plainTargets)
+					t.runAsyncTargets(target, script.Options.Displaycmd, plainTargets)
 
-					t.getLogger().Debug("needs result", results)
+					// here we have the "run in threads" part
+					/*
+						var needExecs []awaitgroup.FutureStack
+						for _, needTarget := range script.Needs {
+							// check if the task is already registered
+							if !t.watch.TryCreate(needTarget) {
+								// task is already registered, so we will not do it
+								if script.Options.Displaycmd {
+									t.out(MsgTarget{Target: target, Context: "needs_ignored_runs_already", Info: needTarget})
+								}
+								t.getLogger().Debug("need already handled " + needTarget)
+							} else {
+								// task is not registered, so it never runs. we need to run it
+								t.getLogger().Debug("need name should be added " + needTarget)
+								if script.Options.Displaycmd {
+									t.out(MsgTarget{Target: target, Context: "needs_execute", Info: needTarget})
+								}
+								needExecs = append(needExecs, awaitgroup.FutureStack{
+									AwaitFunc: func(ctx context.Context) interface{} {
+										argNeed := ctx.Value(awaitgroup.CtxKey{}).(string)
+										_, argmap := systools.StringSplitArgs(argNeed, "arg")
+										t.getLogger().Debug("add need task " + argNeed)
+										return t.executeTemplate(true, argNeed, argmap)
+									},
+									Argument: needTarget})
+							}
+						}
+
+						futures := awaitgroup.ExecFutureGroup(needExecs) // create the futures and start the tasks
+						results := awaitgroup.WaitAtGroup(futures)       // wait until any task is executed
+
+						t.getLogger().Debug("needs result", results)
+					*/
 				} else {
 					// here we have the "run in sequence" part
 					// we need to run the needs in sequence

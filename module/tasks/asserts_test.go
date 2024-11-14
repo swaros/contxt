@@ -468,7 +468,7 @@ func RunTargetHelperWithErrors(
 	if resetTasks {
 		tsk.GetWatch().ResetAllTaskInfos()
 	}
-	code := tsk.RunTarget(cmd, false)
+	code := tsk.RunTarget(cmd, !runCfg.Config.Sequencially)
 	if code != expectedExitCode {
 		t.Error("expected exit code ", expectedExitCode, " but got", code)
 	}

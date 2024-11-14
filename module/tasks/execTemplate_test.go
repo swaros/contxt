@@ -2010,3 +2010,46 @@ func TestInvalidTargetName(t *testing.T) {
 		}
 	}
 }
+
+func TestWorkingDirSplit(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 3
+	expectedMessages := []string{"task_diffdir", "task_samedir", "task_main"}
+	runConfig := configure.RunConfig{
+		Config: configure.Config{
+			Sequencially: false,
+		},
+
+		Task: []configure.Task{
+			{
+				ID:    "maintask",
+				Needs: []string{"samedir", "diffdir"},
+				Script: []string{
+					"echo task_main",
+				},
+			},
+
+			{
+				ID: "samedir",
+				Script: []string{
+					"echo task_samedir",
+				},
+			},
+			{
+				ID: "diffdir",
+				Script: []string{
+					"echo task_diffdir",
+				},
+				Options: configure.Options{
+					WorkingDir: "testdata",
+				},
+			},
+		},
+	}
+	_, _, logger := RunTargetHelperWithErrors(
+		t, "maintask", runConfig, false, expectedExitCode, expectedMessageCount, expectedMessages, true,
+	)
+	if len(logger.errors) > 0 {
+		t.Error("expected no errors but got", len(logger.errors))
+	}
+}
