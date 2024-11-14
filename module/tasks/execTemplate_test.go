@@ -3,6 +3,7 @@ package tasks_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/swaros/contxt/module/configure"
 	"github.com/swaros/contxt/module/mimiclog"
@@ -1941,5 +1942,71 @@ func TestNeedsExecutedOnceWithoutCode(t *testing.T) {
 	}
 	if !assertSliceContainsAtLeast(t, keys, "run_3", 1) {
 		t.Error("expected to have run_3 in the data keys but got", keys)
+	}
+}
+
+func TestExecNoTasks(t *testing.T) {
+	expectedExitCode := systools.ExitByNoTargetExists
+	expectedMessageCount := 0
+	runConfig := configure.RunConfig{}
+	_, _, logger := RunTargetHelperWithErrors(t, "neededTwo", runConfig, false, expectedExitCode, expectedMessageCount, []string{}, true)
+	if len(logger.errors) > 0 {
+		t.Error("expected no errors but got", len(logger.errors))
+	}
+}
+
+func TestAnkoWaitMillis(t *testing.T) {
+	expectedExitCode := systools.ExitOk
+	expectedMessageCount := 1
+	cmd := `
+	  waitMillis(100)
+	  println("done")`
+
+	runConfig := configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test",
+				Cmd: []string{
+					cmd,
+				},
+			},
+		},
+	}
+	startTime := time.Now()
+	_, _, logger := RunTargetHelperWithErrors(t, "test", runConfig, false, expectedExitCode, expectedMessageCount, []string{"done"}, true)
+	execTimeInMillis := time.Since(startTime).Milliseconds()
+
+	if execTimeInMillis < 100 {
+		t.Error("expected to wait at least 100ms but got", execTimeInMillis)
+	}
+	if len(logger.errors) > 0 {
+		t.Error("expected no errors but got", len(logger.errors))
+	}
+
+}
+
+func TestInvalidTargetName(t *testing.T) {
+	expectedExitCode := systools.ErrorInvalidTargetName
+	expectedMessageCount := 0
+	cmd := `
+	  println("done")`
+
+	runConfig := configure.RunConfig{
+		Task: []configure.Task{
+			{
+				ID: "test#$",
+				Cmd: []string{
+					cmd,
+				},
+			},
+		},
+	}
+	_, _, logger := RunTargetHelperWithErrors(t, "test#$", runConfig, false, expectedExitCode, expectedMessageCount, []string{}, true)
+	if len(logger.errors) < 1 {
+		t.Error("expected at least one error")
+	} else {
+		if !strings.Contains(logger.errors[0], "invalid target name") {
+			t.Error("expected error to contain 'invalid target name' but got", logger.errors[0])
+		}
 	}
 }

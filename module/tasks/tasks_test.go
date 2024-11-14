@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/swaros/contxt/module/configure"
@@ -1595,5 +1596,85 @@ task:
 		}
 
 		assert.Contains(t, targetUpdates, "subTarget:requirement-check-failed[environment variable[OLDPWD] not matching with hello]", ".subTarget:command.. not found in targetUpdates ["+strings.Join(targetUpdates, ",")+"]")
+	}
+}
+
+func TestTaskBlocking(t *testing.T) {
+	ResetWatchmanTaskList(t)
+	expectedCode := systools.ExitAlreadyRunning
+	source := `
+version: "0.0.1"
+task:
+  - id: testWithWait
+    options:
+        displaycmd: true
+    cmd:
+        - waitMillis(100)
+`
+
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		codeBackChan := make(chan int)
+		go func() {
+			execCode := taskMain.RunTarget("testWithWait", true) // we run the task async
+			codeBackChan <- execCode
+		}()
+		time.Sleep(10 * time.Millisecond)
+		code := taskMain.RunTarget("testWithWait", true) // we run the task
+		if code != expectedCode {
+			t.Errorf("Expected code %d, got %d", expectedCode, code)
+		}
+		codeBack := <-codeBackChan
+		if codeBack != 0 {
+			t.Errorf("Expected code 0, got %d", codeBack)
+		}
+
+		assertSliceContains(t, targetUpdates, "testWithWait:ankocommand[waitMillis(100)]")
+	}
+}
+
+func TestKeynameVerify(t *testing.T) {
+	ResetWatchmanTaskList(t)
+	expectedCode := systools.ExitOk
+	source := `
+version: "0.0.1"
+task:
+  - id: triggerTarget
+    options:
+        displaycmd: true
+    script:
+        - echo "works"
+    listener:
+        - trigger:
+            onoutContains:
+            - works
+          action:
+            target: "subTarget#?"
+  - id: subTarget
+    options:
+      displaycmd: true
+    script:
+    - echo "subtask here"
+`
+
+	messages := []string{}
+	errorMsg := []error{}
+	targetUpdates := []string{}
+	if taskMain, err := createRuntimeByYamlStringWithAllMsg(source, &messages, &errorMsg, nil, &targetUpdates); err != nil {
+		t.Errorf("Error parsing yaml: %v", err)
+	} else {
+		code := taskMain.RunTarget("triggerTarget", true) // we run the task
+		if code != expectedCode {                         // we expect a code 0
+			t.Errorf("Expected code %d, got %d", expectedCode, code)
+		}
+		if len(errorMsg) < 1 {
+			t.Errorf("Expected error message, got none")
+		} else {
+			assert.Contains(t, errorMsg[0].Error(), "invalid keyname for target reference: subTarget#?")
+		}
 	}
 }
