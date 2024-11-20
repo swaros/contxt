@@ -28,6 +28,7 @@ import (
 )
 
 type CmdExecutor interface {
+	SetOutputHandlerByName(name string) error // set the output handler by name like table, plain, json
 	Print(msg ...interface{})
 	Println(msg ...interface{})
 	PrintPaths(plain bool, showFulltask bool)                         // print out all paths

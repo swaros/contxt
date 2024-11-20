@@ -43,15 +43,23 @@ import (
 )
 
 type CmdExecutorImpl struct {
-	session   *CmdSession
-	executer  *tasks.TaskListExec
-	dataHandl *tasks.CombinedDh
+	session     *CmdSession
+	executer    *tasks.TaskListExec
+	dataHandl   *tasks.CombinedDh
+	outHandlers map[string]*OutputHandler
+	usedHandler string
 }
 
 func NewCmd(session *CmdSession) *CmdExecutorImpl {
 	return &CmdExecutorImpl{
-		session: session,
+		session:     session,
+		outHandlers: make(map[string]*OutputHandler),
 	}
+}
+
+func (c *CmdExecutorImpl) SetOutputHandlerByName(name string) error {
+	c.usedHandler = name
+	return nil // right now we only set the name of the handler. so this will not fail. it may fail in the future
 }
 
 func (c *CmdExecutorImpl) PrintVariables(format string) {
@@ -330,6 +338,10 @@ func (c *CmdExecutorImpl) runAsyncTargets(targets []string, force bool) error {
 	return nil
 }
 
+func (c *CmdExecutorImpl) setDefaultOutHandlers() {
+	c.addOutHandler(NewTableOutput())
+}
+
 func (c *CmdExecutorImpl) InitExecuter() error {
 	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
 		c.session.Log.Logger.Error("error while loading template", err)
@@ -342,12 +354,18 @@ func (c *CmdExecutorImpl) InitExecuter() error {
 		c.dataHandl = tasks.NewCombinedDataHandler()
 		c.SetStartupVariables(c.dataHandl, &template)
 
+		c.setDefaultOutHandlers() // register any outputhandler
+		outputHndl, err := c.setOutHandler(c.usedHandler)
+		if err != nil {
+			return err
+		}
+
 		requireHndl := tasks.NewDefaultRequires(c.dataHandl, c.session.Log.Logger)
 		c.executer = tasks.NewTaskListExec(
 			template,
 			c.dataHandl,
 			requireHndl,
-			c.getOutHandler(),
+			outputHndl,
 			tasks.ShellCmd,
 		)
 		c.executer.SetLogger(c.session.Log.Logger)
