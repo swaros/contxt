@@ -215,18 +215,100 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 					c.drawRow(
 						ctxout.BaseSignSuccess+" "+tm.Target,
 						ctxout.ForeGreen,
-						"DONE ..."+tm.Info,
+						"NEXT DONE ..."+tm.Info,
 						ctxout.ForeDarkGrey,
 						ctxout.BaseSignSuccess+" ",
 						ctxout.ForeBlue,
 					)
-
+				case "requirement-check-failed":
+					c.drawRow(
+						ctxout.BaseSignWarning+" "+tm.Target,
+						ctxout.ForeYellow,
+						"SKIP REASON: ..."+ctxout.ForeLightCyan+tm.Info+ctxout.CleanTag,
+						ctxout.ForeBlue,
+						ctxout.BaseSignInfo+" ",
+						ctxout.ForeBlue,
+					)
+				case "wait_for_targets":
+					c.drawRow(
+						ctxout.BaseSignInfo+" "+tm.Target,
+						ctxout.ForeLightBlue,
+						"waiting for targets ..."+tm.Info,
+						ctxout.ForeBlue,
+						ctxout.BaseSignInfo+" ",
+						ctxout.ForeBlue,
+					)
+				case "wait_targets_done":
+					c.drawRow(
+						ctxout.BaseSignSuccess+" "+tm.Target,
+						ctxout.ForeGreen,
+						"TARGET DONE ..."+tm.Info,
+						ctxout.ForeDarkGrey,
+						ctxout.BaseSignSuccess+" ",
+						ctxout.ForeBlue,
+					)
+				case "running_in_workingdir":
+					c.drawRow(
+						ctxout.BaseSignInfo+" "+tm.Target,
+						ctxout.ForeLightBlue,
+						"running in workingdir ..."+tm.Info,
+						ctxout.ForeBlue,
+						ctxout.BaseSignInfo+" ",
+						ctxout.ForeBlue,
+					)
+				case "not_found":
+					c.drawRow(
+						ctxout.BaseSignError+" "+tm.Target,
+						ctxout.ForeLightRed,
+						"target not found ..."+tm.Info,
+						ctxout.ForeRed,
+						ctxout.BaseSignError+" ",
+						ctxout.ForeRed,
+					)
+				case "ankocommand":
+					c.drawRow(
+						ctxout.BaseSignInfo+" "+tm.Target,
+						ctxout.ForeLightBlue,
+						"running anko command ..."+tm.Info,
+						ctxout.ForeBlue,
+						ctxout.BaseSignInfo+" ",
+						ctxout.ForeBlue,
+					)
+				case "run-trigger-target-output":
+					c.drawRow(
+						ctxout.BaseSignInfo+" "+tm.Target,
+						ctxout.ForeLightBlue,
+						"running trigger target output ..."+tm.Info,
+						ctxout.ForeBlue,
+						ctxout.BaseSignInfo+" ",
+						ctxout.ForeBlue,
+					)
+				case "execute-trigger-target":
+					c.drawRow(
+						ctxout.BaseSignInfo+" "+tm.Target,
+						ctxout.ForeLightBlue,
+						"running trigger target ..."+tm.Info,
+						ctxout.ForeBlue,
+						ctxout.BaseSignInfo+" ",
+						ctxout.ForeBlue,
+					)
+				case "needs_ignored_runs_already":
+					c.drawRow(
+						ctxout.BaseSignInfo+" "+tm.Target,
+						ctxout.ForeLightBlue,
+						"needs ignored, runs already ..."+tm.Info,
+						ctxout.ForeBlue,
+						ctxout.BaseSignInfo+" ",
+						ctxout.ForeBlue,
+					)
 				default:
 					c.Println(
 						ctxout.ForeCyan,
 						" [",
 						ctxout.ForeLightYellow,
 						tm.Target,
+						" @ ",
+						tm.Context,
 						ctxout.ForeCyan,
 						"]",
 						ctxout.ForeLightCyan,
@@ -304,7 +386,7 @@ func (c *CmdExecutorImpl) getOutHandler() func(msg ...interface{}) {
 							" "+tm.Comment,
 							ctxout.Prop(ctxout.AttrSize, 70),
 							ctxout.Prop(ctxout.AttrPrefix, commentPreDef),
-							ctxout.Prop(ctxout.AttrOverflow, "ignore"),
+							ctxout.Prop(ctxout.AttrOverflow, "wrap"),
 							ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag),
 						),
 
