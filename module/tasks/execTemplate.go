@@ -530,6 +530,7 @@ func (t *targetExecuter) generateFuturesByTargetListAndExec(RunTargets []string)
 	}
 	var runTargetExecs []awaitgroup.FutureStack
 	for _, needTarget := range RunTargets {
+		needTarget = t.phHandler.HandlePlaceHolder(needTarget)
 		t.getLogger().Debug("runTarget name should be added " + needTarget)
 		runTargetExecs = append(runTargetExecs, awaitgroup.FutureStack{
 			AwaitFunc: func(ctx context.Context) interface{} {
