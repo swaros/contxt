@@ -89,7 +89,7 @@
             // "program": "${workspaceFolder}/module/ctxout/examples/table/.ignore/main.go",
             "program": "${workspaceFolder}/cmd/v2/main.go",
             "env": {},
-            "args": ["interactive","once","run test"]
+            "args": ["run","test","-o","plain"]
         },
         {
             "name": "plain start",

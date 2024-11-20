@@ -56,6 +56,7 @@ type CobraOptions struct {
 	PreVars              map[string]string // preset variables they will set variables from commandline. they will be overwritten by the template
 	ShowVars             bool              // show the variables
 	ShowVarsPattern      string            // show the variables with a pattern
+	OutputHandler        string            // set the output handler by name
 }
 
 // this is the main entry point for the cobra command
@@ -92,6 +93,7 @@ func (c *SessionCobra) Init(cmd CmdExecutor) error {
 	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.InContext, "incontext", "I", false, "use the current workspace as context")
 	c.RootCmd.PersistentFlags().StringToStringVarP(&c.Options.PreVars, "var", "v", nil, "set variables by keyname and value.")
 	c.RootCmd.PersistentFlags().BoolVarP(&c.Options.ShowVars, "showvars", "s", false, "show all variables")
+	c.RootCmd.PersistentFlags().StringVarP(&c.Options.OutputHandler, "output", "o", "table", "set output format handler. (table)")
 
 	c.RootCmd.AddCommand(
 		c.GetWorkspaceCmd(),
@@ -1042,6 +1044,18 @@ func (c *SessionCobra) checkDefaultFlags(cmd *cobra.Command, _ []string) {
 	if err := c.ExternalCmdHndl.SetLogLevel(c.Options.LogLevel); err != nil {
 		c.log().Error(err)
 		systools.Exit(systools.ErrorInitApp)
+	}
+
+	// set the output handler by env or flag
+	envOutput := os.Getenv("CTX_OUTPUT")
+	if envOutput != "" {
+		c.Options.OutputHandler = envOutput
+	}
+	if c.Options.OutputHandler != "" {
+		if err := c.ExternalCmdHndl.SetOutputHandlerByName(c.Options.OutputHandler); err != nil {
+			ctxout.PrintLn("error while setting output handler:", err)
+			systools.Exit(systools.ErrorInitApp)
+		}
 	}
 
 	// force the log level by env var

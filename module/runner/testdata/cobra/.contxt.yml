@@ -1,0 +1,4 @@
+task:
+  - id: simple
+    script:
+      - echo "testdir"
