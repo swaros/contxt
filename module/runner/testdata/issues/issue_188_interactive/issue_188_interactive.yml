@@ -6,7 +6,7 @@
 # is not found in the subtask directory
 # this test is to check if this behavior is also present in the regular run without interactive shell
 testName: issue_188_interactive
-disabled: true
+disabled: false
 runCmd: run main
 systems:
   - linux

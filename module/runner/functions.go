@@ -340,6 +340,7 @@ func (c *CmdExecutorImpl) runAsyncTargets(targets []string, force bool) error {
 
 func (c *CmdExecutorImpl) setDefaultOutHandlers() {
 	c.addOutHandler(NewTableOutput())
+	c.addOutHandler(NewPlainOutput())
 }
 
 func (c *CmdExecutorImpl) InitExecuter() error {
