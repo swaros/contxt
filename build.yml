@@ -32,9 +32,13 @@ build:
 
     release:
       is_release: true
-      mainfile: "cmd/cmd-contxt/main.go"
+      mainfile: "cmd/v2/main.go"
       output: "contxt"
       version_verify: "version"
+      ldflags:
+        - ${configmodul}.shortcut=ctx
+        - ${configmodul}.binaryName=contxt
+        - ${configmodul}.cnShortCut=cn
 
     development:
       is_release: false
