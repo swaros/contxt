@@ -268,14 +268,18 @@ func (t *Template) TryHandleTemplate(path string) (string, error) {
 	if ferr != nil {
 		return "", ferr
 	}
-
+	t.logger.Debug("TryHandleTemplate: file loaded:", mimiclog.Fields{"path": path, "size": len(templateData)})
 	templateString, ferr := t.handleIgnoreFile(path, string(templateData))
 	if ferr != nil {
 		// we just log the error, because ignore file is optional. but might change the expected outcome, so the user should know
 		t.logger.Error("error while handling template ignore file:", path, ferr)
+	} else {
+		if string(templateData) != templateString {
+			t.logger.Debug("TryHandleTemplate: ignore file was used. new size:", len(templateString))
+		}
 	}
 
-	t.logger.Debug("TryHandleTemplate: file succesfully loaded:", path, "size:", len(templateData))
+	t.logger.Debug("TryHandleTemplate: file succesfully loaded:", path, "size:", len(templateString))
 	t.logger.Trace("TryHandleTemplate: file content:", templateString)
 	source, err := t.ParseGoTemplate(templateString)
 	t.logger.Trace("TryHandleTemplate: parsed content:", mimiclog.Fields{"size": len(source), "content": source, "err": err})

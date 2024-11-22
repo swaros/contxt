@@ -140,7 +140,10 @@ func (c *CtxTemplate) getCtxFuncMap() template.FuncMap {
 func (c *CtxTemplate) ParseTemplateString(tmpl string) (string, error) {
 
 	tf := c.getCtxFuncMap()
-	funcMap, _ := MergeVariableMap(tf, sprig.FuncMap())
+	funcMap, err := MergeVariableMap(tf, sprig.FuncMap())
+	if err != nil {
+		return "", err
+	}
 	tpl := template.New("contxt-functions").Funcs(funcMap)
 	tt, err := tpl.Parse(tmpl)
 	if err != nil {

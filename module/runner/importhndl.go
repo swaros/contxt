@@ -70,7 +70,7 @@ func (ih *ImportHandler) handleFileImportsToVars(imports []string) error {
 			ih.logger.Error("error while loading import", filename)
 			return err
 		} else {
-			ih.logger.Debug("HandleImports: import file loaded", filename)
+			ih.logger.Debug("HandleImports: import file loaded", mimiclog.Fields{"content-len": len(content), "filename": filename})
 			if len(parts) > 1 {
 				keyname = parts[1]
 			}
