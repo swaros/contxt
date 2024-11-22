@@ -17,13 +17,13 @@ jobs:
     steps:
 
     - name: Set up Go 1.x
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
         go-version: ^1.18
       id: go
 
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
 {{- range $targetName, $targets := $.build.targets}}
   {{- if $targets.is_release}}
@@ -43,10 +43,10 @@ jobs:
 {{- range $targetName, $targets := $.build.targets}}
   {{- if $targets.is_release}}
     - name: contxt-artifact-{{ $targetName }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: "contxt-{{ $targetName }}"
-        path: ./bin/{{ $targets.output }}
+        path: ./build/{{ $targets.output }}
 
  {{- end -}}
 {{- end }}

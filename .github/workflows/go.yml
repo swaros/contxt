@@ -17,15 +17,15 @@ jobs:
     steps:
 
     - name: Set up Go 1.x
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
         go-version: ^1.18
       id: go
 
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Build-release
-      run: go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=0 -X github.com/swaros/contxt/module/configure.midversion=6 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20241121.130412-linux-release -X github.com/swaros/contxt/module/configure.shortcut=ctx -X github.com/swaros/contxt/module/configure.binaryName=contxt -X github.com/swaros/contxt/module/configure.cnShortCut=cn" -o ./bin/contxt cmd/v2/main.go
+      run: go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=0 -X github.com/swaros/contxt/module/configure.midversion=6 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20241122.135644-linux-release -X github.com/swaros/contxt/module/configure.shortcut=ctx -X github.com/swaros/contxt/module/configure.binaryName=contxt -X github.com/swaros/contxt/module/configure.cnShortCut=cn" -o ./bin/contxt cmd/v2/main.go
 
     - name: Test
       run: |
@@ -49,7 +49,7 @@ jobs:
           go test  -failfast ./module/mimiclog/./...
           go test  -failfast ./module/process/./...
     - name: contxt-artifact-release
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: "contxt-release"
-        path: ./bin/contxt
+        path: ./build/contxt
