@@ -55,6 +55,7 @@ func (ih *ImportHandler) SetImports(imports []string) {
 
 func (ih *ImportHandler) HandleImports() error {
 	if ih.imports == nil {
+		ih.logger.Debug("no imports to handle")
 		return nil
 	}
 	return ih.handleFileImportsToVars(ih.imports)

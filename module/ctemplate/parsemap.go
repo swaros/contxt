@@ -152,7 +152,7 @@ func (c *CtxTemplate) ParseTemplateString(tmpl string) (string, error) {
 	out := new(bytes.Buffer)
 	tErr := tt.Execute(out, &c.data)
 	if tErr != nil {
-		return "", err
+		return "", tErr
 	}
 	return out.String(), nil
 
