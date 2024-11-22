@@ -458,6 +458,13 @@ func (c *CmdExecutorImpl) initDefaultVariables() {
 		c.setVariable("CTX_PATH", currentPath)
 		c.setVariable("BASEPATH", currentPath)
 	}
+	exec, err := os.Executable()
+	if err != nil {
+		c.session.Log.Logger.Error("error while getting executable", err)
+	} else {
+		c.setVariable("CTX_BINARY", exec)
+	}
+	c.setVariable("CTX_BIN_NAME", configure.GetBinaryName())
 	c.setVariable("CTX_OS", runtime.GOOS)
 	c.setVariable("CTX_ARCH", runtime.GOARCH)
 	c.setVariable("CTX_USER", os.Getenv("USER"))
