@@ -1,0 +1,8 @@
+config:
+  imports:
+    - ./template/.goreleaser.tpl RELEASE
+
+task:
+  - id: print_release
+    script:
+      - echo "${RELEASE}"

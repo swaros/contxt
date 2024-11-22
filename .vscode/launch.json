@@ -92,6 +92,16 @@
             "args": ["run","test","-o","plain"]
         },
         {
+            "name": "debug-template-parsing",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/v2/main.go",
+            "env": {},
+            "cwd": "${workspaceFolder}/module/runner/testdata/templignore",
+            "args": ["run", "print_release"]
+        },
+        {
             "name": "plain start",
             "type": "go",
             "request": "launch",

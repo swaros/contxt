@@ -44,11 +44,13 @@ type SessionLogger struct {
 
 func NewCmdSession() *CmdSession {
 	logger := NewLogrusLogger()
+	templateHndl := ctemplate.New()
+	templateHndl.SetIgnoreHndl(true)
 	session := &CmdSession{
 		OutPutHdnl:       ctxout.NewFmtWrap(),
 		Printer:          ctxout.NewMOWrap(),
 		Cobra:            NewCobraCmds(),
-		TemplateHndl:     ctemplate.New(),
+		TemplateHndl:     templateHndl,
 		SharedHelper:     NewSharedHelper(),
 		DefaultVariables: make(map[string]string),
 		Log: &SessionLogger{
