@@ -149,7 +149,6 @@ task:
       - modules-verify
       - makefile-update
       - licence-header-check
-      - update-dependencies
       - build-script-update
     script:
       - echo "update all"
@@ -551,6 +550,15 @@ task:
             echo "OK: $gfile"
           fi
        done <<< "$GOFILES"
+
+
+  - id: gorelease-check
+    script:
+      - goreleaser check
+  
+  - id: gorelease-snapshot
+    script:
+      - goreleaser release --snapshot --clean
 
 # special tests defined in build.yml
 # they need some special handling
