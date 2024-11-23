@@ -294,6 +294,7 @@ func (t *Template) handleIgnoreFile(path, templateData string) (string, error) {
 		baseDir := filepath.Dir(path)
 		ignoreFile := baseDir + string(os.PathSeparator) + DefaultIgnoreFile
 		if systools.FileExists(ignoreFile) {
+			t.logger.Debug("template ignore file will be used:", ignoreFile)
 			content, err := systools.ReadFileAsStrings(ignoreFile)
 			if err == nil {
 				t.ignoreHandler = NewIgnorreHndl(string(templateData))
@@ -303,6 +304,8 @@ func (t *Template) handleIgnoreFile(path, templateData string) (string, error) {
 			} else {
 				return templateData, err
 			}
+		} else {
+			t.logger.Debug("template ignore file NOT found:", ignoreFile)
 		}
 	}
 	return templateData, nil

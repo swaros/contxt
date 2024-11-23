@@ -309,6 +309,7 @@ func TestStrContains(t *testing.T) {
 		{"hello world", "\n\n", false},
 		{"hello\nworld", "\n", true},
 		{"hello\nworld", "\nworld", true},
+		{`{{- if eq .Arch "amd64" }}x86_64`, `{{- if eq .Arch "amd64" }}`, true},
 	}
 
 	for i, v := range tests {

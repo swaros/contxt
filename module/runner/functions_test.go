@@ -1274,3 +1274,41 @@ func TestAnkoFileExecuteWrongFile(t *testing.T) {
 		}
 	}
 }
+
+func TestTemplateImportsWithTplIgnore(t *testing.T) {
+
+	ChangeToRuntimeDir(t)
+	app, output, appErr := SetupTestApp("templignore", time.Now().Format(time.RFC3339)+"ctx_projects.yml")
+	if appErr != nil {
+		t.Errorf("Expected no error, got '%v'", appErr)
+	}
+
+	output.SetKeepNewLines(true)
+	defer cleanAllFiles()
+	defer output.ClearAndLog()
+	// clean the output buffer
+	output.Clear()
+	logFileName := "template_tpl_ignore_" + time.Now().Format(time.RFC3339) + ".log"
+	output.SetLogFile(getAbsolutePath(logFileName))
+
+	if err := os.Chdir(getAbsolutePath("templignore")); err != nil {
+		t.Errorf("Expected no error, got '%v'", err)
+	}
+	// note: we getting the output by echo, where we lost the double quotes.
+	// so we have to check the output without the double quotes.
+	// that double quotes are not a issue is tested is ctemplate test doIgnoreHndl_test.go
+	expectedInFile := `
+{{ .ProjectName }}_
+{{- title .Os }}_
+{{- if eq .Arch amd64 }}x86_64
+{{- else if eq .Arch 386 }}i386
+{{- else }}{{ .Arch }}{{ end }}
+{{- if .Arm }}v{{ .Arm }}{{ end }}`
+
+	if err := runCobraCmd(app, "run print_release"); err != nil {
+		t.Error("Expected no error, got:", err)
+	} else {
+		assertSplitTestInMessage(t, output, expectedInFile)
+	}
+
+}

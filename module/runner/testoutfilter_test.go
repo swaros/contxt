@@ -108,6 +108,9 @@ func (t *TestOutHandler) Contains(msg string) bool {
 		if strings.Contains(m, msg) {
 			return true
 		}
+		if systools.StrContains(m, msg) {
+			return true
+		}
 	}
 	return false
 }

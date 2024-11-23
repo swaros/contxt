@@ -47,11 +47,15 @@ func (i *IgnorreHndl) AddIgnores(stringToIgnore ...string) {
 
 func (i *IgnorreHndl) CreateMaskedString() string {
 	i.masked = i.origin
+	replaces := make([]string, 0)
 	for _, ign := range i.ignoreSet {
 		key := ign.key
 		searchText := ign.origin
-		i.masked = strings.ReplaceAll(i.masked, searchText, key)
+		replaces = append(replaces, searchText)
+		replaces = append(replaces, key)
 	}
+	replacer := strings.NewReplacer(replaces...)
+	i.masked = replacer.Replace(i.origin)
 	return i.masked
 }
 
