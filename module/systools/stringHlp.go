@@ -34,6 +34,7 @@ import (
 	"strings"
 )
 
+// StringSubLeft returns the left part of a string
 func StringSubLeft(path string, max int) string {
 	if len := StrLen(path); len <= max {
 		return path
@@ -43,11 +44,12 @@ func StringSubLeft(path string, max int) string {
 	}
 }
 
-func StringSubRight(path string, max int) string {
-	if len := StrLen(path); len <= max {
-		return path
+// StringSubRight returns the right part of a string
+func StringSubRight(inStr string, max int) string {
+	if len := StrLen(inStr); len <= max {
+		return inStr
 	} else {
-		runes := []rune(path)
+		runes := []rune(inStr)
 		left := len - max
 		return string(runes[left:])
 	}
@@ -57,6 +59,17 @@ func StrLen(str string) int {
 	return len([]rune(str))
 }
 
+// CheckForCleanString checks if a string contains only
+// accepted chars for a string. these are A-Z, a-z, 0-9, _ and -
+// so "hello_my-friend" is a clean string
+// "hello_my-friend!" is not a clean string
+// there are chars they will just be replaced by a clean char
+// and in this case no error will be returned
+// so "hello.my:friend" will be "hello-my--friend"
+// and no error will be returned
+// but if after that the string contains any other char (what will be checked by a regex)
+// an error will be returned
+// this is usefull for keys in json, yaml or other config files
 func CheckForCleanString(s string) (cleanString string, err error) {
 	// replace some expected chars comming from version (dots) nd paths (/\:)
 	s = strings.ReplaceAll(s, ".", "-")
@@ -69,6 +82,8 @@ func CheckForCleanString(s string) (cleanString string, err error) {
 	return "", errors.New("string contains not accepted chars ")
 }
 
+// returns the string where any non printable chars are removed
+// so "hello\x00my\x01friend" will be "hellomyfriend"
 func PrintableChars(str string) string {
 	var result []rune
 	for _, r := range str {
@@ -93,6 +108,7 @@ func TrimAllSpaces(s string) string {
 	return strings.Join(newSl, " ")
 }
 
+// this function removes any escape sequences from a string
 func NoEscapeSequences(str string) string {
 	// we need to remove any escape sequences from the string
 	// for output without colors and countingchars they are visible
@@ -114,6 +130,14 @@ func NoEscapeSequences(str string) string {
 	return string(result)
 }
 
+// this function creates a short label from a string
+// by looking for the first char that is a letter until
+// a non letter char is found.
+// so hello-my-friend will be hmf
+// or hello_my_friend will be hmf
+// or hello my friend will be hmf
+// also for escape sequences
+// so \033[1;32mC.H.E.C.K\033[0m will be CHECK
 func ShortLabel(label string, max int) string {
 	label = FindStartChars(NoEscapeSequences(label))
 	if len := StrLen(label); len <= max {
@@ -124,10 +148,9 @@ func ShortLabel(label string, max int) string {
 	}
 }
 
-// create a string that is an shortcut of the given string
-// so hello-my-friend will be hmf
-// or hello_my_friend will be hmf
-// or hello my friend will be hmf
+// FindStartChars returns the first chars of a string
+// that are a letter or a number
+// so "hello my friend" will be "hmf"
 func FindStartChars(str string) string {
 	var result []rune
 	hit := false
@@ -154,53 +177,26 @@ func FindStartChars(str string) string {
 	return string(result)
 }
 
-func PrintableCharsByUnquote(str string) (string, error) {
-	s2, err := strconv.Unquote(`"` + str + `"`)
-	if err != nil {
-		return "", err
-	}
-	return s2, nil
-}
-
-func SplitArgs(cmdList []string, prefix string, arghandler func(string, map[string]string)) []string {
-	var cleared []string
-	var args map[string]string = make(map[string]string)
-
-	for _, value := range cmdList {
-		argArr := strings.Split(value, " ")
-		cleared = append(cleared, argArr[0])
-		if len(argArr) > 1 {
-			for index, v := range argArr {
-				args[fmt.Sprintf("%s%v", prefix, index)] = v
-			}
-			arghandler(argArr[0], args)
-		}
-	}
-	return cleared
-}
-
+// StringSplitArgs splits a string into a command and arguments
+// the first argument is the command, the rest are arguments
+// the prefix is used to create the map keys for the arguments
+// so the first argument will be prefix0, the second prefix1 etc.
 func StringSplitArgs(argLine string, prefix string) (string, map[string]string) {
 	var args map[string]string = make(map[string]string)
 	argArr := strings.Split(argLine, " ")
 	for index, v := range argArr {
+		if v == "" {
+			continue
+		}
 		args[fmt.Sprintf("%s%v", prefix, index)] = v
 	}
 	return argArr[0], args
 }
 
-func GetArgQuotedEntries(oristr string) ([]string, bool) {
-	var result []string
-	found := false
-	re := regexp.MustCompile(`'[^']+'`)
-	newStrs := re.FindAllString(oristr, -1)
-	for _, s := range newStrs {
-		found = true
-		result = append(result, s)
-
-	}
-	return result, found
-}
-
+// SplitQuoted splits a string by a separator and respects quoted strings
+// so 'hello my friend' will be ['hello my friend']
+// and hello my friend will be ['hello', 'my', 'friend']
+// this func is only using single quotes
 func SplitQuoted(oristr string, sep string) []string {
 	var result []string
 	var placeHolder map[string]string = make(map[string]string)
@@ -230,13 +226,50 @@ func SplitQuoted(oristr string, sep string) []string {
 	return result
 }
 
+// AnyToStrNoTabs just converts any tab (\t) to a space
+// so "hello\tworld" will be "hello world"
 func AnyToStrNoTabs(any interface{}) string {
 	return strings.ReplaceAll(fmt.Sprintf("%v", any), "\t", " ")
 }
 
+// FillString fills a string with spaces to a given length
+// but only if the string is shorter than the length
+// so "hello" with a length of 10 will be "hello     "
+// and "hello" with a length of 3 will be "hello"
 func FillString(str string, length int) string {
 	if len(str) > length {
 		return str
 	}
 	return str + strings.Repeat(" ", length-len(str))
+}
+
+// StrContains checks if a string contains a substring
+// by not using the strings.Contains function
+// because the use template strings and the function
+// would not work as expected
+func StrContains(str string, substr string) bool {
+	var byteArr []byte
+	for _, v := range str {
+		byteArr = append(byteArr, byte(v))
+	}
+	var byteArrSub []byte
+	for _, v := range substr {
+		byteArrSub = append(byteArrSub, byte(v))
+	}
+	if len(byteArrSub) == 0 {
+		return len(byteArr) == 0 // empty string is contained in empty string
+	}
+	for i := 0; i < len(byteArr); i++ {
+		if byteArr[i] == byteArrSub[0] && len(byteArr)-i >= len(byteArrSub) {
+			for j := 0; j < len(byteArrSub); j++ {
+				if byteArr[i+j] != byteArrSub[j] {
+					break
+				}
+				if j == len(byteArrSub)-1 {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

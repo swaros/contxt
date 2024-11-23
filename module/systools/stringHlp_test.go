@@ -110,6 +110,80 @@ func TestShortLabel(t *testing.T) {
 			t.Error("unexpected string: [", str, "] for string ", v)
 		}
 	}
+	if str := systools.ShortLabel("hello-my-friend", 20); str != "hmf" {
+		t.Error("unexpected string: [", str, "] for string hello-my-friend")
+	}
+	if str := systools.ShortLabel("this-is-the first\t-day...of_the\tcentury", 50); str != "titfdotc" {
+		t.Error("unexpected string: [", str, "] for string hello-my-friend")
+	}
+
+	if str := systools.ShortLabel("this-is-the first\t-day...of_the\tcentury", 3); str != "tit" {
+		t.Error("unexpected string: [", str, "] for string hello-my-friend")
+	}
+	//\033[1;32mCHECK\033[0m
+	if str := systools.ShortLabel("\033[1;32mC.H.E.C.K\033[0m", 20); str != "CHECK" {
+		t.Error("unexpected string: [", str, "] for string \033[1;32mCHECK\033[0m")
+	}
+}
+
+func TestFindStartChars(t *testing.T) {
+	// Basic test case
+	if chars := systools.FindStartChars("hello world"); chars != "hw" {
+		t.Error("unexpected chars: [", chars, "] for string hello world")
+	}
+
+	// UTF-8 characters
+	if chars := systools.FindStartChars("你好，世界"); chars != "" {
+		t.Error("unexpected chars: [", chars, "] for string 你好，世界")
+	}
+
+	// New lines and tabs
+	if chars := systools.FindStartChars("hello\nworld\t!"); chars != "hw" {
+		t.Error("unexpected chars: [", chars, "] for string hello\nworld\t!")
+	}
+
+	// Escape sequences
+	if chars := systools.FindStartChars("hello\\nworld\\t!"); chars != "hnt" {
+		t.Error("unexpected chars: [", chars, "] for string hello\\nworld\\t!")
+	}
+
+	// Special characters
+	if chars := systools.FindStartChars("this-is-the first\t-day...of_the\tcentury"); chars != "titfdotc" {
+		t.Error("unexpected chars: [", chars, "] for string this-is-the first\t-day...of_the\tcentury")
+	}
+
+	// ANSI escape sequences
+	if chars := systools.FindStartChars("\033[1;32mCHECK\033[0m"); chars != "130" {
+		t.Error("unexpected chars: [", chars, "] for string \033[1;32mCHECK\033[0m")
+	}
+
+	// Long string with special characters
+	if chars := systools.FindStartChars("bhd sdkh lskshl .lshlfh  lsjjh lkskhg the-wild-wild-world the-wild-wild-world"); chars != "bslllltwwwtwww" {
+		t.Error("unexpected chars: [", chars, "] for string bhd sdkh lskshl .lshlfh  lsjjh lkskhg the-wild-wild-world the-wild-wild-world")
+	}
+}
+
+func TestStringSplitArgs(t *testing.T) {
+	strRes, mapRes := systools.StringSplitArgs("command check01 data last ", "arg")
+	if strRes != "command" {
+		t.Error("unexpected string: [", strRes, "]")
+	}
+	expectedMap := map[string]string{
+		"arg0": "command",
+		"arg1": "check01",
+		"arg2": "data",
+		"arg3": "last",
+	}
+	if len(mapRes) != len(expectedMap) {
+		t.Error("unexpected map length: [", len(mapRes), "]")
+	} else {
+		for k, v := range mapRes {
+			if expectedMap[k] != v {
+				t.Error("unexpected map value: [", v, "] for key ", k)
+			}
+		}
+	}
+
 }
 
 func TestStrLen(t *testing.T) {
@@ -155,11 +229,130 @@ func TestPathStringSub(t *testing.T) {
 		t.Error("string should be reduced but starts from right: [", str, "]", systools.StrLen(str))
 	}
 
+	str = systools.StringSubRight("test", 20)
+	if str != "test" {
+		t.Error("the string should being changed, because it is shorter then max")
+	}
+
 }
 
 func TestStringTrimAllSpaces(t *testing.T) {
 	str := systools.TrimAllSpaces("hello   my friend")
 	if str != "hello my friend" {
 		t.Error("string should be reduced: ", str)
+	}
+}
+
+func TestFillString(t *testing.T) {
+	str := systools.FillString("hello", 10)
+	if str != "hello     " {
+		t.Error("string should be filled: ", str)
+	}
+
+	str = systools.FillString("hello", 5)
+	if str != "hello" {
+		t.Error("string should be filled: ", str)
+	}
+
+	str = systools.FillString("hello", 0)
+	if str != "hello" {
+		t.Error("string should not be changed, because it is already longer then 0: ", str)
+	}
+}
+
+func TestStrContains(t *testing.T) {
+	tests := []struct {
+		in  string
+		sub string
+		out bool
+	}{
+		{"hello world", "world", true},
+		{"hello world", "worlds", false},
+		{"hello world", "hello", true},
+		{"hello world", "hello world", true},
+		{"hello world", "hello world ", false},
+		{"{{- if}}testdata{{- end }}", "{{- if}}testdata{{- end }}", true},
+		{"check outer {{- if}}testdata{{- end }}sample", "{{- if}}testdata{{- end }}", true},
+		{"check outer {{- if}}testdata{{- end }}sample", "{{- if}}testdata{{- end }}sample", true},
+		{"check outer {{- if}}testdata{{- end }}sample", "testdata ", false},
+		{"'\"'masken\"'\"'", "\"'masken\"'\"", true},
+		// escape sequences
+		{"\033[1;32mCHECK\033[0m", "CHECK", true},
+		{"\033[1;32mCHECK\033[0m", "CHECK ", false},
+		// utf8
+		{" 你好世界", "你好", true},
+		{" 你好世界", "你好 ", false},
+		{" 你好世界", "你好世界", true},
+		// special chars
+		{"\\m/", "\\m/", true},
+		{"\\m/", "\\m", true},
+		{"\\m/", "m", true},
+		{"\\m/", "m/", true},
+		// empty strings
+		{"", "", true},
+		{"", " ", false},
+		{" ", "", false},
+		{" ", " ", true},
+		// spaces
+		{"hello world", " ", true},
+		{"hello world", "  ", false},
+		{"hello world", "   ", false},
+		// tabs
+		{"hello world", "\t", false},
+		{"hello world", "\t\t", false},
+		{"hello world", "\t\t\t", false},
+		{"hello\tworld", "\t", true},
+		{"hello\tworld", "\t\t", false},
+		{"hello\tworld", "\t\t\t", false},
+		// newlines
+		{"hello world", "\n", false},
+		{"hello world", "\n\n", false},
+		{"hello\nworld", "\n", true},
+		{"hello\nworld", "\nworld", true},
+	}
+
+	for i, v := range tests {
+		if systools.StrContains(v.in, v.sub) != v.out {
+			t.Error("unexpected result for test ", i, " [", v.in, "] [", v.sub, "]")
+		}
+	}
+}
+
+func TestSplitQuoted(t *testing.T) {
+	cmdStr := "command 'check01 data last' 'new world data' test"
+	cmds := systools.SplitQuoted(cmdStr, " ")
+	if len(cmds) != 4 {
+		t.Error("unexpected length ", len(cmds))
+	}
+	if cmds[0] != "command" {
+		t.Error("unexpected string ", cmds[0])
+	}
+	if cmds[1] != "check01 data last" {
+		t.Error("unexpected string ", cmds[1])
+	}
+	if cmds[2] != "new world data" {
+		t.Error("unexpected string ", cmds[2])
+	}
+	if cmds[3] != "test" {
+		t.Error("unexpected string ", cmds[3])
+	}
+	cmdStr = "command check"
+	cmds = systools.SplitQuoted(cmdStr, " ")
+	if len(cmds) != 2 {
+		t.Error("unexpected length ", len(cmds))
+	}
+	if cmds[0] != "command" {
+		t.Error("unexpected string ", cmds[0])
+	}
+	if cmds[1] != "check" {
+		t.Error("unexpected string ", cmds[1])
+	}
+
+}
+
+func TestAnyToStrNoTabs(t *testing.T) {
+	str := systools.AnyToStrNoTabs("hello\tworld")
+	if str != "hello world" {
+		t.Error("unexpected string ", str)
 	}
 }
