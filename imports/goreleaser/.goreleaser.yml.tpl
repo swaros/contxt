@@ -18,10 +18,12 @@ builds:
       #- darwin
     main: ./cmd/v2/main.go
     ldflags:
-      - -X github.com/swaros/contxt/module/configure.minversion=0
-      - -X github.com/swaros/contxt/module/configure.midversion=6
-      - -X github.com/swaros/contxt/module/configure.mainversion=0
-      - -X github.com/swaros/contxt/module/configure.build=.20241126.070134-linux-release
+      {{- range $k, $ldflag := $.build.preset.ldflags }}
+      - -X {{ $ldflag }} 
+      {{- end }} 
+      {{- range $k, $ldflag := $.release.ldflags }}
+      - -X {{ $ldflag }} 
+      {{- end }}
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.

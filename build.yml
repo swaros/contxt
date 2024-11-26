@@ -59,7 +59,7 @@ docu:
 # to increase the chance to find a raise condition.
 # if a test ever failed randomly, this is always a good reason to add them here
 testcases:
-  runner: go run ./cmd/cmd-contxt/main.go
+  runner: go run ./cmd/v2/main.go
 #  looptests:
 #      TaskNestedNeeds_first:
 #        loops: 50
