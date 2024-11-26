@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/abiosoft/ishell v2.0.0+incompatible
-	github.com/charmbracelet/bubbletea v1.2.3
+	github.com/charmbracelet/bubbletea v1.2.4
 	github.com/charmbracelet/lipgloss v1.0.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/swaros/contxt/module/configure v0.0.0-20230531064521-09943a54576e
