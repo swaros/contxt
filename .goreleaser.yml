@@ -21,7 +21,7 @@ builds:
       - -X github.com/swaros/contxt/module/configure.minversion=0
       - -X github.com/swaros/contxt/module/configure.midversion=6
       - -X github.com/swaros/contxt/module/configure.mainversion=0
-      - -X github.com/swaros/contxt/module/configure.build=.20241126.070134-linux-release
+      - -X github.com/swaros/contxt/module/configure.build=.20241126.093555-linux-release
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.
@@ -62,6 +62,7 @@ nfpms:
     formats:
       - rpm
       - deb
+      - apk
 
     rpm:
       summary: context manager

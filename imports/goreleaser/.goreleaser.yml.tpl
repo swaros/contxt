@@ -64,6 +64,7 @@ nfpms:
     formats:
       - rpm
       - deb
+      - apk
 
     rpm:
       summary: context manager
