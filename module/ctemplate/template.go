@@ -26,9 +26,11 @@ package ctemplate
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/swaros/contxt/module/configure"
@@ -280,10 +282,23 @@ func (t *Template) TryHandleTemplate(path string) (string, error) {
 	}
 
 	t.logger.Debug("TryHandleTemplate: file succesfully loaded:", path, "size:", len(templateString))
-	t.logger.Trace("TryHandleTemplate: file content:", templateString)
+	if t.logger.IsTraceEnabled() {
+		traceBigString(t.logger, "TryHandleTemplate: content:", templateString)
+	}
 	source, err := t.ParseGoTemplate(templateString)
-	t.logger.Trace("TryHandleTemplate: parsed content:", mimiclog.Fields{"size": len(source), "content": source, "err": err})
+	if t.logger.IsTraceEnabled() {
+		t.logger.Trace("TryHandleTemplate: parsed content:", mimiclog.Fields{"size": len(source), "err": err})
+		traceBigString(t.logger, "TryHandleTemplate: parsed content:", source)
+	}
 	return source, err
+}
+
+func traceBigString(logger mimiclog.Logger, msg string, content string) {
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		keyName := "line" + fmt.Sprint(i)
+		logger.Trace(msg, mimiclog.Fields{keyName: line})
+	}
 }
 
 func (t *Template) handleIgnoreFile(path, templateData string) (string, error) {

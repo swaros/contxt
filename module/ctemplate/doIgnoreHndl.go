@@ -24,7 +24,15 @@
 
 package ctemplate
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/swaros/contxt/module/systools"
+)
+
+// these chars are not allowed to be ignored, because they are used as delimiters
+// and would break the whole file structure if we would not ignore them.
+var notToIgnore = []string{" ", "\n", "\t", "\r"}
 
 type IgnorreHndl struct {
 	origin    string
@@ -41,7 +49,14 @@ func NewIgnorreHndl(origin string) *IgnorreHndl {
 
 func (i *IgnorreHndl) AddIgnores(stringToIgnore ...string) {
 	for _, toIgnore := range stringToIgnore {
-		i.ignoreSet.Add(toIgnore)
+		if toIgnore == "" {
+			continue
+		}
+		if systools.SliceContains(notToIgnore, toIgnore) {
+			continue
+		}
+
+		i.ignoreSet.Add(strings.Trim(toIgnore, " "))
 	}
 }
 

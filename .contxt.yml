@@ -24,6 +24,7 @@ config:
     - ./imports/build.sh build-sh
     - ./imports/winbuild.bat winbuild-bat
     - ./imports/README.md readme
+    - ./imports/goreleaser/.goreleaser.yml.tpl goreleaser
   variables:
       include-dev-externals: ""
       configmodul: github.com/swaros/contxt/module/configure
@@ -147,6 +148,7 @@ task:
       - set-version
     runTargets:
       - modules-verify
+      - gorelease-config-update
       - makefile-update
       - licence-header-check
       - build-script-update
@@ -551,12 +553,22 @@ task:
           fi
        done <<< "$GOFILES"
 
+### goreleaser tasks
+  - id: gorelease-config-update
+    needs:
+      - set-version
+    script:
+      - "#@var-to-file goreleaser .goreleaser.yml"
 
   - id: gorelease-check
+    needs:
+      - gorelease-config-update
     script:
       - goreleaser check
   
   - id: gorelease-snapshot
+    needs:
+      - gorelease-check
     script:
       - goreleaser release --snapshot --clean
 

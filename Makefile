@@ -1,11 +1,11 @@
 build: test	build-no-test
 
 build-no-test:
-	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=0 -X github.com/swaros/contxt/module/configure.midversion=6 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20241122.135644-linux-release -X github.com/swaros/contxt/module/configure.shortcut=ctx -X github.com/swaros/contxt/module/configure.binaryName=contxt -X github.com/swaros/contxt/module/configure.cnShortCut=cn" -o ./bin/contxt cmd/v2/main.go
+	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=0 -X github.com/swaros/contxt/module/configure.midversion=6 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20241126.054611-linux-release -X github.com/swaros/contxt/module/configure.shortcut=ctx -X github.com/swaros/contxt/module/configure.binaryName=contxt -X github.com/swaros/contxt/module/configure.cnShortCut=cn" -o ./bin/contxt cmd/v2/main.go
 build-development:
-	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=0 -X github.com/swaros/contxt/module/configure.midversion=6 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20241122.135644-linux-release -X github.com/swaros/contxt/module/configure.shortcut=v2ctx -X github.com/swaros/contxt/module/configure.binaryName=ctxv2 -X github.com/swaros/contxt/module/configure.cnShortCut=v2cn" -o ./bin/ctxv2 cmd/v2/main.go
+	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=0 -X github.com/swaros/contxt/module/configure.midversion=6 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20241126.054611-linux-release -X github.com/swaros/contxt/module/configure.shortcut=v2ctx -X github.com/swaros/contxt/module/configure.binaryName=ctxv2 -X github.com/swaros/contxt/module/configure.cnShortCut=v2cn" -o ./bin/ctxv2 cmd/v2/main.go
 build-release:
-	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=0 -X github.com/swaros/contxt/module/configure.midversion=6 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20241122.135644-linux-release -X github.com/swaros/contxt/module/configure.shortcut=ctx -X github.com/swaros/contxt/module/configure.binaryName=contxt -X github.com/swaros/contxt/module/configure.cnShortCut=cn" -o ./bin/contxt cmd/v2/main.go
+	go build -ldflags " -X github.com/swaros/contxt/module/configure.minversion=0 -X github.com/swaros/contxt/module/configure.midversion=6 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20241126.054611-linux-release -X github.com/swaros/contxt/module/configure.shortcut=ctx -X github.com/swaros/contxt/module/configure.binaryName=contxt -X github.com/swaros/contxt/module/configure.cnShortCut=cn" -o ./bin/contxt cmd/v2/main.go
 
 clean:
 	rm -f ./bin/contxt
@@ -31,7 +31,7 @@ test:
 	go test  -failfast ./module/yaclint/./...
 	go test  -failfast ./module/mimiclog/./...
 	go test  -failfast ./module/process/./...
-	go run ./cmd/cmd-contxt/main.go run test-loops
+	go run ./cmd/v2/main.go run test-loops
 
 info: build
 	./bin/contxt dir
