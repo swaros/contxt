@@ -21,7 +21,7 @@ builds:
       - -X github.com/swaros/contxt/module/configure.minversion=2
       - -X github.com/swaros/contxt/module/configure.midversion=6
       - -X github.com/swaros/contxt/module/configure.mainversion=0
-      - -X github.com/swaros/contxt/module/configure.build=.20241130.064506-linux-release
+      - -X github.com/swaros/contxt/module/configure.build=.20241130.082748-linux-release
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.
@@ -40,7 +40,7 @@ archives:
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
