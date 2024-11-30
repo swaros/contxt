@@ -2,13 +2,13 @@ release:      # this is the release target
   version:    # the version number of the release main.mid.minor
      main: 0
      mid: 6
-     minor: 0
+     minor: 2
 
 # this section contains all build related information
 build:
   version: # this contxt version is required for the build process. depending structure of .contxt.yml
      main: 0
-     mid: 5
+     mid: 6
      minor: 0
   preset: # preset is ment as a default value for all targets
     ldflags: # the default flags for all targets. this will not be overwritten by the target flags. they will be appended
