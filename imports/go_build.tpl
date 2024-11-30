@@ -40,13 +40,13 @@ jobs:
     {{- end }}
     {{- end }}
 
-{{- range $targetName, $targets := $.build.targets}}
-  {{- if $targets.is_release}}
-    - name: contxt-artifact-{{ $targetName }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: "contxt-{{ $targetName }}"
-        path: ./build/{{ $targets.output }}
+#{{- range $targetName, $targets := $.build.targets}}
+#  {{- if $targets.is_release}}
+#    - name: contxt-artifact-{{ $targetName }}
+#      uses: actions/upload-artifact@v4
+#      with:
+#        name: "contxt-{{ $targetName }}"
+#        path: ./build/{{ $targets.output }}
 
- {{- end -}}
-{{- end }}
+# {{- end -}}
+#{{- end }}
