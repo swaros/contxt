@@ -3,7 +3,7 @@ echo "build script"
 ### build release
 
 # compose build ldflags
-BUILD_ARGS=" -X github.com/swaros/contxt/module/configure.minversion=0 -X github.com/swaros/contxt/module/configure.midversion=6 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20241126.054611-linux-release -X github.com/swaros/contxt/module/configure.shortcut=ctx -X github.com/swaros/contxt/module/configure.binaryName=contxt -X github.com/swaros/contxt/module/configure.cnShortCut=cn"
+BUILD_ARGS=" -X github.com/swaros/contxt/module/configure.minversion=2 -X github.com/swaros/contxt/module/configure.midversion=6 -X github.com/swaros/contxt/module/configure.mainversion=0 -X github.com/swaros/contxt/module/configure.build=.20241130.064109-linux-release -X github.com/swaros/contxt/module/configure.shortcut=ctx -X github.com/swaros/contxt/module/configure.binaryName=contxt -X github.com/swaros/contxt/module/configure.cnShortCut=cn"
 # build release
 echo "-> build release"
 go build -ldflags "$BUILD_ARGS" -o ./bin/contxt cmd/v2/main.go
