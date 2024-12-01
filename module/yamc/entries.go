@@ -1,7 +1,6 @@
 // Copyright (c) 2022 Thomas Ziegler <thomas.zglr@googlemail.com>. All rights reserved.
 //
-// Licensed under the MIT License
-//
+// # Licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +44,7 @@ func FindChain(in interface{}, byChain ...string) (data interface{}, err error) 
 			return nil, err
 		} else {
 			// just checking the possible index range
-			if len(v) >= index && index >= 0 {
+			if len(v) > index && index >= 0 {
 				newChain := byChain[1:] // reduce chain slice
 				data = v[index]         // getting data by index
 				if len(newChain) == 0 { // if we no entires left in the slice, we have found the value
@@ -58,7 +57,7 @@ func FindChain(in interface{}, byChain ...string) (data interface{}, err error) 
 					return FindChain(data, newChain...) // we have keys left in the chain slice
 				}
 			} else {
-				return nil, fmt.Errorf("index %v is out of range %s in %T", index, byChain[0], data)
+				return nil, fmt.Errorf("index %v is out of range. have  %d entries in %T. starting at 0 max index is %d", index, len(v), v, len(v)-1)
 			}
 		}
 	case map[interface{}]interface{}: // here again close the same logic as for array. just data is get diffent
