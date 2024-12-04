@@ -148,5 +148,15 @@ func TestWithIgnoredValues(t *testing.T) {
 	assert.Equal(t, "testing", cfg.Task[0].ID)
 	assert.Equal(t, `echo "docker inspect \-f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' container_name_or_id"`, cfg.Task[0].Script[0])
 
+	source := tmplte.GetLastParsed()
+	expected := `#this test is about ignoring {{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}} while parsing the template, 
+# so it stays as it it.
+# these part of the template should be used later as it is.
+task:
+  - id: testing
+    script:
+       - echo "docker inspect \-f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' container_name_or_id"`
+	assert.Equal(t, expected, source)
+
 	popDir()
 }

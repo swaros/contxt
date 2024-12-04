@@ -92,6 +92,29 @@
             "args": ["run","test","-o","plain"]
         },
         {
+            "name": "run test broken tpl",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            //"program": "${workspaceFolder}/module/yaclint/example/check_local.only_check/test.go",
+            //"program": "${workspaceFolder}/module/awaitgroup/example/flow/main.go",
+            // "program": "${workspaceFolder}/module/ctxout/examples/table/.ignore/main.go",
+            "program": "${workspaceFolder}/cmd/v2/main.go",
+            "env": {},
+            "cwd": "${workspaceFolder}/module/runner/testdata/yamlerror/brokentpl",
+            "args": ["run","test","-o","plain"]
+        },
+        {
+            "name": "run code cover",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/v2/main.go",
+            "env": {},
+            "cwd": "${workspaceFolder}",
+            "args": ["run","test-cover"]
+        },
+        {
             "name": "debug-template-parsing",
             "type": "go",
             "request": "launch",

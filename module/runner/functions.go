@@ -346,6 +346,7 @@ func (c *CmdExecutorImpl) setDefaultOutHandlers() {
 func (c *CmdExecutorImpl) InitExecuter() error {
 	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
 		c.session.Log.Logger.Error("error while loading template", err)
+		c.tryExplainError(err)
 		return err
 	} else if !exists {
 		c.session.Log.Logger.Error("template not exists")
@@ -430,6 +431,7 @@ func (c *CmdExecutorImpl) RunTargets(target string, force bool) error {
 func (c *CmdExecutorImpl) GetTargets(incInvisible bool) []string {
 	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
 		c.session.Log.Logger.Error("error while loading template", err)
+		c.tryExplainError(err)
 	} else if !exists {
 		c.session.Log.Logger.Debug("template not exists", err)
 	} else {
@@ -443,13 +445,13 @@ func (c *CmdExecutorImpl) GetTargets(incInvisible bool) []string {
 func (c *CmdExecutorImpl) ResetVariables() {
 }
 
-func (c *CmdExecutorImpl) MainInit() {
-	c.initDefaultVariables()
+func (c *CmdExecutorImpl) MainInit() error {
+	return c.initDefaultVariables()
 }
 
 // initDefaultVariables init the default variables for the current session.
 // these are the varibales they should not change during the session.
-func (c *CmdExecutorImpl) initDefaultVariables() {
+func (c *CmdExecutorImpl) initDefaultVariables() error {
 	if currentPath, err := os.Getwd(); err != nil {
 		ctxout.CtxOut("Error while reading current directory", err)
 		systools.Exit(systools.ErrorBySystem)
@@ -477,9 +479,12 @@ func (c *CmdExecutorImpl) initDefaultVariables() {
 	c.setVariable("CTX_VERSION", configure.GetVersion())
 	c.setVariable("CTX_BUILD_NO", configure.GetBuild())
 
-	c.SetProjectVariables()
+	if err := c.SetProjectVariables(); err != nil {
+		return err
+	}
 
 	c.handleWindowsInit() // it self is testing if we are on windows
+	return nil
 }
 
 func getHostname() string {
@@ -560,13 +565,50 @@ func (c *CmdExecutorImpl) GetOuputHandler() (ctxout.StreamInterface, ctxout.Prin
 	return c.session.OutPutHdnl, c.session.Printer
 }
 
+// tryExplainError try to explain the error by parsing the error message
+// and give a hint to the user, what could be the reason for the error.
+// if possible it shows also the source code, where the error is located.
+func (c *CmdExecutorImpl) tryExplainError(err error) {
+	if err != nil {
+		errExplain := NewErrParse(err, c.session)
+		c.Println(ctxout.ForeYellow, "error explanation: ", ctxout.ForeLightBlue, errExplain.Explain(), ctxout.CleanTag)
+		if errExplain.code != nil {
+			for _, code := range errExplain.code {
+				codeColor := ctxout.ForeBlue + ctxout.BackWhite
+				errMsg := ""
+				if code.IsError {
+					codeColor = ctxout.ForeRed + ctxout.BackLightYellow
+					errMsg = "« " + errExplain.Explain()
+				}
+				c.Println(ctxout.Row(
+					ctxout.TD(code.LineNr, ctxout.Fixed(), ctxout.Prop(ctxout.AttrPrefix, ctxout.ForeDarkGrey), ctxout.Right(), ctxout.Size(5)),
+					ctxout.TD("|", ctxout.Fixed(), ctxout.Prop(ctxout.AttrPrefix, ctxout.ForeDarkGrey), ctxout.Right(), ctxout.Size(1)),
+					ctxout.TD(code.Line, ctxout.Prop(ctxout.AttrSuffix, ctxout.CleanTag), ctxout.Prop(ctxout.AttrPrefix, codeColor), ctxout.Left(), ctxout.Size(55)),
+					ctxout.TD(errMsg, ctxout.Prop(ctxout.AttrPrefix, ctxout.ForeLightYellow), ctxout.Left(), ctxout.Size(30)),
+				))
+			}
+			msq := `
+			by investigating the source code, keep in mind that the line numbers
+			could be different, since the error is shown in the parsed code and 
+			the line count could be changed by the parser.
+			`
+			c.Println(ctxout.ForeBlue, msq, ctxout.CleanTag)
+		} else {
+			c.Println(ctxout.ForeDarkGrey, "code could not be shown. Why should be shown in the error above.", ctxout.CleanTag)
+		}
+
+	}
+}
+
 // SetProjectVariables set the project variables for the current session.
 // what includes any workspaces and there paths.
 // we ignore any errors, since we are not able to do anything with them.
 // this would just be a log entry and ignored as variable.
-func (c *CmdExecutorImpl) SetProjectVariables() {
+func (c *CmdExecutorImpl) SetProjectVariables() error {
 	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
-		c.session.Log.Logger.Error("error while loading template", err)
+		c.session.Log.Logger.Error("error while loading template for Setting Default Vatiables", err)
+		c.tryExplainError(err)
+		return err
 	} else if !exists {
 		c.session.Log.Logger.Debug("template not exists", err)
 	} else {
@@ -589,6 +631,7 @@ func (c *CmdExecutorImpl) SetProjectVariables() {
 
 		}
 	})
+	return nil
 }
 
 func (c *CmdExecutorImpl) GetWorkspaces() []string {
@@ -782,6 +825,7 @@ func (c *CmdExecutorImpl) Lint(showAll bool) error {
 	c.Println("linting...")
 	c.session.TemplateHndl.SetLinting(true)
 	if _, exists, err := c.session.TemplateHndl.Load(); err != nil {
+		c.tryExplainError(err)
 		c.Println(ctxout.ForeRed, "linting failed: ", ctxout.CleanTag, err.Error())
 		return err
 	} else {
@@ -887,6 +931,7 @@ func (c *CmdExecutorImpl) PrintShared() {
 // displays the current version of contxt template as a yaml string
 func (c *CmdExecutorImpl) PrintTemplate() {
 	if template, exists, err := c.session.TemplateHndl.Load(); err != nil {
+		c.tryExplainError(err)
 		c.Println(ctxout.ForeRed, "yaml export failed: ", ctxout.CleanTag, err.Error())
 		c.Print(ctxout.ForeRed, "error while loading template: ", ctxout.CleanTag, err.Error())
 	} else {

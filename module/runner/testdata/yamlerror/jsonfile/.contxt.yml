@@ -1,0 +1,4 @@
+{
+   "i am a json file": "with a json content"
+   "and here i will break": "because of a syntax error"
+}

@@ -348,6 +348,16 @@ task:
 ##### because it seems there is none, we just create oure own overview page
 ##### and link to the detailed html report.
 ##### also we add the -func output to the report
+  - id: test-cover
+    cmd:
+     - println("this works")
+     - |
+      println("test-cover")
+#      {{- range $k, $test := $.module }}
+#      {{- if $test.local}}
+#      println("testing modul {{ $test.modul }}")
+#      {{- end }}
+#      {{- end }}
 
   - id: test-coverage
     require:

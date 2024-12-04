@@ -158,7 +158,9 @@ func Init() error {
 	ctxout.AddPostFilter(ctxout.NewTabOut())
 
 	// initialize the application functions
-	functions.MainInit()
+	if err := functions.MainInit(); err != nil {
+		return err
+	}
 
 	// set the shutdown behavior
 	setShutDownBehavior()

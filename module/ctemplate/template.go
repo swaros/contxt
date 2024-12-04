@@ -60,6 +60,8 @@ type Template struct {
 	onLoadFn      func(*configure.RunConfig) error // if this callback is set it will be called after the template file is loaded
 	ignoreEnabled bool                             // if ignore is enabled we try to read the ignore file, and ignore the values defined in it
 	ignoreHandler *IgnorreHndl                     // the ignore handler is used to ignore values in the template file
+	lastParsed    string                           // the last parsed content
+	lastUnparsed  string                           // the last unparsed content
 }
 
 // create a new Template struct
@@ -104,6 +106,27 @@ func (t *Template) SetIncludeFile(file string) {
 
 func (t *Template) GetIncludeFile() string {
 	return t.includeFile
+}
+
+// GetLastParsed returns the last parsed content.
+// this is the content that is returned by the go/template parser
+func (t *Template) GetLastParsed() string {
+	return t.lastParsed
+}
+
+// GetLastUnparsed returns the last unparsed content.
+// this is the content that without any go/template parsing
+func (t *Template) GetLastUnparsed() string {
+	return t.lastUnparsed
+}
+
+// GetAviableSource returns the last parsed content if it is available
+// otherwise it returns the last unparsed content
+func (t *Template) GetAviableSource() string {
+	if t.lastParsed == "" {
+		return t.lastUnparsed
+	}
+	return t.GetLastParsed()
 }
 
 // Init initializes the Template struct
@@ -328,7 +351,7 @@ func (t *Template) handleIgnoreFile(path, templateData string) (string, error) {
 
 func (t *Template) ParseGoTemplate(data string) (string, error) {
 	t.tplParser.SetData(t.GetOriginMap())
-
+	t.lastUnparsed = data
 	if templateParsed, err := t.tplParser.ParseTemplateString(data); err != nil {
 		return "", err
 	} else {
@@ -337,6 +360,7 @@ func (t *Template) ParseGoTemplate(data string) (string, error) {
 		if t.ignoreEnabled && t.ignoreHandler != nil {
 			templateParsed = t.ignoreHandler.RestoreOriginalString(templateParsed)
 		}
+		t.lastParsed = templateParsed
 		return templateParsed, nil
 	}
 }

@@ -1,0 +1,4 @@
+task:
+  - id: maniac
+    script: 
+     - echo "I am a {{ include .maniac }}"
