@@ -45,7 +45,7 @@ require (
 	github.com/imdario/mergo v0.3.16
 	github.com/kylelemons/godebug v1.1.0
 	github.com/rivo/tview v0.0.0-20221117065207-09f052e6ca98
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	github.com/tidwall/gjson v1.17.1
 	golang.org/x/sys v0.17.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
