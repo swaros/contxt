@@ -1,6 +1,6 @@
 module github.com/swaros/contxt/module/shellcmd
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/abiosoft/ishell v2.0.0+incompatible
@@ -13,7 +13,6 @@ require (
 	github.com/swaros/contxt/module/taskrun v0.0.0-20230531064521-09943a54576e
 	github.com/swaros/contxt/module/trigger v0.4.0
 	github.com/swaros/manout v0.2.1
-
 )
 
 require (
@@ -54,10 +53,10 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	golang.org/x/crypto v0.17.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
-	golang.org/x/term v0.15.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/term v0.29.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
@@ -72,5 +71,4 @@ require (
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	golang.org/x/sys v0.30.0 // indirect
-
 )
