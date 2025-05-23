@@ -7,8 +7,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/mattn/anko v0.1.9 h1:OpdRDvjOY/FQXoGXkN0n7b0br4a4fHB5hhsaq0Cd3ds=
-github.com/mattn/anko v0.1.9/go.mod h1:gjrudvzf1t7FWTZo1Nbywnr75g3uDnGjXdp2nkguBjQ=
+github.com/mattn/anko v0.1.10 h1:3QcIxCLirIxOZhIVtvo9eWz8tym/iZ9Nb29VCnzaMvc=
+github.com/mattn/anko v0.1.10/go.mod h1:gjrudvzf1t7FWTZo1Nbywnr75g3uDnGjXdp2nkguBjQ=
 github.com/mattn/go-runewidth v0.0.12/go.mod h1:RAqKPSqVFrSLVXbA8x7dzmKdmGzieGRCM46jaSJTDAk=
 github.com/mattn/go-runewidth v0.0.15 h1:UNAjwbU9l54TA3KzvqLGxwWjHmMgBUVhBiTjelZgg3U=
 github.com/mattn/go-runewidth v0.0.15/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
