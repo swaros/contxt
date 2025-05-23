@@ -1,6 +1,6 @@
 module github.com/swaros/contxt/module/process
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/swaros/contxt/module/mimiclog v0.0.0-20240808085138-b2135233cb1c

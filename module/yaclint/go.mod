@@ -1,6 +1,6 @@
 module github.com/swaros/contxt/module/yaclint
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/kylelemons/godebug v1.1.0

@@ -1,6 +1,6 @@
 module github.com/swaros/contxt/module/ctxout
 
-go 1.18
+go 1.23.0
 
 require (
 	atomicgo.dev/cursor v0.2.0

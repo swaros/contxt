@@ -1,6 +1,6 @@
 module github.com/swaros/contxt/module/yamc
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/swaros/contxt/module/systools v0.0.0-20240211085138-c4de9bbc4e28

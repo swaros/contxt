@@ -1,6 +1,6 @@
 module github.com/swaros/contxt/module/taskrun
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/gdamore/tcell/v2 v2.7.4
@@ -35,7 +35,7 @@ require (
 	github.com/swaros/outinject v0.0.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	golang.org/x/crypto v0.17.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 )
 

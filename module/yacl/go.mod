@@ -1,6 +1,6 @@
 module github.com/swaros/contxt/module/yacl
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/swaros/contxt/module/systools v0.0.0-20230531064521-09943a54576e
