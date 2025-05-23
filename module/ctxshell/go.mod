@@ -1,6 +1,6 @@
 module github.com/swaros/contxt/module/ctxshell
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/chzyer/readline v1.5.1
