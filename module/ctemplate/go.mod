@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.6.0
 	github.com/imdario/mergo v0.3.16
 	github.com/stretchr/testify v1.10.0
 	github.com/swaros/contxt/module/configure v0.0.0-20230106225453-d04145a0b401
