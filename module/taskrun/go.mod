@@ -13,7 +13,7 @@ require (
 	github.com/swaros/contxt/module/yamc v0.0.1
 	github.com/swaros/manout v0.2.1
 	github.com/tidwall/sjson v1.2.5
-	golang.org/x/term v0.17.0
+	golang.org/x/term v0.32.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -36,7 +36,7 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	golang.org/x/crypto v0.35.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 )
 
 require (
@@ -47,6 +47,6 @@ require (
 	github.com/rivo/tview v0.0.0-20221117065207-09f052e6ca98
 	github.com/spf13/cobra v1.8.0
 	github.com/tidwall/gjson v1.17.1
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
