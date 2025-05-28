@@ -28,7 +28,7 @@ func NewDefaultExplainer() *ExplainLib {
 		},
 		Info: `Verify the yaml file. if you have a yaml file that is not correctly formatted, you will get this error.
 		You can use online tools like https://yamlchecker.com/ to verify the yaml file.
-		the yam file file could also be invalid after the template parsing. if you have a template file that
+		the YAML file could also be invalid after the template parsing. if you have a template file that
 		contains yaml code, you have to verify the output of the template parser.`,
 	})
 	return lib
