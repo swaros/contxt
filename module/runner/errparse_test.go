@@ -52,7 +52,7 @@ func TestBrokenTpl(t *testing.T) {
 		t.Errorf("Expected error, got nil")
 	} else {
 		defer output.ClearAndLog()
-		assertInMessage(t, output, "error explanation: Verify the code of the template file. this type of error can happen if we try to parse temlates")
+		assertInMessage(t, output, "Verify the code of the template file. this type of error can happen if we try to parse templates")
 
 		if err.Error() != "template: contxt-functions:4: function \"include\" not defined" {
 			t.Errorf("Got unexpected Error [%v]", err.Error())
