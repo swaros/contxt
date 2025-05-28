@@ -182,7 +182,7 @@ func (w *Watchman) WaitForProcessStart(target string, tickDuration time.Duration
 	w.logger.Debug("Watchman: wait for process start", target)
 	for {
 		if wtask, found := w.GetTask(target); found {
-			if wtask.IsProcessRunning() {
+			if wtask.IsProcessRunningOrDone() {
 				w.logger.Debug("Watchman: process is running", target)
 				return true, currentTick * int(tickDuration)
 			}

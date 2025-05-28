@@ -381,7 +381,7 @@ func TestMultipleTaskManagementWithChildProcs(t *testing.T) {
 
 	for target := range targets {
 		if success, timeUsed := wman.WaitForProcessStart(target, 5*time.Millisecond, 10); !success {
-			t.Error("failed to start process in time", timeUsed)
+			t.Error("failed to start ", target, " process in time", timeUsed)
 		}
 	}
 	wman.StopAllTasks(func(target string, time int, succeed bool) {
