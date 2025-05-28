@@ -112,7 +112,7 @@ func extractCodeHelper(source string, errParser *ErrParse, errRef ErrorReference
 		lines := strings.Split(source, "\n")
 		// we have the line number now we try to find the line
 		if lineNr > len(lines) {
-			return fmt.Sprintf("yaml Error: can not get line %d of total amout of source lines %d:", lineNr, len(lines)) + errParser.Error(), true
+			return fmt.Sprintf("yaml Error: can not get line %d of total amount of source lines %d:", lineNr, len(lines)) + errParser.Error(), true
 		}
 		// we have the line now we try to find the position of the error
 		defaultBeforeLines := 5
