@@ -12,7 +12,7 @@ func NewDefaultExplainer() *ExplainLib {
 			// fist try to parse something like this: template: contxt-functions:4: function "include" not defined
 			return extractCodeHelper(errParser.session.TemplateHndl.GetAviableSource(), errParser, errRef)
 		},
-		Info: `Verify the code of the template file. this type of error can happen if we try to parse temlates
+		Info: `Verify the code of the template file. this type of error can happen if we try to parse templates
 		they have a different use case then the default go templates. as example helm templates.
 		You can still use this type of templates but if this contains unsupported markups, you have to
 		create a "tpl.ignore" file in the same directory as the template file.
