@@ -2,7 +2,7 @@ release:      # this is the release target
   version:    # the version number of the release main.mid.minor
      main: 0
      mid: 6
-     minor: 2
+     minor: 4
 
 # this section contains all build related information
 build:
