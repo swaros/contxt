@@ -107,6 +107,33 @@ func (ts *TaskDef) IsProcessRunning() bool {
 	return false
 }
 
+func (ts *TaskDef) IsProcessRunningOrDone() bool {
+	if ts.process != nil && ts.process.processInfo != nil {
+		if ts.process.processInfo.Pid > 0 {
+			proc, err := os.FindProcess(ts.process.processInfo.Pid)
+			if runtime.GOOS == "windows" {
+				_, pErr := WinProcInfo(ts.process.processInfo.Pid)
+				return pErr == nil
+			}
+			if err == nil {
+				if err := proc.Signal(syscall.Signal(0)); err != nil {
+					if err.Error() == "os: process already finished" {
+						ts.process.handlingDone = true
+						return true
+					}
+					if ts.process.handlingDone {
+						// if we are handling the done state, we can return true
+						return true
+					}
+					return false
+				}
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (ts *TaskDef) GetProcessLog() []ProcessLog {
 	return ts.processLog
 }
