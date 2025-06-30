@@ -3,7 +3,7 @@ module github.com/swaros/contxt/module/configure
 go 1.23.0
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/swaros/contxt/module/systools v0.0.0-20230531064521-09943a54576e
 	github.com/swaros/contxt/module/yacl v0.0.0-20230531064521-09943a54576e
 	github.com/swaros/contxt/module/yamc v0.0.1
