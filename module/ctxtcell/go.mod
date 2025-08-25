@@ -3,7 +3,7 @@ module github.com/swaros/contxt/module/ctxtcell
 go 1.23.0
 
 require (
-	github.com/gdamore/tcell/v2 v2.8.1
+	github.com/gdamore/tcell/v2 v2.9.0
 	github.com/swaros/contxt/module/awaitgroup v0.4.0
 	github.com/swaros/contxt/module/ctxout v0.0.0-20240808085138-b2135233cb1c
 )
@@ -19,7 +19,7 @@ require (
 	github.com/swaros/contxt/module/systools v0.0.0-20230531064521-09943a54576e // indirect
 	github.com/swaros/manout v0.2.1 // indirect
 	github.com/swaros/outinject v0.0.4 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/term v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/term v0.34.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 )
