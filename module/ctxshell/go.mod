@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	github.com/chzyer/readline v1.5.1
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.7
+	github.com/spf13/pflag v1.0.9
 	github.com/swaros/contxt/module/ctxout v0.0.0-20240611073337-85362aa73bad
 	github.com/swaros/contxt/module/systools v0.0.0-20231101075921-e9a9cbc58474
 )
