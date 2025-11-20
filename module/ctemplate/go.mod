@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/google/uuid v1.6.0
 	github.com/imdario/mergo v0.3.16
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/swaros/contxt/module/configure v0.0.0-20230106225453-d04145a0b401
 	github.com/swaros/contxt/module/mimiclog v0.0.0-20231201093939-9aec73f7b1f8
 	github.com/swaros/contxt/module/systools v0.0.0-20230531064521-09943a54576e
