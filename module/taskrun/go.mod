@@ -29,7 +29,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/rivo/uniseg v0.4.3 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
@@ -45,7 +45,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/imdario/mergo v0.3.16
 	github.com/kylelemons/godebug v1.1.0
-	github.com/rivo/tview v0.0.0-20221117065207-09f052e6ca98
+	github.com/rivo/tview v0.42.0
 	github.com/spf13/cobra v1.9.1
 	github.com/tidwall/gjson v1.18.0
 	golang.org/x/sys v0.33.0 // indirect
