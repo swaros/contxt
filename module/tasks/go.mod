@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	github.com/google/uuid v1.6.0
 	github.com/mattn/anko v0.1.10
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.10.0
 	github.com/swaros/contxt/module/awaitgroup v0.4.0
 	github.com/swaros/contxt/module/configure v0.0.0-20240808085138-b2135233cb1c
