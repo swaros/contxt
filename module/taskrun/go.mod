@@ -1,6 +1,6 @@
 module github.com/swaros/contxt/module/taskrun
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/gdamore/tcell/v2 v2.8.1
@@ -13,7 +13,7 @@ require (
 	github.com/swaros/contxt/module/yamc v0.0.1
 	github.com/swaros/manout v0.2.1
 	github.com/tidwall/sjson v1.2.5
-	golang.org/x/term v0.32.0
+	golang.org/x/term v0.39.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -48,6 +48,6 @@ require (
 	github.com/rivo/tview v0.42.0
 	github.com/spf13/cobra v1.9.1
 	github.com/tidwall/gjson v1.18.0
-	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
